@@ -37,41 +37,6 @@
       overflow: hidden;
     }
 
-    /* ── Left sidebar: TOC ── */
-    .lesson-sidebar {
-      width: 230px; min-width: 230px;
-      background: var(--surface); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column;
-      overflow-y: auto; flex-shrink: 0;
-      padding: 16px 10px;
-    }
-    .sidebar-title {
-      font-size: 10px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .8px; color: var(--subtle);
-      padding: 0 6px 10px;
-    }
-    .toc-item {
-      display: flex; align-items: flex-start; gap: 7px;
-      padding: 6px 8px; border-radius: var(--r);
-      font-size: 12.5px; color: var(--muted);
-      cursor: pointer; transition: background .12s, color .12s;
-      line-height: 1.4;
-      border: none; background: transparent; width: 100%; text-align: left;
-    }
-    .toc-item:hover { background: var(--bg); color: var(--text); }
-    .toc-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
-    .toc-item-num {
-      width: 18px; height: 18px; border-radius: 5px;
-      background: var(--bg); border: 1px solid var(--border);
-      font-size: 10px; font-weight: 700; color: var(--subtle);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; margin-top: 1px;
-    }
-    .toc-item.active .toc-item-num {
-      background: var(--accent-lt); border-color: var(--accent-lt);
-      color: var(--accent);
-    }
-
     /* ── Main content ── */
     .lesson-main {
       flex: 1; min-width: 0;
@@ -291,12 +256,6 @@
 <!-- ══ BODY ═════════════════════════════════════════════════ -->
 <div class="lesson-layout">
 
-  <!-- Sidebar: TOC (page list) -->
-  <aside class="lesson-sidebar" id="lessonSidebar" style="display:none">
-    <div class="sidebar-title">Сторінки уроку</div>
-    <div id="tocList"></div>
-  </aside>
-
   <!-- Main -->
   <main class="lesson-main" id="lessonMain">
 
@@ -423,13 +382,6 @@
       // Save container to module scope
       _container = body;
 
-      // Sidebar TOC
-      if (pages.length > 1) {
-        const sidebar = document.getElementById('lessonSidebar');
-        sidebar.style.display = 'flex';
-        renderTOC(pages);
-      }
-
       // Clamp page index
       curPageIdx = Math.max(0, Math.min(curPageIdx, pages.length - 1));
 
@@ -439,23 +391,6 @@
       console.error(e);
       showError();
     }
-  }
-
-  // ── Render TOC ─────────────────────────────────────────────
-  function renderTOC(pages) {
-    const el = document.getElementById('tocList');
-    el.innerHTML = '';
-    pages.forEach((page, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'toc-item' + (i === curPageIdx ? ' active' : '');
-      btn.id = `toc-${i}`;
-      btn.innerHTML = `
-        <span class="toc-item-num">${i + 1}</span>
-        <span>${esc(page.title || `Сторінка ${i + 1}`)}</span>`;
-      // Use module-level vars so TOC always has the right references
-      btn.addEventListener('click', () => switchPage(i, _pages, _lesson, _container));
-      el.appendChild(btn);
-    });
   }
 
   // ── Render lesson ──────────────────────────────────────────
@@ -621,20 +556,12 @@
 
   // ── Switch page ────────────────────────────────────────────
   function switchPage(idx, pages, lesson, container) {
-    // Update URL without reload
     const url = new URL(location.href);
     url.searchParams.set('page', idx);
     history.replaceState(null, '', url);
     curPageIdx = idx;
 
-    // Update TOC highlight
-    document.querySelectorAll('.toc-item').forEach((el, i) => {
-      el.classList.toggle('active', i === idx);
-    });
-
     renderLesson(container, lesson, pages, idx);
-
-    // Scroll to top of main
     document.getElementById('lessonMain')?.scrollTo(0, 0);
   }
 
