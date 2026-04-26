@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Навчальний Портал</title>
+  <title>Edvault — Learning Portal</title>
 
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -13,11 +12,164 @@
   <link rel="stylesheet" href="styles.css" />
 
   <style>
-    /* Portal page overrides */
-    body {
-      overflow: auto;
-      height: auto;
-      min-height: 100vh;
+    body { overflow: auto; height: auto; min-height: 100vh; }
+
+    /* ── View toggle ── */
+    .view-toggle {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 3px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      flex-shrink: 0;
+    }
+    .view-btn {
+      width: 28px; height: 26px;
+      border: none; border-radius: 5px;
+      background: transparent;
+      color: var(--subtle);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .13s, color .13s;
+    }
+    .view-btn svg { width: 14px; height: 14px; pointer-events: none; }
+    .view-btn:hover { background: var(--surface); color: var(--text); }
+    .view-btn.active {
+      background: var(--surface);
+      color: var(--accent);
+      box-shadow: var(--sh-sm);
+    }
+
+    /* ── Subject card base ── */
+    .subject-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      box-shadow: var(--sh-sm);
+      overflow: hidden;
+      transition: box-shadow .2s, transform .2s;
+    }
+    .subject-card:hover { box-shadow: var(--sh); transform: translateY(-1px); }
+
+    .subject-card-head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px;
+      cursor: pointer; user-select: none;
+    }
+    .subject-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: var(--accent-bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .subject-icon svg { width: 17px; height: 17px; color: var(--accent); }
+    .subject-card-info { flex: 1; min-width: 0; }
+    .subject-card-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .subject-card-meta { font-size: 11.5px; color: var(--subtle); margin-top: 2px; }
+    .subject-card-chevron { width: 20px; height: 20px; color: var(--subtle); transition: transform .2s; flex-shrink: 0; }
+    .subject-card.open .subject-card-chevron { transform: rotate(90deg); }
+
+    /* ── GRID layout ── */
+    .portal-grid-inner {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    /* Grid — lessons as vertical list */
+    .lessons-list {
+      display: none;
+      border-top: 1px solid var(--border);
+      padding: 6px 0;
+    }
+    .subject-card.open .lessons-list { display: block; }
+
+    .lesson-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 16px;
+      text-decoration: none; color: var(--muted);
+      font-size: 13px;
+      transition: background .12s, color .12s;
+    }
+    .lesson-item:hover { background: var(--accent-bg); color: var(--accent); }
+    .lesson-item svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--subtle); }
+    .lesson-item:hover svg { color: var(--accent); }
+    .lesson-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── LIST layout overrides ── */
+    .portal-grid-inner.list-view {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .list-view .subject-card { border-radius: var(--r); }
+    .list-view .subject-card:hover { transform: none; }
+    .list-view .subject-card-head { padding: 10px 14px; }
+    .list-view .subject-icon { width: 30px; height: 30px; border-radius: 7px; }
+    .list-view .subject-icon svg { width: 14px; height: 14px; }
+    .list-view .subject-card-name { font-size: 13.5px; }
+
+    /* In list mode: lessons become pill tags in a flex row */
+    .list-view .lessons-list {
+      display: none;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 6px 10px 10px;
+      border-top: 1px solid var(--border);
+    }
+    .list-view .subject-card.open .lessons-list { display: flex; }
+
+    /* Hide the default vertical lesson-item in list mode */
+    .list-view .lesson-item {
+      padding: 4px 11px;
+      border-radius: 20px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      flex-shrink: 0;
+      white-space: nowrap;
+      display: inline-flex;
+    }
+    .list-view .lesson-item svg:first-child,
+    .list-view .lesson-item svg:last-child { display: none; }
+    .list-view .lesson-item:hover {
+      background: var(--accent-bg);
+      border-color: var(--accent-lt);
+      color: var(--accent);
+    }
+
+    /* Category badge */
+    .cat-badge {
+      display: inline-flex; align-items: center;
+      height: 20px; padding: 0 7px; border-radius: 20px;
+      font-size: 10.5px; font-weight: 600;
+      background: var(--accent-bg); color: var(--accent);
+    }
+
+    /* Empty / skeleton */
+    .portal-empty {
+      grid-column: 1 / -1; padding: 60px 20px;
+      text-align: center; color: var(--subtle);
+    }
+    .portal-empty svg { width: 44px; height: 44px; color: var(--border2); margin: 0 auto 14px; display: block; }
+    .portal-empty strong { display: block; font-size: 15px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    .portal-empty p { font-size: 13px; line-height: 1.6; }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: var(--r);
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    .results-count { font-size: 12px; color: var(--subtle); padding: 0 0 10px; }
+
+    @media(max-width:600px){
+      .portal-controls { padding: 12px; gap: 8px; }
+      .search-wrap { max-width: 100%; }
+      .portal-grid-inner { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -28,24 +180,43 @@
   <header class="topbar">
     <a href="index.html" class="brand">
       <div class="brand-mark">
-        <!-- Book icon -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
         </svg>
       </div>
-      <span class="brand-name">Навчальний Портал</span>
+      <span class="brand-name">Edvault</span>
     </a>
 
     <div class="topbar-div"></div>
 
     <div class="topbar-actions">
+
+      <!-- Grid / List toggle -->
+      <div class="view-toggle">
+        <button class="view-btn" id="btnGrid" title="Grid view">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </button>
+        <button class="view-btn" id="btnList" title="List view">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="topbar-div"></div>
+
       <a href="admin.html" class="btn btn-ghost">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="8" r="4"/>
-          <path d="M20 21a8 8 0 1 0-16 0"/>
+          <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
         </svg>
-        <span class="btn-label">Адмін</span>
+        <span class="btn-label">Admin</span>
       </a>
     </div>
   </header>
@@ -56,34 +227,25 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <input
-        id="searchInp"
-        class="search-inp"
-        type="search"
-        placeholder="Пошук предметів…"
-        autocomplete="off"
-      />
+      <input id="searchInp" class="search-inp" type="search" placeholder="Search subjects…" autocomplete="off" />
     </div>
 
-    <!-- Custom category dropdown -->
     <div class="cat-dropdown" id="catDropdown">
       <button class="cat-btn" id="catBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
         </svg>
-        <span id="catBtnLabel">Усі категорії</span>
+        <span id="catBtnLabel">All categories</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="6 9 12 15 18 9"/>
         </svg>
       </button>
-      <div class="cat-menu" id="catMenu" role="listbox">
-        <!-- Populated by JS -->
-      </div>
+      <div class="cat-menu" id="catMenu" role="listbox"></div>
     </div>
   </div>
 
-  <!-- ══ GRID ═════════════════════════════════════════════ -->
-  <main class="portal-grid">
+  <!-- ══ MAIN ══════════════════════════════════════════════ -->
+  <main style="padding:24px 20px 60px;max-width:1200px;margin:0 auto;">
     <p class="results-count" id="resultsCount"></p>
     <div class="portal-grid-inner" id="subjectsGrid">
       <!-- Skeleton loaders -->
@@ -113,8 +275,8 @@
   <div class="overlay" id="loadOverlay">
     <div class="ov-card">
       <div class="spin"></div>
-      <strong>Завантаження…</strong>
-      <span>Отримуємо матеріали з бази даних</span>
+      <strong>Loading…</strong>
+      <span>Fetching materials from the database</span>
     </div>
   </div>
 
@@ -123,13 +285,15 @@
     import { dbGet, objToArray } from './firebase-config.js';
 
     // ── State ─────────────────────────────────────────────
-    let allSubjects  = [];   // [{id, name, categoryId, ...}]
-    let allCategories = {};  // {catId: {name:...}}
-    let allLessons   = {};   // {lessonId: {title, subjectId, ...}}
-    let activeCatId  = null; // null = show all
-    let searchQuery  = '';
+    let allSubjects   = [];
+    let allCategories = {};
+    let allLessons    = {};
+    let activeCatId   = null;
+    let searchQuery   = '';
+    // Persist view preference across sessions
+    let currentView   = localStorage.getItem('edvault_view') || 'grid';
 
-    // ── DOM refs ──────────────────────────────────────────
+    // ── DOM ───────────────────────────────────────────────
     const grid         = document.getElementById('subjectsGrid');
     const searchInp    = document.getElementById('searchInp');
     const catBtn       = document.getElementById('catBtn');
@@ -140,231 +304,193 @@
     const resultsCount = document.getElementById('resultsCount');
     const sbCount      = document.getElementById('sbSubjectCount');
     const sbTime       = document.getElementById('sbTime');
+    const btnGrid      = document.getElementById('btnGrid');
+    const btnList      = document.getElementById('btnList');
 
     // ── Clock ─────────────────────────────────────────────
-    function updateClock() {
-      sbTime.textContent = new Date().toLocaleTimeString('uk-UA');
-    }
-    updateClock();
-    setInterval(updateClock, 1000);
+    const tick = () => sbTime.textContent = new Date().toLocaleTimeString('uk-UA');
+    tick(); setInterval(tick, 1000);
 
-    // ── Bootstrap: load all data in parallel ─────────────
+    // ── View toggle ───────────────────────────────────────
+    function applyView(v, rerender = false) {
+      currentView = v;
+      localStorage.setItem('edvault_view', v);
+
+      const isList = v === 'list';
+      grid.classList.toggle('list-view', isList);
+      btnGrid.classList.toggle('active', !isList);
+      btnList.classList.toggle('active', isList);
+
+      if (rerender) renderGrid();
+    }
+
+    btnGrid.addEventListener('click', () => applyView('grid', true));
+    btnList.addEventListener('click', () => applyView('list', true));
+
+    // Apply immediately on load (before data arrives)
+    applyView(currentView, false);
+
+    // ── Bootstrap ─────────────────────────────────────────
     async function bootstrap() {
       loadOverlay.classList.add('show');
-
       try {
         const [catData, subjData, lessonData] = await Promise.all([
           dbGet('/categories'),
           dbGet('/subjects'),
           dbGet('/lessons')
         ]);
-
-        allCategories = catData  || {};
+        allCategories = catData    || {};
         allLessons    = lessonData || {};
         allSubjects   = objToArray(subjData);
-
         buildCategoryMenu();
         renderGrid();
       } catch (err) {
-        console.error('Bootstrap error:', err);
+        console.error(err);
         grid.innerHTML = `
           <div class="portal-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <strong>Помилка завантаження</strong>
-            <p>Перевірте конфігурацію Firebase та права доступу до бази даних.</p>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <strong>Failed to load</strong>
+            <p>Check your Firebase config and database rules.</p>
           </div>`;
       } finally {
         loadOverlay.classList.remove('show');
       }
     }
 
-    // ── Build the category dropdown options ───────────────
+    // ── Category menu ─────────────────────────────────────
     function buildCategoryMenu() {
-      const all = document.createElement('button');
-      all.className = 'cat-opt active';
-      all.dataset.catId = '';
-      all.textContent = 'Усі категорії';
-      all.addEventListener('click', () => selectCategory(null, 'Усі категорії', all));
-      catMenu.appendChild(all);
+      catMenu.innerHTML = '';
+      addCatOpt('', 'All categories', null);
+      Object.entries(allCategories).forEach(([id, cat]) => addCatOpt(id, cat.name, id));
+    }
 
-      Object.entries(allCategories).forEach(([id, cat]) => {
-        const opt = document.createElement('button');
-        opt.className = 'cat-opt';
-        opt.dataset.catId = id;
-        opt.textContent = cat.name;
-        opt.addEventListener('click', () => selectCategory(id, cat.name, opt));
-        catMenu.appendChild(opt);
+    function addCatOpt(id, label, catId) {
+      const opt = document.createElement('button');
+      opt.className = 'cat-opt' + (catId === activeCatId ? ' active' : '');
+      opt.textContent = label;
+      opt.addEventListener('click', () => {
+        activeCatId = catId;
+        catBtnLabel.textContent = label;
+        catMenu.querySelectorAll('.cat-opt').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        closeDropdown();
+        renderGrid();
       });
+      catMenu.appendChild(opt);
     }
 
-    function selectCategory(id, label, el) {
-      activeCatId = id || null;
-      catBtnLabel.textContent = label;
-      catMenu.querySelectorAll('.cat-opt').forEach(o => o.classList.remove('active'));
-      el.classList.add('active');
-      closeDropdown();
-      renderGrid();
-    }
-
-    // ── Dropdown open / close ─────────────────────────────
     catBtn.addEventListener('click', () => {
-      const open = catMenu.classList.toggle('open');
-      catBtn.classList.toggle('open', open);
+      catMenu.classList.toggle('open');
+      catBtn.classList.toggle('open', catMenu.classList.contains('open'));
     });
-    document.addEventListener('click', e => {
-      if (!catDropdown.contains(e.target)) closeDropdown();
-    });
-    function closeDropdown() {
-      catMenu.classList.remove('open');
-      catBtn.classList.remove('open');
-    }
+    document.addEventListener('click', e => { if (!catDropdown.contains(e.target)) closeDropdown(); });
+    function closeDropdown() { catMenu.classList.remove('open'); catBtn.classList.remove('open'); }
 
     // ── Search ────────────────────────────────────────────
-    searchInp.addEventListener('input', () => {
-      searchQuery = searchInp.value.toLowerCase().trim();
-      renderGrid();
-    });
+    searchInp.addEventListener('input', () => { searchQuery = searchInp.value.toLowerCase().trim(); renderGrid(); });
 
-    // ── Count lessons per subject ─────────────────────────
-    function lessonCountFor(subjectId) {
-      return Object.values(allLessons)
-        .filter(l => l.subjectId === subjectId).length;
-    }
-    function lessonsFor(subjectId) {
+    // ── Helpers ───────────────────────────────────────────
+    function lessonsFor(sid) {
       return Object.entries(allLessons)
-        .filter(([, l]) => l.subjectId === subjectId)
-        .map(([id, l]) => ({ id, ...l }));
+        .filter(([, l]) => l.subjectId === sid)
+        .map(([id, l]) => ({ id, ...l }))
+        .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'uk'));
     }
 
-    // ── Main render ───────────────────────────────────────
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    const BOOK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
+    const DOC_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+    const ARR_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;color:var(--border2);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+    // ── Render grid ───────────────────────────────────────
     function renderGrid() {
-      // Filter
-      let visible = allSubjects.filter(s => {
-        const matchCat    = !activeCatId || s.categoryId === activeCatId;
-        const matchSearch = !searchQuery || s.name.toLowerCase().includes(searchQuery);
-        return matchCat && matchSearch;
-      });
+      const isList = currentView === 'list';
 
-      // Sort alphabetically
-      visible.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+      let visible = allSubjects
+        .filter(s => (!activeCatId || s.categoryId === activeCatId)
+                  && (!searchQuery || s.name.toLowerCase().includes(searchQuery)))
+        .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 
-      // Status counts
-      sbCount.textContent = `${visible.length} предмет${plural(visible.length)}`;
-      resultsCount.textContent = visible.length
-        ? `Знайдено ${visible.length} предмет${plural(visible.length)}`
-        : '';
+      sbCount.textContent = `${visible.length} subject${visible.length !== 1 ? 's' : ''}`;
+      resultsCount.textContent = visible.length ? `${visible.length} subject${visible.length !== 1 ? 's' : ''} found` : '';
 
-      // Empty state
       if (!visible.length) {
         grid.innerHTML = `
           <div class="portal-empty">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <strong>Нічого не знайдено</strong>
-            <p>Спробуйте змінити пошуковий запит або обрати іншу категорію.</p>
+            <strong>Nothing found</strong>
+            <p>Try a different search term or category.</p>
           </div>`;
         return;
       }
 
-      // Render cards
       grid.innerHTML = '';
       visible.forEach(subject => {
-        const card = buildSubjectCard(subject);
+        const lessons = lessonsFor(subject.id);
+        const count   = lessons.length;
+        const catName = allCategories[subject.categoryId]?.name || '';
+
+        // ── Card shell ──
+        const card = document.createElement('div');
+        card.className = 'subject-card';
+
+        // ── Head ──
+        const head = document.createElement('div');
+        head.className = 'subject-card-head';
+        head.innerHTML = `
+          <div class="subject-icon">${BOOK_SVG}</div>
+          <div class="subject-card-info">
+            <div class="subject-card-name">${esc(subject.name)}</div>
+            <div class="subject-card-meta">
+              ${catName ? `<span class="cat-badge">${esc(catName)}</span>&nbsp;` : ''}
+              ${count} lesson${count !== 1 ? 's' : ''}
+            </div>
+          </div>
+          <svg class="subject-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>`;
+
+        // ── Lessons wrap ──
+        const wrap = document.createElement('div');
+        wrap.className = 'lessons-list';
+
+        if (count === 0) {
+          wrap.innerHTML = isList
+            ? `<span style="font-size:12px;color:var(--subtle);font-style:italic;padding:2px 4px">No lessons yet</span>`
+            : `<div style="padding:10px 16px;font-size:12.5px;color:var(--subtle);font-style:italic">No lessons yet</div>`;
+        } else {
+          lessons.forEach(lesson => {
+            const a = document.createElement('a');
+            a.className = 'lesson-item';
+            a.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
+
+            if (isList) {
+              // Compact pill — just the title
+              a.innerHTML = esc(lesson.title || 'Untitled');
+            } else {
+              // Full row with icons
+              a.innerHTML = `${DOC_SVG}<span class="lesson-item-title">${esc(lesson.title || 'Untitled')}</span>${ARR_SVG}`;
+            }
+            wrap.appendChild(a);
+          });
+        }
+
+        // ── Toggle ──
+        head.addEventListener('click', () => {
+          const isOpen = card.classList.toggle('open');
+          wrap.style.animation = isOpen ? 'fadeUp .18s ease' : '';
+        });
+
+        card.appendChild(head);
+        card.appendChild(wrap);
         grid.appendChild(card);
       });
-    }
-
-    // ── Build one subject card ────────────────────────────
-    function buildSubjectCard(subject) {
-      const catName  = allCategories[subject.categoryId]?.name || '';
-      const lessons  = lessonsFor(subject.id);
-      const count    = lessons.length;
-
-      const card = document.createElement('div');
-      card.className = 'subject-card';
-
-      // Head
-      const head = document.createElement('div');
-      head.className = 'subject-card-head';
-      head.innerHTML = `
-        <div class="subject-icon">
-          ${subjectIcon()}
-        </div>
-        <div class="subject-card-info">
-          <div class="subject-card-name">${escHtml(subject.name)}</div>
-          <div class="subject-card-meta">
-            ${catName ? `<span class="cat-badge">${escHtml(catName)}</span> &nbsp;` : ''}
-            ${count} урок${plural(count)}
-          </div>
-        </div>
-        <svg class="subject-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>`;
-
-      // Lessons list
-      const list = document.createElement('div');
-      list.className = 'lessons-list';
-
-      if (count === 0) {
-        list.innerHTML = `<div style="padding:10px 16px;font-size:12.5px;color:var(--subtle);font-style:italic">Уроки ще не додані</div>`;
-      } else {
-        lessons
-          .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'uk'))
-          .forEach(lesson => {
-            const item = document.createElement('a');
-            item.className = 'lesson-item';
-            item.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
-            item.innerHTML = `
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-              </svg>
-              <span class="lesson-item-title">${escHtml(lesson.title || 'Без назви')}</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;color:var(--border2)">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>`;
-            list.appendChild(item);
-          });
-      }
-
-      // Toggle expand
-      head.addEventListener('click', () => {
-        const isOpen = card.classList.toggle('open');
-        // Animate height
-        if (isOpen) {
-          list.style.display = 'block';
-          list.style.animation = 'fadeUp .18s ease';
-        } else {
-          list.style.display = 'none';
-        }
-      });
-
-      card.appendChild(head);
-      card.appendChild(list);
-      return card;
-    }
-
-    // ── Helpers ───────────────────────────────────────────
-
-    function plural(n) {
-      if (n % 10 === 1 && n % 100 !== 11) return '';
-      if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return 'и';
-      return 'ів';
-    }
-
-    function escHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    function subjectIcon() {
-      // Book icon — same for all subjects; could randomise by index
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-      </svg>`;
     }
 
     // ── Start ─────────────────────────────────────────────
