@@ -1,0 +1,72 @@
+{
+  "_comment": "Paste this into Firebase Console → Realtime Database → Import JSON to bootstrap your DB with sample data. Remove all _comment keys before importing.",
+
+  "admins": {
+    "admin": {
+      "username": "admin",
+      "password": "change_me_123"
+    }
+  },
+
+  "categories": {
+    "cat_it": {
+      "name": "Інформаційні технології"
+    },
+    "cat_lang": {
+      "name": "Мови"
+    },
+    "cat_math": {
+      "name": "Математика"
+    }
+  },
+
+  "subjects": {
+    "subj_js": {
+      "name": "JavaScript",
+      "categoryId": "cat_it"
+    },
+    "subj_python": {
+      "name": "Python",
+      "categoryId": "cat_it"
+    },
+    "subj_english": {
+      "name": "Англійська мова",
+      "categoryId": "cat_lang"
+    },
+    "subj_algebra": {
+      "name": "Алгебра",
+      "categoryId": "cat_math"
+    }
+  },
+
+  "lessons": {
+    "aB3mK9pX2r": {
+      "title": "Вступ до JavaScript",
+      "subjectId": "subj_js",
+      "htmlContent": "<h1>Вступ до JavaScript</h1><p>JavaScript — це мова програмування, яка робить веб-сторінки інтерактивними.</p><h2>Основи синтаксису</h2><p>Змінні оголошуються за допомогою <code>let</code> або <code>const</code>.</p>",
+      "links": [
+        {
+          "title": "MDN Web Docs — JavaScript",
+          "url": "https://developer.mozilla.org/uk/docs/Web/JavaScript"
+        },
+        {
+          "title": "JavaScript.info",
+          "url": "https://uk.javascript.info/"
+        }
+      ],
+      "materials": [
+        {
+          "title": "Конспект лекції (PDF)",
+          "fileUrl": "https://example.com/js-intro.pdf"
+        }
+      ]
+    },
+    "cD7nL4qY5s": {
+      "title": "Змінні та типи даних",
+      "subjectId": "subj_js",
+      "htmlContent": "<h1>Змінні та типи даних</h1><p>У JavaScript є кілька примітивних типів даних.</p><h2>Рядки (String)</h2><p>Рядки — це послідовності символів.</p><h2>Числа (Number)</h2><p>JavaScript має один числовий тип для цілих та дробових чисел.</p><h3>Приклад</h3><p>Приклад коду для роботи з числами.</p>",
+      "links": [],
+      "materials": []
+    }
+  }
+}

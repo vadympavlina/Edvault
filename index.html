@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Навчальний Портал</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <style>
+    /* Portal page overrides */
+    body {
+      overflow: auto;
+      height: auto;
+      min-height: 100vh;
+    }
+  </style>
+</head>
+
+<body class="portal-page">
+
+  <!-- ══ TOP BAR ══════════════════════════════════════════ -->
+  <header class="topbar">
+    <a href="index.html" class="brand">
+      <div class="brand-mark">
+        <!-- Book icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      </div>
+      <span class="brand-name">Навчальний Портал</span>
+    </a>
+
+    <div class="topbar-div"></div>
+
+    <div class="topbar-actions">
+      <a href="admin.html" class="btn btn-ghost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/>
+          <path d="M20 21a8 8 0 1 0-16 0"/>
+        </svg>
+        <span class="btn-label">Адмін</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- ══ SEARCH & FILTER ══════════════════════════════════ -->
+  <div class="portal-controls">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input
+        id="searchInp"
+        class="search-inp"
+        type="search"
+        placeholder="Пошук предметів…"
+        autocomplete="off"
+      />
+    </div>
+
+    <!-- Custom category dropdown -->
+    <div class="cat-dropdown" id="catDropdown">
+      <button class="cat-btn" id="catBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span id="catBtnLabel">Усі категорії</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      <div class="cat-menu" id="catMenu" role="listbox">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ GRID ═════════════════════════════════════════════ -->
+  <main class="portal-grid">
+    <p class="results-count" id="resultsCount"></p>
+    <div class="portal-grid-inner" id="subjectsGrid">
+      <!-- Skeleton loaders -->
+      <div class="subject-card" style="padding:16px;">
+        <div class="skeleton" style="height:36px;border-radius:9px;margin-bottom:10px;"></div>
+        <div class="skeleton" style="height:14px;width:60%;"></div>
+      </div>
+      <div class="subject-card" style="padding:16px;">
+        <div class="skeleton" style="height:36px;border-radius:9px;margin-bottom:10px;"></div>
+        <div class="skeleton" style="height:14px;width:70%;"></div>
+      </div>
+      <div class="subject-card" style="padding:16px;">
+        <div class="skeleton" style="height:36px;border-radius:9px;margin-bottom:10px;"></div>
+        <div class="skeleton" style="height:14px;width:55%;"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══ STATUS BAR ════════════════════════════════════════ -->
+  <div class="statusbar" style="position:fixed;bottom:0;left:0;right:0;">
+    <span><span class="sb-dot"></span>Firebase Realtime DB</span>
+    <span id="sbSubjectCount" style="color:var(--subtle)"></span>
+    <span class="sb-right" id="sbTime" style="color:var(--subtle)"></span>
+  </div>
+
+  <!-- ══ LOADING OVERLAY ══════════════════════════════════ -->
+  <div class="overlay" id="loadOverlay">
+    <div class="ov-card">
+      <div class="spin"></div>
+      <strong>Завантаження…</strong>
+      <span>Отримуємо матеріали з бази даних</span>
+    </div>
+  </div>
+
+  <!-- ══ SCRIPT ════════════════════════════════════════════ -->
+  <script type="module">
+    import { dbGet, objToArray } from './firebase-config.js';
+
+    // ── State ─────────────────────────────────────────────
+    let allSubjects  = [];   // [{id, name, categoryId, ...}]
+    let allCategories = {};  // {catId: {name:...}}
+    let allLessons   = {};   // {lessonId: {title, subjectId, ...}}
+    let activeCatId  = null; // null = show all
+    let searchQuery  = '';
+
+    // ── DOM refs ──────────────────────────────────────────
+    const grid         = document.getElementById('subjectsGrid');
+    const searchInp    = document.getElementById('searchInp');
+    const catBtn       = document.getElementById('catBtn');
+    const catBtnLabel  = document.getElementById('catBtnLabel');
+    const catMenu      = document.getElementById('catMenu');
+    const catDropdown  = document.getElementById('catDropdown');
+    const loadOverlay  = document.getElementById('loadOverlay');
+    const resultsCount = document.getElementById('resultsCount');
+    const sbCount      = document.getElementById('sbSubjectCount');
+    const sbTime       = document.getElementById('sbTime');
+
+    // ── Clock ─────────────────────────────────────────────
+    function updateClock() {
+      sbTime.textContent = new Date().toLocaleTimeString('uk-UA');
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // ── Bootstrap: load all data in parallel ─────────────
+    async function bootstrap() {
+      loadOverlay.classList.add('show');
+
+      try {
+        const [catData, subjData, lessonData] = await Promise.all([
+          dbGet('/categories'),
+          dbGet('/subjects'),
+          dbGet('/lessons')
+        ]);
+
+        allCategories = catData  || {};
+        allLessons    = lessonData || {};
+        allSubjects   = objToArray(subjData);
+
+        buildCategoryMenu();
+        renderGrid();
+      } catch (err) {
+        console.error('Bootstrap error:', err);
+        grid.innerHTML = `
+          <div class="portal-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <strong>Помилка завантаження</strong>
+            <p>Перевірте конфігурацію Firebase та права доступу до бази даних.</p>
+          </div>`;
+      } finally {
+        loadOverlay.classList.remove('show');
+      }
+    }
+
+    // ── Build the category dropdown options ───────────────
+    function buildCategoryMenu() {
+      const all = document.createElement('button');
+      all.className = 'cat-opt active';
+      all.dataset.catId = '';
+      all.textContent = 'Усі категорії';
+      all.addEventListener('click', () => selectCategory(null, 'Усі категорії', all));
+      catMenu.appendChild(all);
+
+      Object.entries(allCategories).forEach(([id, cat]) => {
+        const opt = document.createElement('button');
+        opt.className = 'cat-opt';
+        opt.dataset.catId = id;
+        opt.textContent = cat.name;
+        opt.addEventListener('click', () => selectCategory(id, cat.name, opt));
+        catMenu.appendChild(opt);
+      });
+    }
+
+    function selectCategory(id, label, el) {
+      activeCatId = id || null;
+      catBtnLabel.textContent = label;
+      catMenu.querySelectorAll('.cat-opt').forEach(o => o.classList.remove('active'));
+      el.classList.add('active');
+      closeDropdown();
+      renderGrid();
+    }
+
+    // ── Dropdown open / close ─────────────────────────────
+    catBtn.addEventListener('click', () => {
+      const open = catMenu.classList.toggle('open');
+      catBtn.classList.toggle('open', open);
+    });
+    document.addEventListener('click', e => {
+      if (!catDropdown.contains(e.target)) closeDropdown();
+    });
+    function closeDropdown() {
+      catMenu.classList.remove('open');
+      catBtn.classList.remove('open');
+    }
+
+    // ── Search ────────────────────────────────────────────
+    searchInp.addEventListener('input', () => {
+      searchQuery = searchInp.value.toLowerCase().trim();
+      renderGrid();
+    });
+
+    // ── Count lessons per subject ─────────────────────────
+    function lessonCountFor(subjectId) {
+      return Object.values(allLessons)
+        .filter(l => l.subjectId === subjectId).length;
+    }
+    function lessonsFor(subjectId) {
+      return Object.entries(allLessons)
+        .filter(([, l]) => l.subjectId === subjectId)
+        .map(([id, l]) => ({ id, ...l }));
+    }
+
+    // ── Main render ───────────────────────────────────────
+    function renderGrid() {
+      // Filter
+      let visible = allSubjects.filter(s => {
+        const matchCat    = !activeCatId || s.categoryId === activeCatId;
+        const matchSearch = !searchQuery || s.name.toLowerCase().includes(searchQuery);
+        return matchCat && matchSearch;
+      });
+
+      // Sort alphabetically
+      visible.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+
+      // Status counts
+      sbCount.textContent = `${visible.length} предмет${plural(visible.length)}`;
+      resultsCount.textContent = visible.length
+        ? `Знайдено ${visible.length} предмет${plural(visible.length)}`
+        : '';
+
+      // Empty state
+      if (!visible.length) {
+        grid.innerHTML = `
+          <div class="portal-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <strong>Нічого не знайдено</strong>
+            <p>Спробуйте змінити пошуковий запит або обрати іншу категорію.</p>
+          </div>`;
+        return;
+      }
+
+      // Render cards
+      grid.innerHTML = '';
+      visible.forEach(subject => {
+        const card = buildSubjectCard(subject);
+        grid.appendChild(card);
+      });
+    }
+
+    // ── Build one subject card ────────────────────────────
+    function buildSubjectCard(subject) {
+      const catName  = allCategories[subject.categoryId]?.name || '';
+      const lessons  = lessonsFor(subject.id);
+      const count    = lessons.length;
+
+      const card = document.createElement('div');
+      card.className = 'subject-card';
+
+      // Head
+      const head = document.createElement('div');
+      head.className = 'subject-card-head';
+      head.innerHTML = `
+        <div class="subject-icon">
+          ${subjectIcon()}
+        </div>
+        <div class="subject-card-info">
+          <div class="subject-card-name">${escHtml(subject.name)}</div>
+          <div class="subject-card-meta">
+            ${catName ? `<span class="cat-badge">${escHtml(catName)}</span> &nbsp;` : ''}
+            ${count} урок${plural(count)}
+          </div>
+        </div>
+        <svg class="subject-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>`;
+
+      // Lessons list
+      const list = document.createElement('div');
+      list.className = 'lessons-list';
+
+      if (count === 0) {
+        list.innerHTML = `<div style="padding:10px 16px;font-size:12.5px;color:var(--subtle);font-style:italic">Уроки ще не додані</div>`;
+      } else {
+        lessons
+          .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'uk'))
+          .forEach(lesson => {
+            const item = document.createElement('a');
+            item.className = 'lesson-item';
+            item.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
+            item.innerHTML = `
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              <span class="lesson-item-title">${escHtml(lesson.title || 'Без назви')}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;color:var(--border2)">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>`;
+            list.appendChild(item);
+          });
+      }
+
+      // Toggle expand
+      head.addEventListener('click', () => {
+        const isOpen = card.classList.toggle('open');
+        // Animate height
+        if (isOpen) {
+          list.style.display = 'block';
+          list.style.animation = 'fadeUp .18s ease';
+        } else {
+          list.style.display = 'none';
+        }
+      });
+
+      card.appendChild(head);
+      card.appendChild(list);
+      return card;
+    }
+
+    // ── Helpers ───────────────────────────────────────────
+
+    function plural(n) {
+      if (n % 10 === 1 && n % 100 !== 11) return '';
+      if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return 'и';
+      return 'ів';
+    }
+
+    function escHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function subjectIcon() {
+      // Book icon — same for all subjects; could randomise by index
+      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>`;
+    }
+
+    // ── Start ─────────────────────────────────────────────
+    bootstrap();
+  </script>
+</body>
+</html>
