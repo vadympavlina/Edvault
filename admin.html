@@ -260,6 +260,41 @@
     }
     .html-editor:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.12); background: var(--surface); }
 
+    /* ── Upload HTML ── */
+    .page-toolbar {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 6px;
+    }
+    .page-toolbar-label { font-size: 11px; color: var(--subtle); flex: 1; }
+    .btn-upload-html {
+      display: inline-flex; align-items: center; gap: 5px;
+      height: 26px; padding: 0 10px;
+      border-radius: var(--r); border: 1px solid var(--border2);
+      font-size: 11.5px; font-weight: 500; color: var(--muted);
+      background: var(--surface); cursor: pointer;
+      transition: border-color .12s, color .12s, background .12s;
+    }
+    .btn-upload-html:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+    .btn-upload-html svg { width: 12px; height: 12px; }
+    .isolated-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      height: 22px; padding: 0 8px; border-radius: 20px;
+      font-size: 10.5px; font-weight: 600;
+      background: #fef9c3; color: #a16207;
+      border: 1px solid #fde68a;
+    }
+    .isolated-badge svg { width: 11px; height: 11px; }
+    .btn-clear-isolated {
+      background: transparent; border: none; cursor: pointer;
+      color: #a16207; padding: 0 2px; font-size: 13px; line-height: 1;
+    }
+    .btn-clear-isolated:hover { color: #dc2626; }
+    .isolated-preview {
+      width: 100%; min-height: 280px; border: 1px solid var(--border2);
+      border-radius: var(--r); background: #fff;
+      resize: vertical; overflow: auto;
+    }
+
     /* ── Links & materials ── */
     .links-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
     .link-row {
@@ -1338,8 +1373,11 @@
   function syncActivePage() {
     const textarea = document.querySelector('.html-editor');
     const titleInp = document.querySelector('.page-title-inp');
-    if (!textarea || !lessonPages[activePageIdx]) return;
-    lessonPages[activePageIdx].htmlContent = textarea.value;
+    if (!lessonPages[activePageIdx]) return;
+    // Only sync textarea content if NOT isolated (isolated content set directly)
+    if (textarea && !lessonPages[activePageIdx].isolated) {
+      lessonPages[activePageIdx].htmlContent = textarea.value;
+    }
     if (titleInp) lessonPages[activePageIdx].title = titleInp.value || `Сторінка ${activePageIdx + 1}`;
   }
 
@@ -1380,15 +1418,65 @@
 
     // Editor for active page
     const page = lessonPages[activePageIdx] || {};
+    const isIsolated = !!page.isolated;
+
     editorEl.innerHTML = `
       <div class="page-title-row">
         <input class="page-title-inp" placeholder="Назва сторінки (напр. Теорія)" value="${esc(page.title || '')}" />
       </div>
-      <textarea class="html-editor" placeholder="<h1>Заголовок</h1>\n<p>Текст уроку у форматі HTML...</p>">${esc(page.htmlContent || '')}</textarea>`;
+      <div class="page-toolbar">
+        ${isIsolated
+          ? `<span class="isolated-badge">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+               Завантажений HTML-файл
+               <button class="btn-clear-isolated" title="Очистити та редагувати HTML вручну">✕</button>
+             </span>`
+          : `<span class="page-toolbar-label">Введіть HTML вручну або завантажте файл</span>`
+        }
+        <label class="btn-upload-html" title="Завантажити .html файл">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          ${isIsolated ? 'Замінити файл' : 'Завантажити HTML'}
+          <input type="file" accept=".html,.htm" style="display:none" id="htmlFileInput" />
+        </label>
+      </div>
+      ${isIsolated
+        ? `<iframe class="isolated-preview" srcdoc="${esc(page.htmlContent || '')}" sandbox="allow-same-origin allow-scripts"></iframe>`
+        : `<textarea class="html-editor" placeholder="<h1>Заголовок</h1>\n<p>Текст уроку у форматі HTML...</p>">${esc(page.htmlContent || '')}</textarea>`
+      }`;
 
-    // Auto-save on blur
-    editorEl.querySelector('.html-editor').addEventListener('change', syncActivePage);
+    // Auto-save
+    const textarea = editorEl.querySelector('.html-editor');
+    if (textarea) textarea.addEventListener('change', syncActivePage);
     editorEl.querySelector('.page-title-inp').addEventListener('change', syncActivePage);
+
+    // Clear isolated → back to manual editor
+    const clearBtn = editorEl.querySelector('.btn-clear-isolated');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        syncActivePage();
+        lessonPages[activePageIdx].isolated = false;
+        renderPagesEditor();
+      });
+    }
+
+    // File upload
+    const fileInput = editorEl.querySelector('#htmlFileInput');
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        syncActivePage();
+        lessonPages[activePageIdx].htmlContent = ev.target.result;
+        lessonPages[activePageIdx].isolated = true;
+        if (!lessonPages[activePageIdx].title || lessonPages[activePageIdx].title.startsWith('Сторінка')) {
+          lessonPages[activePageIdx].title = file.name.replace(/\.html?$/i, '');
+        }
+        renderPagesEditor();
+        toast('HTML-файл завантажено');
+      };
+      reader.readAsText(file);
+    });
   }
 
   function addPage() {
