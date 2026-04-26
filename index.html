@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Edvault — Learning Portal</title>
+  <title>Edvault — Навчальний портал</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,134 +16,134 @@
 
     /* ── View toggle ── */
     .view-toggle {
-      display: flex;
-      align-items: center;
-      gap: 2px;
-      padding: 3px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--r);
-      flex-shrink: 0;
+      display: flex; align-items: center; gap: 2px;
+      padding: 3px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: var(--r); flex-shrink: 0;
     }
     .view-btn {
-      width: 28px; height: 26px;
-      border: none; border-radius: 5px;
-      background: transparent;
-      color: var(--subtle);
-      cursor: pointer;
+      width: 28px; height: 26px; border: none; border-radius: 5px;
+      background: transparent; color: var(--subtle); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: background .13s, color .13s;
     }
     .view-btn svg { width: 14px; height: 14px; pointer-events: none; }
     .view-btn:hover { background: var(--surface); color: var(--text); }
-    .view-btn.active {
-      background: var(--surface);
-      color: var(--accent);
-      box-shadow: var(--sh-sm);
-    }
+    .view-btn.active { background: var(--surface); color: var(--accent); box-shadow: var(--sh-sm); }
 
-    /* ── Subject card base ── */
-    .subject-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      box-shadow: var(--sh-sm);
-      overflow: hidden;
-      transition: box-shadow .2s, transform .2s;
-    }
-    .subject-card:hover { box-shadow: var(--sh); transform: translateY(-1px); }
-
-    .subject-card-head {
-      display: flex; align-items: center; gap: 10px;
-      padding: 14px 16px;
-      cursor: pointer; user-select: none;
-    }
-    .subject-icon {
-      width: 36px; height: 36px; border-radius: 9px;
-      background: var(--accent-bg);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .subject-icon svg { width: 17px; height: 17px; color: var(--accent); }
-    .subject-card-info { flex: 1; min-width: 0; }
-    .subject-card-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .subject-card-meta { font-size: 11.5px; color: var(--subtle); margin-top: 2px; }
-    .subject-card-chevron { width: 20px; height: 20px; color: var(--subtle); transition: transform .2s; flex-shrink: 0; }
-    .subject-card.open .subject-card-chevron { transform: rotate(90deg); }
-
-    /* ── GRID layout ── */
-    .portal-grid-inner {
+    /* ══ GRID VIEW ══════════════════════════════════════════ */
+    .subjects-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
     }
 
-    /* Grid — lessons as vertical list */
-    .lessons-list {
-      display: none;
-      border-top: 1px solid var(--border);
-      padding: 6px 0;
+    .subj-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-lg); box-shadow: var(--sh-sm);
+      overflow: hidden; transition: box-shadow .2s, transform .15s;
     }
-    .subject-card.open .lessons-list { display: block; }
+    .subj-card:hover { box-shadow: var(--sh); transform: translateY(-2px); }
 
-    .lesson-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 16px;
-      text-decoration: none; color: var(--muted);
-      font-size: 13px;
-      transition: background .12s, color .12s;
+    .subj-card-head {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px; cursor: pointer; user-select: none;
     }
-    .lesson-item:hover { background: var(--accent-bg); color: var(--accent); }
-    .lesson-item svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--subtle); }
-    .lesson-item:hover svg { color: var(--accent); }
-    .lesson-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .lesson-pages-badge {
-      font-size: 10.5px; color: var(--subtle);
-      background: var(--bg); border: 1px solid var(--border);
-      padding: 1px 6px; border-radius: 10px; flex-shrink: 0; white-space: nowrap;
+    .subj-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--accent-bg); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
     }
-
-    /* ── LIST layout overrides ── */
-    .portal-grid-inner.list-view {
-      grid-template-columns: 1fr;
-      gap: 6px;
-    }
-    .list-view .subject-card { border-radius: var(--r); }
-    .list-view .subject-card:hover { transform: none; }
-    .list-view .subject-card-head { padding: 10px 14px; }
-    .list-view .subject-icon { width: 30px; height: 30px; border-radius: 7px; }
-    .list-view .subject-icon svg { width: 14px; height: 14px; }
-    .list-view .subject-card-name { font-size: 13.5px; }
-
-    /* In list mode: lessons-list is a block (rows), not flex pills */
-    .list-view .lessons-list {
-      display: none;
-      padding: 4px 0 6px;
-      border-top: 1px solid var(--border);
-    }
-    .list-view .subject-card.open .lessons-list { display: block; }
-
-    /* List mode lesson row — compact */
-    .list-view .lesson-item {
-      padding: 7px 14px;
-      font-size: 12.5px;
-      display: flex;
-    }
-    .list-view .lesson-item svg { width: 12px; height: 12px; }
-    .list-view .lesson-pages-badge { display: none; }
-
-    /* Category badge */
-    .cat-badge {
+    .subj-icon svg { width: 18px; height: 18px; color: var(--accent); }
+    .subj-info { flex: 1; min-width: 0; }
+    .subj-name { font-size: 14.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .subj-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+    .cat-pill {
       display: inline-flex; align-items: center;
-      height: 20px; padding: 0 7px; border-radius: 20px;
-      font-size: 10.5px; font-weight: 600;
+      height: 18px; padding: 0 7px; border-radius: 20px;
+      font-size: 10px; font-weight: 600;
       background: var(--accent-bg); color: var(--accent);
     }
+    .subj-count { font-size: 11.5px; color: var(--subtle); }
+    .subj-chevron { width: 18px; height: 18px; color: var(--subtle); transition: transform .2s; flex-shrink: 0; }
+    .subj-card.open .subj-chevron { transform: rotate(90deg); }
 
-    /* Empty / skeleton */
+    .subj-lessons { display: none; border-top: 1px solid var(--border); }
+    .subj-card.open .subj-lessons { display: block; animation: fadeUp .18s ease; }
+
+    .grid-lesson-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 16px; text-decoration: none; color: var(--muted);
+      font-size: 13px; border-bottom: 1px solid var(--border);
+      transition: background .1s, color .1s;
+    }
+    .grid-lesson-item:last-child { border-bottom: none; }
+    .grid-lesson-item:hover { background: var(--accent-bg); color: var(--accent); }
+    .grid-lesson-item svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--border2); }
+    .grid-lesson-item:hover svg { color: var(--accent-lt); }
+    .grid-lesson-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .grid-pages-badge {
+      font-size: 10px; color: var(--subtle);
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 1px 6px; border-radius: 10px; flex-shrink: 0;
+    }
+    .grid-arr { width: 11px; height: 11px; color: var(--border2); flex-shrink: 0; }
+    .grid-no-lessons { padding: 12px 16px; font-size: 12.5px; color: var(--subtle); font-style: italic; }
+
+    /* ══ LIST VIEW ══════════════════════════════════════════ */
+    .subjects-list { display: flex; flex-direction: column; gap: 2px; }
+
+    .list-subj-row {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); overflow: hidden;
+    }
+    .list-subj-head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; cursor: pointer; user-select: none;
+      transition: background .1s;
+    }
+    .list-subj-head:hover { background: var(--bg); }
+    .list-subj-icon {
+      width: 30px; height: 30px; border-radius: 7px;
+      background: var(--accent-bg); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .list-subj-icon svg { width: 14px; height: 14px; color: var(--accent); }
+    .list-subj-name { font-size: 13.5px; font-weight: 600; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .list-subj-cat {
+      font-size: 11px; font-weight: 600; color: var(--accent);
+      background: var(--accent-bg); padding: 2px 8px;
+      border-radius: 20px; flex-shrink: 0;
+    }
+    .list-subj-count { font-size: 12px; color: var(--subtle); flex-shrink: 0; min-width: 70px; text-align: right; }
+    .list-chevron { width: 16px; height: 16px; color: var(--subtle); transition: transform .2s; flex-shrink: 0; margin-left: 4px; }
+    .list-subj-row.open .list-chevron { transform: rotate(90deg); }
+
+    .list-lessons { display: none; border-top: 1px solid var(--border); background: var(--bg); }
+    .list-subj-row.open .list-lessons { display: block; animation: fadeUp .15s ease; }
+
+    .list-lesson-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 14px 8px 54px;
+      text-decoration: none; color: var(--muted);
+      font-size: 12.5px; border-bottom: 1px solid var(--border);
+      transition: background .1s, color .1s;
+    }
+    .list-lesson-item:last-child { border-bottom: none; }
+    .list-lesson-item:hover { background: var(--accent-bg); color: var(--accent); }
+    .list-lesson-item svg { width: 12px; height: 12px; flex-shrink: 0; color: var(--border2); }
+    .list-lesson-item:hover svg { color: var(--accent-lt); }
+    .list-lesson-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .list-pages-badge {
+      font-size: 10px; color: var(--subtle);
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 1px 6px; border-radius: 10px; flex-shrink: 0;
+    }
+    .list-arr { width: 10px; height: 10px; color: var(--border2); flex-shrink: 0; }
+    .list-no-lessons { padding: 8px 14px 8px 54px; font-size: 12px; color: var(--subtle); font-style: italic; }
+
+    /* ══ SHARED ═════════════════════════════════════════════ */
     .portal-empty {
-      grid-column: 1 / -1; padding: 60px 20px;
-      text-align: center; color: var(--subtle);
+      padding: 60px 20px; text-align: center; color: var(--subtle);
     }
     .portal-empty svg { width: 44px; height: 44px; color: var(--border2); margin: 0 auto 14px; display: block; }
     .portal-empty strong { display: block; font-size: 15px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
@@ -151,18 +151,22 @@
 
     .skeleton {
       background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.4s infinite;
-      border-radius: var(--r);
+      background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: var(--r);
     }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-    .results-count { font-size: 12px; color: var(--subtle); padding: 0 0 10px; }
+    .results-count { font-size: 12px; color: var(--subtle); margin-bottom: 12px; }
 
-    @media(max-width:600px){
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(5px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    @media(max-width:640px) {
       .portal-controls { padding: 12px; gap: 8px; }
       .search-wrap { max-width: 100%; }
-      .portal-grid-inner { grid-template-columns: 1fr; }
+      .subjects-grid { grid-template-columns: 1fr; }
+      .list-subj-cat { display: none; }
     }
   </style>
 </head>
@@ -184,16 +188,14 @@
     <div class="topbar-div"></div>
 
     <div class="topbar-actions">
-
-      <!-- Grid / List toggle -->
       <div class="view-toggle">
-        <button class="view-btn" id="btnGrid" title="Grid view">
+        <button class="view-btn" id="btnGrid" title="Сітка">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
             <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
           </svg>
         </button>
-        <button class="view-btn" id="btnList" title="List view">
+        <button class="view-btn" id="btnList" title="Список">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
             <line x1="8" y1="18" x2="21" y2="18"/>
@@ -202,15 +204,6 @@
           </svg>
         </button>
       </div>
-
-      <div class="topbar-div"></div>
-
-      <a href="admin.html" class="btn btn-ghost">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
-        </svg>
-        <span class="btn-label">Admin</span>
-      </a>
     </div>
   </header>
 
@@ -220,7 +213,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <input id="searchInp" class="search-inp" type="search" placeholder="Search subjects…" autocomplete="off" />
+      <input id="searchInp" class="search-inp" type="search" placeholder="Пошук предметів…" autocomplete="off" />
     </div>
 
     <div class="cat-dropdown" id="catDropdown">
@@ -228,31 +221,31 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
         </svg>
-        <span id="catBtnLabel">All categories</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
+        <span id="catBtnLabel">Всі категорії</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <div class="cat-menu" id="catMenu" role="listbox"></div>
     </div>
   </div>
 
   <!-- ══ MAIN ══════════════════════════════════════════════ -->
-  <main style="padding:24px 20px 60px;max-width:1200px;margin:0 auto;">
+  <main style="padding:20px 20px 60px; max-width:1200px; margin:0 auto;">
     <p class="results-count" id="resultsCount"></p>
-    <div class="portal-grid-inner" id="subjectsGrid">
-      <!-- Skeleton loaders -->
-      <div class="subject-card" style="padding:16px;">
-        <div class="skeleton" style="height:36px;border-radius:9px;margin-bottom:10px;"></div>
-        <div class="skeleton" style="height:14px;width:60%;"></div>
-      </div>
-      <div class="subject-card" style="padding:16px;">
-        <div class="skeleton" style="height:36px;border-radius:9px;margin-bottom:10px;"></div>
-        <div class="skeleton" style="height:14px;width:70%;"></div>
-      </div>
-      <div class="subject-card" style="padding:16px;">
-        <div class="skeleton" style="height:36px;border-radius:9px;margin-bottom:10px;"></div>
-        <div class="skeleton" style="height:14px;width:55%;"></div>
+    <div id="contentArea">
+      <!-- Skeleton -->
+      <div class="subjects-grid">
+        <div class="subj-card" style="padding:16px">
+          <div class="skeleton" style="height:40px;border-radius:10px;margin-bottom:12px"></div>
+          <div class="skeleton" style="height:13px;width:65%"></div>
+        </div>
+        <div class="subj-card" style="padding:16px">
+          <div class="skeleton" style="height:40px;border-radius:10px;margin-bottom:12px"></div>
+          <div class="skeleton" style="height:13px;width:55%"></div>
+        </div>
+        <div class="subj-card" style="padding:16px">
+          <div class="skeleton" style="height:40px;border-radius:10px;margin-bottom:12px"></div>
+          <div class="skeleton" style="height:13px;width:70%"></div>
+        </div>
       </div>
     </div>
   </main>
@@ -268,8 +261,8 @@
   <div class="overlay" id="loadOverlay">
     <div class="ov-card">
       <div class="spin"></div>
-      <strong>Loading…</strong>
-      <span>Fetching materials from the database</span>
+      <strong>Завантаження…</strong>
+      <span>Отримуємо матеріали з бази даних</span>
     </div>
   </div>
 
@@ -277,17 +270,14 @@
   <script type="module">
     import { dbGet, objToArray } from './firebase-config.js';
 
-    // ── State ─────────────────────────────────────────────
     let allSubjects   = [];
     let allCategories = {};
     let allLessons    = {};
     let activeCatId   = null;
     let searchQuery   = '';
-    // Persist view preference across sessions
     let currentView   = localStorage.getItem('edvault_view') || 'grid';
 
-    // ── DOM ───────────────────────────────────────────────
-    const grid         = document.getElementById('subjectsGrid');
+    const area         = document.getElementById('contentArea');
     const searchInp    = document.getElementById('searchInp');
     const catBtn       = document.getElementById('catBtn');
     const catBtnLabel  = document.getElementById('catBtnLabel');
@@ -300,63 +290,46 @@
     const btnGrid      = document.getElementById('btnGrid');
     const btnList      = document.getElementById('btnList');
 
-    // ── Clock ─────────────────────────────────────────────
     const tick = () => sbTime.textContent = new Date().toLocaleTimeString('uk-UA');
     tick(); setInterval(tick, 1000);
 
-    // ── View toggle ───────────────────────────────────────
     function applyView(v, rerender = false) {
       currentView = v;
       localStorage.setItem('edvault_view', v);
-
-      const isList = v === 'list';
-      grid.classList.toggle('list-view', isList);
-      btnGrid.classList.toggle('active', !isList);
-      btnList.classList.toggle('active', isList);
-
-      if (rerender) renderGrid();
+      btnGrid.classList.toggle('active', v === 'grid');
+      btnList.classList.toggle('active', v === 'list');
+      if (rerender) render();
     }
-
     btnGrid.addEventListener('click', () => applyView('grid', true));
     btnList.addEventListener('click', () => applyView('list', true));
-
-    // Apply immediately on load (before data arrives)
     applyView(currentView, false);
 
-    // ── Bootstrap ─────────────────────────────────────────
     async function bootstrap() {
       loadOverlay.classList.add('show');
       try {
         const [catData, subjData, lessonData] = await Promise.all([
-          dbGet('/categories'),
-          dbGet('/subjects'),
-          dbGet('/lessons')
+          dbGet('/categories'), dbGet('/subjects'), dbGet('/lessons')
         ]);
         allCategories = catData    || {};
         allLessons    = lessonData || {};
         allSubjects   = objToArray(subjData);
         buildCategoryMenu();
-        renderGrid();
+        render();
       } catch (err) {
         console.error(err);
-        grid.innerHTML = `
-          <div class="portal-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            <strong>Failed to load</strong>
-            <p>Check your Firebase config and database rules.</p>
-          </div>`;
+        area.innerHTML = `<div class="portal-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <strong>Помилка завантаження</strong>
+          <p>Перевірте конфігурацію Firebase та правила бази даних.</p>
+        </div>`;
       } finally {
         loadOverlay.classList.remove('show');
       }
     }
 
-    // ── Category menu ─────────────────────────────────────
     function buildCategoryMenu() {
       catMenu.innerHTML = '';
-      addCatOpt('', 'All categories', null);
+      addCatOpt('', 'Всі категорії', null);
       Object.entries(allCategories).forEach(([id, cat]) => addCatOpt(id, cat.name, id));
     }
 
@@ -370,7 +343,7 @@
         catMenu.querySelectorAll('.cat-opt').forEach(o => o.classList.remove('active'));
         opt.classList.add('active');
         closeDropdown();
-        renderGrid();
+        render();
       });
       catMenu.appendChild(opt);
     }
@@ -382,116 +355,147 @@
     document.addEventListener('click', e => { if (!catDropdown.contains(e.target)) closeDropdown(); });
     function closeDropdown() { catMenu.classList.remove('open'); catBtn.classList.remove('open'); }
 
-    // ── Search ────────────────────────────────────────────
-    searchInp.addEventListener('input', () => { searchQuery = searchInp.value.toLowerCase().trim(); renderGrid(); });
+    searchInp.addEventListener('input', () => { searchQuery = searchInp.value.toLowerCase().trim(); render(); });
 
-    // ── Helpers ───────────────────────────────────────────
     function lessonsFor(sid) {
       return Object.entries(allLessons)
         .filter(([, l]) => l.subjectId === sid)
-        .map(([id, l]) => ({
-          id, ...l,
-          pagesCount: Array.isArray(l.pages) ? l.pages.length : (l.htmlContent ? 1 : 0)
-        }))
+        .map(([id, l]) => ({ id, ...l, pagesCount: Array.isArray(l.pages) ? l.pages.length : (l.htmlContent ? 1 : 0) }))
         .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'uk'));
     }
 
     function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+    function ukEnd(n, many, one, few) {
+      const abs = Math.abs(n) % 100, last = abs % 10;
+      if (abs >= 11 && abs <= 19) return many;
+      if (last === 1) return one;
+      if (last >= 2 && last <= 4) return few;
+      return many;
+    }
+
     const BOOK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
     const DOC_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
-    const ARR_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;color:var(--border2);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>`;
 
-    // ── Render grid ───────────────────────────────────────
-    function renderGrid() {
-      const isList = currentView === 'list';
-
-      let visible = allSubjects
+    function render() {
+      const filtered = allSubjects
         .filter(s => (!activeCatId || s.categoryId === activeCatId)
                   && (!searchQuery || s.name.toLowerCase().includes(searchQuery)))
         .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 
-      sbCount.textContent = `${visible.length} subject${visible.length !== 1 ? 's' : ''}`;
-      resultsCount.textContent = visible.length ? `${visible.length} subject${visible.length !== 1 ? 's' : ''} found` : '';
+      const total = filtered.length;
+      sbCount.textContent = `${total} предмет${ukEnd(total, 'ів', '', 'и')}`;
+      resultsCount.textContent = total ? `${total} предмет${ukEnd(total, 'ів', '', 'и')} знайдено` : '';
 
-      if (!visible.length) {
-        grid.innerHTML = `
-          <div class="portal-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <strong>Nothing found</strong>
-            <p>Try a different search term or category.</p>
-          </div>`;
+      if (!total) {
+        area.innerHTML = `<div class="portal-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <strong>Нічого не знайдено</strong>
+          <p>Спробуйте інший пошуковий запит або категорію.</p>
+        </div>`;
         return;
       }
 
-      grid.innerHTML = '';
-      visible.forEach(subject => {
+      area.innerHTML = '';
+      currentView === 'grid' ? renderGrid(filtered) : renderList(filtered);
+    }
+
+    /* ── GRID ─────────────────────────────────────────────── */
+    function renderGrid(subjects) {
+      const grid = document.createElement('div');
+      grid.className = 'subjects-grid';
+
+      subjects.forEach(subject => {
         const lessons = lessonsFor(subject.id);
-        const count   = lessons.length;
         const catName = allCategories[subject.categoryId]?.name || '';
 
-        // ── Card shell ──
         const card = document.createElement('div');
-        card.className = 'subject-card';
+        card.className = 'subj-card';
 
-        // ── Head ──
         const head = document.createElement('div');
-        head.className = 'subject-card-head';
+        head.className = 'subj-card-head';
         head.innerHTML = `
-          <div class="subject-icon">${BOOK_SVG}</div>
-          <div class="subject-card-info">
-            <div class="subject-card-name">${esc(subject.name)}</div>
-            <div class="subject-card-meta">
-              ${catName ? `<span class="cat-badge">${esc(catName)}</span>&nbsp;` : ''}
-              ${count} lesson${count !== 1 ? 's' : ''}
+          <div class="subj-icon">${BOOK_SVG}</div>
+          <div class="subj-info">
+            <div class="subj-name">${esc(subject.name)}</div>
+            <div class="subj-meta">
+              ${catName ? `<span class="cat-pill">${esc(catName)}</span>` : ''}
+              <span class="subj-count">${lessons.length} урок${ukEnd(lessons.length, 'ів', '', 'и')}</span>
             </div>
           </div>
-          <svg class="subject-card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>`;
+          <svg class="subj-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
 
-        // ── Lessons wrap ──
-        const wrap = document.createElement('div');
-        wrap.className = 'lessons-list';
+        const panel = document.createElement('div');
+        panel.className = 'subj-lessons';
 
-        if (count === 0) {
-          wrap.innerHTML = isList
-            ? `<span style="font-size:12px;color:var(--subtle);font-style:italic;padding:2px 4px">No lessons yet</span>`
-            : `<div style="padding:10px 16px;font-size:12.5px;color:var(--subtle);font-style:italic">No lessons yet</div>`;
+        if (!lessons.length) {
+          panel.innerHTML = `<div class="grid-no-lessons">Уроків ще немає</div>`;
         } else {
           lessons.forEach(lesson => {
             const a = document.createElement('a');
-            a.className = 'lesson-item';
+            a.className = 'grid-lesson-item';
             a.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
-
-            const pagesLabel = lesson.pagesCount > 1 ? `${lesson.pagesCount} стор.` : '';
-
-            if (isList) {
-              // Compact row with icons
-              a.innerHTML = `${DOC_SVG}<span class="lesson-item-title">${esc(lesson.title || 'Untitled')}</span>${ARR_SVG}`;
-            } else {
-              // Full row with icons + pages badge
-              a.innerHTML = `${DOC_SVG}<span class="lesson-item-title">${esc(lesson.title || 'Untitled')}</span>${pagesLabel ? `<span class="lesson-pages-badge">${pagesLabel}</span>` : ''}${ARR_SVG}`;
-            }
-            wrap.appendChild(a);
+            const badge = lesson.pagesCount > 1 ? `<span class="grid-pages-badge">${lesson.pagesCount} стор.</span>` : '';
+            a.innerHTML = `${DOC_SVG}<span class="grid-lesson-title">${esc(lesson.title || 'Без назви')}</span>${badge}<svg class="grid-arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+            panel.appendChild(a);
           });
         }
 
-        // ── Toggle ──
-        head.addEventListener('click', () => {
-          const isOpen = card.classList.toggle('open');
-          wrap.style.animation = isOpen ? 'fadeUp .18s ease' : '';
-        });
-
+        head.addEventListener('click', () => card.classList.toggle('open'));
         card.appendChild(head);
-        card.appendChild(wrap);
+        card.appendChild(panel);
         grid.appendChild(card);
       });
+
+      area.appendChild(grid);
     }
 
-    // ── Start ─────────────────────────────────────────────
+    /* ── LIST ─────────────────────────────────────────────── */
+    function renderList(subjects) {
+      const list = document.createElement('div');
+      list.className = 'subjects-list';
+
+      subjects.forEach(subject => {
+        const lessons = lessonsFor(subject.id);
+        const catName = allCategories[subject.categoryId]?.name || '';
+
+        const row = document.createElement('div');
+        row.className = 'list-subj-row';
+
+        const head = document.createElement('div');
+        head.className = 'list-subj-head';
+        head.innerHTML = `
+          <div class="list-subj-icon">${BOOK_SVG}</div>
+          <span class="list-subj-name">${esc(subject.name)}</span>
+          ${catName ? `<span class="list-subj-cat">${esc(catName)}</span>` : ''}
+          <span class="list-subj-count">${lessons.length} урок${ukEnd(lessons.length, 'ів', '', 'и')}</span>
+          <svg class="list-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+        const lessonsWrap = document.createElement('div');
+        lessonsWrap.className = 'list-lessons';
+
+        if (!lessons.length) {
+          lessonsWrap.innerHTML = `<div class="list-no-lessons">Уроків ще немає</div>`;
+        } else {
+          lessons.forEach(lesson => {
+            const a = document.createElement('a');
+            a.className = 'list-lesson-item';
+            a.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
+            const badge = lesson.pagesCount > 1 ? `<span class="list-pages-badge">${lesson.pagesCount} стор.</span>` : '';
+            a.innerHTML = `${DOC_SVG}<span class="list-lesson-title">${esc(lesson.title || 'Без назви')}</span>${badge}<svg class="list-arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+            lessonsWrap.appendChild(a);
+          });
+        }
+
+        head.addEventListener('click', () => row.classList.toggle('open'));
+        row.appendChild(head);
+        row.appendChild(lessonsWrap);
+        list.appendChild(row);
+      });
+
+      area.appendChild(list);
+    }
+
     bootstrap();
   </script>
 </body>
