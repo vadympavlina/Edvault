@@ -33,9 +33,11 @@
     /* ══ GRID VIEW ══════════════════════════════════════════ */
     .subjects-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 16px;
     }
+    @media(max-width:1000px) { .subjects-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media(max-width:640px)  { .subjects-grid { grid-template-columns: 1fr; } }
 
     .subj-card {
       background: var(--surface); border: 1px solid var(--border);
@@ -90,15 +92,17 @@
     .grid-no-lessons { padding: 12px 16px; font-size: 12.5px; color: var(--subtle); font-style: italic; }
 
     /* ══ LIST VIEW ══════════════════════════════════════════ */
-    .subjects-list { display: flex; flex-direction: column; gap: 2px; }
+    .subjects-list { display: flex; flex-direction: column; }
 
     .list-subj-row {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r); overflow: hidden;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
     }
+    .list-subj-row:first-child { border-top: 1px solid var(--border); }
+
     .list-subj-head {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 14px; cursor: pointer; user-select: none;
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 20px; cursor: pointer; user-select: none;
       transition: background .1s;
     }
     .list-subj-head:hover { background: var(--bg); }
@@ -114,7 +118,7 @@
       background: var(--accent-bg); padding: 2px 8px;
       border-radius: 20px; flex-shrink: 0;
     }
-    .list-subj-count { font-size: 12px; color: var(--subtle); flex-shrink: 0; min-width: 70px; text-align: right; }
+    .list-subj-count { font-size: 12px; color: var(--subtle); flex-shrink: 0; min-width: 80px; text-align: right; }
     .list-chevron { width: 16px; height: 16px; color: var(--subtle); transition: transform .2s; flex-shrink: 0; margin-left: 4px; }
     .list-subj-row.open .list-chevron { transform: rotate(90deg); }
 
@@ -122,10 +126,10 @@
     .list-subj-row.open .list-lessons { display: block; animation: fadeUp .15s ease; }
 
     .list-lesson-item {
-      display: flex; align-items: center; gap: 9px;
-      padding: 8px 14px 8px 54px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 20px 9px 62px;
       text-decoration: none; color: var(--muted);
-      font-size: 12.5px; border-bottom: 1px solid var(--border);
+      font-size: 13px; border-bottom: 1px solid var(--border);
       transition: background .1s, color .1s;
     }
     .list-lesson-item:last-child { border-bottom: none; }
@@ -139,7 +143,7 @@
       padding: 1px 6px; border-radius: 10px; flex-shrink: 0;
     }
     .list-arr { width: 10px; height: 10px; color: var(--border2); flex-shrink: 0; }
-    .list-no-lessons { padding: 8px 14px 8px 54px; font-size: 12px; color: var(--subtle); font-style: italic; }
+    .list-no-lessons { padding: 9px 20px 9px 62px; font-size: 12px; color: var(--subtle); font-style: italic; }
 
     /* ══ SHARED ═════════════════════════════════════════════ */
     .portal-empty {
@@ -165,7 +169,6 @@
     @media(max-width:640px) {
       .portal-controls { padding: 12px; gap: 8px; }
       .search-wrap { max-width: 100%; }
-      .subjects-grid { grid-template-columns: 1fr; }
       .list-subj-cat { display: none; }
     }
   </style>
@@ -229,7 +232,7 @@
   </div>
 
   <!-- ══ MAIN ══════════════════════════════════════════════ -->
-  <main style="padding:20px 20px 60px; max-width:1200px; margin:0 auto;">
+  <main id="mainWrap" style="padding:20px 20px 60px;">
     <p class="results-count" id="resultsCount"></p>
     <div id="contentArea">
       <!-- Skeleton -->
@@ -290,6 +293,8 @@
     const btnGrid      = document.getElementById('btnGrid');
     const btnList      = document.getElementById('btnList');
 
+    const mainWrap     = document.getElementById('mainWrap');
+
     const tick = () => sbTime.textContent = new Date().toLocaleTimeString('uk-UA');
     tick(); setInterval(tick, 1000);
 
@@ -298,6 +303,14 @@
       localStorage.setItem('edvault_view', v);
       btnGrid.classList.toggle('active', v === 'grid');
       btnList.classList.toggle('active', v === 'list');
+      // Grid: centred max-width container; List: full-width with side padding
+      if (v === 'grid') {
+        mainWrap.style.maxWidth = '1200px';
+        mainWrap.style.margin   = '0 auto';
+      } else {
+        mainWrap.style.maxWidth = 'none';
+        mainWrap.style.margin   = '0';
+      }
       if (rerender) render();
     }
     btnGrid.addEventListener('click', () => applyView('grid', true));
