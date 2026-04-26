@@ -710,7 +710,21 @@
     authBtn.disabled = true; authBtn.textContent = 'Перевірка...';
     try {
       const admins = await dbGet('/admins');
-      if (admins && admins[user] && admins[user].password === pass) {
+      // Підтримка двох форматів:
+      // 1) ключ = логін: { password: '...' }
+      // 2) ключ = будь-що: { username: '...', password: '...' }
+      let found = false;
+      if (admins) {
+        for (const entry of Object.values(admins)) {
+          if (entry.username === user && entry.password === pass) {
+            found = true; break;
+          }
+        }
+        if (!found && admins[user] && admins[user].password === pass) {
+          found = true;
+        }
+      }
+      if (found) {
         sessionStorage.setItem('ev_admin', user);
         showAdmin(user);
       } else {
