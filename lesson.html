@@ -359,11 +359,13 @@
   // ── Load lesson ────────────────────────────────────────────
   async function loadLesson(id) {
     try {
-      const [lesson, subjects] = await Promise.all([
+      const [lesson, subjects, tags] = await Promise.all([
         dbGet(`/lessons/${id}`),
-        dbGet('/subjects')
+        dbGet('/subjects'),
+        dbGet('/tags')
       ]);
       if (!lesson) { showError(); return; }
+      const allTags = tags || {};
 
       // Normalize pages
       let pages;
@@ -391,6 +393,15 @@
           <span class="breadcrumb-sep">›</span>
           <span class="breadcrumb-cur">${esc(lesson.title || 'Урок')}</span>`;
         document.getElementById('subjBadge').textContent = `📚 ${subjName}`;
+      }
+      // Show tag badge in statusbar
+      if (lesson.tagId && allTags[lesson.tagId]) {
+        const tag = allTags[lesson.tagId];
+        const sb  = document.getElementById('subjBadge');
+        const tagEl = document.createElement('span');
+        tagEl.style.cssText = `display:inline-flex;align-items:center;height:18px;padding:0 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:${tag.bg};color:${tag.text};margin-left:6px`;
+        tagEl.textContent = tag.name;
+        sb.after(tagEl);
       }
 
       // Show download button and wire it up

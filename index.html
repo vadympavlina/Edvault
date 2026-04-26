@@ -336,6 +336,7 @@
     let allSubjects    = [];
     let allCategories  = {};
     let allLessons     = {};
+    let allTags        = {};
     let activeCatId    = null;
     let searchQuery    = '';
     let selectedSubjId = null;   // null = subjects view, ID = lessons view
@@ -377,12 +378,13 @@
     async function bootstrap() {
       loadOverlay.classList.add('show');
       try {
-        const [catData, subjData, lessonData] = await Promise.all([
-          dbGet('/categories'), dbGet('/subjects'), dbGet('/lessons')
+        const [catData, subjData, lessonData, tagData] = await Promise.all([
+          dbGet('/categories'), dbGet('/subjects'), dbGet('/lessons'), dbGet('/tags')
         ]);
         allCategories = catData    || {};
         allLessons    = lessonData || {};
         allSubjects   = objToArray(subjData);
+        allTags       = tagData    || {};
         buildCategoryMenu();
         render();
       } catch (err) {
@@ -601,6 +603,7 @@
       const grid = document.createElement('div');
       grid.className = 'items-grid';
       lessons.forEach(lesson => {
+        const tag = lesson.tagId ? allTags[lesson.tagId] : null;
         const el = document.createElement('a');
         el.className = 'lesson-card';
         el.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
@@ -608,16 +611,16 @@
         el.rel = 'noopener';
         const badge = lesson.pagesCount > 1
           ? `<span class="lesson-pages-badge">${lesson.pagesCount} стор.</span>` : '';
+        const tagHtml = tag
+          ? `<span style="display:inline-flex;align-items:center;height:19px;padding:0 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:${tag.bg};color:${tag.text}">${esc(tag.name)}</span>` : '';
         el.innerHTML = `
           <div class="lesson-card-top">
             <div class="lesson-card-icon">${DOC_SVG}</div>
             <div class="lesson-card-title">${esc(lesson.title || 'Без назви')}</div>
           </div>
           <div class="lesson-card-footer">
-            ${badge}
-            <span class="lesson-open-hint">
-              ${EXT_SVG} відкрити
-            </span>
+            <div style="display:flex;align-items:center;gap:6px">${tagHtml}${badge}</div>
+            <span class="lesson-open-hint">${EXT_SVG} відкрити</span>
           </div>`;
         grid.appendChild(el);
       });
@@ -628,6 +631,7 @@
       const list = document.createElement('div');
       list.className = 'items-list';
       lessons.forEach(lesson => {
+        const tag = lesson.tagId ? allTags[lesson.tagId] : null;
         const el = document.createElement('a');
         el.className = 'lesson-row';
         el.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
@@ -635,10 +639,12 @@
         el.rel = 'noopener';
         const badge = lesson.pagesCount > 1
           ? `<span class="lesson-row-badge">${lesson.pagesCount} стор.</span>` : '';
+        const tagHtml = tag
+          ? `<span style="display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:20px;font-size:10.5px;font-weight:600;background:${tag.bg};color:${tag.text};flex-shrink:0">${esc(tag.name)}</span>` : '';
         el.innerHTML = `
           <div class="lesson-row-icon">${DOC_SVG}</div>
           <span class="lesson-row-title">${esc(lesson.title || 'Без назви')}</span>
-          ${badge}
+          ${tagHtml}${badge}
           <svg class="lesson-row-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
         list.appendChild(el);
       });
