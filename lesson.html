@@ -481,40 +481,44 @@
     contentWrap.className = 'lesson-content-wrap';
 
     if (isIsolated) {
-      // Render isolated HTML in iframe — portal styles don't apply
+      // Render isolated HTML in iframe via Blob URL.
+      // With Blob URL as src: anchor links like #heading-1 resolve to blob://...#heading-1
+      // and just scroll within the iframe — they CANNOT load lesson.html.
       const frameWrap = document.createElement('div');
       frameWrap.className = 'isolated-frame-wrap';
       const iframe = document.createElement('iframe');
       iframe.className = 'isolated-frame';
-      // allow-same-origin needed so anchor links (#heading) scroll within srcdoc
-      // (without it, href="#x" resolves to lesson.html#x and reloads the portal inside iframe)
-      iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-popups allow-forms');
+      iframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-forms allow-same-origin');
 
-      // Inject a link interceptor: non-anchor links → open in new tab, never navigate iframe
+      // Inject interceptor: external links open in _blank, internal anchors scroll smoothly
       const interceptor = `<script>
 (function(){
   document.addEventListener('click', function(e){
     var a = e.target.closest('a[href]');
     if (!a) return;
     var href = a.getAttribute('href') || '';
-    if (href.startsWith('#') || href === '') return; // allow in-page anchors
+    if (href.startsWith('#')) return; // anchor — let browser handle scroll natively
     e.preventDefault();
-    window.open(a.href, '_blank', 'noopener,noreferrer');
+    e.stopPropagation();
+    if (href) window.open(a.href || href, '_blank', 'noopener,noreferrer');
   }, true);
 })();
 <\/script>`;
 
-      // Inject into <head> if present, otherwise prepend
       let html = page.htmlContent || '';
       if (html.includes('</head>')) {
         html = html.replace('</head>', interceptor + '</head>');
-      } else if (html.includes('<body')) {
-        html = html.replace('<body', interceptor + '<body');
       } else {
         html = interceptor + html;
       }
 
-      iframe.srcdoc = html;
+      // Blob URL: anchor hrefs like #heading-1 resolve to blob:https://...#heading-1
+      // The browser scrolls within the iframe — no lesson.html reload possible
+      const blob   = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      iframe.src = blobUrl;
+      iframe.addEventListener('load', () => URL.revokeObjectURL(blobUrl), { once: true });
+
       frameWrap.appendChild(iframe);
       contentWrap.appendChild(frameWrap);
     } else {
