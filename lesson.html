@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="styles.css" />
 
   <style>
-    body { overflow: auto; height: auto; min-height: 100vh; }
+    body { overflow: hidden; height: 100vh; }
 
     /* ── Breadcrumb ── */
     .breadcrumb {
@@ -32,8 +32,9 @@
 
     /* ── Lesson layout ── */
     .lesson-layout {
-      display: flex; flex: 1;
-      min-height: calc(100vh - var(--topbar));
+      display: flex;
+      height: calc(100vh - var(--topbar));
+      overflow: hidden;
     }
 
     /* ── Left sidebar: TOC ── */
@@ -104,19 +105,16 @@
     /* ── Content wrapper ── */
     .lesson-content-wrap {
       flex: 1; display: flex; flex-direction: column;
+      min-height: 0; /* required for flex children to shrink below content size */
     }
 
     /* ── Isolated iframe page ── */
     .isolated-frame-wrap {
       flex: 1; display: flex; flex-direction: column;
-      /* Clip iframe so its position:fixed elements can't escape */
-      overflow: hidden;
+      overflow: hidden; min-height: 0;
     }
     .isolated-frame {
-      flex: 1; width: 100%; border: none;
-      /* Give iframe its own scroll — position:fixed inside is relative to iframe viewport */
-      height: calc(100vh - var(--topbar) - 40px - var(--statusbar));
-      display: block;
+      flex: 1; width: 100%; border: none; display: block; min-height: 0;
     }
 
     /* ── Regular HTML content ── */
@@ -456,6 +454,13 @@
     const hasMultiplePages = pages.length > 1;
 
     container.innerHTML = '';
+
+    // For isolated pages: only the iframe scrolls, lesson-main must not scroll
+    // For regular pages: lesson-main scrolls normally
+    const lessonMain = document.getElementById('lessonMain');
+    if (lessonMain) {
+      lessonMain.style.overflowY = isIsolated ? 'hidden' : 'auto';
+    }
 
     // Page tabs (only if multiple pages)
     if (hasMultiplePages) {
