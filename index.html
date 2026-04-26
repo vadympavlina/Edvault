@@ -52,11 +52,9 @@
     /* ══ GRID VIEW ══════════════════════════════════════════ */
     .items-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 16px;
     }
-    @media(max-width:1000px) { .items-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media(max-width:600px)  { .items-grid { grid-template-columns: 1fr; } }
 
     /* ── Subject card ── */
     .subj-card {
@@ -289,7 +287,7 @@
   </div>
 
   <!-- ══ MAIN ══════════════════════════════════════════════ -->
-  <main id="mainWrap" style="padding:20px 20px 60px;">
+  <main id="mainWrap" style="padding:24px 28px 60px;">
     <div id="breadcrumbArea"></div>
     <p class="items-count" id="itemsCount"></p>
     <div id="contentArea">
@@ -369,8 +367,6 @@
       localStorage.setItem('edvault_view', v);
       btnGrid.classList.toggle('active', v === 'grid');
       btnList.classList.toggle('active', v === 'list');
-      if (v === 'grid') { mainWrap.style.maxWidth = '1200px'; mainWrap.style.margin = '0 auto'; }
-      else              { mainWrap.style.maxWidth = 'none';   mainWrap.style.margin = '0'; }
       if (rerender) render();
     }
     btnGrid.addEventListener('click', () => applyView('grid', true));
