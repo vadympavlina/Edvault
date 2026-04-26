@@ -14,7 +14,7 @@
   <style>
     body { overflow: auto; height: auto; min-height: 100vh; }
 
-    /* ── View toggle ── */
+    /* ══ VIEW TOGGLE ════════════════════════════════════════ */
     .view-toggle {
       display: flex; align-items: center; gap: 2px;
       padding: 3px; background: var(--bg);
@@ -30,122 +30,180 @@
     .view-btn:hover { background: var(--surface); color: var(--text); }
     .view-btn.active { background: var(--surface); color: var(--accent); box-shadow: var(--sh-sm); }
 
+    /* ══ BREADCRUMB ═════════════════════════════════════════ */
+    .portal-breadcrumb {
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 0 16px;
+      flex-wrap: wrap;
+    }
+    .bc-back {
+      display: inline-flex; align-items: center; gap: 5px;
+      height: 28px; padding: 0 10px;
+      border: 1px solid var(--border); border-radius: var(--r);
+      background: var(--surface); color: var(--muted);
+      font-size: 12.5px; font-weight: 500; cursor: pointer;
+      transition: border-color .12s, color .12s, background .12s;
+    }
+    .bc-back:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+    .bc-back svg { width: 13px; height: 13px; }
+    .bc-sep { color: var(--subtle); font-size: 13px; }
+    .bc-cur { font-size: 13px; font-weight: 600; color: var(--text); }
+
     /* ══ GRID VIEW ══════════════════════════════════════════ */
-    .subjects-grid {
+    .items-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
     }
-    @media(max-width:1000px) { .subjects-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media(max-width:640px)  { .subjects-grid { grid-template-columns: 1fr; } }
+    @media(max-width:1000px) { .items-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media(max-width:600px)  { .items-grid { grid-template-columns: 1fr; } }
 
+    /* ── Subject card ── */
     .subj-card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--r-lg); box-shadow: var(--sh-sm);
-      overflow: hidden; transition: box-shadow .2s, transform .15s;
+      padding: 20px; cursor: pointer;
+      display: flex; flex-direction: column; gap: 12px;
+      transition: box-shadow .18s, transform .15s, border-color .15s;
+      text-decoration: none;
     }
-    .subj-card:hover { box-shadow: var(--sh); transform: translateY(-2px); }
-
-    .subj-card-head {
-      display: flex; align-items: center; gap: 12px;
-      padding: 16px; cursor: pointer; user-select: none;
+    .subj-card:hover {
+      box-shadow: var(--sh); transform: translateY(-2px);
+      border-color: var(--accent-lt);
     }
-    .subj-icon {
-      width: 40px; height: 40px; border-radius: 10px;
+    .subj-card-top { display: flex; align-items: flex-start; gap: 12px; }
+    .subj-card-icon {
+      width: 42px; height: 42px; border-radius: 11px;
       background: var(--accent-bg); flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
     }
-    .subj-icon svg { width: 18px; height: 18px; color: var(--accent); }
-    .subj-info { flex: 1; min-width: 0; }
-    .subj-name { font-size: 14.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .subj-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
-    .cat-pill {
+    .subj-card-icon svg { width: 19px; height: 19px; color: var(--accent); }
+    .subj-card-info { flex: 1; min-width: 0; }
+    .subj-card-name {
+      font-size: 15px; font-weight: 700; color: var(--text);
+      line-height: 1.3; margin-bottom: 5px;
+    }
+    .subj-card-cat {
       display: inline-flex; align-items: center;
-      height: 18px; padding: 0 7px; border-radius: 20px;
-      font-size: 10px; font-weight: 600;
+      height: 19px; padding: 0 8px; border-radius: 20px;
+      font-size: 10.5px; font-weight: 600;
       background: var(--accent-bg); color: var(--accent);
     }
-    .subj-count { font-size: 11.5px; color: var(--subtle); }
-    .subj-chevron { width: 18px; height: 18px; color: var(--subtle); transition: transform .2s; flex-shrink: 0; }
-    .subj-card.open .subj-chevron { transform: rotate(90deg); }
-
-    .subj-lessons { display: none; border-top: 1px solid var(--border); }
-    .subj-card.open .subj-lessons { display: block; animation: fadeUp .18s ease; }
-
-    .grid-lesson-item {
-      display: flex; align-items: center; gap: 9px;
-      padding: 9px 16px; text-decoration: none; color: var(--muted);
-      font-size: 13px; border-bottom: 1px solid var(--border);
-      transition: background .1s, color .1s;
+    .subj-card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 10px; border-top: 1px solid var(--border);
     }
-    .grid-lesson-item:last-child { border-bottom: none; }
-    .grid-lesson-item:hover { background: var(--accent-bg); color: var(--accent); }
-    .grid-lesson-item svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--border2); }
-    .grid-lesson-item:hover svg { color: var(--accent-lt); }
-    .grid-lesson-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .grid-pages-badge {
-      font-size: 10px; color: var(--subtle);
-      background: var(--bg); border: 1px solid var(--border);
-      padding: 1px 6px; border-radius: 10px; flex-shrink: 0;
+    .subj-card-count { font-size: 12px; color: var(--subtle); }
+    .subj-card-arr {
+      width: 18px; height: 18px; color: var(--border2);
+      transition: color .15s, transform .15s;
     }
-    .grid-arr { width: 11px; height: 11px; color: var(--border2); flex-shrink: 0; }
-    .grid-no-lessons { padding: 12px 16px; font-size: 12.5px; color: var(--subtle); font-style: italic; }
+    .subj-card:hover .subj-card-arr { color: var(--accent); transform: translateX(2px); }
 
-    /* ══ LIST VIEW ══════════════════════════════════════════ */
-    .subjects-list { display: flex; flex-direction: column; }
-
-    .list-subj-row {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
+    /* ── Lesson card ── */
+    .lesson-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-lg); box-shadow: var(--sh-sm);
+      padding: 18px 20px; cursor: pointer;
+      display: flex; flex-direction: column; gap: 10px;
+      transition: box-shadow .18s, transform .15s, border-color .15s;
+      text-decoration: none;
     }
-    .list-subj-row:first-child { border-top: 1px solid var(--border); }
-
-    .list-subj-head {
-      display: flex; align-items: center; gap: 12px;
-      padding: 11px 20px; cursor: pointer; user-select: none;
-      transition: background .1s;
+    .lesson-card:hover {
+      box-shadow: var(--sh); transform: translateY(-2px);
+      border-color: var(--accent-lt);
     }
-    .list-subj-head:hover { background: var(--bg); }
-    .list-subj-icon {
-      width: 30px; height: 30px; border-radius: 7px;
+    .lesson-card-top { display: flex; align-items: flex-start; gap: 10px; }
+    .lesson-card-icon {
+      width: 36px; height: 36px; border-radius: 9px;
       background: var(--accent-bg); flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
     }
-    .list-subj-icon svg { width: 14px; height: 14px; color: var(--accent); }
-    .list-subj-name { font-size: 13.5px; font-weight: 600; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .list-subj-cat {
+    .lesson-card-icon svg { width: 15px; height: 15px; color: var(--accent); }
+    .lesson-card-title {
+      font-size: 14px; font-weight: 600; color: var(--text);
+      line-height: 1.4; flex: 1;
+    }
+    .lesson-card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px;
+    }
+    .lesson-pages-badge {
+      font-size: 10.5px; color: var(--subtle);
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 2px 7px; border-radius: 10px;
+    }
+    .lesson-open-hint {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; color: var(--subtle);
+      transition: color .12s;
+    }
+    .lesson-open-hint svg { width: 11px; height: 11px; }
+    .lesson-card:hover .lesson-open-hint { color: var(--accent); }
+
+    /* ══ LIST VIEW ══════════════════════════════════════════ */
+    .items-list { display: flex; flex-direction: column; }
+
+    /* ── Subject list row ── */
+    .subj-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 20px; cursor: pointer;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+      text-decoration: none;
+    }
+    .subj-row:first-child { border-top: 1px solid var(--border); }
+    .subj-row:hover { background: var(--accent-bg); }
+    .subj-row-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--accent-bg); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .subj-row:hover .subj-row-icon { background: var(--accent-lt); }
+    .subj-row-icon svg { width: 14px; height: 14px; color: var(--accent); }
+    .subj-row-name { font-size: 13.5px; font-weight: 600; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .subj-row-cat {
       font-size: 11px; font-weight: 600; color: var(--accent);
       background: var(--accent-bg); padding: 2px 8px;
       border-radius: 20px; flex-shrink: 0;
     }
-    .list-subj-count { font-size: 12px; color: var(--subtle); flex-shrink: 0; min-width: 80px; text-align: right; }
-    .list-chevron { width: 16px; height: 16px; color: var(--subtle); transition: transform .2s; flex-shrink: 0; margin-left: 4px; }
-    .list-subj-row.open .list-chevron { transform: rotate(90deg); }
+    .subj-row:hover .subj-row-cat { background: var(--accent-lt); }
+    .subj-row-count { font-size: 12px; color: var(--subtle); flex-shrink: 0; min-width: 80px; text-align: right; }
+    .subj-row-arr { width: 15px; height: 15px; color: var(--subtle); flex-shrink: 0; margin-left: 4px; transition: color .12s, transform .12s; }
+    .subj-row:hover .subj-row-arr { color: var(--accent); transform: translateX(2px); }
 
-    .list-lessons { display: none; border-top: 1px solid var(--border); background: var(--bg); }
-    .list-subj-row.open .list-lessons { display: block; animation: fadeUp .15s ease; }
-
-    .list-lesson-item {
+    /* ── Lesson list row ── */
+    .lesson-row {
       display: flex; align-items: center; gap: 10px;
-      padding: 9px 20px 9px 62px;
-      text-decoration: none; color: var(--muted);
-      font-size: 13px; border-bottom: 1px solid var(--border);
-      transition: background .1s, color .1s;
+      padding: 10px 20px; cursor: pointer;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+      text-decoration: none;
     }
-    .list-lesson-item:last-child { border-bottom: none; }
-    .list-lesson-item:hover { background: var(--accent-bg); color: var(--accent); }
-    .list-lesson-item svg { width: 12px; height: 12px; flex-shrink: 0; color: var(--border2); }
-    .list-lesson-item:hover svg { color: var(--accent-lt); }
-    .list-lesson-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .list-pages-badge {
-      font-size: 10px; color: var(--subtle);
-      background: var(--surface); border: 1px solid var(--border);
+    .lesson-row:first-child { border-top: 1px solid var(--border); }
+    .lesson-row:hover { background: var(--accent-bg); }
+    .lesson-row-icon {
+      width: 28px; height: 28px; border-radius: 7px;
+      background: var(--bg); border: 1px solid var(--border);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .lesson-row-icon svg { width: 12px; height: 12px; color: var(--subtle); }
+    .lesson-row:hover .lesson-row-icon { background: var(--accent-bg); border-color: var(--accent-lt); }
+    .lesson-row:hover .lesson-row-icon svg { color: var(--accent); }
+    .lesson-row-title { font-size: 13px; font-weight: 500; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lesson-row-badge {
+      font-size: 10.5px; color: var(--subtle);
+      background: var(--bg); border: 1px solid var(--border);
       padding: 1px 6px; border-radius: 10px; flex-shrink: 0;
     }
-    .list-arr { width: 10px; height: 10px; color: var(--border2); flex-shrink: 0; }
-    .list-no-lessons { padding: 9px 20px 9px 62px; font-size: 12px; color: var(--subtle); font-style: italic; }
+    .lesson-row-ext { width: 13px; height: 13px; color: var(--subtle); flex-shrink: 0; margin-left: 2px; transition: color .12s; }
+    .lesson-row:hover .lesson-row-ext { color: var(--accent); }
 
     /* ══ SHARED ═════════════════════════════════════════════ */
+    .items-count { font-size: 12px; color: var(--subtle); margin-bottom: 12px; }
+
     .portal-empty {
       padding: 60px 20px; text-align: center; color: var(--subtle);
     }
@@ -159,17 +217,16 @@
     }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-    .results-count { font-size: 12px; color: var(--subtle); margin-bottom: 12px; }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(5px); }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: none; }
     }
+    .fade-in { animation: fadeIn .2s ease; }
 
     @media(max-width:640px) {
       .portal-controls { padding: 12px; gap: 8px; }
       .search-wrap { max-width: 100%; }
-      .list-subj-cat { display: none; }
+      .subj-row-cat { display: none; }
     }
   </style>
 </head>
@@ -216,10 +273,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <input id="searchInp" class="search-inp" type="search" placeholder="Пошук предметів…" autocomplete="off" />
+      <input id="searchInp" class="search-inp" type="search" placeholder="Пошук…" autocomplete="off" />
     </div>
 
-    <div class="cat-dropdown" id="catDropdown">
+    <div class="cat-dropdown" id="catDropdown" style="display:flex">
       <button class="cat-btn" id="catBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -233,21 +290,25 @@
 
   <!-- ══ MAIN ══════════════════════════════════════════════ -->
   <main id="mainWrap" style="padding:20px 20px 60px;">
-    <p class="results-count" id="resultsCount"></p>
+    <div id="breadcrumbArea"></div>
+    <p class="items-count" id="itemsCount"></p>
     <div id="contentArea">
       <!-- Skeleton -->
-      <div class="subjects-grid">
-        <div class="subj-card" style="padding:16px">
-          <div class="skeleton" style="height:40px;border-radius:10px;margin-bottom:12px"></div>
-          <div class="skeleton" style="height:13px;width:65%"></div>
+      <div class="items-grid">
+        <div class="subj-card" style="min-height:120px">
+          <div class="skeleton" style="height:42px;width:42px;border-radius:11px"></div>
+          <div class="skeleton" style="height:15px;width:70%;margin-top:8px"></div>
+          <div class="skeleton" style="height:12px;width:45%;margin-top:4px"></div>
         </div>
-        <div class="subj-card" style="padding:16px">
-          <div class="skeleton" style="height:40px;border-radius:10px;margin-bottom:12px"></div>
-          <div class="skeleton" style="height:13px;width:55%"></div>
+        <div class="subj-card" style="min-height:120px">
+          <div class="skeleton" style="height:42px;width:42px;border-radius:11px"></div>
+          <div class="skeleton" style="height:15px;width:60%;margin-top:8px"></div>
+          <div class="skeleton" style="height:12px;width:50%;margin-top:4px"></div>
         </div>
-        <div class="subj-card" style="padding:16px">
-          <div class="skeleton" style="height:40px;border-radius:10px;margin-bottom:12px"></div>
-          <div class="skeleton" style="height:13px;width:70%"></div>
+        <div class="subj-card" style="min-height:120px">
+          <div class="skeleton" style="height:42px;width:42px;border-radius:11px"></div>
+          <div class="skeleton" style="height:15px;width:75%;margin-top:8px"></div>
+          <div class="skeleton" style="height:12px;width:40%;margin-top:4px"></div>
         </div>
       </div>
     </div>
@@ -256,7 +317,7 @@
   <!-- ══ STATUS BAR ════════════════════════════════════════ -->
   <div class="statusbar" style="position:fixed;bottom:0;left:0;right:0;">
     <span><span class="sb-dot"></span>Firebase Realtime DB</span>
-    <span id="sbSubjectCount" style="color:var(--subtle)"></span>
+    <span id="sbCount" style="color:var(--subtle)"></span>
     <span class="sb-right" id="sbTime" style="color:var(--subtle)"></span>
   </div>
 
@@ -273,50 +334,50 @@
   <script type="module">
     import { dbGet, objToArray } from './firebase-config.js';
 
-    let allSubjects   = [];
-    let allCategories = {};
-    let allLessons    = {};
-    let activeCatId   = null;
-    let searchQuery   = '';
-    let currentView   = localStorage.getItem('edvault_view') || 'grid';
+    // ── State ──────────────────────────────────────────────
+    let allSubjects    = [];
+    let allCategories  = {};
+    let allLessons     = {};
+    let activeCatId    = null;
+    let searchQuery    = '';
+    let selectedSubjId = null;   // null = subjects view, ID = lessons view
+    let currentView    = localStorage.getItem('edvault_view') || 'grid';
 
-    const area         = document.getElementById('contentArea');
-    const searchInp    = document.getElementById('searchInp');
-    const catBtn       = document.getElementById('catBtn');
-    const catBtnLabel  = document.getElementById('catBtnLabel');
-    const catMenu      = document.getElementById('catMenu');
-    const catDropdown  = document.getElementById('catDropdown');
-    const loadOverlay  = document.getElementById('loadOverlay');
-    const resultsCount = document.getElementById('resultsCount');
-    const sbCount      = document.getElementById('sbSubjectCount');
-    const sbTime       = document.getElementById('sbTime');
-    const btnGrid      = document.getElementById('btnGrid');
-    const btnList      = document.getElementById('btnList');
+    // ── DOM ────────────────────────────────────────────────
+    const mainWrap      = document.getElementById('mainWrap');
+    const area          = document.getElementById('contentArea');
+    const bcArea        = document.getElementById('breadcrumbArea');
+    const searchInp     = document.getElementById('searchInp');
+    const catBtn        = document.getElementById('catBtn');
+    const catBtnLabel   = document.getElementById('catBtnLabel');
+    const catMenu       = document.getElementById('catMenu');
+    const catDropdown   = document.getElementById('catDropdown');
+    const loadOverlay   = document.getElementById('loadOverlay');
+    const itemsCount    = document.getElementById('itemsCount');
+    const sbCount       = document.getElementById('sbCount');
+    const sbTime        = document.getElementById('sbTime');
+    const btnGrid       = document.getElementById('btnGrid');
+    const btnList       = document.getElementById('btnList');
 
-    const mainWrap     = document.getElementById('mainWrap');
-
+    // ── Clock ──────────────────────────────────────────────
     const tick = () => sbTime.textContent = new Date().toLocaleTimeString('uk-UA');
     tick(); setInterval(tick, 1000);
 
+    // ── View toggle ────────────────────────────────────────
     function applyView(v, rerender = false) {
       currentView = v;
       localStorage.setItem('edvault_view', v);
       btnGrid.classList.toggle('active', v === 'grid');
       btnList.classList.toggle('active', v === 'list');
-      // Grid: centred max-width container; List: full-width with side padding
-      if (v === 'grid') {
-        mainWrap.style.maxWidth = '1200px';
-        mainWrap.style.margin   = '0 auto';
-      } else {
-        mainWrap.style.maxWidth = 'none';
-        mainWrap.style.margin   = '0';
-      }
+      if (v === 'grid') { mainWrap.style.maxWidth = '1200px'; mainWrap.style.margin = '0 auto'; }
+      else              { mainWrap.style.maxWidth = 'none';   mainWrap.style.margin = '0'; }
       if (rerender) render();
     }
     btnGrid.addEventListener('click', () => applyView('grid', true));
     btnList.addEventListener('click', () => applyView('list', true));
     applyView(currentView, false);
 
+    // ── Bootstrap ──────────────────────────────────────────
     async function bootstrap() {
       loadOverlay.classList.add('show');
       try {
@@ -332,21 +393,20 @@
         console.error(err);
         area.innerHTML = `<div class="portal-empty">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <strong>Помилка завантаження</strong>
-          <p>Перевірте конфігурацію Firebase та правила бази даних.</p>
+          <strong>Помилка завантаження</strong><p>Перевірте конфігурацію Firebase.</p>
         </div>`;
       } finally {
         loadOverlay.classList.remove('show');
       }
     }
 
+    // ── Category menu ──────────────────────────────────────
     function buildCategoryMenu() {
       catMenu.innerHTML = '';
-      addCatOpt('', 'Всі категорії', null);
-      Object.entries(allCategories).forEach(([id, cat]) => addCatOpt(id, cat.name, id));
+      addCatOpt('Всі категорії', null);
+      Object.entries(allCategories).forEach(([id, cat]) => addCatOpt(cat.name, id));
     }
-
-    function addCatOpt(id, label, catId) {
+    function addCatOpt(label, catId) {
       const opt = document.createElement('button');
       opt.className = 'cat-opt' + (catId === activeCatId ? ' active' : '');
       opt.textContent = label;
@@ -360,7 +420,6 @@
       });
       catMenu.appendChild(opt);
     }
-
     catBtn.addEventListener('click', () => {
       catMenu.classList.toggle('open');
       catBtn.classList.toggle('open', catMenu.classList.contains('open'));
@@ -368,17 +427,36 @@
     document.addEventListener('click', e => { if (!catDropdown.contains(e.target)) closeDropdown(); });
     function closeDropdown() { catMenu.classList.remove('open'); catBtn.classList.remove('open'); }
 
-    searchInp.addEventListener('input', () => { searchQuery = searchInp.value.toLowerCase().trim(); render(); });
+    // ── Search ─────────────────────────────────────────────
+    searchInp.addEventListener('input', () => {
+      searchQuery = searchInp.value.toLowerCase().trim();
+      render();
+    });
 
+    // ── Navigation ─────────────────────────────────────────
+    function openSubject(subjId) {
+      selectedSubjId = subjId;
+      searchInp.value = '';
+      searchQuery = '';
+      render();
+      window.scrollTo(0, 0);
+    }
+    function goBack() {
+      selectedSubjId = null;
+      searchInp.value = '';
+      searchQuery = '';
+      render();
+      window.scrollTo(0, 0);
+    }
+
+    // ── Helpers ────────────────────────────────────────────
     function lessonsFor(sid) {
       return Object.entries(allLessons)
         .filter(([, l]) => l.subjectId === sid)
         .map(([id, l]) => ({ id, ...l, pagesCount: Array.isArray(l.pages) ? l.pages.length : (l.htmlContent ? 1 : 0) }))
         .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'uk'));
     }
-
     function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
     function ukEnd(n, many, one, few) {
       const abs = Math.abs(n) % 100, last = abs % 10;
       if (abs >= 11 && abs <= 19) return many;
@@ -389,8 +467,30 @@
 
     const BOOK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
     const DOC_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+    const ARR_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+    const EXT_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
 
+    // ── Main render ────────────────────────────────────────
     function render() {
+      area.innerHTML = '';
+      area.classList.add('fade-in');
+      setTimeout(() => area.classList.remove('fade-in'), 300);
+
+      if (selectedSubjId) {
+        renderLessons(selectedSubjId);
+      } else {
+        renderSubjects();
+      }
+    }
+
+    // ══════════════════════════════════════════════════════
+    // SUBJECTS VIEW
+    // ══════════════════════════════════════════════════════
+    function renderSubjects() {
+      // Category filter only shown on subjects view
+      catDropdown.style.display = 'flex';
+      bcArea.innerHTML = '';
+
       const filtered = allSubjects
         .filter(s => (!activeCatId || s.categoryId === activeCatId)
                   && (!searchQuery || s.name.toLowerCase().includes(searchQuery)))
@@ -398,114 +498,154 @@
 
       const total = filtered.length;
       sbCount.textContent = `${total} предмет${ukEnd(total, 'ів', '', 'и')}`;
-      resultsCount.textContent = total ? `${total} предмет${ukEnd(total, 'ів', '', 'и')} знайдено` : '';
+      itemsCount.textContent = total ? `${total} предмет${ukEnd(total, 'ів', '', 'и')} знайдено` : '';
 
       if (!total) {
         area.innerHTML = `<div class="portal-empty">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <strong>Нічого не знайдено</strong>
-          <p>Спробуйте інший пошуковий запит або категорію.</p>
+          <strong>Нічого не знайдено</strong><p>Спробуйте інший запит або категорію.</p>
         </div>`;
         return;
       }
 
-      area.innerHTML = '';
-      currentView === 'grid' ? renderGrid(filtered) : renderList(filtered);
+      currentView === 'grid' ? renderSubjectsGrid(filtered) : renderSubjectsList(filtered);
     }
 
-    /* ── GRID ─────────────────────────────────────────────── */
-    function renderGrid(subjects) {
+    function renderSubjectsGrid(subjects) {
       const grid = document.createElement('div');
-      grid.className = 'subjects-grid';
-
-      subjects.forEach(subject => {
-        const lessons = lessonsFor(subject.id);
-        const catName = allCategories[subject.categoryId]?.name || '';
-
-        const card = document.createElement('div');
-        card.className = 'subj-card';
-
-        const head = document.createElement('div');
-        head.className = 'subj-card-head';
-        head.innerHTML = `
-          <div class="subj-icon">${BOOK_SVG}</div>
-          <div class="subj-info">
-            <div class="subj-name">${esc(subject.name)}</div>
-            <div class="subj-meta">
-              ${catName ? `<span class="cat-pill">${esc(catName)}</span>` : ''}
-              <span class="subj-count">${lessons.length} урок${ukEnd(lessons.length, 'ів', '', 'и')}</span>
+      grid.className = 'items-grid';
+      subjects.forEach(subj => {
+        const lessons = lessonsFor(subj.id);
+        const catName = allCategories[subj.categoryId]?.name || '';
+        const el = document.createElement('div');
+        el.className = 'subj-card';
+        el.innerHTML = `
+          <div class="subj-card-top">
+            <div class="subj-card-icon">${BOOK_SVG}</div>
+            <div class="subj-card-info">
+              <div class="subj-card-name">${esc(subj.name)}</div>
+              ${catName ? `<span class="subj-card-cat">${esc(catName)}</span>` : ''}
             </div>
           </div>
-          <svg class="subj-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
-
-        const panel = document.createElement('div');
-        panel.className = 'subj-lessons';
-
-        if (!lessons.length) {
-          panel.innerHTML = `<div class="grid-no-lessons">Уроків ще немає</div>`;
-        } else {
-          lessons.forEach(lesson => {
-            const a = document.createElement('a');
-            a.className = 'grid-lesson-item';
-            a.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
-            const badge = lesson.pagesCount > 1 ? `<span class="grid-pages-badge">${lesson.pagesCount} стор.</span>` : '';
-            a.innerHTML = `${DOC_SVG}<span class="grid-lesson-title">${esc(lesson.title || 'Без назви')}</span>${badge}<svg class="grid-arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
-            panel.appendChild(a);
-          });
-        }
-
-        head.addEventListener('click', () => card.classList.toggle('open'));
-        card.appendChild(head);
-        card.appendChild(panel);
-        grid.appendChild(card);
+          <div class="subj-card-footer">
+            <span class="subj-card-count">${lessons.length} урок${ukEnd(lessons.length, 'ів', '', 'и')}</span>
+            <svg class="subj-card-arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>`;
+        el.addEventListener('click', () => openSubject(subj.id));
+        grid.appendChild(el);
       });
-
       area.appendChild(grid);
     }
 
-    /* ── LIST ─────────────────────────────────────────────── */
-    function renderList(subjects) {
+    function renderSubjectsList(subjects) {
       const list = document.createElement('div');
-      list.className = 'subjects-list';
-
-      subjects.forEach(subject => {
-        const lessons = lessonsFor(subject.id);
-        const catName = allCategories[subject.categoryId]?.name || '';
-
-        const row = document.createElement('div');
-        row.className = 'list-subj-row';
-
-        const head = document.createElement('div');
-        head.className = 'list-subj-head';
-        head.innerHTML = `
-          <div class="list-subj-icon">${BOOK_SVG}</div>
-          <span class="list-subj-name">${esc(subject.name)}</span>
-          ${catName ? `<span class="list-subj-cat">${esc(catName)}</span>` : ''}
-          <span class="list-subj-count">${lessons.length} урок${ukEnd(lessons.length, 'ів', '', 'и')}</span>
-          <svg class="list-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
-
-        const lessonsWrap = document.createElement('div');
-        lessonsWrap.className = 'list-lessons';
-
-        if (!lessons.length) {
-          lessonsWrap.innerHTML = `<div class="list-no-lessons">Уроків ще немає</div>`;
-        } else {
-          lessons.forEach(lesson => {
-            const a = document.createElement('a');
-            a.className = 'list-lesson-item';
-            a.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
-            const badge = lesson.pagesCount > 1 ? `<span class="list-pages-badge">${lesson.pagesCount} стор.</span>` : '';
-            a.innerHTML = `${DOC_SVG}<span class="list-lesson-title">${esc(lesson.title || 'Без назви')}</span>${badge}<svg class="list-arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
-            lessonsWrap.appendChild(a);
-          });
-        }
-
-        head.addEventListener('click', () => row.classList.toggle('open'));
-        row.appendChild(head);
-        row.appendChild(lessonsWrap);
-        list.appendChild(row);
+      list.className = 'items-list';
+      subjects.forEach(subj => {
+        const lessons = lessonsFor(subj.id);
+        const catName = allCategories[subj.categoryId]?.name || '';
+        const el = document.createElement('div');
+        el.className = 'subj-row';
+        el.innerHTML = `
+          <div class="subj-row-icon">${BOOK_SVG}</div>
+          <span class="subj-row-name">${esc(subj.name)}</span>
+          ${catName ? `<span class="subj-row-cat">${esc(catName)}</span>` : ''}
+          <span class="subj-row-count">${lessons.length} урок${ukEnd(lessons.length, 'ів', '', 'и')}</span>
+          <svg class="subj-row-arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+        el.addEventListener('click', () => openSubject(subj.id));
+        list.appendChild(el);
       });
+      area.appendChild(list);
+    }
 
+    // ══════════════════════════════════════════════════════
+    // LESSONS VIEW
+    // ══════════════════════════════════════════════════════
+    function renderLessons(subjId) {
+      const subj    = allSubjects.find(s => s.id === subjId);
+      const catName = allCategories[subj?.categoryId]?.name || '';
+      // Hide category filter in lessons view
+      catDropdown.style.display = 'none';
+
+      // Breadcrumb
+      bcArea.innerHTML = '';
+      const bc = document.createElement('div');
+      bc.className = 'portal-breadcrumb';
+      bc.innerHTML = `
+        <button class="bc-back" id="bcBackBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Всі предмети
+        </button>
+        <span class="bc-sep">›</span>
+        ${catName ? `<span style="font-size:12.5px;color:var(--subtle)">${esc(catName)}</span><span class="bc-sep">›</span>` : ''}
+        <span class="bc-cur">${esc(subj?.name || 'Предмет')}</span>`;
+      bcArea.appendChild(bc);
+      document.getElementById('bcBackBtn').addEventListener('click', goBack);
+
+      const lessons = lessonsFor(subjId)
+        .filter(l => !searchQuery || (l.title || '').toLowerCase().includes(searchQuery));
+
+      const total = lessons.length;
+      sbCount.textContent = `${total} урок${ukEnd(total, 'ів', '', 'и')}`;
+      itemsCount.textContent = total
+        ? `${total} урок${ukEnd(total, 'ів', '', 'и')} — ${esc(subj?.name || '')}`
+        : '';
+
+      if (!total) {
+        area.innerHTML = `<div class="portal-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <strong>Уроків ще немає</strong><p>До цього предмету не додано жодного уроку.</p>
+        </div>`;
+        return;
+      }
+
+      currentView === 'grid' ? renderLessonsGrid(lessons) : renderLessonsList(lessons);
+    }
+
+    function renderLessonsGrid(lessons) {
+      const grid = document.createElement('div');
+      grid.className = 'items-grid';
+      lessons.forEach(lesson => {
+        const el = document.createElement('a');
+        el.className = 'lesson-card';
+        el.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
+        el.target = '_blank';
+        el.rel = 'noopener';
+        const badge = lesson.pagesCount > 1
+          ? `<span class="lesson-pages-badge">${lesson.pagesCount} стор.</span>` : '';
+        el.innerHTML = `
+          <div class="lesson-card-top">
+            <div class="lesson-card-icon">${DOC_SVG}</div>
+            <div class="lesson-card-title">${esc(lesson.title || 'Без назви')}</div>
+          </div>
+          <div class="lesson-card-footer">
+            ${badge}
+            <span class="lesson-open-hint">
+              ${EXT_SVG} відкрити
+            </span>
+          </div>`;
+        grid.appendChild(el);
+      });
+      area.appendChild(grid);
+    }
+
+    function renderLessonsList(lessons) {
+      const list = document.createElement('div');
+      list.className = 'items-list';
+      lessons.forEach(lesson => {
+        const el = document.createElement('a');
+        el.className = 'lesson-row';
+        el.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
+        el.target = '_blank';
+        el.rel = 'noopener';
+        const badge = lesson.pagesCount > 1
+          ? `<span class="lesson-row-badge">${lesson.pagesCount} стор.</span>` : '';
+        el.innerHTML = `
+          <div class="lesson-row-icon">${DOC_SVG}</div>
+          <span class="lesson-row-title">${esc(lesson.title || 'Без назви')}</span>
+          ${badge}
+          <svg class="lesson-row-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+        list.appendChild(el);
+      });
       area.appendChild(list);
     }
 
