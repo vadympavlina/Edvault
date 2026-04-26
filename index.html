@@ -97,6 +97,11 @@
     .lesson-item svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--subtle); }
     .lesson-item:hover svg { color: var(--accent); }
     .lesson-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lesson-pages-badge {
+      font-size: 10.5px; color: var(--subtle);
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 1px 6px; border-radius: 10px; flex-shrink: 0; white-space: nowrap;
+    }
 
     /* ── LIST layout overrides ── */
     .portal-grid-inner.list-view {
@@ -110,34 +115,22 @@
     .list-view .subject-icon svg { width: 14px; height: 14px; }
     .list-view .subject-card-name { font-size: 13.5px; }
 
-    /* In list mode: lessons become pill tags in a flex row */
+    /* In list mode: lessons-list is a block (rows), not flex pills */
     .list-view .lessons-list {
       display: none;
-      flex-wrap: wrap;
-      gap: 5px;
-      padding: 6px 10px 10px;
+      padding: 4px 0 6px;
       border-top: 1px solid var(--border);
     }
-    .list-view .subject-card.open .lessons-list { display: flex; }
+    .list-view .subject-card.open .lessons-list { display: block; }
 
-    /* Hide the default vertical lesson-item in list mode */
+    /* List mode lesson row — compact */
     .list-view .lesson-item {
-      padding: 4px 11px;
-      border-radius: 20px;
-      font-size: 12px;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      flex-shrink: 0;
-      white-space: nowrap;
-      display: inline-flex;
+      padding: 7px 14px;
+      font-size: 12.5px;
+      display: flex;
     }
-    .list-view .lesson-item svg:first-child,
-    .list-view .lesson-item svg:last-child { display: none; }
-    .list-view .lesson-item:hover {
-      background: var(--accent-bg);
-      border-color: var(--accent-lt);
-      color: var(--accent);
-    }
+    .list-view .lesson-item svg { width: 12px; height: 12px; }
+    .list-view .lesson-pages-badge { display: none; }
 
     /* Category badge */
     .cat-badge {
@@ -396,7 +389,10 @@
     function lessonsFor(sid) {
       return Object.entries(allLessons)
         .filter(([, l]) => l.subjectId === sid)
-        .map(([id, l]) => ({ id, ...l }))
+        .map(([id, l]) => ({
+          id, ...l,
+          pagesCount: Array.isArray(l.pages) ? l.pages.length : (l.htmlContent ? 1 : 0)
+        }))
         .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'uk'));
     }
 
@@ -470,12 +466,14 @@
             a.className = 'lesson-item';
             a.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
 
+            const pagesLabel = lesson.pagesCount > 1 ? `${lesson.pagesCount} стор.` : '';
+
             if (isList) {
-              // Compact pill — just the title
-              a.innerHTML = esc(lesson.title || 'Untitled');
-            } else {
-              // Full row with icons
+              // Compact row with icons
               a.innerHTML = `${DOC_SVG}<span class="lesson-item-title">${esc(lesson.title || 'Untitled')}</span>${ARR_SVG}`;
+            } else {
+              // Full row with icons + pages badge
+              a.innerHTML = `${DOC_SVG}<span class="lesson-item-title">${esc(lesson.title || 'Untitled')}</span>${pagesLabel ? `<span class="lesson-pages-badge">${pagesLabel}</span>` : ''}${ARR_SVG}`;
             }
             wrap.appendChild(a);
           });

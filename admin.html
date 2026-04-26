@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edvault — Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234F6BF4'/><path d='M8 24.5A2.5 2.5 0 0 1 10.5 22H24M10.5 7H24v18H10.5A2.5 2.5 0 0 1 8 22.5v-13A2.5 2.5 0 0 1 10.5 7z' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <style>
+    body { overflow: auto; height: auto; min-height: 100vh; }
+
+    /* ── Auth screen ── */
+    .auth-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh;
+      background: var(--bg);
+      background-image: radial-gradient(circle, rgba(180,185,200,.4) 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      box-shadow: var(--sh-lg);
+      padding: 40px 44px;
+      width: 100%; max-width: 360px;
+      animation: popIn .2s ease;
+    }
+    .auth-logo {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 28px;
+    }
+    .auth-logo .brand-mark { width: 36px; height: 36px; border-radius: 10px; }
+    .auth-logo .brand-mark svg { width: 16px; height: 16px; }
+    .auth-logo-text { font-size: 17px; font-weight: 700; color: var(--text); }
+    .auth-logo-sub { font-size: 12px; color: var(--subtle); margin-top: 1px; }
+    .auth-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .auth-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; letter-spacing: .2px; }
+    .field input {
+      width: 100%; height: 38px; padding: 0 12px;
+      border: 1px solid var(--border2); border-radius: var(--r);
+      font-family: 'Inter', system-ui, sans-serif; font-size: 13.5px;
+      color: var(--text); background: var(--bg); outline: none;
+      transition: border-color .13s, box-shadow .13s;
+    }
+    .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.12); background: var(--surface); }
+    .auth-error { font-size: 12px; color: #ef4444; margin-bottom: 12px; display: none; }
+    .auth-error.show { display: block; }
+    .btn-auth { width: 100%; height: 38px; margin-top: 4px; justify-content: center; }
+
+    /* ── Admin layout ── */
+    .admin-screen { display: none; flex-direction: column; min-height: 100vh; }
+    .admin-screen.show { display: flex; }
+
+    /* ── Sidebar ── */
+    .admin-layout { display: flex; flex: 1; overflow: hidden; height: calc(100vh - var(--topbar) - var(--statusbar)); }
+    .admin-sidebar {
+      width: 220px; min-width: 220px;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow-y: auto; flex-shrink: 0;
+    }
+    .sidebar-section { padding: 12px 10px 4px; }
+    .sidebar-section-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--subtle); padding: 0 6px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: var(--r);
+      font-size: 13px; font-weight: 500; color: var(--muted);
+      cursor: pointer; transition: background .12s, color .12s;
+      border: none; background: transparent; width: 100%; text-align: left;
+    }
+    .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .nav-item:hover { background: var(--bg); color: var(--text); }
+    .nav-item.active { background: var(--accent-bg); color: var(--accent); }
+    .nav-count {
+      margin-left: auto; font-size: 10.5px; font-weight: 600;
+      background: var(--bg); color: var(--subtle);
+      padding: 1px 6px; border-radius: 10px;
+    }
+    .nav-item.active .nav-count { background: var(--accent-lt); color: var(--accent); }
+
+    /* ── Main content ── */
+    .admin-main { flex: 1; overflow-y: auto; background: var(--bg); }
+    .admin-content { max-width: 900px; margin: 0 auto; padding: 28px 24px 60px; }
+    .content-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 24px;
+    }
+    .content-title { font-size: 20px; font-weight: 700; color: var(--text); }
+    .content-subtitle { font-size: 13px; color: var(--subtle); margin-top: 2px; }
+    .content-header-actions { margin-left: auto; display: flex; gap: 8px; }
+
+    /* ── Table card ── */
+    .table-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-lg); box-shadow: var(--sh-sm); overflow: hidden;
+    }
+    .table-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+    .table-row:last-child { border-bottom: none; }
+    .table-row:hover { background: var(--bg); }
+    .table-row-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--accent-bg);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .table-row-icon svg { width: 14px; height: 14px; color: var(--accent); }
+    .table-row-info { flex: 1; min-width: 0; }
+    .table-row-name { font-size: 13.5px; font-weight: 600; color: var(--text); }
+    .table-row-meta { font-size: 11.5px; color: var(--subtle); margin-top: 1px; }
+    .table-row-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .icon-btn {
+      width: 28px; height: 28px; border: none; border-radius: var(--r);
+      background: transparent; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--subtle); transition: background .12s, color .12s;
+    }
+    .icon-btn svg { width: 13px; height: 13px; }
+    .icon-btn:hover { background: var(--bg); color: var(--text); }
+    .icon-btn.danger:hover { background: #fef2f2; color: #ef4444; }
+    .table-empty {
+      padding: 40px 20px; text-align: center;
+      color: var(--subtle); font-size: 13px; font-style: italic;
+    }
+    .badge {
+      display: inline-flex; align-items: center;
+      height: 19px; padding: 0 7px; border-radius: 20px;
+      font-size: 10.5px; font-weight: 600;
+      background: var(--accent-bg); color: var(--accent);
+    }
+
+    /* ── Modal ── */
+    .modal-bg {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15,18,25,.45);
+      backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+      z-index: 9000; align-items: center; justify-content: center;
+    }
+    .modal-bg.show { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-lg); box-shadow: var(--sh-lg);
+      width: 100%; max-width: 560px; max-height: 90vh;
+      overflow-y: auto; animation: popIn .18s ease;
+    }
+    .modal.modal-lg { max-width: 860px; }
+    .modal-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: var(--surface); z-index: 2;
+    }
+    .modal-title { font-size: 15px; font-weight: 700; color: var(--text); flex: 1; }
+    .modal-close {
+      width: 28px; height: 28px; border: none; border-radius: var(--r);
+      background: transparent; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--subtle); transition: background .12s;
+    }
+    .modal-close:hover { background: var(--bg); color: var(--text); }
+    .modal-close svg { width: 14px; height: 14px; }
+    .modal-body { padding: 20px; }
+    .modal-footer {
+      display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+      padding: 14px 20px; border-top: 1px solid var(--border);
+      position: sticky; bottom: 0; background: var(--surface);
+    }
+
+    /* ── Form fields ── */
+    .form-field { margin-bottom: 16px; }
+    .form-field:last-child { margin-bottom: 0; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; letter-spacing: .2px; }
+    .form-input, .form-select {
+      width: 100%; height: 36px; padding: 0 11px;
+      border: 1px solid var(--border2); border-radius: var(--r);
+      font-family: 'Inter', system-ui, sans-serif; font-size: 13px;
+      color: var(--text); background: var(--bg); outline: none;
+      transition: border-color .13s, box-shadow .13s;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.12); background: var(--surface);
+    }
+    .form-select { cursor: pointer; }
+
+    /* ── Lesson pages ── */
+    .pages-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .pages-label { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .2px; }
+    .pages-tabs {
+      display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 4px; margin-bottom: 10px;
+    }
+    .page-tab {
+      display: flex; align-items: center; gap: 6px;
+      height: 28px; padding: 0 10px;
+      border-radius: 5px; border: 1px solid transparent;
+      font-size: 12.5px; font-weight: 500; color: var(--muted);
+      cursor: pointer; background: transparent;
+      transition: background .12s, color .12s, border-color .12s;
+      max-width: 140px;
+    }
+    .page-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .page-tab:hover { background: var(--surface); color: var(--text); }
+    .page-tab.active { background: var(--surface); color: var(--accent); border-color: var(--accent-lt); box-shadow: var(--sh-sm); }
+    .page-tab-del {
+      width: 14px; height: 14px; border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--subtle); flex-shrink: 0; background: transparent; border: none; cursor: pointer;
+      transition: background .1s, color .1s; padding: 0;
+    }
+    .page-tab-del:hover { background: #fee2e2; color: #ef4444; }
+    .page-tab-del svg { width: 10px; height: 10px; pointer-events: none; }
+    .add-page-tab {
+      height: 28px; padding: 0 8px;
+      border-radius: 5px; border: 1px dashed var(--border2);
+      font-size: 12px; color: var(--subtle);
+      cursor: pointer; background: transparent;
+      display: flex; align-items: center; gap: 5px;
+      transition: border-color .12s, color .12s, background .12s;
+      flex-shrink: 0;
+    }
+    .add-page-tab:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+    .add-page-tab svg { width: 11px; height: 11px; }
+
+    .page-title-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .page-title-inp {
+      flex: 1; height: 32px; padding: 0 10px;
+      border: 1px solid var(--border2); border-radius: var(--r);
+      font-family: 'Inter', system-ui, sans-serif; font-size: 13px;
+      color: var(--text); background: var(--bg); outline: none;
+      transition: border-color .13s, box-shadow .13s;
+    }
+    .page-title-inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.12); background: var(--surface); }
+
+    .html-editor {
+      width: 100%;
+      min-height: 280px;
+      padding: 12px;
+      border: 1px solid var(--border2); border-radius: var(--r);
+      font-family: 'Courier New', monospace; font-size: 12.5px;
+      color: var(--text); background: var(--bg); outline: none;
+      resize: vertical; line-height: 1.6;
+      transition: border-color .13s, box-shadow .13s;
+    }
+    .html-editor:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.12); background: var(--surface); }
+
+    /* ── Links & materials ── */
+    .links-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+    .link-row {
+      display: flex; gap: 6px; align-items: center;
+    }
+    .link-row input {
+      flex: 1; height: 32px; padding: 0 10px;
+      border: 1px solid var(--border2); border-radius: var(--r);
+      font-family: 'Inter', system-ui, sans-serif; font-size: 12.5px;
+      color: var(--text); background: var(--bg); outline: none;
+    }
+    .link-row input:focus { border-color: var(--accent); outline: none; }
+    .link-row-del {
+      width: 28px; height: 28px; flex-shrink: 0;
+      border: none; border-radius: var(--r); cursor: pointer;
+      background: transparent; display: flex; align-items: center; justify-content: center;
+      color: var(--subtle); transition: background .1s, color .1s;
+    }
+    .link-row-del:hover { background: #fef2f2; color: #ef4444; }
+    .link-row-del svg { width: 12px; height: 12px; }
+
+    /* ── Dashboard stats ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-lg); padding: 16px 18px; box-shadow: var(--sh-sm);
+    }
+    .stat-icon {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: var(--accent-bg);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 10px;
+    }
+    .stat-icon svg { width: 15px; height: 15px; color: var(--accent); }
+    .stat-val { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--subtle); margin-top: 4px; }
+
+    /* ── Toast ── */
+    .toast-container { position: fixed; bottom: 36px; right: 16px; z-index: 99999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+    .toast {
+      background: var(--text); color: #fff;
+      padding: 10px 16px; border-radius: var(--r);
+      font-size: 13px; font-weight: 500;
+      box-shadow: var(--sh-lg);
+      animation: slideUp .2s ease;
+      pointer-events: all;
+      display: flex; align-items: center; gap: 8px;
+      max-width: 320px;
+    }
+    .toast.success { background: #16a34a; }
+    .toast.error { background: #dc2626; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    @keyframes slideDown { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px); } }
+
+    /* ── Confirm modal ── */
+    .confirm-modal { max-width: 400px; }
+    .confirm-text { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .btn-danger { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+    .btn-danger:hover { background: #fecaca; border-color: #f87171; }
+
+    /* ── Section views ── */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    @media(max-width:640px) {
+      .admin-sidebar { display: none; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .admin-content { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ AUTH SCREEN ═══════════════════════════════════════════ -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="auth-logo-text">Edvault</div>
+        <div class="auth-logo-sub">Admin Panel</div>
+      </div>
+    </div>
+    <div class="auth-title">Вхід</div>
+    <div class="auth-sub">Введіть дані адміністратора</div>
+    <div class="auth-error" id="authError">Невірний логін або пароль</div>
+    <div class="field">
+      <label>Логін</label>
+      <input type="text" id="authUser" placeholder="admin" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label>Пароль</label>
+      <input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn btn-solid btn-auth" id="authBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      Увійти
+    </button>
+  </div>
+</div>
+
+<!-- ══ ADMIN SCREEN ═══════════════════════════════════════════ -->
+<div class="admin-screen" id="adminScreen">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <a href="index.html" class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      </div>
+      <span class="brand-name">Edvault</span>
+    </a>
+    <div class="topbar-div"></div>
+    <span style="font-size:12px;font-weight:600;color:var(--subtle);letter-spacing:.3px">ADMIN</span>
+    <div class="topbar-actions">
+      <a href="index.html" class="btn btn-ghost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="btn-label">Портал</span>
+      </a>
+      <button class="btn btn-ghost" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span class="btn-label">Вийти</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <div class="admin-layout">
+
+    <!-- Sidebar -->
+    <nav class="admin-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Навігація</div>
+        <button class="nav-item active" data-section="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Дашборд
+        </button>
+        <button class="nav-item" data-section="categories">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Категорії
+          <span class="nav-count" id="navCatCount">0</span>
+        </button>
+        <button class="nav-item" data-section="subjects">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          Предмети
+          <span class="nav-count" id="navSubjCount">0</span>
+        </button>
+        <button class="nav-item" data-section="lessons">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Уроки
+          <span class="nav-count" id="navLessonCount">0</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Content area -->
+    <main class="admin-main">
+      <div class="admin-content">
+
+        <!-- ── Dashboard ── -->
+        <div class="section active" id="sectionDashboard">
+          <div class="content-header">
+            <div>
+              <div class="content-title">Дашборд</div>
+              <div class="content-subtitle">Огляд навчального порталу</div>
+            </div>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div class="stat-val" id="statCats">–</div>
+              <div class="stat-label">Категорій</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              </div>
+              <div class="stat-val" id="statSubjs">–</div>
+              <div class="stat-label">Предметів</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div class="stat-val" id="statLessons">–</div>
+              <div class="stat-label">Уроків</div>
+            </div>
+          </div>
+
+          <!-- Recent lessons -->
+          <div class="content-header" style="margin-bottom:12px">
+            <div class="content-title" style="font-size:15px">Останні уроки</div>
+          </div>
+          <div class="table-card" id="recentLessons">
+            <div class="table-empty">Завантаження...</div>
+          </div>
+        </div>
+
+        <!-- ── Categories ── -->
+        <div class="section" id="sectionCategories">
+          <div class="content-header">
+            <div>
+              <div class="content-title">Категорії</div>
+              <div class="content-subtitle">Групи предметів</div>
+            </div>
+            <div class="content-header-actions">
+              <button class="btn btn-solid" id="btnAddCat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Додати категорію
+              </button>
+            </div>
+          </div>
+          <div class="table-card" id="catTable">
+            <div class="table-empty">Завантаження...</div>
+          </div>
+        </div>
+
+        <!-- ── Subjects ── -->
+        <div class="section" id="sectionSubjects">
+          <div class="content-header">
+            <div>
+              <div class="content-title">Предмети</div>
+              <div class="content-subtitle">Навчальні курси</div>
+            </div>
+            <div class="content-header-actions">
+              <button class="btn btn-solid" id="btnAddSubj">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Додати предмет
+              </button>
+            </div>
+          </div>
+          <div class="table-card" id="subjTable">
+            <div class="table-empty">Завантаження...</div>
+          </div>
+        </div>
+
+        <!-- ── Lessons ── -->
+        <div class="section" id="sectionLessons">
+          <div class="content-header">
+            <div>
+              <div class="content-title">Уроки</div>
+              <div class="content-subtitle">Навчальні матеріали</div>
+            </div>
+            <div class="content-header-actions">
+              <select class="form-select" id="lessonFilterSubj" style="width:180px;height:34px">
+                <option value="">Всі предмети</option>
+              </select>
+              <button class="btn btn-solid" id="btnAddLesson">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Додати урок
+              </button>
+            </div>
+          </div>
+          <div class="table-card" id="lessonTable">
+            <div class="table-empty">Завантаження...</div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Status bar -->
+  <div class="statusbar">
+    <span><span class="sb-dot"></span>Firebase Connected</span>
+    <span id="adminUser" style="color:var(--muted)"></span>
+    <span class="sb-right" id="sbTime"></span>
+  </div>
+</div>
+
+<!-- ══ MODALS ═══════════════════════════════════════════════ -->
+
+<!-- Category modal -->
+<div class="modal-bg" id="catModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="catModalTitle">Нова категорія</div>
+      <button class="modal-close" data-close="catModal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label class="form-label">Назва категорії</label>
+        <input class="form-input" id="catNameInp" placeholder="Наприклад: Інформаційні технології" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="catModal">Скасувати</button>
+      <button class="btn btn-solid" id="saveCatBtn">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<!-- Subject modal -->
+<div class="modal-bg" id="subjModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="subjModalTitle">Новий предмет</div>
+      <button class="modal-close" data-close="subjModal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label class="form-label">Назва предмету</label>
+        <input class="form-input" id="subjNameInp" placeholder="Наприклад: JavaScript" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Категорія</label>
+        <select class="form-select" id="subjCatSel"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="subjModal">Скасувати</button>
+      <button class="btn btn-solid" id="saveSubjBtn">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lesson modal -->
+<div class="modal-bg" id="lessonModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="lessonModalTitle">Новий урок</div>
+      <button class="modal-close" data-close="lessonModal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <!-- Basic info -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div class="form-field" style="margin:0">
+          <label class="form-label">Назва уроку</label>
+          <input class="form-input" id="lessonTitleInp" placeholder="Вступ до JavaScript" />
+        </div>
+        <div class="form-field" style="margin:0">
+          <label class="form-label">Предмет</label>
+          <select class="form-select" id="lessonSubjSel"></select>
+        </div>
+      </div>
+
+      <!-- Pages -->
+      <div style="border:1px solid var(--border);border-radius:var(--r);padding:14px;background:var(--bg);margin-bottom:16px">
+        <div class="pages-header">
+          <div class="pages-label">📄 Сторінки уроку</div>
+          <span style="font-size:11px;color:var(--subtle)">До одного уроку можна додати кілька сторінок</span>
+        </div>
+        <div class="pages-tabs" id="pagesTabs"></div>
+        <div id="pageEditor">
+          <!-- Filled dynamically -->
+        </div>
+      </div>
+
+      <!-- Links -->
+      <div style="margin-bottom:16px">
+        <div class="pages-header">
+          <div class="pages-label">🔗 Корисні посилання</div>
+          <button class="btn btn-outline" style="height:26px;font-size:12px;padding:0 10px" id="addLinkBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Додати
+          </button>
+        </div>
+        <div class="links-list" id="linksList"></div>
+      </div>
+
+      <!-- Materials -->
+      <div>
+        <div class="pages-header">
+          <div class="pages-label">📁 Матеріали</div>
+          <button class="btn btn-outline" style="height:26px;font-size:12px;padding:0 10px" id="addMatBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Додати
+          </button>
+        </div>
+        <div class="links-list" id="matsList"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="lessonModal">Скасувати</button>
+      <button class="btn btn-solid" id="saveLessonBtn">Зберегти урок</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm delete modal -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal confirm-modal">
+    <div class="modal-header">
+      <div class="modal-title">Підтвердження</div>
+      <button class="modal-close" data-close="confirmModal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-text" id="confirmText">Ви впевнені, що хочете видалити цей елемент?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="confirmModal">Скасувати</button>
+      <button class="btn btn-danger" id="confirmOkBtn">Видалити</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ══ SCRIPTS ═══════════════════════════════════════════════ -->
+<script type="module">
+  import { dbGet, dbSet, dbUpdate, dbPush, dbRemove, generateId, objToArray }
+    from './firebase-config.js';
+
+  // ── State ─────────────────────────────────────────────────
+  let allCategories = {};
+  let allSubjects   = {};
+  let allLessons    = {};
+
+  // Lesson editor state
+  let lessonPages   = []; // [{id, title, htmlContent}]
+  let activePageIdx = 0;
+  let editingLessonId = null;
+
+  let lessonLinks = []; // [{title, url}]
+  let lessonMats  = []; // [{title, fileUrl}]
+
+  // ── Clock ─────────────────────────────────────────────────
+  const sbTime = document.getElementById('sbTime');
+  const tick = () => sbTime.textContent = new Date().toLocaleTimeString('uk-UA');
+  tick(); setInterval(tick, 1000);
+
+  // ── Auth ──────────────────────────────────────────────────
+  const authScreen  = document.getElementById('authScreen');
+  const adminScreen = document.getElementById('adminScreen');
+  const authBtn     = document.getElementById('authBtn');
+  const authError   = document.getElementById('authError');
+
+  // Check session
+  const loggedIn = sessionStorage.getItem('ev_admin');
+  if (loggedIn) showAdmin(loggedIn);
+
+  authBtn.addEventListener('click', doLogin);
+  document.getElementById('authUser').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
+  document.getElementById('authPass').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
+
+  async function doLogin() {
+    const user = document.getElementById('authUser').value.trim();
+    const pass = document.getElementById('authPass').value;
+    if (!user || !pass) { showAuthError('Заповніть усі поля'); return; }
+    authBtn.disabled = true; authBtn.textContent = 'Перевірка...';
+    try {
+      const admins = await dbGet('/admins');
+      if (admins && admins[user] && admins[user].password === pass) {
+        sessionStorage.setItem('ev_admin', user);
+        showAdmin(user);
+      } else {
+        showAuthError('Невірний логін або пароль');
+      }
+    } catch(e) {
+      showAuthError('Помилка з\'єднання з Firebase');
+    } finally {
+      authBtn.disabled = false; authBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Увійти`;
+    }
+  }
+
+  function showAuthError(msg) {
+    authError.textContent = msg;
+    authError.classList.add('show');
+  }
+
+  function showAdmin(user) {
+    authScreen.style.display = 'none';
+    adminScreen.classList.add('show');
+    document.getElementById('adminUser').textContent = `👤 ${user}`;
+    bootstrap();
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    sessionStorage.removeItem('ev_admin');
+    location.reload();
+  });
+
+  // ── Navigation ────────────────────────────────────────────
+  document.querySelectorAll('.nav-item[data-section]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById('section' + capitalize(btn.dataset.section)).classList.add('active');
+    });
+  });
+
+  function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  // ── Close modals ──────────────────────────────────────────
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+  });
+  document.querySelectorAll('.modal-bg').forEach(bg => {
+    bg.addEventListener('click', e => { if (e.target === bg) closeModal(bg.id); });
+  });
+
+  function openModal(id) { document.getElementById(id).classList.add('show'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+  // ── Toast ──────────────────────────────────────────────────
+  function toast(msg, type = 'success') {
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0">${type === 'success' ? '<polyline points="20 6 9 17 4 12"/>' : '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>'}</svg>${msg}`;
+    document.getElementById('toastContainer').appendChild(t);
+    setTimeout(() => { t.style.animation = 'slideDown .2s ease forwards'; setTimeout(() => t.remove(), 200); }, 2800);
+  }
+
+  // ── Bootstrap ─────────────────────────────────────────────
+  async function bootstrap() {
+    const [catData, subjData, lessonData] = await Promise.all([
+      dbGet('/categories'),
+      dbGet('/subjects'),
+      dbGet('/lessons')
+    ]);
+    allCategories = catData    || {};
+    allSubjects   = subjData   || {};
+    allLessons    = lessonData || {};
+
+    updateCounts();
+    renderCatTable();
+    renderSubjTable();
+    renderLessonTable();
+    renderDashboard();
+    populateSubjSelects();
+  }
+
+  function updateCounts() {
+    const nc = Object.keys(allCategories).length;
+    const ns = Object.keys(allSubjects).length;
+    const nl = Object.keys(allLessons).length;
+    document.getElementById('navCatCount').textContent    = nc;
+    document.getElementById('navSubjCount').textContent   = ns;
+    document.getElementById('navLessonCount').textContent = nl;
+    document.getElementById('statCats').textContent    = nc;
+    document.getElementById('statSubjs').textContent   = ns;
+    document.getElementById('statLessons').textContent = nl;
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────
+  function renderDashboard() {
+    const container = document.getElementById('recentLessons');
+    const lessons = Object.entries(allLessons).slice(-5).reverse();
+    if (!lessons.length) { container.innerHTML = '<div class="table-empty">Уроків ще немає</div>'; return; }
+    container.innerHTML = '';
+    lessons.forEach(([id, l]) => {
+      const subjName = allSubjects[l.subjectId]?.name || '—';
+      const pagesCount = Array.isArray(l.pages) ? l.pages.length : (l.htmlContent ? 1 : 0);
+      container.insertAdjacentHTML('beforeend', `
+        <div class="table-row">
+          <div class="table-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div class="table-row-info">
+            <div class="table-row-name">${esc(l.title || 'Без назви')}</div>
+            <div class="table-row-meta">${esc(subjName)} · ${pagesCount} стор.</div>
+          </div>
+          <span class="badge">${esc(subjName)}</span>
+        </div>`);
+    });
+  }
+
+  // ── Categories ────────────────────────────────────────────
+  let editingCatId = null;
+
+  document.getElementById('btnAddCat').addEventListener('click', () => {
+    editingCatId = null;
+    document.getElementById('catModalTitle').textContent = 'Нова категорія';
+    document.getElementById('catNameInp').value = '';
+    openModal('catModal');
+    setTimeout(() => document.getElementById('catNameInp').focus(), 50);
+  });
+
+  document.getElementById('saveCatBtn').addEventListener('click', async () => {
+    const name = document.getElementById('catNameInp').value.trim();
+    if (!name) { toast('Введіть назву', 'error'); return; }
+    const btn = document.getElementById('saveCatBtn');
+    btn.disabled = true; btn.textContent = 'Збереження...';
+    try {
+      if (editingCatId) {
+        await dbUpdate(`/categories/${editingCatId}`, { name });
+        allCategories[editingCatId].name = name;
+        toast('Категорію оновлено');
+      } else {
+        const id = 'cat_' + generateId(6);
+        await dbSet(`/categories/${id}`, { name });
+        allCategories[id] = { name };
+        toast('Категорію додано');
+      }
+      closeModal('catModal');
+      updateCounts();
+      renderCatTable();
+      populateSubjSelects();
+    } catch(e) { toast('Помилка збереження', 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Зберегти'; }
+  });
+
+  function renderCatTable() {
+    const el = document.getElementById('catTable');
+    const entries = Object.entries(allCategories);
+    if (!entries.length) { el.innerHTML = '<div class="table-empty">Категорій ще немає. Додайте першу!</div>'; return; }
+    el.innerHTML = '';
+    entries.forEach(([id, cat]) => {
+      const subjCount = Object.values(allSubjects).filter(s => s.categoryId === id).length;
+      const row = document.createElement('div');
+      row.className = 'table-row';
+      row.innerHTML = `
+        <div class="table-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="table-row-info">
+          <div class="table-row-name">${esc(cat.name)}</div>
+          <div class="table-row-meta">${subjCount} предмет${subjCount === 1 ? '' : 'ів'}</div>
+        </div>
+        <span class="badge" style="margin-right:8px">${id}</span>
+        <div class="table-row-actions">
+          <button class="icon-btn" title="Редагувати" data-edit-cat="${id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="icon-btn danger" title="Видалити" data-del-cat="${id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>`;
+      el.appendChild(row);
+    });
+
+    el.querySelectorAll('[data-edit-cat]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.editCat;
+        editingCatId = id;
+        document.getElementById('catModalTitle').textContent = 'Редагувати категорію';
+        document.getElementById('catNameInp').value = allCategories[id].name;
+        openModal('catModal');
+        setTimeout(() => document.getElementById('catNameInp').focus(), 50);
+      });
+    });
+
+    el.querySelectorAll('[data-del-cat]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.delCat;
+        confirmDelete(`Видалити категорію "${allCategories[id]?.name}"? Предмети цієї категорії залишаться.`, async () => {
+          await dbRemove(`/categories/${id}`);
+          delete allCategories[id];
+          updateCounts(); renderCatTable(); populateSubjSelects(); toast('Видалено');
+        });
+      });
+    });
+  }
+
+  // ── Subjects ──────────────────────────────────────────────
+  let editingSubjId = null;
+
+  document.getElementById('btnAddSubj').addEventListener('click', () => {
+    editingSubjId = null;
+    document.getElementById('subjModalTitle').textContent = 'Новий предмет';
+    document.getElementById('subjNameInp').value = '';
+    openModal('subjModal');
+    setTimeout(() => document.getElementById('subjNameInp').focus(), 50);
+  });
+
+  document.getElementById('saveSubjBtn').addEventListener('click', async () => {
+    const name = document.getElementById('subjNameInp').value.trim();
+    const categoryId = document.getElementById('subjCatSel').value;
+    if (!name) { toast('Введіть назву', 'error'); return; }
+    const btn = document.getElementById('saveSubjBtn');
+    btn.disabled = true; btn.textContent = 'Збереження...';
+    try {
+      if (editingSubjId) {
+        await dbUpdate(`/subjects/${editingSubjId}`, { name, categoryId });
+        allSubjects[editingSubjId] = { ...allSubjects[editingSubjId], name, categoryId };
+        toast('Предмет оновлено');
+      } else {
+        const id = 'subj_' + generateId(6);
+        await dbSet(`/subjects/${id}`, { name, categoryId });
+        allSubjects[id] = { name, categoryId };
+        toast('Предмет додано');
+      }
+      closeModal('subjModal');
+      updateCounts(); renderSubjTable(); populateSubjSelects();
+    } catch(e) { toast('Помилка збереження', 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Зберегти'; }
+  });
+
+  function renderSubjTable() {
+    const el = document.getElementById('subjTable');
+    const entries = Object.entries(allSubjects);
+    if (!entries.length) { el.innerHTML = '<div class="table-empty">Предметів ще немає. Спочатку додайте категорію.</div>'; return; }
+    el.innerHTML = '';
+    entries.forEach(([id, subj]) => {
+      const catName = allCategories[subj.categoryId]?.name || '—';
+      const lessonCount = Object.values(allLessons).filter(l => l.subjectId === id).length;
+      const row = document.createElement('div');
+      row.className = 'table-row';
+      row.innerHTML = `
+        <div class="table-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+        <div class="table-row-info">
+          <div class="table-row-name">${esc(subj.name)}</div>
+          <div class="table-row-meta">${esc(catName)} · ${lessonCount} урок${lessonCount === 1 ? '' : 'ів'}</div>
+        </div>
+        <span class="badge" style="margin-right:8px">${esc(catName)}</span>
+        <div class="table-row-actions">
+          <button class="icon-btn" title="Редагувати" data-edit-subj="${id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="icon-btn danger" title="Видалити" data-del-subj="${id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>`;
+      el.appendChild(row);
+    });
+
+    el.querySelectorAll('[data-edit-subj]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.editSubj;
+        editingSubjId = id;
+        document.getElementById('subjModalTitle').textContent = 'Редагувати предмет';
+        document.getElementById('subjNameInp').value = allSubjects[id].name;
+        populateCatSelect('subjCatSel', allSubjects[id].categoryId);
+        openModal('subjModal');
+        setTimeout(() => document.getElementById('subjNameInp').focus(), 50);
+      });
+    });
+
+    el.querySelectorAll('[data-del-subj]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.delSubj;
+        confirmDelete(`Видалити предмет "${allSubjects[id]?.name}"? Уроки залишаться.`, async () => {
+          await dbRemove(`/subjects/${id}`);
+          delete allSubjects[id];
+          updateCounts(); renderSubjTable(); renderLessonTable(); populateSubjSelects(); toast('Видалено');
+        });
+      });
+    });
+  }
+
+  // ── Lessons ───────────────────────────────────────────────
+  document.getElementById('btnAddLesson').addEventListener('click', () => {
+    editingLessonId = null;
+    document.getElementById('lessonModalTitle').textContent = 'Новий урок';
+    document.getElementById('lessonTitleInp').value = '';
+    populateSubjSelect('lessonSubjSel', '');
+    // Init with one page
+    lessonPages = [{ id: generateId(6), title: 'Сторінка 1', htmlContent: '' }];
+    activePageIdx = 0;
+    lessonLinks = [];
+    lessonMats  = [];
+    renderPagesEditor();
+    renderLinks();
+    renderMats();
+    openModal('lessonModal');
+    setTimeout(() => document.getElementById('lessonTitleInp').focus(), 50);
+  });
+
+  document.getElementById('saveLessonBtn').addEventListener('click', saveLesson);
+
+  async function saveLesson() {
+    const title = document.getElementById('lessonTitleInp').value.trim();
+    const subjectId = document.getElementById('lessonSubjSel').value;
+    if (!title) { toast('Введіть назву уроку', 'error'); return; }
+    if (!subjectId) { toast('Оберіть предмет', 'error'); return; }
+
+    // Save current page textarea
+    syncActivePage();
+
+    const btn = document.getElementById('saveLessonBtn');
+    btn.disabled = true; btn.textContent = 'Збереження...';
+
+    try {
+      const data = {
+        title, subjectId,
+        pages: lessonPages,
+        // Backward compat: keep htmlContent = first page
+        htmlContent: lessonPages[0]?.htmlContent || '',
+        links: lessonLinks,
+        materials: lessonMats
+      };
+
+      if (editingLessonId) {
+        await dbUpdate(`/lessons/${editingLessonId}`, data);
+        allLessons[editingLessonId] = { ...allLessons[editingLessonId], ...data };
+        toast('Урок оновлено');
+      } else {
+        const id = generateId(10);
+        await dbSet(`/lessons/${id}`, data);
+        allLessons[id] = data;
+        toast('Урок додано');
+      }
+      closeModal('lessonModal');
+      updateCounts(); renderLessonTable(); renderDashboard();
+    } catch(e) { toast('Помилка збереження', 'error'); console.error(e); }
+    finally { btn.disabled = false; btn.textContent = 'Зберегти урок'; }
+  }
+
+  // ── Pages editor ──────────────────────────────────────────
+  function syncActivePage() {
+    const textarea = document.querySelector('.html-editor');
+    const titleInp = document.querySelector('.page-title-inp');
+    if (!textarea || !lessonPages[activePageIdx]) return;
+    lessonPages[activePageIdx].htmlContent = textarea.value;
+    if (titleInp) lessonPages[activePageIdx].title = titleInp.value || `Сторінка ${activePageIdx + 1}`;
+  }
+
+  function renderPagesEditor() {
+    const tabsEl   = document.getElementById('pagesTabs');
+    const editorEl = document.getElementById('pageEditor');
+
+    // Tabs
+    tabsEl.innerHTML = '';
+    lessonPages.forEach((page, i) => {
+      const tab = document.createElement('button');
+      tab.className = 'page-tab' + (i === activePageIdx ? ' active' : '');
+      tab.innerHTML = `<span>${esc(page.title || `Сторінка ${i+1}`)}</span>`;
+
+      if (lessonPages.length > 1) {
+        const del = document.createElement('button');
+        del.className = 'page-tab-del';
+        del.title = 'Видалити сторінку';
+        del.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+        del.addEventListener('click', e => { e.stopPropagation(); deletePage(i); });
+        tab.appendChild(del);
+      }
+
+      tab.addEventListener('click', () => {
+        syncActivePage();
+        activePageIdx = i;
+        renderPagesEditor();
+      });
+      tabsEl.appendChild(tab);
+    });
+
+    // Add page button
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-page-tab';
+    addBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Нова сторінка`;
+    addBtn.addEventListener('click', addPage);
+    tabsEl.appendChild(addBtn);
+
+    // Editor for active page
+    const page = lessonPages[activePageIdx] || {};
+    editorEl.innerHTML = `
+      <div class="page-title-row">
+        <input class="page-title-inp" placeholder="Назва сторінки (напр. Теорія)" value="${esc(page.title || '')}" />
+      </div>
+      <textarea class="html-editor" placeholder="<h1>Заголовок</h1>\n<p>Текст уроку у форматі HTML...</p>">${esc(page.htmlContent || '')}</textarea>`;
+
+    // Auto-save on blur
+    editorEl.querySelector('.html-editor').addEventListener('change', syncActivePage);
+    editorEl.querySelector('.page-title-inp').addEventListener('change', syncActivePage);
+  }
+
+  function addPage() {
+    syncActivePage();
+    lessonPages.push({ id: generateId(6), title: `Сторінка ${lessonPages.length + 1}`, htmlContent: '' });
+    activePageIdx = lessonPages.length - 1;
+    renderPagesEditor();
+  }
+
+  function deletePage(i) {
+    syncActivePage();
+    lessonPages.splice(i, 1);
+    activePageIdx = Math.min(activePageIdx, lessonPages.length - 1);
+    renderPagesEditor();
+  }
+
+  // ── Links ─────────────────────────────────────────────────
+  document.getElementById('addLinkBtn').addEventListener('click', () => {
+    lessonLinks.push({ title: '', url: '' });
+    renderLinks();
+  });
+
+  function renderLinks() {
+    const el = document.getElementById('linksList');
+    el.innerHTML = '';
+    lessonLinks.forEach((link, i) => {
+      const row = document.createElement('div');
+      row.className = 'link-row';
+      row.innerHTML = `
+        <input placeholder="Назва посилання" value="${esc(link.title)}" data-link-title="${i}" />
+        <input placeholder="https://..." value="${esc(link.url)}" data-link-url="${i}" />
+        <button class="link-row-del" data-del-link="${i}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>`;
+      el.appendChild(row);
+    });
+    el.querySelectorAll('[data-link-title]').forEach(inp => inp.addEventListener('input', () => { lessonLinks[inp.dataset.linkTitle].title = inp.value; }));
+    el.querySelectorAll('[data-link-url]').forEach(inp => inp.addEventListener('input', () => { lessonLinks[inp.dataset.linkUrl].url = inp.value; }));
+    el.querySelectorAll('[data-del-link]').forEach(btn => btn.addEventListener('click', () => { lessonLinks.splice(+btn.dataset.delLink, 1); renderLinks(); }));
+  }
+
+  // ── Materials ─────────────────────────────────────────────
+  document.getElementById('addMatBtn').addEventListener('click', () => {
+    lessonMats.push({ title: '', fileUrl: '' });
+    renderMats();
+  });
+
+  function renderMats() {
+    const el = document.getElementById('matsList');
+    el.innerHTML = '';
+    lessonMats.forEach((mat, i) => {
+      const row = document.createElement('div');
+      row.className = 'link-row';
+      row.innerHTML = `
+        <input placeholder="Назва файлу" value="${esc(mat.title)}" data-mat-title="${i}" />
+        <input placeholder="https://example.com/file.pdf" value="${esc(mat.fileUrl)}" data-mat-url="${i}" />
+        <button class="link-row-del" data-del-mat="${i}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>`;
+      el.appendChild(row);
+    });
+    el.querySelectorAll('[data-mat-title]').forEach(inp => inp.addEventListener('input', () => { lessonMats[inp.dataset.matTitle].title = inp.value; }));
+    el.querySelectorAll('[data-mat-url]').forEach(inp => inp.addEventListener('input', () => { lessonMats[inp.dataset.matUrl].fileUrl = inp.value; }));
+    el.querySelectorAll('[data-del-mat]').forEach(btn => btn.addEventListener('click', () => { lessonMats.splice(+btn.dataset.delMat, 1); renderMats(); }));
+  }
+
+  // ── Lesson table ──────────────────────────────────────────
+  function renderLessonTable(filterSubjId = '') {
+    const el = document.getElementById('lessonTable');
+    let entries = Object.entries(allLessons);
+    if (filterSubjId) entries = entries.filter(([, l]) => l.subjectId === filterSubjId);
+    entries.sort((a, b) => (a[1].title || '').localeCompare(b[1].title || '', 'uk'));
+
+    if (!entries.length) { el.innerHTML = '<div class="table-empty">Уроків ще немає. Спочатку додайте предмет.</div>'; return; }
+    el.innerHTML = '';
+    entries.forEach(([id, lesson]) => {
+      const subjName  = allSubjects[lesson.subjectId]?.name || '—';
+      const pagesCount = Array.isArray(lesson.pages) ? lesson.pages.length : (lesson.htmlContent ? 1 : 0);
+      const row = document.createElement('div');
+      row.className = 'table-row';
+      row.innerHTML = `
+        <div class="table-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <div class="table-row-info">
+          <div class="table-row-name">${esc(lesson.title || 'Без назви')}</div>
+          <div class="table-row-meta">${esc(subjName)} · <strong>${pagesCount}</strong> стор. · ${(lesson.links||[]).length} посил. · ${(lesson.materials||[]).length} матер.</div>
+        </div>
+        <span class="badge" style="margin-right:8px">${esc(subjName)}</span>
+        <div class="table-row-actions">
+          <button class="icon-btn" title="Редагувати" data-edit-lesson="${id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="icon-btn danger" title="Видалити" data-del-lesson="${id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>`;
+      el.appendChild(row);
+    });
+
+    el.querySelectorAll('[data-edit-lesson]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.editLesson;
+        const l  = allLessons[id];
+        editingLessonId = id;
+        document.getElementById('lessonModalTitle').textContent = 'Редагувати урок';
+        document.getElementById('lessonTitleInp').value = l.title || '';
+        populateSubjSelect('lessonSubjSel', l.subjectId);
+
+        // Load pages: support old format (htmlContent) and new (pages array)
+        if (Array.isArray(l.pages) && l.pages.length > 0) {
+          lessonPages = l.pages.map(p => ({ ...p }));
+        } else {
+          lessonPages = [{ id: generateId(6), title: 'Сторінка 1', htmlContent: l.htmlContent || '' }];
+        }
+        activePageIdx = 0;
+        lessonLinks = (l.links || []).map(x => ({ ...x }));
+        lessonMats  = (l.materials || []).map(x => ({ ...x }));
+
+        renderPagesEditor();
+        renderLinks();
+        renderMats();
+        openModal('lessonModal');
+      });
+    });
+
+    el.querySelectorAll('[data-del-lesson]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.delLesson;
+        confirmDelete(`Видалити урок "${allLessons[id]?.title}"?`, async () => {
+          await dbRemove(`/lessons/${id}`);
+          delete allLessons[id];
+          updateCounts(); renderLessonTable(); renderDashboard(); toast('Видалено');
+        });
+      });
+    });
+  }
+
+  // Filter lessons by subject
+  document.getElementById('lessonFilterSubj').addEventListener('change', e => {
+    renderLessonTable(e.target.value);
+  });
+
+  // ── Populates ─────────────────────────────────────────────
+  function populateSubjSelects() {
+    populateCatSelect('subjCatSel', '');
+    populateSubjSelect('lessonSubjSel', '');
+
+    // Lesson filter
+    const filterEl = document.getElementById('lessonFilterSubj');
+    filterEl.innerHTML = '<option value="">Всі предмети</option>';
+    Object.entries(allSubjects).forEach(([id, s]) => {
+      filterEl.insertAdjacentHTML('beforeend', `<option value="${id}">${esc(s.name)}</option>`);
+    });
+  }
+
+  function populateCatSelect(selId, selectedId) {
+    const el = document.getElementById(selId);
+    el.innerHTML = '<option value="">— Без категорії —</option>';
+    Object.entries(allCategories).forEach(([id, cat]) => {
+      el.insertAdjacentHTML('beforeend', `<option value="${id}" ${id === selectedId ? 'selected' : ''}>${esc(cat.name)}</option>`);
+    });
+  }
+
+  function populateSubjSelect(selId, selectedId) {
+    const el = document.getElementById(selId);
+    el.innerHTML = '<option value="">— Оберіть предмет —</option>';
+    Object.entries(allSubjects).forEach(([id, s]) => {
+      el.insertAdjacentHTML('beforeend', `<option value="${id}" ${id === selectedId ? 'selected' : ''}>${esc(s.name)}</option>`);
+    });
+  }
+
+  // ── Confirm helper ────────────────────────────────────────
+  let confirmCallback = null;
+  function confirmDelete(text, cb) {
+    document.getElementById('confirmText').textContent = text;
+    confirmCallback = cb;
+    openModal('confirmModal');
+  }
+  document.getElementById('confirmOkBtn').addEventListener('click', async () => {
+    closeModal('confirmModal');
+    if (confirmCallback) { await confirmCallback(); confirmCallback = null; }
+  });
+
+  // ── Util ──────────────────────────────────────────────────
+  function esc(s) {
+    if (!s) return '';
+    const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML;
+  }
+
+</script>
+</body>
+</html>
