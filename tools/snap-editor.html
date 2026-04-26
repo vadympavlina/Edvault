@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SnapEdit</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Crect x='6' y='9' width='13' height='9' rx='2' fill='white' opacity='0.95'/%3E%3Crect x='13' y='14' width='13' height='9' rx='2' fill='white' opacity='0.6'/%3E%3Ccircle cx='8.5' cy='22.5' r='2' fill='%2300D4AA'/%3E%3Ccircle cx='23.5' cy='9.5' r='2' fill='%23FF6B8A'/%3E%3Cline x1='10.5' y1='22.5' x2='21.5' y2='9.5' stroke='%23a0aec0' stroke-width='1.5' stroke-dasharray='2,2'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f0f2f5; --surface:#ffffff; --surface2:#f7f8fa;
+  --border:#e2e5ea; --border2:#d0d5dd;
+  --accent:#4F6BF4; --accent-light:#eef0fe; --accent-hover:#3d57e0;
+  --danger:#ef4444; --danger-light:#fef2f2;
+  --text:#1a1d23; --text2:#4b5563; --muted:#9ca3af;
+  --success:#10b981;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;user-select:none;-webkit-font-smoothing:antialiased}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:1000;transition:opacity .35s,transform .35s}
+#splash.hide{opacity:0;pointer-events:none;transform:scale(.98)}
+.splash-logo{font-size:2rem;font-weight:700;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:10px;letter-spacing:-0.03em}
+.splash-logo-icon{width:36px;height:36px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.splash-logo-icon svg{width:20px;height:20px;color:white}
+.splash-sub{font-size:.75rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:36px;margin-left:46px}
+.splash-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px 28px;max-width:460px;width:90%;display:flex;flex-direction:column;gap:14px;margin-bottom:20px;box-shadow:var(--shadow-md)}
+.splash-card h2{font-size:.7rem;font-weight:600;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.step{display:flex;gap:12px;align-items:flex-start}
+.step-num{background:var(--accent-light);border-radius:8px;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:var(--accent);flex-shrink:0}
+.step-text{font-size:.8rem;color:var(--text2);line-height:1.55;padding-top:4px}
+.step-text b{color:var(--text);font-weight:600}
+.kbd{display:inline-flex;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-bottom:2px solid var(--border2);border-radius:5px;padding:1px 7px;font-size:.68rem;color:var(--text);font-family:inherit;font-weight:500}
+.splash-btns{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.splash-hint{font-size:.72rem;color:var(--muted);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.btn-new{font-family:'Inter',sans-serif;font-size:.8rem;font-weight:600;padding:9px 22px;border-radius:9px;background:var(--accent);color:#fff;border:none;cursor:pointer;transition:background .15s,box-shadow .15s;box-shadow:0 2px 8px rgba(79,107,244,.3)}
+.btn-new:hover{background:var(--accent-hover);box-shadow:0 4px 12px rgba(79,107,244,.4)}
+
+/* TOOLBAR */
+#toolbar{height:52px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:4px;padding:0 12px;flex-shrink:0;z-index:10;overflow-x:auto;box-shadow:var(--shadow-sm)}
+.logo-sm{font-size:.95rem;font-weight:700;color:var(--text);margin-right:10px;flex-shrink:0;letter-spacing:-0.02em;display:flex;align-items:center;gap:7px}
+.logo-sm-icon{width:26px;height:26px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-sm-icon svg{width:14px;height:14px;color:white}
+.div{width:1px;height:22px;background:var(--border);margin:0 4px;flex-shrink:0}
+.tbtn{position:relative;width:34px;height:34px;border-radius:8px;background:transparent;border:1px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .13s;flex-shrink:0}
+.tbtn:hover{background:var(--surface2);color:var(--text2);border-color:var(--border)}
+.tbtn.active{background:var(--accent-light);color:var(--accent);border-color:transparent}
+.tbtn svg{width:16px;height:16px}
+.tbtn[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:-32px;left:50%;transform:translateX(-50%);background:var(--text);border-radius:6px;padding:4px 9px;font-size:.63rem;white-space:nowrap;color:#fff;pointer-events:none;z-index:100;font-weight:500}
+#colorPicker{-webkit-appearance:none;appearance:none;width:30px;height:30px;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:none;padding:0;overflow:hidden;flex-shrink:0}
+#colorPicker::-webkit-color-swatch-wrapper{padding:0}
+#colorPicker::-webkit-color-swatch{border:none;border-radius:6px}
+.size-wrap{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0 10px;height:34px;flex-shrink:0}
+.size-wrap label{font-size:.62rem;color:var(--muted);font-weight:500}
+#sizeRange{-webkit-appearance:none;width:70px;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer}
+#sizeRange::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 2px var(--accent-light)}
+#sizeVal{font-size:.68rem;color:var(--accent);min-width:16px;font-weight:600}
+.spacer{flex:1}
+.abtn{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;cursor:pointer;transition:all .13s;flex-shrink:0;white-space:nowrap}
+.abtn:hover{border-color:var(--border2);background:var(--surface);color:var(--text)}
+.abtn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;box-shadow:0 2px 6px rgba(79,107,244,.25)}
+.abtn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.abtn svg{width:13px;height:13px}
+
+/* zoom indicator */
+#zoomBadge{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0 9px;height:32px;font-size:.72rem;color:var(--muted);flex-shrink:0}
+#zoomLabel{color:var(--text2);min-width:38px;text-align:center;font-weight:600}
+.zbtn{width:22px;height:22px;border-radius:5px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;line-height:1;transition:all .13s;flex-shrink:0}
+.zbtn:hover{background:var(--surface);color:var(--text);border-color:var(--border2)}
+
+/* VIEWPORT */
+#viewport{flex:1;overflow:hidden;background-color:#e8ebf0;background-image:radial-gradient(circle,#c8cdd8 1px,transparent 1px);background-size:20px 20px;position:relative;cursor:default}
+#viewport.panning{cursor:grab}
+#viewport.panning:active{cursor:grabbing}
+#scene{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
+#canvas{display:block;box-shadow:0 8px 40px rgba(0,0,0,.15),0 2px 8px rgba(0,0,0,.08);border-radius:3px}
+#canvas.cur-crosshair{cursor:crosshair}
+#canvas.cur-text{cursor:text}
+#canvas.cur-grab{cursor:grab}
+#canvas.cur-grabbing{cursor:grabbing}
+
+/* EMPTY OVERLAY */
+#empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;pointer-events:none;z-index:5}
+#empty.hidden{display:none}
+.e-icon{opacity:.18}
+.e-icon svg{width:64px;height:64px;color:var(--text2)}
+.e-label{font-size:.75rem;color:var(--muted);letter-spacing:.06em;font-weight:500}
+.e-hint{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 16px;font-size:.73rem;color:var(--text2);pointer-events:all;box-shadow:var(--shadow-sm)}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--text);border-radius:10px;padding:8px 20px;font-size:.75rem;color:#fff;opacity:0;transition:all .28s;pointer-events:none;z-index:999;white-space:nowrap;font-weight:500}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{background:var(--success)}
+#toast.err{background:var(--danger)}
+
+/* MODAL */
+#modalOverlay{position:fixed;inset:0;background:rgba(15,18,25,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}
+#modalOverlay.open{opacity:1;pointer-events:all}
+#modalBox{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 28px 24px;width:420px;max-width:94vw;box-shadow:0 24px 60px rgba(0,0,0,.18),0 4px 16px rgba(0,0,0,.1);transform:translateY(10px) scale(.97);transition:transform .22s,opacity .22s;opacity:0}
+#modalOverlay.open #modalBox{transform:translateY(0) scale(1);opacity:1}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-size:.95rem;font-weight:700;color:var(--text);letter-spacing:-0.01em}
+.modal-close{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .13s;font-size:1rem;line-height:1}
+.modal-close:hover{background:var(--border);color:var(--text)}
+.modal-presets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.preset-btn{border:1.5px solid var(--border);background:var(--surface2);border-radius:10px;padding:11px 14px;cursor:pointer;text-align:left;transition:all .13s;display:flex;flex-direction:column;gap:3px}
+.preset-btn:hover{border-color:var(--accent);background:var(--accent-light)}
+.preset-btn.sel{border-color:var(--accent);background:var(--accent-light)}
+.preset-name{font-size:.78rem;font-weight:600;color:var(--text)}
+.preset-dim{font-size:.68rem;color:var(--muted)}
+.modal-divider{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:var(--muted);font-size:.7rem;font-weight:500}
+.modal-divider::before,.modal-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.custom-size{display:flex;gap:8px;align-items:center;margin-bottom:20px}
+.custom-input{flex:1;height:36px;background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:0 12px;font-family:'Inter',sans-serif;font-size:.8rem;color:var(--text);outline:none;transition:border-color .13s;text-align:center}
+.custom-input:focus{border-color:var(--accent)}
+.custom-sep{font-size:.85rem;color:var(--muted);font-weight:500;flex-shrink:0}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.mbtn{font-family:'Inter',sans-serif;height:36px;padding:0 18px;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .13s;border:1px solid var(--border)}
+.mbtn.cancel{background:var(--surface2);color:var(--text2)}
+.mbtn.cancel:hover{background:var(--border)}
+.mbtn.confirm{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(79,107,244,.25)}
+.mbtn.confirm:hover{background:var(--accent-hover)}
+
+/* RESPONSIVE TOOLBAR */
+@media (max-width:900px){.abtn .btn-label{display:none}.abtn{padding:0 9px}}
+@media (max-width:720px){.logo-sm .logo-text{display:none}.logo-sm{margin-right:4px}#sizeRange{width:50px}}
+@media (max-width:600px){#sizeRange{display:none}#sizeVal{display:none}}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">
+    <div class="splash-logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+    SnapEdit
+  </div>
+  <div class="splash-sub">редактор скріншотів</div>
+  <div class="splash-card">
+    <h2>Як користуватись</h2>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Зроби скріншот (<b>Win+Shift+S</b> / <b>⌘+Ctrl+4</b>) або натисни «Новий аркуш».</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Встав <span class="kbd">Ctrl+V</span> або перетягни файл.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Малюй. <b>Колесо миші</b> — зум. <b>Пробіл + drag</b> або <b>середня кнопка</b> — переміщення.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">Збережи: <b>копіюй в буфер</b> або <b>завантаж</b> PNG.</div>
+    </div>
+  </div>
+  <div class="splash-btns">
+    <div class="splash-hint">вставити скріншот → <span class="kbd">Ctrl+V</span></div>
+    <span style="color:var(--muted);font-size:.7rem">або</span>
+    <button class="btn-new" id="splashNew">+ новий аркуш</button>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <span class="logo-sm">
+    <div class="logo-sm-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+    <span class="logo-text">SnapEdit</span>
+  </span>
+  <div class="div"></div>
+
+  <button class="tbtn active" data-tool="pen"     data-tip="Пензель (B)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="11" cy="11" r="2"/></svg>
+  </button>
+  <button class="tbtn" data-tool="line"    data-tip="Лінія (L)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="20" x2="20" y2="4"/></svg>
+  </button>
+  <button class="tbtn" data-tool="arrow"   data-tip="Стрілка (A)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="9 5 19 5 19 15"/></svg>
+  </button>
+  <button class="tbtn" data-tool="rect"    data-tip="Прямокутник (R)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+  </button>
+  <button class="tbtn" data-tool="ellipse" data-tip="Еліпс (E)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="10" ry="7"/></svg>
+  </button>
+  <button class="tbtn" data-tool="step"    data-tip="Нумерація кроків (N)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" fill="currentColor" opacity="0.15"/><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor" stroke="none" font-family="Inter,sans-serif">N</text></svg>
+  </button>
+  <button class="tbtn" data-tool="blur"    data-tip="Мозаїка (M)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+  </button>
+  <button class="tbtn" data-tool="eraser"  data-tip="Гумка (X)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H7L3 16l13-13 5 5-1 12z"/><line x1="6" y1="16" x2="17" y2="5"/></svg>
+  </button>
+
+  <div class="div"></div>
+
+  <input type="color" id="colorPicker" value="#ff4e6a" title="Колір">
+  <div class="size-wrap">
+    <label>px</label>
+    <input type="range" id="sizeRange" min="1" max="30" value="3">
+    <span id="sizeVal">3</span>
+  </div>
+
+  <div class="div"></div>
+
+  <button class="tbtn" id="btnUndo" data-tip="Undo (Ctrl+Z)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+  </button>
+  <button class="tbtn" id="btnRedo" data-tip="Redo (Ctrl+Y)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-4.95"/></svg>
+  </button>
+  <button class="tbtn" id="btnClear" data-tip="Очистити" style="color:var(--danger)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+  </button>
+  <button class="tbtn" id="btnResetStep" data-tip="Скинути лічильник кроків">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" stroke="none" font-family="Inter,sans-serif">1</text><path d="M4.5 4.5l1.8 1.8" stroke-width="2.5" stroke-linecap="round"/></svg>
+  </button>
+
+  <div class="div"></div>
+
+  <!-- ZOOM CONTROLS -->
+  <div id="zoomBadge">
+    <button class="zbtn" id="btnZoomOut" title="Зменшити (-)">−</button>
+    <span id="zoomLabel">100%</span>
+    <button class="zbtn" id="btnZoomIn"  title="Збільшити (+)">+</button>
+    <button class="zbtn" id="btnZoomFit" title="По розміру (0)" style="font-size:.6rem;padding:0 4px;width:auto">FIT</button>
+  </div>
+
+  <div class="spacer"></div>
+
+  <button class="abtn" id="btnNew">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    <span class="btn-label">Новий аркуш</span>
+  </button>
+  <button class="abtn" id="btnCopy">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    <span class="btn-label">Копіювати</span>
+  </button>
+  <button class="abtn primary" id="btnDownload">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    <span class="btn-label">Завантажити</span>
+  </button>
+</div>
+
+<!-- NEW CANVAS MODAL -->
+<div id="modalOverlay">
+  <div id="modalBox">
+    <div class="modal-header">
+      <span class="modal-title">Новий аркуш</span>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-presets">
+      <button class="preset-btn sel" data-w="1200" data-h="800">
+        <span class="preset-name">Стандартний</span>
+        <span class="preset-dim">1200 × 800 px</span>
+      </button>
+      <button class="preset-btn" data-w="1920" data-h="1080">
+        <span class="preset-name">Full HD</span>
+        <span class="preset-dim">1920 × 1080 px</span>
+      </button>
+      <button class="preset-btn" data-w="2560" data-h="1440">
+        <span class="preset-name">2K / QHD</span>
+        <span class="preset-dim">2560 × 1440 px</span>
+      </button>
+      <button class="preset-btn" data-w="800" data-h="600">
+        <span class="preset-name">Маленький</span>
+        <span class="preset-dim">800 × 600 px</span>
+      </button>
+    </div>
+    <div class="modal-divider">або свій розмір</div>
+    <div class="custom-size">
+      <input class="custom-input" type="number" id="customW" placeholder="Ширина" min="1" max="8000">
+      <span class="custom-sep">×</span>
+      <input class="custom-input" type="number" id="customH" placeholder="Висота" min="1" max="8000">
+      <span class="custom-sep" style="color:var(--muted);font-size:.7rem">px</span>
+    </div>
+    <div class="modal-actions">
+      <button class="mbtn cancel" id="modalCancel">Скасувати</button>
+      <button class="mbtn confirm" id="modalConfirm">Створити</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEWPORT -->
+<div id="viewport">
+  <div id="scene">
+    <canvas id="canvas"></canvas>
+  </div>
+  <div id="empty">
+    <div class="e-icon">
+      <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="10" y="18" width="60" height="44" rx="4"/>
+        <path d="M10 28h60M24 18v10M56 18v10"/>
+        <circle cx="40" cy="46" r="8"/>
+      </svg>
+    </div>
+    <div class="e-label">порожнє полотно</div>
+    <div class="e-hint">
+      <span class="kbd">Ctrl+V</span>&nbsp; вставити скріншот &nbsp;·&nbsp; або натисни «Новий аркуш»
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── REFS ──────────────────────────────────────────────────────────────────────
+const canvas   = document.getElementById('canvas');
+const ctx      = canvas.getContext('2d');
+const viewport = document.getElementById('viewport');
+const scene    = document.getElementById('scene');
+const empty    = document.getElementById('empty');
+const splash   = document.getElementById('splash');
+const zoomLbl  = document.getElementById('zoomLabel');
+
+// ── VIEW STATE (pan / zoom) ───────────────────────────────────────────────────
+let vx = 0, vy = 0, vz = 1;   // offset x/y, zoom scale
+const ZOOM_MIN = 0.05, ZOOM_MAX = 16;
+const ZOOM_STEP = 0.12;
+
+function applyTransform() {
+  scene.style.transform = `translate(${vx}px,${vy}px) scale(${vz})`;
+  zoomLbl.textContent = Math.round(vz * 100) + '%';
+}
+
+function fitCanvas() {
+  if (!active) return;
+  const vw = viewport.clientWidth, vh = viewport.clientHeight;
+  const margin = 40;
+  const scale = Math.min((vw - margin*2) / canvas.width, (vh - margin*2) / canvas.height, 1);
+  vz = scale;
+  vx = (vw - canvas.width  * vz) / 2;
+  vy = (vh - canvas.height * vz) / 2;
+  applyTransform();
+}
+
+function zoomAt(cx, cy, delta) {
+  // cx, cy — point in viewport coords to zoom towards
+  const newZ = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, vz * (1 + delta)));
+  const ratio = newZ / vz;
+  vx = cx - ratio * (cx - vx);
+  vy = cy - ratio * (cy - vy);
+  vz = newZ;
+  applyTransform();
+}
+
+// convert viewport-space point to canvas-pixel coords
+function vpToCanvas(clientX, clientY) {
+  const r = viewport.getBoundingClientRect();
+  const lx = clientX - r.left;
+  const ly = clientY - r.top;
+  return {
+    x: (lx - vx) / vz,
+    y: (ly - vy) / vz
+  };
+}
+
+// ── DRAW STATE ────────────────────────────────────────────────────────────────
+let tool     = 'pen';
+let color    = '#ff4e6a';
+let size     = 3;
+let drawing  = false;
+let startX   = 0, startY = 0;
+let active   = false;
+let snapshot = null;
+let textNode = null;
+let history  = [], histIdx = -1;
+const MAX_H  = 40;
+let stepCounter = 1;
+
+// panning state
+let panning    = false;
+let spaceDown  = false;
+let panStartX  = 0, panStartY  = 0;
+let panOriginX = 0, panOriginY = 0;
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + (type || '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', 2600);
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────────────────
+function pushHistory() {
+  history = history.slice(0, histIdx + 1);
+  if (history.length >= MAX_H) history.shift();
+  history.push(canvas.toDataURL());
+  histIdx = history.length - 1;
+}
+
+function restoreState(url) {
+  const img = new Image();
+  img.onload = () => { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); };
+  img.src = url;
+}
+
+function undo() { if (histIdx <= 0) { toast('Нічого відміняти','err'); return; } restoreState(history[--histIdx]); }
+function redo() { if (histIdx >= history.length-1) { toast('Нічого повертати','err'); return; } restoreState(history[++histIdx]); }
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function initBlank(w, h) {
+  canvas.width  = w || 1200;
+  canvas.height = h || 800;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  active = true;
+  empty.classList.add('hidden');
+  splash.classList.add('hide');
+  history = []; histIdx = -1;
+  stepCounter = 1;
+  pushHistory();
+  fitCanvas();
+}
+
+function newCanvas() {
+  openNewModal();
+}
+
+// ── NEW CANVAS MODAL ──────────────────────────────────────────────────────────
+const modalOverlay = document.getElementById('modalOverlay');
+const customW = document.getElementById('customW');
+const customH = document.getElementById('customH');
+let selectedW = 1200, selectedH = 800;
+
+function openNewModal() {
+  modalOverlay.classList.add('open');
+  customW.value = ''; customH.value = '';
+  document.querySelectorAll('.preset-btn').forEach((b,i) => b.classList.toggle('sel', i===0));
+  selectedW = 1200; selectedH = 800;
+}
+function closeModal() { modalOverlay.classList.remove('open'); }
+
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    selectedW = +btn.dataset.w; selectedH = +btn.dataset.h;
+    customW.value = ''; customH.value = '';
+  });
+});
+
+[customW, customH].forEach(inp => {
+  inp.addEventListener('input', () => {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('sel'));
+  });
+});
+
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('modalCancel').addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+
+document.getElementById('modalConfirm').addEventListener('click', () => {
+  const cw = parseInt(customW.value), ch = parseInt(customH.value);
+  const w = (cw > 0 && cw <= 8000) ? cw : selectedW;
+  const h = (ch > 0 && ch <= 8000) ? ch : selectedH;
+  if (active && !confirm('Створити новий аркуш? Зміни буде втрачено.')) return;
+  closeModal();
+  initBlank(w, h);
+  toast(`Новий аркуш ${w}×${h} ✓`, 'ok');
+});
+
+// ── LOAD IMAGE ────────────────────────────────────────────────────────────────
+function loadImage(url) {
+  const img = new Image();
+  img.onload = () => {
+    initBlank(img.width, img.height);
+    ctx.drawImage(img, 0, 0);
+    history = []; histIdx = -1;
+    pushHistory();
+    toast('Скріншот вставлено ✓','ok');
+    URL.revokeObjectURL(url);
+  };
+  img.onerror = () => toast('Помилка зображення','err');
+  img.src = url;
+}
+
+// ── DRAW UTILS ────────────────────────────────────────────────────────────────
+function setupCtx() {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.strokeStyle = color;
+  ctx.fillStyle   = color;
+  ctx.lineWidth   = size;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+}
+
+function drawArrow(x1,y1,x2,y2) {
+  const hw = Math.max(size*3,12), angle = Math.atan2(y2-y1,x2-x1);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-hw*Math.cos(angle-Math.PI/6), y2-hw*Math.sin(angle-Math.PI/6));
+  ctx.lineTo(x2-hw*Math.cos(angle+Math.PI/6), y2-hw*Math.sin(angle+Math.PI/6));
+  ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+}
+
+// ── PAN/ZOOM CURSOR HELPER ────────────────────────────────────────────────────
+function isPanMode() { return spaceDown || tool === 'pan'; }
+
+function updateCursor() {
+  if (isPanMode()) {
+    canvas.className = panning ? 'cur-grabbing' : 'cur-grab';
+    viewport.classList.add('panning');
+  } else {
+    viewport.classList.remove('panning');
+    canvas.className = tool === 'text' ? 'cur-text' : 'cur-crosshair';
+  }
+}
+
+// ── POINTER EVENTS ON VIEWPORT ────────────────────────────────────────────────
+// We listen on viewport so pan works even outside canvas bounds
+viewport.addEventListener('mousedown', onDown);
+viewport.addEventListener('mousemove', onMove);
+viewport.addEventListener('mouseup',   onUp);
+viewport.addEventListener('mouseleave',onUp);
+viewport.addEventListener('touchstart', e => { e.preventDefault(); onDown(e); }, {passive:false});
+viewport.addEventListener('touchmove',  e => { e.preventDefault(); onMove(e); }, {passive:false});
+viewport.addEventListener('touchend',   e => { e.preventDefault(); onUp(e);   }, {passive:false});
+
+// Middle mouse button pan
+viewport.addEventListener('mousedown', e => { if (e.button === 1) { e.preventDefault(); startPan(e.clientX, e.clientY); } });
+
+function startPan(cx, cy) {
+  panning   = true;
+  panStartX = cx; panStartY = cy;
+  panOriginX = vx; panOriginY = vy;
+  updateCursor();
+}
+
+function onDown(e) {
+  if (!active) return;
+  if (e.button === 1) return; // handled separately
+
+  const src = e.touches ? e.touches[0] : e;
+
+  // Two-finger pan/pinch on touch
+  if (e.touches && e.touches.length === 2) {
+    pinchStart(e); return;
+  }
+
+  if (isPanMode()) {
+    startPan(src.clientX, src.clientY);
+    return;
+  }
+
+  const p = vpToCanvas(src.clientX, src.clientY);
+  // Only draw if inside canvas bounds
+  if (p.x < 0 || p.y < 0 || p.x > canvas.width || p.y > canvas.height) return;
+
+  if (tool === 'text') { spawnText(p.x, p.y); return; }
+  if (tool === 'step') { placeStepBadge(p.x, p.y); return; }
+
+  drawing = true;
+  startX = p.x; startY = p.y;
+  setupCtx();
+
+  if (tool === 'pen') {
+    ctx.beginPath(); ctx.moveTo(startX, startY);
+  } else if (tool === 'eraser') {
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.lineWidth = size * 4;
+    ctx.beginPath(); ctx.moveTo(startX, startY);
+  } else {
+    snapshot = ctx.getImageData(0,0,canvas.width,canvas.height);
+  }
+}
+
+// Pinch zoom
+let pinchDist0 = 0, pinchZ0 = 1, pinchMidX = 0, pinchMidY = 0;
+function pinchDist(e) {
+  const dx = e.touches[0].clientX - e.touches[1].clientX;
+  const dy = e.touches[0].clientY - e.touches[1].clientY;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+function pinchStart(e) {
+  pinchDist0 = pinchDist(e);
+  pinchZ0 = vz;
+  pinchMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+  pinchMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+  const r = viewport.getBoundingClientRect();
+  pinchMidX -= r.left; pinchMidY -= r.top;
+}
+
+function onMove(e) {
+  const src = e.touches ? e.touches[0] : e;
+
+  // Pinch zoom
+  if (e.touches && e.touches.length === 2) {
+    const d = pinchDist(e);
+    const newZ = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, pinchZ0 * (d / pinchDist0)));
+    const ratio = newZ / vz;
+    vx = pinchMidX - ratio * (pinchMidX - vx);
+    vy = pinchMidY - ratio * (pinchMidY - vy);
+    vz = newZ;
+    applyTransform();
+    return;
+  }
+
+  if (panning) {
+    vx = panOriginX + (src.clientX - panStartX);
+    vy = panOriginY + (src.clientY - panStartY);
+    applyTransform();
+    return;
+  }
+
+  if (!drawing) return;
+  const p = vpToCanvas(src.clientX, src.clientY);
+
+  if (tool === 'pen') {
+    ctx.lineTo(p.x, p.y); ctx.stroke(); return;
+  }
+  if (tool === 'eraser') {
+    ctx.lineTo(p.x, p.y); ctx.stroke(); return;
+  }
+
+  ctx.putImageData(snapshot, 0, 0);
+  setupCtx();
+  if (tool === 'line') {
+    ctx.beginPath(); ctx.moveTo(startX,startY); ctx.lineTo(p.x,p.y); ctx.stroke();
+  } else if (tool === 'arrow') {
+    drawArrow(startX,startY,p.x,p.y);
+  } else if (tool === 'rect') {
+    ctx.strokeRect(startX,startY,p.x-startX,p.y-startY);
+  } else if (tool === 'ellipse') {
+    const rx=Math.abs(p.x-startX)/2, ry=Math.abs(p.y-startY)/2;
+    if (rx>0&&ry>0) { ctx.beginPath(); ctx.ellipse(startX+(p.x-startX)/2,startY+(p.y-startY)/2,rx,ry,0,0,Math.PI*2); ctx.stroke(); }
+  } else if (tool === 'blur') {
+    ctx.fillStyle='rgba(80,80,80,0.5)';
+    ctx.fillRect(startX,startY,p.x-startX,p.y-startY);
+  }
+}
+
+function onUp(e) {
+  if (panning) { panning = false; updateCursor(); return; }
+  if (!drawing) return;
+  drawing = false;
+  ctx.globalCompositeOperation = 'source-over';
+
+  if (tool === 'blur' && snapshot) {
+    const src = e.changedTouches ? e.changedTouches[0] : e;
+    const p = vpToCanvas(src.clientX, src.clientY);
+    ctx.putImageData(snapshot, 0, 0);
+    applyMosaic(startX, startY, p.x, p.y);
+  }
+  snapshot = null;
+  pushHistory();
+}
+
+// ── SCROLL ZOOM ───────────────────────────────────────────────────────────────
+viewport.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r   = viewport.getBoundingClientRect();
+  const cx  = e.clientX - r.left;
+  const cy  = e.clientY - r.top;
+  const dir = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+  zoomAt(cx, cy, dir);
+}, { passive: false });
+
+// ── MOSAIC ────────────────────────────────────────────────────────────────────
+function applyMosaic(x1,y1,x2,y2) {
+  const bx=Math.min(x1,x2), by=Math.min(y1,y2);
+  const bw=Math.abs(x2-x1), bh=Math.abs(y2-y1);
+  if (bw<4||bh<4) return;
+  const block=Math.max(8,size*3);
+  const sw=Math.max(1,Math.ceil(bw/block)), sh=Math.max(1,Math.ceil(bh/block));
+  const tmp=document.createElement('canvas'); tmp.width=bw; tmp.height=bh;
+  const tc=tmp.getContext('2d'); tc.imageSmoothingEnabled=false;
+  tc.drawImage(canvas,bx,by,bw,bh,0,0,sw,sh);
+  tc.drawImage(tmp,0,0,sw,sh,0,0,bw,bh);
+  ctx.drawImage(tmp,bx,by,bw,bh);
+}
+
+// ── STEP BADGE ────────────────────────────────────────────────────────────────
+function placeStepBadge(cx, cy) {
+  const radius = Math.max(14, size * 5);
+  const label  = String(stepCounter);
+
+  // filled circle
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+
+  // white number
+  const fontSize = Math.round(radius * 1.1);
+  ctx.font = `700 ${fontSize}px 'Inter',system-ui,sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, cx, cy + 1);
+  ctx.restore();
+
+  stepCounter++;
+  updateStepBtn();
+  pushHistory();
+}
+
+function updateStepBtn() {
+  const btn = document.querySelector('[data-tool="step"]');
+  if (btn) btn.setAttribute('data-tip', `Нумерація кроків (N) — наступний: ${stepCounter}`);
+}
+
+// ── TEXT ──────────────────────────────────────────────────────────────────────
+function spawnText(cx, cy) {
+  if (textNode) { textNode.remove(); textNode = null; }
+  const r  = viewport.getBoundingClientRect();
+  const fs = Math.max(12, size * 5);
+  // position in screen coords
+  const sx = vx + cx * vz + r.left;
+  const sy = vy + cy * vz + r.top;
+  const inp = document.createElement('textarea');
+  inp.style.cssText = `
+    position:fixed;left:${sx}px;top:${sy}px;
+    min-width:120px;min-height:32px;background:rgba(255,255,255,.95);color:${color};
+    font-family:'Inter',system-ui,sans-serif;font-size:${fs * vz}px;
+    border:1.5px dashed ${color};border-radius:6px;padding:4px 8px;
+    resize:both;outline:none;z-index:500;line-height:1.4;box-shadow:0 4px 12px rgba(0,0,0,.12);
+  `;
+  document.body.appendChild(inp);
+  inp.focus();
+  textNode = inp;
+  const commit = () => {
+    if (textNode !== inp) return;
+    textNode = null;
+    const val = inp.value.trim();
+    inp.remove();
+    if (!val) return;
+    setupCtx();
+    ctx.font = `${fs}px 'Inter',system-ui,sans-serif`;
+    ctx.fillStyle = color;
+    val.split('\n').forEach((l,i) => ctx.fillText(l, cx, cy + i*(fs*1.3) + fs));
+    pushHistory();
+  };
+  inp.addEventListener('keydown', e => {
+    if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); commit(); }
+    if (e.key==='Escape') { textNode=null; inp.remove(); }
+  });
+  inp.addEventListener('blur', commit);
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (['TEXTAREA','INPUT'].includes(document.activeElement.tagName)) return;
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (ctrl && e.key==='v')  { e.preventDefault(); pasteAPI(); return; }
+  if (ctrl && e.key==='z')  { e.preventDefault(); undo(); return; }
+  if (ctrl && (e.key==='y' || (e.shiftKey&&e.key==='z'))) { e.preventDefault(); redo(); return; }
+  if (ctrl && e.key==='0')  { e.preventDefault(); fitCanvas(); return; }
+  if (ctrl && (e.key==='=' || e.key==='+')) { e.preventDefault(); const r=viewport.getBoundingClientRect(); zoomAt(r.width/2,r.height/2, ZOOM_STEP); return; }
+  if (ctrl && e.key==='-')  { e.preventDefault(); const r=viewport.getBoundingClientRect(); zoomAt(r.width/2,r.height/2,-ZOOM_STEP); return; }
+  if (e.key===' ' && !spaceDown) { e.preventDefault(); spaceDown=true; updateCursor(); return; }
+  if (!ctrl) {
+    const map={b:'pen',l:'line',a:'arrow',r:'rect',e:'ellipse',t:'text',m:'blur',x:'eraser',n:'step'};
+    if (map[e.key]) document.querySelector(`[data-tool="${map[e.key]}"]`)?.click();
+  }
+});
+document.addEventListener('keyup', e => {
+  if (e.key===' ') { spaceDown=false; if (panning) { panning=false; } updateCursor(); }
+});
+
+// ── PASTE ─────────────────────────────────────────────────────────────────────
+document.addEventListener('paste', e => {
+  for (const item of [...(e.clipboardData?.items||[])]) {
+    if (item.type.startsWith('image/')) { loadImage(URL.createObjectURL(item.getAsFile())); return; }
+  }
+});
+async function pasteAPI() {
+  try {
+    for (const item of await navigator.clipboard.read()) {
+      const t = item.types.find(t=>t.startsWith('image/'));
+      if (t) { loadImage(URL.createObjectURL(await item.getType(t))); return; }
+    }
+    toast('В буфері немає зображення','err');
+  } catch { toast('Спробуй Ctrl+V прямо в вікні','err'); }
+}
+
+// ── DRAG & DROP ───────────────────────────────────────────────────────────────
+viewport.addEventListener('dragover', e => e.preventDefault());
+viewport.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f?.type.startsWith('image/')) loadImage(URL.createObjectURL(f));
+});
+
+// ── TOOLBAR WIRING ────────────────────────────────────────────────────────────
+document.querySelectorAll('[data-tool]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    tool = btn.dataset.tool;
+    document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateCursor();
+  });
+});
+
+document.getElementById('colorPicker').addEventListener('input', e => color = e.target.value);
+const sizeRange = document.getElementById('sizeRange');
+const sizeVal   = document.getElementById('sizeVal');
+sizeRange.addEventListener('input', e => { size = +e.target.value; sizeVal.textContent = size; });
+
+document.getElementById('btnUndo').addEventListener('click', undo);
+document.getElementById('btnRedo').addEventListener('click', redo);
+document.getElementById('btnResetStep').addEventListener('click', () => {
+  stepCounter = 1;
+  updateStepBtn();
+  toast('Лічильник кроків скинуто до 1');
+});
+document.getElementById('btnClear').addEventListener('click', () => {
+  if (!active) return;
+  if (confirm('Очистити полотно?')) { restoreState(history[0]); history=[history[0]]; histIdx=0; toast('Очищено'); }
+});
+document.getElementById('btnNew').addEventListener('click', openNewModal);
+document.getElementById('splashNew').addEventListener('click', openNewModal);
+
+// zoom buttons
+document.getElementById('btnZoomIn').addEventListener('click',  () => { const r=viewport.getBoundingClientRect(); zoomAt(r.width/2,r.height/2, ZOOM_STEP*2); });
+document.getElementById('btnZoomOut').addEventListener('click', () => { const r=viewport.getBoundingClientRect(); zoomAt(r.width/2,r.height/2,-ZOOM_STEP*2); });
+document.getElementById('btnZoomFit').addEventListener('click', fitCanvas);
+
+document.getElementById('btnCopy').addEventListener('click', () => {
+  if (!active) { toast('Нема що копіювати','err'); return; }
+  canvas.toBlob(async blob => {
+    try { await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); toast('Скопійовано ✓','ok'); }
+    catch { toast('Не вдалось скопіювати','err'); }
+  });
+});
+
+document.getElementById('btnDownload').addEventListener('click', () => {
+  if (!active) { toast('Нема що завантажувати','err'); return; }
+  const adj=['swift','bright','crisp','sharp','pixel','vivid','bold','clean'];
+  const noun=['shot','snap','frame','view','grab','scene'];
+  const name=`${adj[Math.random()*adj.length|0]}-${noun[Math.random()*noun.length|0]}-${(Math.random()*9000+1000)|0}.png`;
+  const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download=name; a.click();
+  toast('Збережено як '+name,'ok');
+});
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+canvas.width = 0; canvas.height = 0;
+applyTransform();
+updateCursor();
+</script>
+</body>
+</html>
