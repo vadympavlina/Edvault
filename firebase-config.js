@@ -5,14 +5,15 @@
 
 // ── 🔧 REPLACE WITH YOUR FIREBASE PROJECT CONFIG ──────────
 // Go to: Firebase Console → Project Settings → Your Apps → SDK config
+
 const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey: "AIzaSyASpQTZaka3P-YUJ4tfHNmG-LCI-hQPhAI",
+  authDomain: "edvault-d4a7f.firebaseapp.com",
+  projectId: "edvault-d4a7f",
+  databaseURL: "https://edvault-d4a7f-default-rtdb.firebaseio.com/",
+  storageBucket: "edvault-d4a7f.firebasestorage.app",
+  messagingSenderId: "181496726566",
+  appId: "1:181496726566:web:5a86e78588c9440a0b52e7"
 };
 // ──────────────────────────────────────────────────────────
 
