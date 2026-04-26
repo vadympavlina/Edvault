@@ -276,6 +276,10 @@
     <span class="breadcrumb-cur" id="bcTitle">Завантаження...</span>
   </nav>
   <div class="topbar-actions">
+    <button class="btn btn-ghost" id="btnDownload" style="display:none" title="Завантажити урок">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="btn-label">Завантажити</span>
+    </button>
     <a href="index.html" class="btn btn-ghost">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       <span class="btn-label">Портал</span>
@@ -382,6 +386,11 @@
           <span class="breadcrumb-cur">${esc(lesson.title || 'Урок')}</span>`;
         document.getElementById('subjBadge').textContent = `📚 ${subjName}`;
       }
+
+      // Show download button and wire it up
+      const btnDownload = document.getElementById('btnDownload');
+      btnDownload.style.display = '';
+      btnDownload.addEventListener('click', () => downloadLesson(lesson, pages));
 
       // Hide loading, show body
       document.getElementById('stateLoading').style.display = 'none';
@@ -572,6 +581,80 @@
     // Scroll to top of main
     document.getElementById('lessonMain')?.scrollTo(0, 0);
   }
+
+  // ── Download lesson ────────────────────────────────────────
+  function downloadLesson(lesson, pages) {
+    const page = pages[curPageIdx];
+
+    let html;
+    if (page.isolated) {
+      // Standalone uploaded file — download as-is
+      html = page.htmlContent || '';
+    } else {
+      // Wrap portal HTML content in a clean standalone document
+      const linksHtml = (lesson.links || []).map(l =>
+        `<li><a href="${escAttr(l.url)}" target="_blank">${escText(l.title || l.url)}</a></li>`
+      ).join('');
+      const matsHtml = (lesson.materials || []).map(m =>
+        `<li><a href="${escAttr(m.fileUrl)}" target="_blank">${escText(m.title || m.fileUrl)}</a></li>`
+      ).join('');
+
+      html = `<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escText(lesson.title || 'Урок')}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Georgia, 'Times New Roman', serif; color: #1a1d23; background: #fff; max-width: 820px; margin: 40px auto; padding: 0 32px 60px; line-height: 1.75; }
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 18px; }
+    h2 { font-size: 21px; font-weight: 600; margin: 28px 0 10px; }
+    h3 { font-size: 17px; font-weight: 600; margin: 20px 0 8px; }
+    p  { font-size: 16px; margin-bottom: 14px; }
+    ul, ol { margin: 0 0 14px 22px; font-size: 16px; }
+    li { margin-bottom: 6px; }
+    code { font-family: 'Courier New', monospace; font-size: 13.5px; background: #f3f4f6; border: 1px solid #e2e5ea; padding: 1px 6px; border-radius: 4px; color: #c0392b; }
+    pre  { background: #1e2433; border-radius: 6px; padding: 16px; overflow-x: auto; margin-bottom: 16px; }
+    pre code { background: transparent; border: none; color: #e2e8f0; }
+    blockquote { border-left: 3px solid #4F6BF4; margin: 0 0 16px; padding: 10px 16px; background: #eef0fe; border-radius: 0 6px 6px 0; }
+    img { max-width: 100%; border-radius: 6px; margin: 10px 0; }
+    a   { color: #4F6BF4; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 15px; }
+    th  { background: #f3f4f6; font-weight: 600; }
+    th, td { border: 1px solid #e2e5ea; padding: 8px 12px; text-align: left; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    .meta { font-size: 13px; color: #6b7280; margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid #e2e5ea; }
+    .extra-section { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e5ea; }
+    .extra-section h2 { font-size: 16px; color: #6b7280; margin-bottom: 10px; }
+    .extra-section ul { list-style: none; margin: 0; padding: 0; }
+    .extra-section li { margin-bottom: 6px; }
+    .extra-section a { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>${escText(lesson.title || 'Урок')}</h1>
+  ${pages.length > 1 ? `<div class="meta">Сторінка ${curPageIdx + 1} з ${pages.length}: ${escText(page.title || '')}</div>` : ''}
+  ${page.htmlContent || ''}
+  ${linksHtml ? `<div class="extra-section"><h2>🔗 Корисні посилання</h2><ul>${linksHtml}</ul></div>` : ''}
+  ${matsHtml  ? `<div class="extra-section"><h2>📁 Матеріали</h2><ul>${matsHtml}</ul></div>` : ''}
+</body>
+</html>`;
+    }
+
+    // Trigger download
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const pagePart = pages.length > 1 ? `_${curPageIdx + 1}` : '';
+    a.href     = url;
+    a.download = `${(lesson.title || 'урок').replace(/[^\wа-яА-ЯіІєЄїЇ\s]/g, '').trim()}${pagePart}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function escText(s) { const d = document.createElement('div'); d.textContent = String(s || ''); return d.innerHTML; }
+  function escAttr(s) { return String(s || '').replace(/"/g, '&quot;'); }
 
   // ── Error state ────────────────────────────────────────────
   function showError() {
