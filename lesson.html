@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edvault — Урок</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234F6BF4'/><path d='M8 24.5A2.5 2.5 0 0 1 10.5 22H24M10.5 7H24v18H10.5A2.5 2.5 0 0 1 8 22.5v-13A2.5 2.5 0 0 1 10.5 7z' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <style>
+    body { overflow: auto; height: auto; min-height: 100vh; }
+
+    /* ── Breadcrumb ── */
+    .breadcrumb {
+      display: flex; align-items: center; gap: 5px;
+      flex: 1; min-width: 0; overflow: hidden;
+    }
+    .breadcrumb a {
+      font-size: 12.5px; color: var(--muted); text-decoration: none;
+      white-space: nowrap; transition: color .12s;
+    }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb-sep { color: var(--subtle); font-size: 13px; flex-shrink: 0; }
+    .breadcrumb-cur {
+      font-size: 12.5px; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ── Lesson layout ── */
+    .lesson-layout {
+      display: flex; flex: 1;
+      min-height: calc(100vh - var(--topbar));
+    }
+
+    /* ── Left sidebar: TOC ── */
+    .lesson-sidebar {
+      width: 230px; min-width: 230px;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow-y: auto; flex-shrink: 0;
+      padding: 16px 10px;
+    }
+    .sidebar-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--subtle);
+      padding: 0 6px 10px;
+    }
+    .toc-item {
+      display: flex; align-items: flex-start; gap: 7px;
+      padding: 6px 8px; border-radius: var(--r);
+      font-size: 12.5px; color: var(--muted);
+      cursor: pointer; transition: background .12s, color .12s;
+      line-height: 1.4;
+      border: none; background: transparent; width: 100%; text-align: left;
+    }
+    .toc-item:hover { background: var(--bg); color: var(--text); }
+    .toc-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+    .toc-item-num {
+      width: 18px; height: 18px; border-radius: 5px;
+      background: var(--bg); border: 1px solid var(--border);
+      font-size: 10px; font-weight: 700; color: var(--subtle);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .toc-item.active .toc-item-num {
+      background: var(--accent-lt); border-color: var(--accent-lt);
+      color: var(--accent);
+    }
+
+    /* ── Main content ── */
+    .lesson-main {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column;
+      background: var(--bg); overflow-y: auto;
+    }
+
+    /* ── Page tabs (top of content area) ── */
+    .page-tabs-bar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 0;
+      padding: 0 16px;
+      overflow-x: auto; flex-shrink: 0;
+    }
+    .page-tabs-bar::-webkit-scrollbar { height: 3px; }
+    .page-tabs-bar::-webkit-scrollbar-thumb { background: var(--border2); }
+    .page-tab-btn {
+      display: flex; align-items: center; gap: 6px;
+      height: 40px; padding: 0 14px;
+      border: none; background: transparent;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 13px; font-weight: 500; color: var(--muted);
+      cursor: pointer; white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: color .12s, border-color .12s;
+    }
+    .page-tab-btn:hover { color: var(--text); }
+    .page-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .page-tab-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    /* ── Content wrapper ── */
+    .lesson-content-wrap {
+      flex: 1; display: flex; flex-direction: column;
+    }
+
+    /* ── Isolated iframe page ── */
+    .isolated-frame {
+      flex: 1; width: 100%;
+      border: none; min-height: calc(100vh - var(--topbar) - 40px - var(--statusbar));
+      display: block;
+    }
+    .isolated-frame-wrap {
+      flex: 1; display: flex; flex-direction: column;
+    }
+
+    /* ── Regular HTML content ── */
+    .lesson-article-wrap {
+      max-width: 780px; margin: 0 auto;
+      padding: 36px 32px 60px;
+      width: 100%;
+    }
+
+    /* ── Article typography ── */
+    .lesson-article {
+      font-family: 'Lora', serif;
+      color: var(--text); line-height: 1.75;
+    }
+    .lesson-article h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 16px; color: var(--text); }
+    .lesson-article h2 { font-size: 20px; font-weight: 600; margin: 28px 0 10px; color: var(--text); }
+    .lesson-article h3 { font-size: 16px; font-weight: 600; margin: 20px 0 8px; color: var(--text); }
+    .lesson-article p { margin-bottom: 14px; font-size: 15px; }
+    .lesson-article ul, .lesson-article ol { margin: 0 0 14px 20px; font-size: 15px; }
+    .lesson-article li { margin-bottom: 6px; }
+    .lesson-article code {
+      font-family: 'Courier New', monospace; font-size: 13px;
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 1px 6px; border-radius: 5px; color: #c0392b;
+    }
+    .lesson-article pre {
+      background: #1e2433; border-radius: var(--r);
+      padding: 16px 18px; overflow-x: auto; margin-bottom: 16px;
+    }
+    .lesson-article pre code {
+      background: transparent; border: none; color: #e2e8f0;
+      font-size: 13px; padding: 0;
+    }
+    .lesson-article blockquote {
+      border-left: 3px solid var(--accent); margin: 0 0 16px;
+      padding: 10px 16px; background: var(--accent-bg);
+      border-radius: 0 var(--r) var(--r) 0;
+    }
+    .lesson-article img { max-width: 100%; border-radius: var(--r); margin: 10px 0; }
+    .lesson-article a { color: var(--accent); }
+    .lesson-article table {
+      width: 100%; border-collapse: collapse; margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .lesson-article th { background: var(--bg); font-weight: 600; }
+    .lesson-article th, .lesson-article td {
+      border: 1px solid var(--border); padding: 8px 12px; text-align: left;
+    }
+    .lesson-article tr:nth-child(even) td { background: var(--bg); }
+
+    /* ── Bottom panels: links & materials ── */
+    .lesson-panels {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 20px 32px 28px;
+      display: flex; gap: 32px; flex-wrap: wrap;
+    }
+    .lesson-panel { flex: 1; min-width: 200px; }
+    .panel-title {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .7px; color: var(--subtle); margin-bottom: 10px;
+    }
+    .panel-title svg { width: 13px; height: 13px; }
+    .panel-link {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: var(--r);
+      text-decoration: none; color: var(--muted);
+      font-size: 13px; transition: background .12s, color .12s;
+      border: 1px solid transparent;
+    }
+    .panel-link:hover {
+      background: var(--accent-bg); color: var(--accent);
+      border-color: var(--accent-lt);
+    }
+    .panel-link svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--subtle); }
+    .panel-link:hover svg { color: var(--accent); }
+    .panel-link-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .panel-ext {
+      font-size: 10px; font-weight: 600; color: var(--subtle);
+      background: var(--bg); padding: 1px 5px; border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .panel-empty { font-size: 12px; color: var(--subtle); font-style: italic; }
+
+    /* ── Nav buttons ── */
+    .lesson-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 32px; background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .nav-page-btn {
+      display: flex; align-items: center; gap: 7px;
+      height: 34px; padding: 0 14px;
+      border-radius: var(--r); border: 1px solid var(--border2);
+      background: var(--surface); color: var(--muted);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      transition: border-color .12s, color .12s, background .12s;
+    }
+    .nav-page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+    .nav-page-btn:disabled { opacity: .35; cursor: default; }
+    .nav-page-btn svg { width: 14px; height: 14px; }
+    .nav-page-info { font-size: 12px; color: var(--subtle); }
+
+    /* ── Error / Loading ── */
+    .lesson-state {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: var(--subtle); gap: 12px; padding: 40px;
+    }
+    .lesson-state svg { width: 48px; height: 48px; color: var(--border2); }
+    .lesson-state strong { font-size: 16px; color: var(--muted); }
+    .lesson-state p { font-size: 13px; line-height: 1.6; text-align: center; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Status bar ── */
+    .statusbar {
+      height: var(--statusbar);
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 14px; flex-shrink: 0;
+    }
+    .statusbar span { font-size: 11px; color: var(--subtle); display: flex; align-items: center; gap: 5px; }
+    .sb-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; display: inline-block; }
+    .sb-right { margin-left: auto; }
+
+    @media(max-width: 700px) {
+      .lesson-sidebar { display: none; }
+      .lesson-article-wrap { padding: 20px 16px 40px; }
+      .lesson-panels { padding: 16px; gap: 20px; }
+      .lesson-nav { padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ TOP BAR ══════════════════════════════════════════════ -->
+<header class="topbar">
+  <a href="index.html" class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+    </div>
+    <span class="brand-name">Edvault</span>
+  </a>
+  <div class="topbar-div"></div>
+  <nav class="breadcrumb" id="breadcrumb">
+    <a href="index.html">Портал</a>
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-cur" id="bcTitle">Завантаження...</span>
+  </nav>
+  <div class="topbar-actions">
+    <a href="index.html" class="btn btn-ghost">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="btn-label">Портал</span>
+    </a>
+  </div>
+</header>
+
+<!-- ══ BODY ═════════════════════════════════════════════════ -->
+<div class="lesson-layout">
+
+  <!-- Sidebar: TOC (page list) -->
+  <aside class="lesson-sidebar" id="lessonSidebar" style="display:none">
+    <div class="sidebar-title">Сторінки уроку</div>
+    <div id="tocList"></div>
+  </aside>
+
+  <!-- Main -->
+  <main class="lesson-main" id="lessonMain">
+
+    <!-- Loading state -->
+    <div class="lesson-state" id="stateLoading">
+      <div class="spinner"></div>
+      <strong>Завантаження уроку...</strong>
+    </div>
+
+    <!-- Error state -->
+    <div class="lesson-state" id="stateError" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <strong>Урок не знайдено</strong>
+      <p>Можливо, посилання застаріле або урок було видалено.<br/>
+         <a href="index.html" style="color:var(--accent)">Повернутись на портал</a></p>
+    </div>
+
+    <!-- Content (filled dynamically) -->
+    <div id="lessonBody" style="display:none; flex:1; flex-direction:column; display:none"></div>
+
+  </main>
+</div>
+
+<!-- ══ STATUS BAR ════════════════════════════════════════════ -->
+<div class="statusbar">
+  <span><span class="sb-dot"></span>Firebase Connected</span>
+  <span id="subjBadge" style="color:var(--muted)"></span>
+  <span class="sb-right" id="sbTime"></span>
+</div>
+
+<!-- ══ SCRIPTS ═══════════════════════════════════════════════ -->
+<script type="module">
+  import { dbGet, objToArray } from './firebase-config.js';
+
+  // ── Clock ──────────────────────────────────────────────────
+  const sbTimeEl = document.getElementById('sbTime');
+  const tick = () => sbTimeEl.textContent = new Date().toLocaleTimeString('uk-UA');
+  tick(); setInterval(tick, 1000);
+
+  // ── Parse URL params ───────────────────────────────────────
+  const params    = new URLSearchParams(location.search);
+  const lessonId  = params.get('id');
+  let   curPageIdx = parseInt(params.get('page') || '0', 10);
+
+  if (!lessonId) {
+    showError();
+  } else {
+    loadLesson(lessonId);
+  }
+
+  // ── Load lesson ────────────────────────────────────────────
+  async function loadLesson(id) {
+    try {
+      const [lesson, subjects] = await Promise.all([
+        dbGet(`/lessons/${id}`),
+        dbGet('/subjects')
+      ]);
+      if (!lesson) { showError(); return; }
+
+      // Normalize pages
+      let pages;
+      if (Array.isArray(lesson.pages) && lesson.pages.length > 0) {
+        pages = lesson.pages;
+      } else if (lesson.htmlContent) {
+        pages = [{ id: 'p0', title: 'Урок', htmlContent: lesson.htmlContent, isolated: false }];
+      } else {
+        pages = [{ id: 'p0', title: 'Урок', htmlContent: '<p>Вміст відсутній.</p>', isolated: false }];
+      }
+
+      // Subject info
+      const subj = subjects && lesson.subjectId ? subjects[lesson.subjectId] : null;
+      const subjName = subj?.name || '';
+
+      // Breadcrumb
+      document.title = `${lesson.title} — Edvault`;
+      document.getElementById('bcTitle').textContent = lesson.title || 'Урок';
+      if (subjName) {
+        const breadcrumb = document.getElementById('breadcrumb');
+        breadcrumb.innerHTML = `
+          <a href="index.html">Портал</a>
+          <span class="breadcrumb-sep">›</span>
+          <span style="font-size:12.5px;color:var(--muted)">${esc(subjName)}</span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-cur">${esc(lesson.title || 'Урок')}</span>`;
+        document.getElementById('subjBadge').textContent = `📚 ${subjName}`;
+      }
+
+      // Hide loading, show body
+      document.getElementById('stateLoading').style.display = 'none';
+      const body = document.getElementById('lessonBody');
+      body.style.display = 'flex';
+      body.style.flexDirection = 'column';
+      body.style.flex = '1';
+
+      // Sidebar TOC
+      if (pages.length > 1) {
+        const sidebar = document.getElementById('lessonSidebar');
+        sidebar.style.display = 'flex';
+        renderTOC(pages);
+      }
+
+      // Clamp page index
+      curPageIdx = Math.max(0, Math.min(curPageIdx, pages.length - 1));
+
+      renderLesson(body, lesson, pages, curPageIdx);
+
+    } catch(e) {
+      console.error(e);
+      showError();
+    }
+  }
+
+  // ── Render TOC ─────────────────────────────────────────────
+  function renderTOC(pages) {
+    const el = document.getElementById('tocList');
+    el.innerHTML = '';
+    pages.forEach((page, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'toc-item' + (i === curPageIdx ? ' active' : '');
+      btn.id = `toc-${i}`;
+      btn.innerHTML = `
+        <span class="toc-item-num">${i + 1}</span>
+        <span>${esc(page.title || `Сторінка ${i + 1}`)}</span>`;
+      btn.addEventListener('click', () => switchPage(i));
+      el.appendChild(btn);
+    });
+  }
+
+  // ── Render lesson ──────────────────────────────────────────
+  function renderLesson(container, lesson, pages, pageIdx) {
+    const page = pages[pageIdx];
+    const isIsolated = !!page.isolated;
+    const hasMultiplePages = pages.length > 1;
+
+    container.innerHTML = '';
+
+    // Page tabs (only if multiple pages)
+    if (hasMultiplePages) {
+      const tabsBar = document.createElement('div');
+      tabsBar.className = 'page-tabs-bar';
+      pages.forEach((p, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'page-tab-btn' + (i === pageIdx ? ' active' : '');
+        btn.innerHTML = `
+          ${p.isolated
+            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>`
+          }
+          ${esc(p.title || `Сторінка ${i + 1}`)}`;
+        btn.addEventListener('click', () => switchPage(i, pages, lesson, container));
+        tabsBar.appendChild(btn);
+      });
+      container.appendChild(tabsBar);
+    }
+
+    // Content area
+    const contentWrap = document.createElement('div');
+    contentWrap.className = 'lesson-content-wrap';
+
+    if (isIsolated) {
+      // Render isolated HTML in iframe — portal styles don't apply
+      const frameWrap = document.createElement('div');
+      frameWrap.className = 'isolated-frame-wrap';
+      const iframe = document.createElement('iframe');
+      iframe.className = 'isolated-frame';
+      iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-popups');
+      iframe.srcdoc = page.htmlContent || '';
+      // Auto-resize iframe to content height after load
+      iframe.addEventListener('load', () => {
+        try {
+          const h = iframe.contentDocument?.documentElement?.scrollHeight;
+          if (h && h > 200) iframe.style.height = h + 'px';
+        } catch(_) {}
+      });
+      frameWrap.appendChild(iframe);
+      contentWrap.appendChild(frameWrap);
+    } else {
+      // Render normal HTML content with sanitization
+      const articleWrap = document.createElement('div');
+      articleWrap.className = 'lesson-article-wrap';
+      const article = document.createElement('article');
+      article.className = 'lesson-article';
+      // Use DOMPurify if available, otherwise set innerHTML directly
+      if (typeof DOMPurify !== 'undefined') {
+        article.innerHTML = DOMPurify.sanitize(page.htmlContent || '');
+      } else {
+        article.innerHTML = page.htmlContent || '<p style="color:var(--subtle)">Вміст відсутній.</p>';
+      }
+      articleWrap.appendChild(article);
+      contentWrap.appendChild(articleWrap);
+    }
+
+    container.appendChild(contentWrap);
+
+    // Bottom panels: links + materials
+    const links = lesson.links || [];
+    const mats  = lesson.materials || [];
+    if (links.length || mats.length) {
+      const panels = document.createElement('div');
+      panels.className = 'lesson-panels';
+
+      if (links.length) {
+        panels.insertAdjacentHTML('beforeend', `
+          <div class="lesson-panel">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Корисні посилання
+            </div>
+            ${links.map(l => `
+              <a class="panel-link" href="${esc(l.url)}" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <span class="panel-link-title">${esc(l.title || l.url)}</span>
+                <span class="panel-ext">→</span>
+              </a>`).join('')}
+          </div>`);
+      }
+
+      if (mats.length) {
+        panels.insertAdjacentHTML('beforeend', `
+          <div class="lesson-panel">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Матеріали для завантаження
+            </div>
+            ${mats.map(m => {
+              const ext = (m.fileUrl || '').split('.').pop().toUpperCase().slice(0, 4);
+              return `<a class="panel-link" href="${esc(m.fileUrl)}" target="_blank" rel="noopener" download>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span class="panel-link-title">${esc(m.title || m.fileUrl)}</span>
+                ${ext ? `<span class="panel-ext">${ext}</span>` : ''}
+              </a>`;
+            }).join('')}
+          </div>`);
+      }
+
+      container.appendChild(panels);
+    }
+
+    // Prev / Next navigation (for multi-page lessons)
+    if (hasMultiplePages) {
+      const nav = document.createElement('div');
+      nav.className = 'lesson-nav';
+      nav.innerHTML = `
+        <button class="nav-page-btn" id="btnPrev" ${pageIdx === 0 ? 'disabled' : ''}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Попередня
+        </button>
+        <span class="nav-page-info">${pageIdx + 1} / ${pages.length}</span>
+        <button class="nav-page-btn" id="btnNext" ${pageIdx === pages.length - 1 ? 'disabled' : ''}>
+          Наступна
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>`;
+      nav.querySelector('#btnPrev')?.addEventListener('click', () => switchPage(pageIdx - 1, pages, lesson, container));
+      nav.querySelector('#btnNext')?.addEventListener('click', () => switchPage(pageIdx + 1, pages, lesson, container));
+      container.appendChild(nav);
+    }
+  }
+
+  // ── Switch page ────────────────────────────────────────────
+  function switchPage(idx, pages, lesson, container) {
+    // Update URL without reload
+    const url = new URL(location.href);
+    url.searchParams.set('page', idx);
+    history.replaceState(null, '', url);
+    curPageIdx = idx;
+
+    // Update TOC highlight
+    document.querySelectorAll('.toc-item').forEach((el, i) => {
+      el.classList.toggle('active', i === idx);
+    });
+
+    renderLesson(container, lesson, pages, idx);
+
+    // Scroll to top of main
+    document.getElementById('lessonMain')?.scrollTo(0, 0);
+  }
+
+  // ── Error state ────────────────────────────────────────────
+  function showError() {
+    document.getElementById('stateLoading').style.display = 'none';
+    document.getElementById('stateError').style.display   = 'flex';
+  }
+
+  // ── Escape helper ──────────────────────────────────────────
+  function esc(s) {
+    if (!s) return '';
+    const d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+  }
+
+</script>
+
+<!-- DOMPurify for sanitizing HTML content on non-isolated pages -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js" crossorigin="anonymous"></script>
+
+</body>
+</html>
