@@ -323,7 +323,42 @@
     .section { display: none; }
     .section.active { display: block; }
 
-    /* ── Tag pill ── */
+    /* ── Pagination ── */
+    .pagination {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .page-info { font-size: 12px; color: var(--subtle); }
+    .page-btns { display: flex; align-items: center; gap: 4px; }
+    .page-num-btn {
+      width: 30px; height: 30px; border-radius: var(--r);
+      border: 1px solid var(--border); background: transparent;
+      font-size: 12.5px; font-weight: 500; color: var(--muted);
+      cursor: pointer; transition: all .12s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .page-num-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+    .page-num-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .page-num-btn:disabled { opacity: .35; cursor: default; }
+
+    /* ── Subject toggle ── */
+    .toggle-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      height: 26px; padding: 0 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      border: 1.5px solid transparent; transition: all .15s;
+      margin-right: 6px;
+    }
+    .toggle-btn.on  { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+    .toggle-btn.off { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+    .toggle-btn:hover.on  { background: #bbf7d0; }
+    .toggle-btn:hover.off { background: #fecaca; }
+    .toggle-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .toggle-btn.on  .toggle-dot { background: #16a34a; }
+    .toggle-btn.off .toggle-dot { background: #dc2626; }
+    .subj-disabled .table-row-name { color: var(--subtle); }
+    .subj-disabled .table-row-icon { opacity: .45; }
     .tag-pill {
       display: inline-flex; align-items: center;
       height: 20px; padding: 0 8px; border-radius: 20px;
@@ -1106,10 +1141,11 @@
     if (!entries.length) { el.innerHTML = '<div class="table-empty">Предметів ще немає. Спочатку додайте категорію.</div>'; return; }
     el.innerHTML = '';
     entries.forEach(([id, subj]) => {
-      const catName = allCategories[subj.categoryId]?.name || '—';
+      const catName    = allCategories[subj.categoryId]?.name || '—';
       const lessonCount = Object.values(allLessons).filter(l => l.subjectId === id).length;
+      const isActive   = subj.active !== false; // default true
       const row = document.createElement('div');
-      row.className = 'table-row';
+      row.className = 'table-row' + (isActive ? '' : ' subj-disabled');
       row.innerHTML = `
         <div class="table-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
         <div class="table-row-info">
@@ -1117,6 +1153,10 @@
           <div class="table-row-meta">${esc(catName)} · ${lessonCount} урок${lessonCount === 1 ? '' : 'ів'}</div>
         </div>
         <span class="badge" style="margin-right:8px">${esc(catName)}</span>
+        <button class="toggle-btn ${isActive ? 'on' : 'off'}" data-toggle-subj="${id}" title="${isActive ? 'Відключити предмет' : 'Увімкнути предмет'}">
+          <span class="toggle-dot"></span>
+          ${isActive ? 'Активний' : 'Вимкнений'}
+        </button>
         <div class="table-row-actions">
           <button class="icon-btn" title="Редагувати" data-edit-subj="${id}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1126,6 +1166,23 @@
           </button>
         </div>`;
       el.appendChild(row);
+    });
+
+    // Toggle active
+    el.querySelectorAll('[data-toggle-subj]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id      = btn.dataset.toggleSubj;
+        const current = allSubjects[id].active !== false;
+        const newVal  = !current;
+        btn.disabled  = true;
+        try {
+          await dbUpdate(`/subjects/${id}`, { active: newVal });
+          allSubjects[id].active = newVal;
+          renderSubjTable();
+          toast(newVal ? 'Предмет увімкнено' : 'Предмет вимкнено');
+        } catch(e) { toast('Помилка', 'error'); }
+        finally { btn.disabled = false; }
+      });
     });
 
     el.querySelectorAll('[data-edit-subj]').forEach(btn => {
@@ -1153,6 +1210,10 @@
   }
 
   // ── Lessons ───────────────────────────────────────────────
+  const LESSONS_PER_PAGE = 15;
+  let lessonCurrentPage  = 1;
+  let lessonCurrentFilter = '';
+
   document.getElementById('btnAddLesson').addEventListener('click', () => {
     editingLessonId = null;
     document.getElementById('lessonModalTitle').textContent = 'Новий урок';
@@ -1397,7 +1458,9 @@
         toast('Урок додано');
       }
       closeModal('lessonModal');
-      updateCounts(); renderLessonTable(); renderDashboard();
+      // Restore current filter and page — don't reset view
+      document.getElementById('lessonFilterSubj').value = lessonCurrentFilter;
+      updateCounts(); renderLessonTable(lessonCurrentFilter, lessonCurrentPage); renderDashboard();
     } catch(e) { toast('Помилка збереження', 'error'); console.error(e); }
     finally { btn.disabled = false; btn.textContent = 'Зберегти урок'; }
   }
@@ -1524,21 +1587,33 @@
   }
 
   // ── Lesson table ──────────────────────────────────────────
-  function renderLessonTable(filterSubjId = '') {
+  function renderLessonTable(filterSubjId = lessonCurrentFilter, page = lessonCurrentPage) {
+    lessonCurrentFilter = filterSubjId;
     const el = document.getElementById('lessonTable');
     let entries = Object.entries(allLessons);
     if (filterSubjId) entries = entries.filter(([, l]) => l.subjectId === filterSubjId);
     entries.sort((a, b) => (a[1].title || '').localeCompare(b[1].title || '', 'uk'));
 
-    if (!entries.length) { el.innerHTML = '<div class="table-empty">Уроків ще немає. Спочатку додайте предмет.</div>'; return; }
+    if (!entries.length) {
+      lessonCurrentPage = 1;
+      el.innerHTML = '<div class="table-empty">Уроків ще немає. Спочатку додайте предмет.</div>';
+      return;
+    }
+
+    const totalPages = Math.ceil(entries.length / LESSONS_PER_PAGE);
+    lessonCurrentPage = Math.min(Math.max(1, page), totalPages);
+    const start = (lessonCurrentPage - 1) * LESSONS_PER_PAGE;
+    const slice = entries.slice(start, start + LESSONS_PER_PAGE);
+
     el.innerHTML = '';
-    entries.forEach(([id, lesson]) => {
-      const subjName  = allSubjects[lesson.subjectId]?.name || '—';
+
+    // Rows
+    const rowsWrap = document.createElement('div');
+    slice.forEach(([id, lesson]) => {
+      const subjName   = allSubjects[lesson.subjectId]?.name || '—';
       const pagesCount = Array.isArray(lesson.pages) ? lesson.pages.length : (lesson.htmlContent ? 1 : 0);
-      const tag = lesson.tagId ? allTags[lesson.tagId] : null;
-      const tagHtml = tag
-        ? `<span class="tag-pill" style="background:${tag.bg};color:${tag.text};margin-right:8px">${esc(tag.name)}</span>`
-        : '';
+      const tag        = lesson.tagId ? allTags[lesson.tagId] : null;
+      const tagHtml    = tag ? `<span class="tag-pill" style="background:${tag.bg};color:${tag.text};margin-right:8px">${esc(tag.name)}</span>` : '';
       const row = document.createElement('div');
       row.className = 'table-row';
       row.innerHTML = `
@@ -1557,9 +1632,61 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
           </button>
         </div>`;
-      el.appendChild(row);
+      rowsWrap.appendChild(row);
     });
+    el.appendChild(rowsWrap);
 
+    // Pagination
+    if (totalPages > 1) {
+      const pag = document.createElement('div');
+      pag.className = 'pagination';
+
+      const info = document.createElement('span');
+      info.className = 'page-info';
+      info.textContent = `${start + 1}–${Math.min(start + LESSONS_PER_PAGE, entries.length)} з ${entries.length} уроків`;
+      pag.appendChild(info);
+
+      const btns = document.createElement('div');
+      btns.className = 'page-btns';
+
+      // Prev
+      const prev = document.createElement('button');
+      prev.className = 'page-num-btn';
+      prev.innerHTML = '‹';
+      prev.disabled = lessonCurrentPage === 1;
+      prev.addEventListener('click', () => renderLessonTable(lessonCurrentFilter, lessonCurrentPage - 1));
+      btns.appendChild(prev);
+
+      // Page numbers (show up to 7, with ellipsis)
+      const range = getPageRange(lessonCurrentPage, totalPages);
+      range.forEach(p => {
+        if (p === '…') {
+          const dots = document.createElement('span');
+          dots.style.cssText = 'padding:0 4px;color:var(--subtle);font-size:12px';
+          dots.textContent = '…';
+          btns.appendChild(dots);
+        } else {
+          const btn = document.createElement('button');
+          btn.className = 'page-num-btn' + (p === lessonCurrentPage ? ' active' : '');
+          btn.textContent = p;
+          btn.addEventListener('click', () => renderLessonTable(lessonCurrentFilter, p));
+          btns.appendChild(btn);
+        }
+      });
+
+      // Next
+      const next = document.createElement('button');
+      next.className = 'page-num-btn';
+      next.innerHTML = '›';
+      next.disabled = lessonCurrentPage === totalPages;
+      next.addEventListener('click', () => renderLessonTable(lessonCurrentFilter, lessonCurrentPage + 1));
+      btns.appendChild(next);
+
+      pag.appendChild(btns);
+      el.appendChild(pag);
+    }
+
+    // Edit handlers
     el.querySelectorAll('[data-edit-lesson]').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.editLesson;
@@ -1568,8 +1695,6 @@
         document.getElementById('lessonModalTitle').textContent = 'Редагувати урок';
         document.getElementById('lessonTitleInp').value = l.title || '';
         populateSubjSelect('lessonSubjSel', l.subjectId);
-
-        // Load pages: support old format (htmlContent) and new (pages array)
         if (Array.isArray(l.pages) && l.pages.length > 0) {
           lessonPages = l.pages.map(p => ({ ...p }));
         } else {
@@ -1579,23 +1704,17 @@
         lessonLinks = (l.links || []).map(x => ({ ...x }));
         lessonMats  = (l.materials || []).map(x => ({ ...x }));
         selectedLessonTagId = l.tagId || null;
-
-        renderPagesEditor();
-        renderLinks();
-        renderMats();
-        renderTagPicker();
+        renderPagesEditor(); renderLinks(); renderMats(); renderTagPicker();
         openModal('lessonModal');
       });
     });
 
+    // Delete handlers
     el.querySelectorAll('[data-del-lesson]').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.delLesson;
         confirmDelete(`Видалити урок "${allLessons[id]?.title}"?`, async () => {
-          await Promise.all([
-            dbRemove(`/lessons/${id}`),
-            dbRemove(`/lesson_meta/${id}`)
-          ]);
+          await Promise.all([dbRemove(`/lessons/${id}`), dbRemove(`/lesson_meta/${id}`)]);
           delete allLessons[id];
           updateCounts(); renderLessonTable(); renderDashboard(); toast('Видалено');
         });
@@ -1603,12 +1722,26 @@
     });
   }
 
-  // Filter lessons by subject
-  document.getElementById('lessonFilterSubj').addEventListener('change', e => {
-    renderLessonTable(e.target.value);
-  });
+  function getPageRange(current, total) {
+    if (total <= 7) return Array.from({length: total}, (_, i) => i + 1);
+    const pages = [];
+    if (current <= 4) {
+      for (let i = 1; i <= 5; i++) pages.push(i);
+      pages.push('…', total);
+    } else if (current >= total - 3) {
+      pages.push(1, '…');
+      for (let i = total - 4; i <= total; i++) pages.push(i);
+    } else {
+      pages.push(1, '…', current - 1, current, current + 1, '…', total);
+    }
+    return pages;
+  }
 
-  // ── Populates ─────────────────────────────────────────────
+  // Filter — reset to page 1 on change, keep filter for subsequent renders
+  document.getElementById('lessonFilterSubj').addEventListener('change', e => {
+    lessonCurrentPage = 1;
+    renderLessonTable(e.target.value, 1);
+  });
   function populateSubjSelects() {
     populateCatSelect('subjCatSel', '');
     populateSubjSelect('lessonSubjSel', '');

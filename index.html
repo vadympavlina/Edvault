@@ -518,6 +518,7 @@
       bcArea.innerHTML = '';
 
       const filtered = allSubjects
+        .filter(s => s.active !== false)  // hide disabled subjects
         .filter(s => (!activeCatId || s.categoryId === activeCatId)
                   && (!searchQuery || s.name.toLowerCase().includes(searchQuery)))
         .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
