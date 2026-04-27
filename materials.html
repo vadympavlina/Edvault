@@ -233,7 +233,7 @@
 
   <!-- ══ TOP BAR ══════════════════════════════════════════ -->
   <header class="topbar">
-    <a href="materials.html" class="brand">
+    <a href="index.html" class="brand">
       <div class="brand-mark">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
@@ -314,6 +314,7 @@
 
   <!-- ══ STATUS BAR ════════════════════════════════════════ -->
   <div class="statusbar" style="position:fixed;bottom:0;left:0;right:0;">
+    <span><span class="sb-dot"></span>Firebase Realtime DB</span>
     <span id="sbCount" style="color:var(--subtle)"></span>
     <span class="sb-right" id="sbTime" style="color:var(--subtle)"></span>
   </div>
@@ -335,12 +336,10 @@
     let allSubjects    = [];
     let allCategories  = {};
     let allTags        = {};
-    // Lessons cached per subject: { subjId: [...lessons] }
-    let lessonsCache   = {};
-    let loadingSubjId  = null;
+    let lessonsCache   = {};  // { subjId: [{id,title,tagId,pagesCount}] }
     let activeCatId    = null;
     let searchQuery    = '';
-    let selectedSubjId = null;   // null = subjects view, ID = lessons view
+    let selectedSubjId = null;
     let currentView    = localStorage.getItem('edvault_view') || 'grid';
 
     // ── DOM ────────────────────────────────────────────────
@@ -379,15 +378,33 @@
     async function bootstrap() {
       loadOverlay.classList.add('show');
       try {
-        const [catData, subjData, tagData] = await Promise.all([
-          dbGet('/categories'),
-          dbGet('/subjects'),
-          dbGet('/tags')
+        const [catData, subjData, tagData, metaData] = await Promise.all([
+          dbGet('/categories'), dbGet('/subjects'),
+          dbGet('/tags'), dbGet('/lesson_meta')
         ]);
-        allCategories = catData  || {};
+        allCategories = catData || {};
         allSubjects   = objToArray(subjData);
-        allTags       = tagData  || {};
+        allTags       = tagData || {};
+
+        // Build per-subject cache from lightweight metadata only
+        allSubjects.forEach(s => { lessonsCache[s.id] = []; });
+        Object.entries(metaData || {}).forEach(([id, l]) => {
+          const sid = l.subjectId;
+          if (!lessonsCache[sid]) lessonsCache[sid] = [];
+          lessonsCache[sid].push({
+            id,
+            title:      l.title      || '',
+            tagId:      l.tagId      || null,
+            pagesCount: l.pagesCount || 1
+          });
+        });
+        Object.keys(lessonsCache).forEach(sid =>
+          lessonsCache[sid].sort((a, b) => a.title.localeCompare(b.title, 'uk'))
+        );
+
         buildCategoryMenu();
+        const urlSubj = new URLSearchParams(location.search).get('subject');
+        if (urlSubj && allSubjects.find(s => s.id === urlSubj)) selectedSubjId = urlSubj;
         render();
       } catch (err) {
         console.error(err);
@@ -433,43 +450,28 @@
       render();
     });
 
-    // ── Navigation ─────────────────────────────────────────
-    async function openSubject(subjId) {
+    // ── Navigation — instant + URL sync ──────────────────
+    function openSubject(subjId) {
       selectedSubjId = subjId;
-      searchInp.value = '';
-      searchQuery = '';
-      render(); // renders with loading state
-      window.scrollTo(0, 0);
-
-      // Load lessons only if not cached
-      if (!lessonsCache[subjId]) {
-        loadingSubjId = subjId;
-        render(); // show spinner
-        try {
-          const data = await dbGet('/lessons');
-          // Cache ALL lessons but only once — filter by subject on render
-          const all = data || {};
-          // Store per-subject
-          allSubjects.forEach(s => {
-            lessonsCache[s.id] = Object.entries(all)
-              .filter(([, l]) => l.subjectId === s.id)
-              .map(([id, l]) => ({ id, ...l, pagesCount: Array.isArray(l.pages) ? l.pages.length : (l.htmlContent ? 1 : 0) }))
-              .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'uk'));
-          });
-        } catch(e) {
-          console.error(e);
-        }
-        loadingSubjId = null;
-      }
-      render();
+      searchInp.value = ''; searchQuery = '';
+      const url = new URL(location.href);
+      url.searchParams.set('subject', subjId);
+      history.pushState({ subjId }, '', url);
+      render(); window.scrollTo(0, 0);
     }
     function goBack() {
       selectedSubjId = null;
-      searchInp.value = '';
-      searchQuery = '';
-      render();
-      window.scrollTo(0, 0);
+      searchInp.value = ''; searchQuery = '';
+      const url = new URL(location.href);
+      url.searchParams.delete('subject');
+      history.pushState({}, '', url);
+      render(); window.scrollTo(0, 0);
     }
+    window.addEventListener('popstate', () => {
+      const s = new URLSearchParams(location.search).get('subject');
+      selectedSubjId = (s && allSubjects.find(x => x.id === s)) ? s : null;
+      render();
+    });
 
     // ── Helpers ────────────────────────────────────────────
     function lessonsFor(sid) {
@@ -478,8 +480,7 @@
     }
 
     function lessonCount(sid) {
-      // If cached, use real count; otherwise unknown
-      return lessonsCache[sid] ? lessonsCache[sid].length : null;
+      return (lessonsCache[sid] || []).length;
     }
     function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
     function ukEnd(n, many, one, few) {
@@ -517,6 +518,7 @@
       bcArea.innerHTML = '';
 
       const filtered = allSubjects
+        .filter(s => s.active !== false)  // hide disabled subjects
         .filter(s => (!activeCatId || s.categoryId === activeCatId)
                   && (!searchQuery || s.name.toLowerCase().includes(searchQuery)))
         .sort((a, b) => a.name.localeCompare(b.name, 'uk'));
@@ -542,9 +544,7 @@
       subjects.forEach(subj => {
         const count   = lessonCount(subj.id);
         const catName = allCategories[subj.categoryId]?.name || '';
-        const countLabel = count === null
-          ? '···'
-          : `${count} урок${ukEnd(count, 'ів', '', 'и')}`;
+        const countLabel = `${count} урок${ukEnd(count, 'ів', '', 'и')}`;
         const el = document.createElement('div');
         el.className = 'subj-card';
         el.innerHTML = `
@@ -571,9 +571,7 @@
       subjects.forEach(subj => {
         const count   = lessonCount(subj.id);
         const catName = allCategories[subj.categoryId]?.name || '';
-        const countLabel = count === null
-          ? '···'
-          : `${count} урок${ukEnd(count, 'ів', '', 'и')}`;
+        const countLabel = `${count} урок${ukEnd(count, 'ів', '', 'и')}`;
         const el = document.createElement('div');
         el.className = 'subj-row';
         el.innerHTML = `
@@ -610,18 +608,6 @@
         <span class="bc-cur">${esc(subj?.name || 'Предмет')}</span>`;
       bcArea.appendChild(bc);
       document.getElementById('bcBackBtn').addEventListener('click', goBack);
-
-      // Still loading — show spinner
-      if (loadingSubjId === subjId) {
-        itemsCount.textContent = '';
-        sbCount.textContent = 'Завантаження…';
-        area.innerHTML = `
-          <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:60px 20px;color:var(--subtle)">
-            <div style="width:22px;height:22px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite"></div>
-            <span style="font-size:13px">Завантаження уроків…</span>
-          </div>`;
-        return;
-      }
 
       const lessons = lessonsFor(subjId);
       const total   = lessons.length;
