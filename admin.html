@@ -260,41 +260,6 @@
     }
     .html-editor:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.12); background: var(--surface); }
 
-    /* ── Upload HTML ── */
-    .page-toolbar {
-      display: flex; align-items: center; gap: 6px;
-      margin-bottom: 6px;
-    }
-    .page-toolbar-label { font-size: 11px; color: var(--subtle); flex: 1; }
-    .btn-upload-html {
-      display: inline-flex; align-items: center; gap: 5px;
-      height: 26px; padding: 0 10px;
-      border-radius: var(--r); border: 1px solid var(--border2);
-      font-size: 11.5px; font-weight: 500; color: var(--muted);
-      background: var(--surface); cursor: pointer;
-      transition: border-color .12s, color .12s, background .12s;
-    }
-    .btn-upload-html:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
-    .btn-upload-html svg { width: 12px; height: 12px; }
-    .isolated-badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      height: 22px; padding: 0 8px; border-radius: 20px;
-      font-size: 10.5px; font-weight: 600;
-      background: #fef9c3; color: #a16207;
-      border: 1px solid #fde68a;
-    }
-    .isolated-badge svg { width: 11px; height: 11px; }
-    .btn-clear-isolated {
-      background: transparent; border: none; cursor: pointer;
-      color: #a16207; padding: 0 2px; font-size: 13px; line-height: 1;
-    }
-    .btn-clear-isolated:hover { color: #dc2626; }
-    .isolated-preview {
-      width: 100%; min-height: 280px; border: 1px solid var(--border2);
-      border-radius: var(--r); background: #fff;
-      resize: vertical; overflow: auto;
-    }
-
     /* ── Links & materials ── */
     .links-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
     .link-row {
@@ -433,7 +398,7 @@
     <div class="topbar-div"></div>
     <span style="font-size:12px;font-weight:600;color:var(--subtle);letter-spacing:.3px">ADMIN</span>
     <div class="topbar-actions">
-      <a href="materials.html" class="btn btn-ghost">
+      <a href="index.html" class="btn btn-ghost">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         <span class="btn-label">Портал</span>
       </a>
@@ -520,6 +485,21 @@
           </div>
           <div class="table-card" id="recentLessons">
             <div class="table-empty">Завантаження...</div>
+          </div>
+
+          <!-- Migration tool -->
+          <div style="margin-top:24px;padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r)">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <div style="flex:1;min-width:200px">
+                <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">Міграція метаданих</div>
+                <div style="font-size:12px;color:var(--subtle)">Створює <code>/lesson_meta</code> для всіх існуючих уроків. Потрібно зробити один раз.</div>
+              </div>
+              <button class="btn btn-ghost" id="btnMigrate" style="flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+                Запустити міграцію
+              </button>
+            </div>
+            <div id="migrateStatus" style="display:none;margin-top:10px;font-size:12px;color:var(--accent)"></div>
           </div>
         </div>
 
@@ -963,6 +943,44 @@
     });
   }
 
+  // ── Migration: generate /lesson_meta for all existing lessons ──
+  document.getElementById('btnMigrate').addEventListener('click', async () => {
+    const btn    = document.getElementById('btnMigrate');
+    const status = document.getElementById('migrateStatus');
+    const total  = Object.keys(allLessons).length;
+    if (!total) { toast('Немає уроків для міграції', 'error'); return; }
+
+    btn.disabled = true;
+    status.style.display = 'block';
+    status.textContent   = `Міграція: 0 / ${total}…`;
+
+    const updates = {};
+    let done = 0;
+    Object.entries(allLessons).forEach(([id, l]) => {
+      updates[`/lesson_meta/${id}`] = {
+        title:      l.title      || '',
+        subjectId:  l.subjectId  || '',
+        tagId:      l.tagId      || null,
+        pagesCount: Array.isArray(l.pages) ? l.pages.length : (l.htmlContent ? 1 : 0)
+      };
+      done++;
+    });
+
+    try {
+      // Use dbUpdate on root to do a multi-path update in one request
+      await dbUpdate('/', updates);
+      status.textContent = `✅ Готово! Мігровано ${done} урок${done === 1 ? '' : done < 5 ? 'и' : 'ів'}.`;
+      status.style.color = 'var(--success, #22c55e)';
+      toast(`Міграцію завершено: ${done} уроків`);
+    } catch(e) {
+      console.error(e);
+      status.textContent = '❌ Помилка міграції. Перевірте консоль.';
+      status.style.color = '#ef4444';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   // ── Categories ────────────────────────────────────────────
   let editingCatId = null;
 
@@ -1332,35 +1350,50 @@
   // LESSONS – SAVE
   // ══════════════════════════════════════════════════════════
   async function saveLesson() {
-    const title = document.getElementById('lessonTitleInp').value.trim();
+    const title     = document.getElementById('lessonTitleInp').value.trim();
     const subjectId = document.getElementById('lessonSubjSel').value;
-    if (!title) { toast('Введіть назву уроку', 'error'); return; }
-    if (!subjectId) { toast('Оберіть предмет', 'error'); return; }
+    if (!title)     { toast('Введіть назву уроку', 'error'); return; }
+    if (!subjectId) { toast('Оберіть предмет', 'error');    return; }
 
-    // Save current page textarea
     syncActivePage();
 
     const btn = document.getElementById('saveLessonBtn');
     btn.disabled = true; btn.textContent = 'Збереження...';
 
     try {
-      const data = {
+      const pagesCount = lessonPages.length;
+
+      // Heavy data — full lesson content
+      const fullData = {
         title, subjectId,
-        pages: lessonPages,
+        pages:       lessonPages,
         htmlContent: lessonPages[0]?.htmlContent || '',
-        links: lessonLinks,
-        materials: lessonMats,
-        ...(selectedLessonTagId ? { tagId: selectedLessonTagId } : { tagId: null })
+        links:       lessonLinks,
+        materials:   lessonMats,
+        tagId:       selectedLessonTagId || null
+      };
+
+      // Light data — index only (for portal listing)
+      const metaData = {
+        title, subjectId,
+        pagesCount,
+        tagId: selectedLessonTagId || null
       };
 
       if (editingLessonId) {
-        await dbUpdate(`/lessons/${editingLessonId}`, data);
-        allLessons[editingLessonId] = { ...allLessons[editingLessonId], ...data };
+        await Promise.all([
+          dbUpdate(`/lessons/${editingLessonId}`, fullData),
+          dbUpdate(`/lesson_meta/${editingLessonId}`, metaData)
+        ]);
+        allLessons[editingLessonId] = { ...allLessons[editingLessonId], ...fullData };
         toast('Урок оновлено');
       } else {
         const id = generateId(10);
-        await dbSet(`/lessons/${id}`, data);
-        allLessons[id] = data;
+        await Promise.all([
+          dbSet(`/lessons/${id}`, fullData),
+          dbSet(`/lesson_meta/${id}`, metaData)
+        ]);
+        allLessons[id] = fullData;
         toast('Урок додано');
       }
       closeModal('lessonModal');
@@ -1373,11 +1406,8 @@
   function syncActivePage() {
     const textarea = document.querySelector('.html-editor');
     const titleInp = document.querySelector('.page-title-inp');
-    if (!lessonPages[activePageIdx]) return;
-    // Only sync textarea content if NOT isolated (isolated content set directly)
-    if (textarea && !lessonPages[activePageIdx].isolated) {
-      lessonPages[activePageIdx].htmlContent = textarea.value;
-    }
+    if (!textarea || !lessonPages[activePageIdx]) return;
+    lessonPages[activePageIdx].htmlContent = textarea.value;
     if (titleInp) lessonPages[activePageIdx].title = titleInp.value || `Сторінка ${activePageIdx + 1}`;
   }
 
@@ -1418,65 +1448,15 @@
 
     // Editor for active page
     const page = lessonPages[activePageIdx] || {};
-    const isIsolated = !!page.isolated;
-
     editorEl.innerHTML = `
       <div class="page-title-row">
         <input class="page-title-inp" placeholder="Назва сторінки (напр. Теорія)" value="${esc(page.title || '')}" />
       </div>
-      <div class="page-toolbar">
-        ${isIsolated
-          ? `<span class="isolated-badge">
-               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-               Завантажений HTML-файл
-               <button class="btn-clear-isolated" title="Очистити та редагувати HTML вручну">✕</button>
-             </span>`
-          : `<span class="page-toolbar-label">Введіть HTML вручну або завантажте файл</span>`
-        }
-        <label class="btn-upload-html" title="Завантажити .html файл">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          ${isIsolated ? 'Замінити файл' : 'Завантажити HTML'}
-          <input type="file" accept=".html,.htm" style="display:none" id="htmlFileInput" />
-        </label>
-      </div>
-      ${isIsolated
-        ? `<iframe class="isolated-preview" srcdoc="${esc(page.htmlContent || '')}" sandbox="allow-same-origin allow-scripts"></iframe>`
-        : `<textarea class="html-editor" placeholder="<h1>Заголовок</h1>\n<p>Текст уроку у форматі HTML...</p>">${esc(page.htmlContent || '')}</textarea>`
-      }`;
+      <textarea class="html-editor" placeholder="<h1>Заголовок</h1>\n<p>Текст уроку у форматі HTML...</p>">${esc(page.htmlContent || '')}</textarea>`;
 
-    // Auto-save
-    const textarea = editorEl.querySelector('.html-editor');
-    if (textarea) textarea.addEventListener('change', syncActivePage);
+    // Auto-save on blur
+    editorEl.querySelector('.html-editor').addEventListener('change', syncActivePage);
     editorEl.querySelector('.page-title-inp').addEventListener('change', syncActivePage);
-
-    // Clear isolated → back to manual editor
-    const clearBtn = editorEl.querySelector('.btn-clear-isolated');
-    if (clearBtn) {
-      clearBtn.addEventListener('click', () => {
-        syncActivePage();
-        lessonPages[activePageIdx].isolated = false;
-        renderPagesEditor();
-      });
-    }
-
-    // File upload
-    const fileInput = editorEl.querySelector('#htmlFileInput');
-    fileInput.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        syncActivePage();
-        lessonPages[activePageIdx].htmlContent = ev.target.result;
-        lessonPages[activePageIdx].isolated = true;
-        if (!lessonPages[activePageIdx].title || lessonPages[activePageIdx].title.startsWith('Сторінка')) {
-          lessonPages[activePageIdx].title = file.name.replace(/\.html?$/i, '');
-        }
-        renderPagesEditor();
-        toast('HTML-файл завантажено');
-      };
-      reader.readAsText(file);
-    });
   }
 
   function addPage() {
@@ -1612,7 +1592,10 @@
       btn.addEventListener('click', () => {
         const id = btn.dataset.delLesson;
         confirmDelete(`Видалити урок "${allLessons[id]?.title}"?`, async () => {
-          await dbRemove(`/lessons/${id}`);
+          await Promise.all([
+            dbRemove(`/lessons/${id}`),
+            dbRemove(`/lesson_meta/${id}`)
+          ]);
           delete allLessons[id];
           updateCounts(); renderLessonTable(); renderDashboard(); toast('Видалено');
         });
