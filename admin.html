@@ -404,8 +404,8 @@
     <div class="auth-sub">Введіть дані адміністратора</div>
     <div class="auth-error" id="authError">Невірний логін або пароль</div>
     <div class="field">
-      <label>Логін</label>
-      <input type="text" id="authUser" placeholder="admin" autocomplete="username" />
+      <label>Email</label>
+      <input type="email" id="authUser" placeholder="email@example.com" autocomplete="username" />
     </div>
     <div class="field">
       <label>Пароль</label>
@@ -808,6 +808,10 @@
 <script type="module">
   import { dbGet, dbSet, dbUpdate, dbPush, dbRemove, generateId, objToArray }
     from './firebase-config.js';
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const auth = getAuth();
 
   // ── State ─────────────────────────────────────────────────
   let allCategories = {};
@@ -835,43 +839,36 @@
   const authBtn     = document.getElementById('authBtn');
   const authError   = document.getElementById('authError');
 
-  // Check session
-  const loggedIn = sessionStorage.getItem('ev_admin');
-  if (loggedIn) showAdmin(loggedIn);
+  // Check session — Firebase Auth сам пам'ятає сесію між перезавантаженнями
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      showAdmin(user.email);
+    } else {
+      authScreen.style.display = 'flex';
+      adminScreen.classList.remove('show');
+    }
+  });
 
   authBtn.addEventListener('click', doLogin);
   document.getElementById('authUser').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
   document.getElementById('authPass').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
 
   async function doLogin() {
-    const user = document.getElementById('authUser').value.trim();
-    const pass = document.getElementById('authPass').value;
-    if (!user || !pass) { showAuthError('Заповніть усі поля'); return; }
+    const email = document.getElementById('authUser').value.trim();
+    const pass  = document.getElementById('authPass').value;
+    if (!email || !pass) { showAuthError('Заповніть усі поля'); return; }
     authBtn.disabled = true; authBtn.textContent = 'Перевірка...';
     try {
-      const admins = await dbGet('/admins');
-      // Підтримка двох форматів:
-      // 1) ключ = логін: { password: '...' }
-      // 2) ключ = будь-що: { username: '...', password: '...' }
-      let found = false;
-      if (admins) {
-        for (const entry of Object.values(admins)) {
-          if (entry.username === user && entry.password === pass) {
-            found = true; break;
-          }
-        }
-        if (!found && admins[user] && admins[user].password === pass) {
-          found = true;
-        }
-      }
-      if (found) {
-        sessionStorage.setItem('ev_admin', user);
-        showAdmin(user);
-      } else {
-        showAuthError('Невірний логін або пароль');
-      }
-    } catch(e) {
-      showAuthError('Помилка з\'єднання з Firebase');
+      await signInWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged спрацює і викличе showAdmin
+    } catch (e) {
+      const code = e.code || '';
+      let msg = 'Невірний email або пароль';
+      if (code === 'auth/invalid-email')        msg = 'Невірний формат email';
+      else if (code === 'auth/user-disabled')   msg = 'Користувача заблоковано';
+      else if (code === 'auth/network-request-failed') msg = 'Помилка мережі';
+      else if (code === 'auth/too-many-requests') msg = 'Забагато спроб. Спробуйте пізніше';
+      showAuthError(msg);
     } finally {
       authBtn.disabled = false; authBtn.innerHTML = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -891,8 +888,8 @@
     bootstrap();
   }
 
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    sessionStorage.removeItem('ev_admin');
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    try { await signOut(auth); } catch {}
     location.reload();
   });
 
