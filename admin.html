@@ -259,6 +259,7 @@
       transition: border-color .13s, box-shadow .13s;
     }
     .html-editor:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.12); background: var(--surface); }
+    @keyframes spin { to { transform: rotate(360deg) } }
 
     /* ── Links & materials ── */
     .links-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
@@ -404,7 +405,7 @@
     <div class="auth-error" id="authError">Невірний логін або пароль</div>
     <div class="field">
       <label>Логін</label>
-      <input type="email" id="authUser" placeholder="email@example.com" autocomplete="email" />
+      <input type="text" id="authUser" placeholder="admin" autocomplete="username" />
     </div>
     <div class="field">
       <label>Пароль</label>
@@ -587,9 +588,14 @@
               <select class="form-select" id="lessonFilterSubj" style="width:180px;height:34px">
                 <option value="">Всі предмети</option>
               </select>
+              <button class="btn btn-outline" id="btnUploadLesson">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Завантажити .html
+              </button>
+              <input type="file" id="uploadLessonFile" accept=".html,.htm" style="display:none">
               <button class="btn btn-solid" id="btnAddLesson">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Додати урок
+                Створити вручну
               </button>
             </div>
           </div>
@@ -802,9 +808,6 @@
 <script type="module">
   import { dbGet, dbSet, dbUpdate, dbPush, dbRemove, generateId, objToArray }
     from './firebase-config.js';
-  import {
-    getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
-  } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
   // ── State ─────────────────────────────────────────────────
   let allCategories = {};
@@ -816,6 +819,7 @@
   let lessonPages   = []; // [{id, title, htmlContent}]
   let activePageIdx = 0;
   let editingLessonId = null;
+  let lessonIsUploaded = false; // true якщо урок завантажений з .html файлу — read-only
 
   let lessonLinks = []; // [{title, url}]
   let lessonMats  = []; // [{title, fileUrl}]
@@ -826,48 +830,50 @@
   tick(); setInterval(tick, 1000);
 
   // ── Auth ──────────────────────────────────────────────────
-  const auth        = getAuth();
   const authScreen  = document.getElementById('authScreen');
   const adminScreen = document.getElementById('adminScreen');
   const authBtn     = document.getElementById('authBtn');
   const authError   = document.getElementById('authError');
 
-  // Listen to auth state — Firebase automatically restores session
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      showAdmin(user.email);
-    } else {
-      authScreen.style.display  = 'flex';
-      adminScreen.classList.remove('show');
-    }
-  });
+  // Check session
+  const loggedIn = sessionStorage.getItem('ev_admin');
+  if (loggedIn) showAdmin(loggedIn);
 
   authBtn.addEventListener('click', doLogin);
   document.getElementById('authUser').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
   document.getElementById('authPass').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
 
   async function doLogin() {
-    const email = document.getElementById('authUser').value.trim();
-    const pass  = document.getElementById('authPass').value;
-    if (!email || !pass) { showAuthError('Заповніть усі поля'); return; }
-    authError.classList.remove('show');
-    authBtn.disabled = true;
-    authBtn.textContent = 'Вхід...';
+    const user = document.getElementById('authUser').value.trim();
+    const pass = document.getElementById('authPass').value;
+    if (!user || !pass) { showAuthError('Заповніть усі поля'); return; }
+    authBtn.disabled = true; authBtn.textContent = 'Перевірка...';
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged вище автоматично викличе showAdmin()
+      const admins = await dbGet('/admins');
+      // Підтримка двох форматів:
+      // 1) ключ = логін: { password: '...' }
+      // 2) ключ = будь-що: { username: '...', password: '...' }
+      let found = false;
+      if (admins) {
+        for (const entry of Object.values(admins)) {
+          if (entry.username === user && entry.password === pass) {
+            found = true; break;
+          }
+        }
+        if (!found && admins[user] && admins[user].password === pass) {
+          found = true;
+        }
+      }
+      if (found) {
+        sessionStorage.setItem('ev_admin', user);
+        showAdmin(user);
+      } else {
+        showAuthError('Невірний логін або пароль');
+      }
     } catch(e) {
-      const msg = e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found'
-        ? 'Невірний email або пароль'
-        : e.code === 'auth/too-many-requests'
-        ? 'Забагато спроб. Спробуйте пізніше'
-        : e.code === 'auth/invalid-email'
-        ? 'Невірний формат email'
-        : 'Помилка входу: ' + e.code;
-      showAuthError(msg);
+      showAuthError('Помилка з\'єднання з Firebase');
     } finally {
-      authBtn.disabled = false;
-      authBtn.innerHTML = `
+      authBtn.disabled = false; authBtn.innerHTML = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         Увійти`;
     }
@@ -878,16 +884,15 @@
     authError.classList.add('show');
   }
 
-  let bootstrapDone = false;
-  function showAdmin(email) {
+  function showAdmin(user) {
     authScreen.style.display = 'none';
     adminScreen.classList.add('show');
-    document.getElementById('adminUser').textContent = `👤 ${email}`;
-    if (!bootstrapDone) { bootstrapDone = true; bootstrap(); }
+    document.getElementById('adminUser').textContent = `👤 ${user}`;
+    bootstrap();
   }
 
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await signOut(auth);
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    sessionStorage.removeItem('ev_admin');
     location.reload();
   });
 
@@ -924,17 +929,20 @@
   }
 
   // ── Bootstrap ─────────────────────────────────────────────
+  // ВАЖЛИВО: качаємо тільки /lesson_meta (легкі метадані),
+  // а не /lessons з повним htmlContent. Повний урок підтягується
+  // тільки при кліку "Редагувати".
   async function bootstrap() {
-    const [catData, subjData, lessonData, tagData] = await Promise.all([
+    const [catData, subjData, lessonMetaData, tagData] = await Promise.all([
       dbGet('/categories'),
       dbGet('/subjects'),
-      dbGet('/lessons'),
+      dbGet('/lesson_meta'),
       dbGet('/tags')
     ]);
-    allCategories = catData    || {};
-    allSubjects   = subjData   || {};
-    allLessons    = lessonData || {};
-    allTags       = tagData    || {};
+    allCategories = catData        || {};
+    allSubjects   = subjData       || {};
+    allLessons    = lessonMetaData || {};   // тепер це meta, не повні уроки!
+    allTags       = tagData        || {};
 
     updateCounts();
     renderCatTable();
@@ -967,12 +975,16 @@
     container.innerHTML = '';
     lessons.forEach(([id, l]) => {
       const subjName = allSubjects[l.subjectId]?.name || '—';
-      const pagesCount = Array.isArray(l.pages) ? l.pages.length : (l.htmlContent ? 1 : 0);
+      // l тепер meta-картка — pagesCount є напряму
+      const pagesCount = l.pagesCount ?? (Array.isArray(l.pages) ? l.pages.length : (l.htmlContent ? 1 : 0));
+      const uploadedBadge = l.isUploaded
+        ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--accent);background:rgba(79,107,244,.1);padding:2px 7px;border-radius:6px;margin-right:6px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>файл</span>`
+        : '';
       container.insertAdjacentHTML('beforeend', `
         <div class="table-row">
           <div class="table-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
           <div class="table-row-info">
-            <div class="table-row-name">${esc(l.title || 'Без назви')}</div>
+            <div class="table-row-name">${uploadedBadge}${esc(l.title || 'Без назви')}</div>
             <div class="table-row-meta">${esc(subjName)} · ${pagesCount} стор.</div>
           </div>
           <span class="badge">${esc(subjName)}</span>
@@ -980,31 +992,51 @@
     });
   }
 
-  // ── Migration: generate /lesson_meta for all existing lessons ──
+  // ── Migration: regenerate /lesson_meta for all existing lessons ──
+  // Завантажує /lessons (важко, разово!) і будує оновлені meta-картки
+  // з новими полями linksCount, materialsCount.
   document.getElementById('btnMigrate').addEventListener('click', async () => {
     const btn    = document.getElementById('btnMigrate');
     const status = document.getElementById('migrateStatus');
-    const total  = Object.keys(allLessons).length;
-    if (!total) { toast('Немає уроків для міграції', 'error'); return; }
 
     btn.disabled = true;
     status.style.display = 'block';
-    status.textContent   = `Міграція: 0 / ${total}…`;
+    status.textContent   = `Завантаження повних уроків з бази...`;
+
+    let fullLessons;
+    try {
+      fullLessons = await dbGet('/lessons');
+    } catch (e) {
+      status.textContent = '❌ Помилка завантаження /lessons';
+      status.style.color = '#ef4444';
+      btn.disabled = false;
+      return;
+    }
+    if (!fullLessons) {
+      status.textContent = 'Немає уроків для міграції';
+      btn.disabled = false;
+      return;
+    }
+
+    const total = Object.keys(fullLessons).length;
+    status.textContent = `Міграція: 0 / ${total}…`;
 
     const updates = {};
     let done = 0;
-    Object.entries(allLessons).forEach(([id, l]) => {
+    Object.entries(fullLessons).forEach(([id, l]) => {
       updates[`/lesson_meta/${id}`] = {
-        title:      l.title      || '',
-        subjectId:  l.subjectId  || '',
-        tagId:      l.tagId      || null,
-        pagesCount: Array.isArray(l.pages) ? l.pages.length : (l.htmlContent ? 1 : 0)
+        title:           l.title      || '',
+        subjectId:       l.subjectId  || '',
+        tagId:           l.tagId      || null,
+        pagesCount:      Array.isArray(l.pages) ? l.pages.length : (l.htmlContent ? 1 : 0),
+        linksCount:      Array.isArray(l.links)     ? l.links.length     : 0,
+        materialsCount:  Array.isArray(l.materials) ? l.materials.length : 0,
+        isUploaded:      !!l.isUploaded
       };
       done++;
     });
 
     try {
-      // Use dbUpdate on root to do a multi-path update in one request
       await dbUpdate('/', updates);
       status.textContent = `✅ Готово! Мігровано ${done} урок${done === 1 ? '' : done < 5 ? 'и' : 'ів'}.`;
       status.style.color = 'var(--success, #22c55e)';
@@ -1216,8 +1248,115 @@
   let lessonCurrentPage  = 1;
   let lessonCurrentFilter = '';
 
+  // ── Завантаження .html файлу ───────────────────────────────
+  const HTML_FILE_LIMIT_BYTES = 10 * 1024 * 1024; // 10 MB
+
+  // Кнопка "Завантажити .html" → відкриває file picker
+  document.getElementById('btnUploadLesson').addEventListener('click', () => {
+    document.getElementById('uploadLessonFile').click();
+  });
+
+  document.getElementById('uploadLessonFile').addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await handleHtmlFileLoad(file, /*isReplace=*/false);
+    e.target.value = ''; // скидаємо щоб можна було знов вибрати той самий файл
+  });
+
+  /**
+   * Обробляє завантажений .html файл — парсить, витягує body, відкриває модалку
+   * @param {File} file
+   * @param {boolean} isReplace true = замінюємо контент існуючого уроку (модалка вже відкрита)
+   */
+  async function handleHtmlFileLoad(file, isReplace) {
+    // Валідація
+    const name = file.name.toLowerCase();
+    if (!name.endsWith('.html') && !name.endsWith('.htm')) {
+      toast('Підтримуються тільки .html файли', 'error');
+      return;
+    }
+    if (file.size > HTML_FILE_LIMIT_BYTES) {
+      toast(`Файл занадто великий (${(file.size/1024/1024).toFixed(1)} МБ). Максимум 10 МБ`, 'error');
+      return;
+    }
+
+    let raw;
+    try {
+      raw = await file.text();
+    } catch (e) {
+      toast('Не вдалося прочитати файл', 'error');
+      return;
+    }
+
+    // Витягуємо body (або весь html якщо body не знайдено)
+    const bodyContent = extractBody(raw);
+    // Назва без розширення
+    const titleFromName = file.name.replace(/\.(html?|HTML?)$/, '').replace(/[_-]+/g, ' ').trim();
+
+    if (isReplace) {
+      // Замінюємо контент в уже відкритій модалці
+      lessonPages = [{
+        id: lessonPages[0]?.id || generateId(6),
+        title: lessonPages[0]?.title || titleFromName || 'Урок',
+        htmlContent: bodyContent
+      }];
+      activePageIdx = 0;
+      renderPagesEditor();
+      toast('Файл замінено. Не забудь натиснути "Зберегти урок"');
+      return;
+    }
+
+    // Новий урок з файлу
+    editingLessonId = null;
+    lessonIsUploaded = true;
+    document.getElementById('lessonModalTitle').textContent = 'Новий урок (з .html файлу)';
+    document.getElementById('lessonTitleInp').value = titleFromName || 'Урок';
+    populateSubjSelect('lessonSubjSel', '');
+    lessonPages = [{ id: generateId(6), title: titleFromName || 'Урок', htmlContent: bodyContent }];
+    activePageIdx = 0;
+    lessonLinks = [];
+    lessonMats  = [];
+    selectedLessonTagId = null;
+    renderPagesEditor();
+    renderLinks();
+    renderMats();
+    renderTagPicker();
+    openModal('lessonModal');
+    setTimeout(() => document.getElementById('lessonTitleInp').focus(), 50);
+  }
+
+  /**
+   * Витягує вміст <body>...</body> з html-документу.
+   * Видаляє script-теги, link rel="stylesheet", але залишає style.
+   * Якщо body не знайдено — повертає весь вхідний рядок.
+   */
+  function extractBody(html) {
+    let content;
+    // Знайти body. Розбиваємо потенційні script-теги через RegExp constructor —
+    // інакше HTML-парсер зреагує на закриваючий тег у коментарі/коді.
+    const bodyOpen  = /<body[^>]*>/i;
+    const bodyClose = new RegExp('<\\/body>', 'i');
+    const openM = html.match(bodyOpen);
+    if (openM) {
+      const startIdx = openM.index + openM[0].length;
+      const rest = html.slice(startIdx);
+      const closeM = rest.match(bodyClose);
+      content = closeM ? rest.slice(0, closeM.index) : rest;
+    } else {
+      content = html;
+    }
+    // Прибираємо script-теги (escape щоб HTML-парсер не зачепився)
+    content = content.replace(new RegExp('<script[\\s\\S]*?<\\/' + 'script>', 'gi'), '');
+    // Прибираємо link rel="stylesheet"
+    content = content.replace(/<link\b[^>]*rel=["']?stylesheet["']?[^>]*>/gi, '');
+    // Прибираємо коментарі
+    content = content.replace(/<!--[\s\S]*?-->/g, '');
+    return content.trim();
+  }
+
   document.getElementById('btnAddLesson').addEventListener('click', () => {
     editingLessonId = null;
+    lessonIsUploaded = false;
     document.getElementById('lessonModalTitle').textContent = 'Новий урок';
     document.getElementById('lessonTitleInp').value = '';
     populateSubjSelect('lessonSubjSel', '');
@@ -1426,29 +1565,34 @@
     try {
       const pagesCount = lessonPages.length;
 
-      // Heavy data — full lesson content
+      // Heavy data — full lesson content (живе в /lessons/{id})
       const fullData = {
         title, subjectId,
         pages:       lessonPages,
         htmlContent: lessonPages[0]?.htmlContent || '',
         links:       lessonLinks,
         materials:   lessonMats,
-        tagId:       selectedLessonTagId || null
+        tagId:       selectedLessonTagId || null,
+        isUploaded:  !!lessonIsUploaded
       };
 
-      // Light data — index only (for portal listing)
+      // Light data — index only (живе в /lesson_meta/{id}, для портального лістингу)
       const metaData = {
         title, subjectId,
         pagesCount,
-        tagId: selectedLessonTagId || null
+        linksCount:     lessonLinks.length,
+        materialsCount: lessonMats.length,
+        tagId:          selectedLessonTagId || null,
+        isUploaded:     !!lessonIsUploaded
       };
 
       if (editingLessonId) {
         await Promise.all([
           dbUpdate(`/lessons/${editingLessonId}`, fullData),
-          dbUpdate(`/lesson_meta/${editingLessonId}`, metaData)
+          dbSet(`/lesson_meta/${editingLessonId}`, metaData)
         ]);
-        allLessons[editingLessonId] = { ...allLessons[editingLessonId], ...fullData };
+        // В пам'яті зберігаємо ТІЛЬКИ meta (не fullData — вона важка)
+        allLessons[editingLessonId] = metaData;
         toast('Урок оновлено');
       } else {
         const id = generateId(10);
@@ -1456,7 +1600,7 @@
           dbSet(`/lessons/${id}`, fullData),
           dbSet(`/lesson_meta/${id}`, metaData)
         ]);
-        allLessons[id] = fullData;
+        allLessons[id] = metaData;
         toast('Урок додано');
       }
       closeModal('lessonModal');
@@ -1469,6 +1613,7 @@
 
   // ── Pages editor ──────────────────────────────────────────
   function syncActivePage() {
+    if (lessonIsUploaded) return; // read-only — не чіпаємо вміст
     const textarea = document.querySelector('.html-editor');
     const titleInp = document.querySelector('.page-title-inp');
     if (!textarea || !lessonPages[activePageIdx]) return;
@@ -1480,6 +1625,57 @@
     const tabsEl   = document.getElementById('pagesTabs');
     const editorEl = document.getElementById('pageEditor');
 
+    // ── READ-ONLY режим для завантажених з .html файлу уроків ──
+    if (lessonIsUploaded) {
+      tabsEl.innerHTML = '';
+      const pageTitle = lessonPages[0]?.title || 'Урок';
+      const sizeKb = ((lessonPages[0]?.htmlContent || '').length / 1024).toFixed(1);
+      editorEl.innerHTML = `
+        <div style="border:1px dashed var(--accent);background:rgba(79,107,244,.04);border-radius:var(--r);padding:24px;text-align:center">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;background:rgba(79,107,244,.12);border-radius:12px;margin-bottom:12px">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </div>
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px">Урок завантажений з .html файлу</div>
+          <div style="font-size:12.5px;color:var(--subtle);margin-bottom:16px">
+            ${esc(pageTitle)} · ${sizeKb} КБ · вміст не редагується
+          </div>
+          <div style="display:inline-flex;gap:8px">
+            <button class="btn btn-outline" id="btnReplaceFile" style="height:34px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+              Замінити файл
+            </button>
+            ${editingLessonId ? `
+            <button class="btn btn-ghost" id="btnPreviewLesson" style="height:34px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Переглянути
+            </button>` : ''}
+          </div>
+          <input type="file" id="replaceFileInput" accept=".html,.htm" style="display:none">
+        </div>`;
+
+      // Replace handler
+      const replaceBtn = document.getElementById('btnReplaceFile');
+      const replaceInp = document.getElementById('replaceFileInput');
+      if (replaceBtn && replaceInp) {
+        replaceBtn.addEventListener('click', () => replaceInp.click());
+        replaceInp.addEventListener('change', async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          await handleHtmlFileLoad(file, /*isReplace=*/true);
+          replaceInp.value = '';
+        });
+      }
+      // Preview handler
+      const previewBtn = document.getElementById('btnPreviewLesson');
+      if (previewBtn && editingLessonId) {
+        previewBtn.addEventListener('click', () => {
+          window.open(`lesson.html?id=${editingLessonId}`, '_blank');
+        });
+      }
+      return;
+    }
+
+    // ── Звичайний режим (вручну створений урок) ──
     // Tabs
     tabsEl.innerHTML = '';
     lessonPages.forEach((page, i) => {
@@ -1613,16 +1809,22 @@
     const rowsWrap = document.createElement('div');
     slice.forEach(([id, lesson]) => {
       const subjName   = allSubjects[lesson.subjectId]?.name || '—';
-      const pagesCount = Array.isArray(lesson.pages) ? lesson.pages.length : (lesson.htmlContent ? 1 : 0);
+      // Тепер lesson — це meta-картка, всі поля прямо доступні
+      const pagesCount = lesson.pagesCount ?? (Array.isArray(lesson.pages) ? lesson.pages.length : (lesson.htmlContent ? 1 : 0));
+      const linksCount = lesson.linksCount ?? ((lesson.links||[]).length);
+      const matsCount  = lesson.materialsCount ?? ((lesson.materials||[]).length);
       const tag        = lesson.tagId ? allTags[lesson.tagId] : null;
       const tagHtml    = tag ? `<span class="tag-pill" style="background:${tag.bg};color:${tag.text};margin-right:8px">${esc(tag.name)}</span>` : '';
+      const uploadedBadge = lesson.isUploaded
+        ? `<span title="Урок завантажений з .html файлу" style="display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;color:var(--accent);background:rgba(79,107,244,.1);padding:2px 6px;border-radius:5px;margin-right:6px;vertical-align:middle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>HTML</span>`
+        : '';
       const row = document.createElement('div');
       row.className = 'table-row';
       row.innerHTML = `
         <div class="table-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
         <div class="table-row-info">
-          <div class="table-row-name">${esc(lesson.title || 'Без назви')}</div>
-          <div class="table-row-meta">${esc(subjName)} · <strong>${pagesCount}</strong> стор. · ${(lesson.links||[]).length} посил. · ${(lesson.materials||[]).length} матер.</div>
+          <div class="table-row-name">${uploadedBadge}${esc(lesson.title || 'Без назви')}</div>
+          <div class="table-row-meta">${esc(subjName)} · <strong>${pagesCount}</strong> стор. · ${linksCount} посил. · ${matsCount} матер.</div>
         </div>
         ${tagHtml}
         <span class="badge" style="margin-right:8px">${esc(subjName)}</span>
@@ -1690,24 +1892,43 @@
 
     // Edit handlers
     el.querySelectorAll('[data-edit-lesson]').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const id = btn.dataset.editLesson;
-        const l  = allLessons[id];
-        editingLessonId = id;
-        document.getElementById('lessonModalTitle').textContent = 'Редагувати урок';
-        document.getElementById('lessonTitleInp').value = l.title || '';
-        populateSubjSelect('lessonSubjSel', l.subjectId);
-        if (Array.isArray(l.pages) && l.pages.length > 0) {
-          lessonPages = l.pages.map(p => ({ ...p }));
-        } else {
-          lessonPages = [{ id: generateId(6), title: 'Сторінка 1', htmlContent: l.htmlContent || '' }];
+        // Показуємо індикатор завантаження на кнопці
+        const orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+        btn.querySelector('svg').style.animation = 'spin 0.6s linear infinite';
+
+        try {
+          // Підвантажуємо ПОВНИЙ урок з бази (включно з htmlContent)
+          const l = await dbGet(`/lessons/${id}`);
+          if (!l) { toast('Урок не знайдено', 'error'); return; }
+
+          editingLessonId = id;
+          lessonIsUploaded = !!l.isUploaded;
+          document.getElementById('lessonModalTitle').textContent =
+            lessonIsUploaded ? 'Урок (з .html файлу)' : 'Редагувати урок';
+          document.getElementById('lessonTitleInp').value = l.title || '';
+          populateSubjSelect('lessonSubjSel', l.subjectId);
+          if (Array.isArray(l.pages) && l.pages.length > 0) {
+            lessonPages = l.pages.map(p => ({ ...p }));
+          } else {
+            lessonPages = [{ id: generateId(6), title: 'Сторінка 1', htmlContent: l.htmlContent || '' }];
+          }
+          activePageIdx = 0;
+          lessonLinks = (l.links || []).map(x => ({ ...x }));
+          lessonMats  = (l.materials || []).map(x => ({ ...x }));
+          selectedLessonTagId = l.tagId || null;
+          renderPagesEditor(); renderLinks(); renderMats(); renderTagPicker();
+          openModal('lessonModal');
+        } catch (e) {
+          console.error(e);
+          toast('Помилка завантаження уроку', 'error');
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = orig;
         }
-        activePageIdx = 0;
-        lessonLinks = (l.links || []).map(x => ({ ...x }));
-        lessonMats  = (l.materials || []).map(x => ({ ...x }));
-        selectedLessonTagId = l.tagId || null;
-        renderPagesEditor(); renderLinks(); renderMats(); renderTagPicker();
-        openModal('lessonModal');
       });
     });
 
