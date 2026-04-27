@@ -374,33 +374,65 @@
     btnList.addEventListener('click', () => applyView('list', true));
     applyView(currentView, false);
 
+    // ── Client-side cache — reduces Firebase reads ─────────
+    const CACHE_KEY = 'edvault_portal_v1';
+    const CACHE_TTL = 5 * 60 * 1000; // 5 хвилин
+
+    function saveCache(data) {
+      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+    }
+    function loadCache() {
+      try {
+        const raw = sessionStorage.getItem(CACHE_KEY);
+        if (!raw) return null;
+        const { ts, data } = JSON.parse(raw);
+        if (Date.now() - ts > CACHE_TTL) { sessionStorage.removeItem(CACHE_KEY); return null; }
+        return data;
+      } catch(e) { return null; }
+    }
+
+    function applyData(categories, subjects, tags, metaRaw) {
+      allCategories = categories;
+      allSubjects   = subjects;
+      allTags       = tags;
+      allSubjects.forEach(s => { lessonsCache[s.id] = []; });
+      Object.entries(metaRaw || {}).forEach(([id, l]) => {
+        const sid = l.subjectId;
+        if (!lessonsCache[sid]) lessonsCache[sid] = [];
+        lessonsCache[sid].push({ id, title: l.title || '', tagId: l.tagId || null, pagesCount: l.pagesCount || 1 });
+      });
+      Object.keys(lessonsCache).forEach(sid =>
+        lessonsCache[sid].sort((a, b) => a.title.localeCompare(b.title, 'uk'))
+      );
+    }
+
     // ── Bootstrap ──────────────────────────────────────────
     async function bootstrap() {
       loadOverlay.classList.add('show');
       try {
+        // ① Try sessionStorage cache first — zero Firebase requests
+        const cached = loadCache();
+        if (cached) {
+          applyData(cached.categories, cached.subjects, cached.tags, cached.metaRaw);
+          buildCategoryMenu();
+          const urlSubj = new URLSearchParams(location.search).get('subject');
+          if (urlSubj && allSubjects.find(s => s.id === urlSubj)) selectedSubjId = urlSubj;
+          render();
+          return;
+        }
+
+        // ② Cache miss — one Firebase burst (4 lightweight paths)
         const [catData, subjData, tagData, metaData] = await Promise.all([
           dbGet('/categories'), dbGet('/subjects'),
           dbGet('/tags'), dbGet('/lesson_meta')
         ]);
-        allCategories = catData || {};
-        allSubjects   = objToArray(subjData);
-        allTags       = tagData || {};
+        const subjects = objToArray(subjData);
+        const metaRaw  = metaData || {};
 
-        // Build per-subject cache from lightweight metadata only
-        allSubjects.forEach(s => { lessonsCache[s.id] = []; });
-        Object.entries(metaData || {}).forEach(([id, l]) => {
-          const sid = l.subjectId;
-          if (!lessonsCache[sid]) lessonsCache[sid] = [];
-          lessonsCache[sid].push({
-            id,
-            title:      l.title      || '',
-            tagId:      l.tagId      || null,
-            pagesCount: l.pagesCount || 1
-          });
-        });
-        Object.keys(lessonsCache).forEach(sid =>
-          lessonsCache[sid].sort((a, b) => a.title.localeCompare(b.title, 'uk'))
-        );
+        applyData(catData || {}, subjects, tagData || {}, metaRaw);
+
+        // Save to cache — next visit in same session is instant
+        saveCache({ categories: allCategories, subjects, tags: allTags, metaRaw });
 
         buildCategoryMenu();
         const urlSubj = new URLSearchParams(location.search).get('subject');
