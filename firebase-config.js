@@ -20,7 +20,7 @@ const FIREBASE_CONFIG = {
 import { initializeApp }            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, set, push, remove, onValue, update }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { getAuth, signInWithPopup, signOut, onAuthStateChanged, OAuthProvider }
+import { getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // Initialise Firebase (safe to call from multiple pages)
@@ -28,14 +28,14 @@ const app  = initializeApp(FIREBASE_CONFIG);
 const db   = getDatabase(app);
 const auth = getAuth(app);
 
-// ── Microsoft Auth ────────────────────────────────────────
+// ── Google Auth ───────────────────────────────────────────
 
-const microsoftProvider = new OAuthProvider('microsoft.com');
-microsoftProvider.setCustomParameters({ prompt: 'select_account' });
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-/** Sign in with Microsoft popup → returns user object */
-async function signInWithMicrosoft() {
-  const result = await signInWithPopup(auth, microsoftProvider);
+/** Sign in with Google popup → returns user object */
+async function signInWithGoogle() {
+  const result = await signInWithPopup(auth, googleProvider);
   return result.user;
 }
 
@@ -121,5 +121,5 @@ export {
   dbGet, dbSet, dbUpdate, dbPush, dbRemove, dbListen,
   generateId,
   objToArray,
-  signInWithMicrosoft, authSignOut, onAuth
+  signInWithGoogle, authSignOut, onAuth
 };
