@@ -491,7 +491,7 @@
 
   <!-- ══ SCRIPT ════════════════════════════════════════════ -->
   <script type="module">
-    import { dbGet, objToArray, signInWithGoogle, authSignOut, onAuth } from './firebase-config.js';
+    import { dbGet, dbSet, dbUpdate, objToArray, signInWithGoogle, authSignOut, onAuth } from './firebase-config.js';
 
     // ── State ──────────────────────────────────────────────
     let allSubjects    = [];
@@ -941,8 +941,27 @@
     });
 
     // Auth state listener — controls entire app flow
-    onAuth(user => {
+    onAuth(async user => {
       if (user) {
+        // ① Перевіряємо чи не заблокований
+        const userData = await dbGet(`/users/${user.uid}`);
+        if (userData?.blocked) {
+          // Заблокований — виходимо і показуємо повідомлення
+          await authSignOut();
+          loginError.textContent = '🚫 Доступ заборонено. Зверніться до адміністратора.';
+          loginBtn.disabled = false;
+          return;
+        }
+
+        // ② Реєструємо/оновлюємо користувача в базі
+        await dbUpdate(`/users/${user.uid}`, {
+          name:      user.displayName || '',
+          email:     user.email       || '',
+          photo:     user.photoURL    || '',
+          lastLogin: Date.now(),
+          blocked:   userData?.blocked ?? false
+        });
+
         loginScreen.classList.add('hidden');
         showUser(user);
         if (!authReady) { authReady = true; bootstrap(); }
