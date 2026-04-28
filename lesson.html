@@ -278,7 +278,7 @@
     </div>
 
     <!-- Content (filled dynamically) -->
-    <div id="lessonBody" style="display:none; flex:1; flex-direction:column; display:none"></div>
+    <div id="lessonBody" style="display:none; flex:1; flex-direction:column"></div>
 
   </main>
 </div>
@@ -314,14 +314,52 @@
     loadLesson(lessonId);
   }
 
+  // ── sessionStorage cache (TTL 5 хв) ────────────────────────
+  // Кеш живе в межах вкладки — закрив вкладку, кеш зник.
+  // TTL потрібен на випадок, якщо адмін оновив урок, поки вкладка відкрита.
+  const CACHE_TTL = 5 * 60 * 1000;
+  const cacheKey  = (id) => `edvault:lesson:${id}`;
+
+  function getCachedLesson(id) {
+    try {
+      const raw = sessionStorage.getItem(cacheKey(id));
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || Date.now() - data.ts > CACHE_TTL) return null;
+      return data;
+    } catch { return null; }
+  }
+
+  function setCachedLesson(id, lesson, subjects, tags) {
+    try {
+      sessionStorage.setItem(cacheKey(id), JSON.stringify({
+        lesson, subjects, tags, ts: Date.now()
+      }));
+    } catch (e) {
+      // QuotaExceededError — урок завеликий (наприклад, base64 картинки).
+      // Не критично: просто не кешуємо, наступне відкриття піде в Firebase.
+      console.warn('Lesson cache skipped:', e.message);
+    }
+  }
+
   // ── Load lesson ────────────────────────────────────────────
   async function loadLesson(id) {
     try {
-      const [lesson, subjects, tags] = await Promise.all([
-        dbGet(`/lessons/${id}`),
-        dbGet('/subjects'),
-        dbGet('/tags')
-      ]);
+      let lesson, subjects, tags;
+
+      // Спершу пробуємо кеш — миттєвий рендер без спінера
+      const cached = getCachedLesson(id);
+      if (cached) {
+        ({ lesson, subjects, tags } = cached);
+      } else {
+        [lesson, subjects, tags] = await Promise.all([
+          dbGet(`/lessons/${id}`),
+          dbGet('/subjects'),
+          dbGet('/tags')
+        ]);
+        if (lesson) setCachedLesson(id, lesson, subjects, tags);
+      }
+
       if (!lesson) { showError(); return; }
       const allTags = tags || {};
 
