@@ -20,10 +20,34 @@ const FIREBASE_CONFIG = {
 import { initializeApp }            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, set, push, remove, onValue, update }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getAuth, signInWithPopup, signOut, onAuthStateChanged, OAuthProvider }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // Initialise Firebase (safe to call from multiple pages)
-const app = initializeApp(FIREBASE_CONFIG);
-const db  = getDatabase(app);
+const app  = initializeApp(FIREBASE_CONFIG);
+const db   = getDatabase(app);
+const auth = getAuth(app);
+
+// ── Microsoft Auth ────────────────────────────────────────
+
+const microsoftProvider = new OAuthProvider('microsoft.com');
+microsoftProvider.setCustomParameters({ prompt: 'select_account' });
+
+/** Sign in with Microsoft popup → returns user object */
+async function signInWithMicrosoft() {
+  const result = await signInWithPopup(auth, microsoftProvider);
+  return result.user;
+}
+
+/** Sign out current user */
+async function authSignOut() {
+  await signOut(auth);
+}
+
+/** Listen for auth state changes — cb(user | null) */
+function onAuth(cb) {
+  return onAuthStateChanged(auth, cb);
+}
 
 // ── DB helpers ────────────────────────────────────────────
 
@@ -93,8 +117,9 @@ function objToArray(obj) {
 // ── Exports ───────────────────────────────────────────────
 
 export {
-  db,
+  db, auth,
   dbGet, dbSet, dbUpdate, dbPush, dbRemove, dbListen,
   generateId,
-  objToArray
+  objToArray,
+  signInWithMicrosoft, authSignOut, onAuth
 };
