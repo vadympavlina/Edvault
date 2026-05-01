@@ -89,6 +89,52 @@
     }
     .nav-item.active .nav-count { background: var(--accent-lt); color: var(--accent); }
 
+    /* ── Maintenance toggle ── */
+    .maintenance-block {
+      margin: auto 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      background: var(--bg);
+      overflow: hidden;
+    }
+    .maintenance-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 10px 8px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .7px; color: var(--subtle);
+    }
+    .maintenance-header svg { width: 13px; height: 13px; flex-shrink: 0; }
+    .maintenance-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 10px 10px; gap: 8px;
+    }
+    .maint-status {
+      font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .maint-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .maint-status.open  .maint-dot { background: #22c55e; box-shadow: 0 0 0 2px #dcfce7; }
+    .maint-status.open  { color: #16a34a; }
+    .maint-status.closed .maint-dot { background: #f59e0b; box-shadow: 0 0 0 2px #fef3c7; }
+    .maint-status.closed { color: #d97706; }
+    .toggle-wrap { position: relative; width: 38px; height: 22px; flex-shrink: 0; }
+    .toggle-wrap input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-slider {
+      position: absolute; inset: 0; border-radius: 11px;
+      background: #d1d5db; cursor: pointer; transition: background .2s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute;
+      width: 16px; height: 16px; border-radius: 50%;
+      left: 3px; top: 3px; background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.25);
+      transition: transform .2s;
+    }
+    .toggle-wrap input:checked + .toggle-slider { background: #f59e0b; }
+    .toggle-wrap input:checked + .toggle-slider::before { transform: translateX(16px); }
+
     /* ── Main content ── */
     .admin-main { flex: 1; overflow-y: auto; background: var(--bg); }
     .admin-content { max-width: 900px; margin: 0 auto; padding: 28px 24px 60px; }
@@ -506,6 +552,25 @@
           <span class="nav-count" id="navUserCount">0</span>
         </button>
       </div>
+
+      <!-- Maintenance block -->
+      <div class="maintenance-block">
+        <div class="maintenance-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Доступ до сервісу
+        </div>
+        <div class="maintenance-row">
+          <span class="maint-status open" id="maintStatus">
+            <span class="maint-dot"></span>
+            <span id="maintLabel">Відкрито</span>
+          </span>
+          <label class="toggle-wrap" title="Вмикає режим обслуговування — вхід закритий для всіх">
+            <input type="checkbox" id="maintToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
     </nav>
 
     <!-- Content area -->
@@ -942,12 +1007,61 @@
     authScreen.style.display = 'none';
     adminScreen.classList.add('show');
     document.getElementById('adminUser').textContent = `👤 ${user}`;
+    loadMaintenanceStatus();
     bootstrap();
   }
 
   document.getElementById('logoutBtn').addEventListener('click', async () => {
     try { await signOut(auth); } catch {}
     location.reload();
+  });
+
+  // ── Maintenance mode ──────────────────────────────────────
+  const maintToggle = document.getElementById('maintToggle');
+  const maintStatus = document.getElementById('maintStatus');
+  const maintLabel  = document.getElementById('maintLabel');
+
+  function applyMaintenanceUI(enabled) {
+    maintToggle.checked = !!enabled;
+    if (enabled) {
+      maintStatus.className = 'maint-status closed';
+      maintLabel.textContent = 'Закрито';
+    } else {
+      maintStatus.className = 'maint-status open';
+      maintLabel.textContent = 'Відкрито';
+    }
+  }
+
+  async function loadMaintenanceStatus() {
+    const settings = await dbGet('/settings/maintenance').catch(() => null);
+    applyMaintenanceUI(settings?.enabled);
+  }
+
+  maintToggle.addEventListener('change', async () => {
+    const enabling = maintToggle.checked;
+    const confirmMsg = enabling
+      ? 'Закрити доступ до сервісу?\n\nВсі залогінені користувачі будуть примусово вилогінені. Вхід буде заблоковано.'
+      : 'Відкрити доступ до сервісу для всіх користувачів?';
+
+    if (!confirm(confirmMsg)) {
+      maintToggle.checked = !enabling;
+      return;
+    }
+
+    maintToggle.disabled = true;
+    try {
+      await dbSet('/settings/maintenance', {
+        enabled: enabling,
+        updatedAt: Date.now()
+      });
+      applyMaintenanceUI(enabling);
+      toast(enabling ? '🔒 Сервіс закрито. Нові входи заблоковані.' : '✅ Сервіс відкрито.');
+    } catch (e) {
+      toast('Помилка збереження: ' + e.message);
+      maintToggle.checked = !enabling;
+    } finally {
+      maintToggle.disabled = false;
+    }
   });
 
   // ── Navigation ────────────────────────────────────────────
