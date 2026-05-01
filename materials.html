@@ -985,42 +985,43 @@
     });
 
     // ── Maintenance gate ──────────────────────────────────────
-    // Перевіряємо перед onAuth: якщо сервіс закрито — вилогінюємо і показуємо заглушку.
+    let isMaintenance = false;
     try {
       const maint = await dbGet('/settings/maintenance');
-      if (maint?.enabled) {
-        await authSignOut().catch(() => {});
-        sessionStorage.removeItem(CACHE_KEY);
-        document.body.innerHTML = `
-          <div style="
-            display:flex; flex-direction:column; align-items:center; justify-content:center;
-            min-height:100vh; font-family:'Inter',system-ui,sans-serif;
-            background:#f0f2f5; text-align:center; padding:24px;
-          ">
-            <div style="
-              width:72px; height:72px; background:#fff8e6; border-radius:18px;
-              display:flex; align-items:center; justify-content:center;
-              box-shadow:0 8px 24px rgba(245,158,11,.2); margin-bottom:20px;
-            ">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
-                stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-            </div>
-            <div style="font-size:22px; font-weight:700; color:#1a1d23; letter-spacing:-.3px; margin-bottom:10px">
-              Edvault
-            </div>
-            <div style="font-size:15px; color:#64748b; line-height:1.65; max-width:320px">
-              Сервіс тимчасово недоступний.<br>
-              Ведуться технічні роботи.<br>
-              Спробуйте зайти пізніше.
-            </div>
-          </div>`;
-        return; // не запускаємо onAuth і решту логіки
-      }
+      isMaintenance = maint?.enabled === true;
     } catch { /* Firebase недоступний — пускаємо далі */ }
+
+    if (isMaintenance) {
+      await authSignOut().catch(() => {});
+      sessionStorage.removeItem(CACHE_KEY);
+      document.body.innerHTML = `
+        <div style="
+          display:flex; flex-direction:column; align-items:center; justify-content:center;
+          min-height:100vh; font-family:'Inter',system-ui,sans-serif;
+          background:#f0f2f5; text-align:center; padding:24px;
+        ">
+          <div style="
+            width:72px; height:72px; background:#fff8e6; border-radius:18px;
+            display:flex; align-items:center; justify-content:center;
+            box-shadow:0 8px 24px rgba(245,158,11,.2); margin-bottom:20px;
+          ">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
+              stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <div style="font-size:22px; font-weight:700; color:#1a1d23; letter-spacing:-.3px; margin-bottom:10px">
+            Edvault
+          </div>
+          <div style="font-size:15px; color:#64748b; line-height:1.65; max-width:320px">
+            Сервіс тимчасово недоступний.<br>
+            Ведуться технічні роботи.<br>
+            Спробуйте зайти пізніше.
+          </div>
+        </div>`;
+    } else {
 
     // Auth state listener — controls entire app flow
     onAuth(async user => {
@@ -1057,6 +1058,7 @@
         authReady = false;
       }
     });
+    } // end maintenance else
   </script>
 </body>
 </html>
