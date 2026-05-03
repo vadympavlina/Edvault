@@ -375,10 +375,63 @@
     }
     .fade-in { animation: fadeIn .2s ease; }
 
+    /* ══ TAG COLUMNS (lessons view) ════════════════════════ */
+    .tag-columns {
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .tag-column {
+      flex: 0 0 280px;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .tag-column-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 2px 4px;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 2px;
+    }
+    .tag-column-badge {
+      display: inline-flex; align-items: center;
+      height: 22px; padding: 0 10px;
+      border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .01em;
+    }
+    .tag-column-count {
+      font-size: 11px; color: var(--subtle); font-weight: 500;
+    }
+
+    /* List view — tag sections */
+    .tag-section { margin-bottom: 24px; }
+    .tag-section-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 20px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 2;
+    }
+    .tag-section-badge {
+      display: inline-flex; align-items: center;
+      height: 20px; padding: 0 9px;
+      border-radius: 20px;
+      font-size: 10.5px; font-weight: 700;
+    }
+    .tag-section-count {
+      font-size: 11px; color: var(--subtle);
+    }
+
     @media(max-width:640px) {
       .portal-controls { padding: 12px; gap: 8px; }
       .search-wrap { max-width: 100%; }
       .subj-row-cat { display: none; }
+      .tag-column { flex: 0 0 240px; }
     }
   </style>
 </head>
@@ -860,55 +913,120 @@
     }
 
     function renderLessonsGrid(lessons) {
-      const grid = document.createElement('div');
-      grid.className = 'items-grid';
+      // Group lessons by tag
+      const tagOrder = [];
+      const byTag = {};
       lessons.forEach(lesson => {
-        const tag = lesson.tagId ? allTags[lesson.tagId] : null;
-        const el = document.createElement('a');
-        el.className = 'lesson-card';
-        el.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
-        el.target = '_blank';
-        el.rel = 'noopener';
-        const badge = lesson.pagesCount > 1
-          ? `<span class="lesson-pages-badge">${lesson.pagesCount} стор.</span>` : '';
-        const tagHtml = tag
-          ? `<span style="display:inline-flex;align-items:center;height:19px;padding:0 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:${tag.bg};color:${tag.text}">${esc(tag.name)}</span>` : '';
-        el.innerHTML = `
-          <div class="lesson-card-top">
-            <div class="lesson-card-icon">${DOC_SVG}</div>
-            <div class="lesson-card-title">${esc(lesson.title || 'Без назви')}</div>
-          </div>
-          <div class="lesson-card-footer">
-            <div style="display:flex;align-items:center;gap:6px">${tagHtml}${badge}</div>
-            <span class="lesson-open-hint">${EXT_SVG} відкрити</span>
-          </div>`;
-        grid.appendChild(el);
+        const key = lesson.tagId || '__none__';
+        if (!byTag[key]) { byTag[key] = []; tagOrder.indexOf(key) === -1 && tagOrder.push(key); }
+        byTag[key].push(lesson);
       });
-      area.appendChild(grid);
+      // Sort: tagged columns first (by tag name), then untagged
+      tagOrder.sort((a, b) => {
+        if (a === '__none__') return 1;
+        if (b === '__none__') return -1;
+        return (allTags[a]?.name || '').localeCompare(allTags[b]?.name || '', 'uk');
+      });
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'tag-columns';
+
+      tagOrder.forEach(key => {
+        const tag = key !== '__none__' ? allTags[key] : null;
+        const colLessons = byTag[key];
+        const col = document.createElement('div');
+        col.className = 'tag-column';
+
+        // Column header
+        const hdr = document.createElement('div');
+        hdr.className = 'tag-column-header';
+        const badgeStyle = tag
+          ? `background:${tag.bg};color:${tag.text}`
+          : 'background:var(--bg);color:var(--muted);border:1px solid var(--border)';
+        hdr.innerHTML = `
+          <span class="tag-column-badge" style="${badgeStyle}">${esc(tag?.name || 'Без тегу')}</span>
+          <span class="tag-column-count">${colLessons.length}</span>`;
+        col.appendChild(hdr);
+
+        // Cards
+        colLessons.forEach(lesson => {
+          const el = document.createElement('a');
+          el.className = 'lesson-card';
+          el.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
+          el.target = '_blank';
+          el.rel = 'noopener';
+          const badge = lesson.pagesCount > 1
+            ? `<span class="lesson-pages-badge">${lesson.pagesCount} стор.</span>` : '';
+          el.innerHTML = `
+            <div class="lesson-card-top">
+              <div class="lesson-card-icon">${DOC_SVG}</div>
+              <div class="lesson-card-title">${esc(lesson.title || 'Без назви')}</div>
+            </div>
+            <div class="lesson-card-footer">
+              <div style="display:flex;align-items:center;gap:6px">${badge}</div>
+              <span class="lesson-open-hint">${EXT_SVG} відкрити</span>
+            </div>`;
+          col.appendChild(el);
+        });
+
+        wrapper.appendChild(col);
+      });
+
+      area.appendChild(wrapper);
     }
 
     function renderLessonsList(lessons) {
-      const list = document.createElement('div');
-      list.className = 'items-list';
+      // Group lessons by tag
+      const tagOrder = [];
+      const byTag = {};
       lessons.forEach(lesson => {
-        const tag = lesson.tagId ? allTags[lesson.tagId] : null;
-        const el = document.createElement('a');
-        el.className = 'lesson-row';
-        el.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
-        el.target = '_blank';
-        el.rel = 'noopener';
-        const badge = lesson.pagesCount > 1
-          ? `<span class="lesson-row-badge">${lesson.pagesCount} стор.</span>` : '';
-        const tagHtml = tag
-          ? `<span style="display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:20px;font-size:10.5px;font-weight:600;background:${tag.bg};color:${tag.text};flex-shrink:0">${esc(tag.name)}</span>` : '';
-        el.innerHTML = `
-          <div class="lesson-row-icon">${DOC_SVG}</div>
-          <span class="lesson-row-title">${esc(lesson.title || 'Без назви')}</span>
-          ${tagHtml}${badge}
-          <svg class="lesson-row-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
-        list.appendChild(el);
+        const key = lesson.tagId || '__none__';
+        if (!byTag[key]) { byTag[key] = []; tagOrder.indexOf(key) === -1 && tagOrder.push(key); }
+        byTag[key].push(lesson);
       });
-      area.appendChild(list);
+      tagOrder.sort((a, b) => {
+        if (a === '__none__') return 1;
+        if (b === '__none__') return -1;
+        return (allTags[a]?.name || '').localeCompare(allTags[b]?.name || '', 'uk');
+      });
+
+      tagOrder.forEach(key => {
+        const tag = key !== '__none__' ? allTags[key] : null;
+        const secLessons = byTag[key];
+        const section = document.createElement('div');
+        section.className = 'tag-section';
+
+        // Section header
+        const hdr = document.createElement('div');
+        hdr.className = 'tag-section-header';
+        const badgeStyle = tag
+          ? `background:${tag.bg};color:${tag.text}`
+          : 'background:var(--bg);color:var(--muted);border:1px solid var(--border)';
+        hdr.innerHTML = `
+          <span class="tag-section-badge" style="${badgeStyle}">${esc(tag?.name || 'Без тегу')}</span>
+          <span class="tag-section-count">${secLessons.length} урок${ukEnd(secLessons.length, 'ів', '', 'и')}</span>`;
+        section.appendChild(hdr);
+
+        const list = document.createElement('div');
+        list.className = 'items-list';
+        secLessons.forEach(lesson => {
+          const el = document.createElement('a');
+          el.className = 'lesson-row';
+          el.href = `lesson.html?id=${encodeURIComponent(lesson.id)}`;
+          el.target = '_blank';
+          el.rel = 'noopener';
+          const badge = lesson.pagesCount > 1
+            ? `<span class="lesson-row-badge">${lesson.pagesCount} стор.</span>` : '';
+          el.innerHTML = `
+            <div class="lesson-row-icon">${DOC_SVG}</div>
+            <span class="lesson-row-title">${esc(lesson.title || 'Без назви')}</span>
+            ${badge}
+            <svg class="lesson-row-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+          list.appendChild(el);
+        });
+        section.appendChild(list);
+        area.appendChild(section);
+      });
     }
 
     // ── Auth ──────────────────────────────────────────────
