@@ -406,6 +406,9 @@
       padding: 11px 14px 10px;
       border-bottom: 1px solid var(--border);
     }
+    .tag-column[data-color] .tag-column-header {
+      background: var(--col-bg);
+    }
     .tag-column-label {
       display: flex; align-items: center; gap: 8px;
     }
@@ -416,10 +419,19 @@
       font-size: 13px; font-weight: 650; color: var(--text);
       letter-spacing: -.01em;
     }
+    .tag-column[data-color] .tag-column-name {
+      color: var(--col-text);
+    }
     .tag-column-count {
-      font-size: 11.5px; color: var(--subtle); font-weight: 500;
-      background: var(--bg); padding: 2px 9px; border-radius: 20px;
-      border: 1px solid var(--border); flex-shrink: 0;
+      font-size: 11.5px; font-weight: 600;
+      padding: 2px 9px; border-radius: 20px;
+      flex-shrink: 0;
+      background: rgba(0,0,0,.07); color: var(--col-text, var(--subtle));
+      border: none;
+    }
+    .tag-column:not([data-color]) .tag-column-count {
+      background: var(--bg); color: var(--subtle);
+      border: 1px solid var(--border);
     }
     .tag-column-body {
       display: flex; flex-direction: column;
@@ -485,17 +497,24 @@
       display: flex; align-items: center; gap: 8px;
       padding: 10px 16px;
       border-bottom: 1px solid var(--border);
+      background: var(--col-bg, var(--surface));
     }
     .tag-section-dot {
       width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
     }
     .tag-section-name {
-      font-size: 13px; font-weight: 650; color: var(--text);
+      font-size: 13px; font-weight: 650;
+      color: var(--col-text, var(--text));
       letter-spacing: -.01em; flex: 1;
     }
     .tag-section-count {
-      font-size: 11.5px; color: var(--subtle);
-      background: var(--bg); padding: 2px 9px; border-radius: 20px;
+      font-size: 11.5px;
+      color: var(--col-text, var(--subtle));
+      background: rgba(0,0,0,.07); padding: 2px 9px; border-radius: 20px;
+      font-weight: 600;
+    }
+    .tag-section:not([data-color]) .tag-section-count {
+      background: var(--bg); color: var(--subtle);
       border: 1px solid var(--border);
     }
     .tag-section-list {
@@ -1019,6 +1038,12 @@
 
         const dotColor = tag ? tag.text : 'var(--border2)';
 
+        if (tag) {
+          col.setAttribute('data-color', '1');
+          col.style.setProperty('--col-bg', tag.bg);
+          col.style.setProperty('--col-text', tag.text);
+        }
+
         const hdr = document.createElement('div');
         hdr.className = 'tag-column-header';
         hdr.innerHTML = `
@@ -1079,6 +1104,11 @@
 
         const section = document.createElement('div');
         section.className = 'tag-section';
+        if (tag) {
+          section.setAttribute('data-color', '1');
+          section.style.setProperty('--col-bg', tag.bg);
+          section.style.setProperty('--col-text', tag.text);
+        }
 
         const hdr = document.createElement('div');
         hdr.className = 'tag-section-header';
