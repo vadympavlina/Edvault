@@ -375,126 +375,131 @@
     }
     .fade-in { animation: fadeIn .2s ease; }
 
-    /* ══ TAG COLUMNS (lessons view) ════════════════════════ */
+    /* ══ TAG COLUMNS (lessons grid view) ═══════════════════ */
     .tag-columns {
       display: grid;
-      gap: 20px;
+      gap: 16px;
       align-items: start;
     }
     .tag-column {
       display: flex;
       flex-direction: column;
-      gap: 8px;
       min-width: 0;
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
     }
     .tag-column-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 14px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg) var(--r-lg) 0 0;
-      border-bottom: none;
+      padding: 11px 14px 10px;
+      border-bottom: 1px solid var(--border);
     }
-    .tag-column-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      height: 24px; padding: 0 11px;
-      border-radius: 20px;
-      font-size: 11.5px; font-weight: 700;
-      letter-spacing: .01em;
+    .tag-column-label {
+      display: flex; align-items: center; gap: 8px;
     }
-    .tag-column-badge-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      opacity: .7; flex-shrink: 0;
+    .tag-column-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .tag-column-name {
+      font-size: 13px; font-weight: 650; color: var(--text);
+      letter-spacing: -.01em;
     }
     .tag-column-count {
-      font-size: 11px; color: var(--subtle); font-weight: 500;
-      background: var(--bg); padding: 2px 8px; border-radius: 20px;
-      border: 1px solid var(--border);
+      font-size: 11.5px; color: var(--subtle); font-weight: 500;
+      background: var(--bg); padding: 2px 9px; border-radius: 20px;
+      border: 1px solid var(--border); flex-shrink: 0;
     }
     .tag-column-body {
-      display: flex; flex-direction: column; gap: 6px;
-      padding: 10px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 0 0 var(--r-lg) var(--r-lg);
-      min-height: 60px;
+      display: flex; flex-direction: column;
+      padding: 8px;
+      gap: 5px;
+      flex: 1;
     }
-    /* Compact lesson card inside column */
+
+    /* Lesson card inside column */
     .lesson-col-card {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 12px;
-      background: var(--surface);
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 11px;
+      background: var(--bg);
       border: 1px solid var(--border);
       border-radius: var(--r);
       text-decoration: none;
-      transition: box-shadow .15s, border-color .15s, transform .12s;
+      transition: border-color .15s, background .12s;
       cursor: pointer;
     }
     .lesson-col-card:hover {
       border-color: var(--accent-lt);
-      box-shadow: var(--sh);
-      transform: translateY(-1px);
+      background: var(--accent-bg);
     }
     .lesson-col-card-icon {
-      width: 30px; height: 30px; border-radius: 8px;
-      background: var(--accent-bg); flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 7px;
+      background: var(--surface); border: 1px solid var(--border);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      transition: background .12s, border-color .12s;
     }
-    .lesson-col-card-icon svg { width: 13px; height: 13px; color: var(--accent); }
-    .lesson-col-card:hover .lesson-col-card-icon { background: var(--accent-lt); }
+    .lesson-col-card-icon svg { width: 12px; height: 12px; color: var(--subtle); }
+    .lesson-col-card:hover .lesson-col-card-icon {
+      background: var(--accent-bg); border-color: var(--accent-lt);
+    }
+    .lesson-col-card:hover .lesson-col-card-icon svg { color: var(--accent); }
     .lesson-col-card-title {
       font-size: 13px; font-weight: 500; color: var(--text);
       line-height: 1.35; flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .lesson-col-card-ext {
-      width: 12px; height: 12px; color: var(--border2); flex-shrink: 0;
-      transition: color .12s;
+      width: 11px; height: 11px; color: var(--border2); flex-shrink: 0;
+      transition: color .12s; opacity: 0;
     }
-    .lesson-col-card:hover .lesson-col-card-ext { color: var(--accent); }
+    .lesson-col-card:hover .lesson-col-card-ext { color: var(--accent); opacity: 1; }
     .lesson-col-badge {
       font-size: 10px; color: var(--subtle);
-      background: var(--bg); border: 1px solid var(--border);
+      background: var(--surface); border: 1px solid var(--border);
       padding: 1px 6px; border-radius: 10px; flex-shrink: 0; white-space: nowrap;
     }
 
-    /* List view — tag sections */
+    /* ══ TAG SECTIONS (lessons list view) ═══════════════════ */
     .tag-sections {
-      display: grid;
-      gap: 20px;
+      display: flex; flex-direction: column;
+      gap: 12px;
     }
-    .tag-section { }
+    .tag-section {
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      background: var(--surface);
+    }
     .tag-section-header {
       display: flex; align-items: center; gap: 8px;
-      padding: 9px 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg) var(--r-lg) 0 0;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
     }
-    .tag-section-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      height: 22px; padding: 0 10px;
-      border-radius: 20px;
-      font-size: 11px; font-weight: 700;
+    .tag-section-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .tag-section-name {
+      font-size: 13px; font-weight: 650; color: var(--text);
+      letter-spacing: -.01em; flex: 1;
     }
     .tag-section-count {
-      font-size: 11px; color: var(--subtle);
-      margin-left: auto;
-      background: var(--bg); padding: 2px 8px; border-radius: 20px;
+      font-size: 11.5px; color: var(--subtle);
+      background: var(--bg); padding: 2px 9px; border-radius: 20px;
       border: 1px solid var(--border);
     }
     .tag-section-list {
       display: flex; flex-direction: column;
-      border: 1px solid var(--border);
-      border-top: none;
-      border-radius: 0 0 var(--r-lg) var(--r-lg);
-      overflow: hidden;
     }
+    .tag-section-list .lesson-row { background: var(--surface); }
+    .tag-section-list .lesson-row:first-child { border-top: none; }
+    .tag-section-list .lesson-row:last-child { border-bottom: none; }
 
     @media(max-width:640px) {
       .portal-controls { padding: 12px; gap: 8px; }
       .search-wrap { max-width: 100%; }
       .subj-row-cat { display: none; }
-      .tag-column { flex: 0 0 240px; }
+      .tag-columns { grid-template-columns: 1fr !important; }
+      .tag-column-name { font-size: 12.5px; }
     }
   </style>
 </head>
@@ -1000,18 +1005,15 @@
         const col = document.createElement('div');
         col.className = 'tag-column';
 
-        const dotColor = tag ? tag.text : 'var(--subtle)';
-        const badgeStyle = tag
-          ? `background:${tag.bg};color:${tag.text}`
-          : 'background:var(--bg);color:var(--muted);border:1px solid var(--border)';
+        const dotColor = tag ? tag.text : 'var(--border2)';
 
         const hdr = document.createElement('div');
         hdr.className = 'tag-column-header';
         hdr.innerHTML = `
-          <span class="tag-column-badge" style="${badgeStyle}">
-            <span class="tag-column-badge-dot" style="background:${dotColor}"></span>
-            ${esc(tag?.name || 'Без тегу')}
-          </span>
+          <div class="tag-column-label">
+            <span class="tag-column-dot" style="background:${dotColor}"></span>
+            <span class="tag-column-name">${esc(tag?.name || 'Без тегу')}</span>
+          </div>
           <span class="tag-column-count">${colLessons.length}</span>`;
         col.appendChild(hdr);
 
@@ -1057,17 +1059,11 @@
 
       const wrapper = document.createElement('div');
       wrapper.className = 'tag-sections';
-      const cols = Math.min(tagOrder.length, 3);
-      wrapper.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
       tagOrder.forEach(key => {
         const tag = key !== '__none__' ? allTags[key] : null;
         const secLessons = byTag[key];
-
-        const badgeStyle = tag
-          ? `background:${tag.bg};color:${tag.text}`
-          : 'background:var(--bg);color:var(--muted);border:1px solid var(--border)';
-        const dotColor = tag ? tag.text : 'var(--subtle)';
+        const dotColor = tag ? tag.text : 'var(--border2)';
 
         const section = document.createElement('div');
         section.className = 'tag-section';
@@ -1075,10 +1071,8 @@
         const hdr = document.createElement('div');
         hdr.className = 'tag-section-header';
         hdr.innerHTML = `
-          <span class="tag-section-badge" style="${badgeStyle}">
-            <span style="width:6px;height:6px;border-radius:50%;background:${dotColor};opacity:.7;flex-shrink:0"></span>
-            ${esc(tag?.name || 'Без тегу')}
-          </span>
+          <span class="tag-section-dot" style="background:${dotColor}"></span>
+          <span class="tag-section-name">${esc(tag?.name || 'Без тегу')}</span>
           <span class="tag-section-count">${secLessons.length} урок${ukEnd(secLessons.length, 'ів', '', 'и')}</span>`;
         section.appendChild(hdr);
 
