@@ -206,51 +206,60 @@
     /* ══ GRID VIEW ══════════════════════════════════════════ */
     .items-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
     }
 
     /* ── Subject card ── */
     .subj-card {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r-lg); box-shadow: var(--sh-sm);
-      padding: 20px; cursor: pointer;
-      display: flex; flex-direction: column; gap: 12px;
-      transition: box-shadow .18s, transform .15s, border-color .15s;
-      text-decoration: none;
+      border-radius: var(--r-lg);
+      padding: 20px 20px 16px; cursor: pointer;
+      display: flex; flex-direction: column; gap: 0;
+      transition: border-color .15s, background .12s;
+      text-decoration: none; position: relative; overflow: hidden;
     }
-    .subj-card:hover {
-      box-shadow: var(--sh); transform: translateY(-2px);
-      border-color: var(--accent-lt);
+    .subj-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--accent); opacity: 0;
+      transition: opacity .15s;
     }
-    .subj-card-top { display: flex; align-items: flex-start; gap: 12px; }
+    .subj-card:hover { border-color: var(--accent-lt); background: var(--bg); }
+    .subj-card:hover::before { opacity: 1; }
+
     .subj-card-icon {
-      width: 42px; height: 42px; border-radius: 11px;
-      background: var(--accent-bg); flex-shrink: 0;
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--accent-bg);
       display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+      transition: background .12s;
     }
-    .subj-card-icon svg { width: 19px; height: 19px; color: var(--accent); }
-    .subj-card-info { flex: 1; min-width: 0; }
+    .subj-card:hover .subj-card-icon { background: var(--accent-lt); }
+    .subj-card-icon svg { width: 20px; height: 20px; color: var(--accent); }
+
     .subj-card-name {
-      font-size: 15px; font-weight: 700; color: var(--text);
-      line-height: 1.3; margin-bottom: 5px;
+      font-size: 14px; font-weight: 650; color: var(--text);
+      line-height: 1.35; margin-bottom: 6px;
+      letter-spacing: -.01em;
     }
     .subj-card-cat {
       display: inline-flex; align-items: center;
-      height: 19px; padding: 0 8px; border-radius: 20px;
-      font-size: 10.5px; font-weight: 600;
+      height: 18px; padding: 0 8px; border-radius: 20px;
+      font-size: 10px; font-weight: 600;
       background: var(--accent-bg); color: var(--accent);
+      margin-bottom: 16px;
     }
     .subj-card-footer {
       display: flex; align-items: center; justify-content: space-between;
-      padding-top: 10px; border-top: 1px solid var(--border);
+      padding-top: 12px; border-top: 1px solid var(--border);
+      margin-top: auto;
     }
     .subj-card-count { font-size: 12px; color: var(--subtle); }
     .subj-card-arr {
-      width: 18px; height: 18px; color: var(--border2);
+      width: 15px; height: 15px; color: var(--border2);
       transition: color .15s, transform .15s;
     }
-    .subj-card:hover .subj-card-arr { color: var(--accent); transform: translateX(2px); }
+    .subj-card:hover .subj-card-arr { color: var(--accent); transform: translateX(3px); }
 
     /* ── Lesson card ── */
     .lesson-card {
@@ -895,19 +904,15 @@
       const grid = document.createElement('div');
       grid.className = 'items-grid';
       subjects.forEach(subj => {
-        const count   = lessonCount(subj.id);
-        const catName = allCategories[subj.categoryId]?.name || '';
+        const count    = lessonCount(subj.id);
+        const catName  = allCategories[subj.categoryId]?.name || '';
         const countLabel = `${count} урок${ukEnd(count, 'ів', '', 'и')}`;
         const el = document.createElement('div');
         el.className = 'subj-card';
         el.innerHTML = `
-          <div class="subj-card-top">
-            <div class="subj-card-icon">${BOOK_SVG}</div>
-            <div class="subj-card-info">
-              <div class="subj-card-name">${esc(subj.name)}</div>
-              ${catName ? `<span class="subj-card-cat">${esc(catName)}</span>` : ''}
-            </div>
-          </div>
+          <div class="subj-card-icon">${BOOK_SVG}</div>
+          <div class="subj-card-name">${esc(subj.name)}</div>
+          ${catName ? `<span class="subj-card-cat">${esc(catName)}</span>` : '<div style="margin-bottom:16px"></div>'}
           <div class="subj-card-footer">
             <span class="subj-card-count">${countLabel}</span>
             <svg class="subj-card-arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
