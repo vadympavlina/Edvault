@@ -1113,13 +1113,12 @@ body{animation:fadeUp .3s ease}
 /* ═══════════ TABLE PICKER ═══════════ */
 .tb-table-wrap{position:relative;flex-shrink:0}
 .table-picker{
-  display:none;position:absolute;
-  top:calc(100% + 6px);left:0;
+  display:none;position:fixed;
   background:var(--surface);
   border:1px solid var(--border2);
   border-radius:var(--r-lg);
   box-shadow:var(--sh-lg);
-  padding:10px;z-index:700;
+  padding:10px;z-index:9000;
   animation:popIn .13s ease;
 }
 .table-picker.open{display:block}
@@ -3295,8 +3294,15 @@ let tablePickerOpen = false;
 function toggleTablePicker(e) {
   e.stopPropagation();
   tablePickerOpen = !tablePickerOpen;
-  document.getElementById('tablePicker').classList.toggle('open', tablePickerOpen);
-  if (tablePickerOpen) saveCursor();
+  const picker = document.getElementById('tablePicker');
+  picker.classList.toggle('open', tablePickerOpen);
+  if (tablePickerOpen) {
+    saveCursor();
+    const btn = document.getElementById('tbTableBtn');
+    const rect = btn.getBoundingClientRect();
+    picker.style.top = (rect.bottom + 6) + 'px';
+    picker.style.left = rect.left + 'px';
+  }
 }
 function closeTablePicker() {
   tablePickerOpen = false;
