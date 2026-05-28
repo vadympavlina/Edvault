@@ -2763,21 +2763,7 @@ function buildContainerBar(container, type, imgCol) {
 
   // BESIDE type — store reference for fixed bar
   container.dataset.besideBar = 'true';
-  container._imgCol = imgCol; // direct ref
-
-  // Show/hide fixed bar on hover and focus
-  container.addEventListener('mouseenter', () => showBesideBar(container));
-  container.addEventListener('mouseleave', e => {
-    if (!e.relatedTarget || !document.getElementById('besideCtxBar').contains(e.relatedTarget)) {
-      scheduleBesideBarHide();
-    }
-  });
-  container.addEventListener('focusin', () => showBesideBar(container));
-  container.addEventListener('focusout', e => {
-    if (!document.getElementById('besideCtxBar').contains(e.relatedTarget) && !container.contains(e.relatedTarget)) {
-      scheduleBesideBarHide();
-    }
-  });
+  container._imgCol = imgCol;
 }
 
 /* ══ BESIDE CONTEXT BAR (fixed, outside contentEditable) ══ */
@@ -4596,6 +4582,24 @@ function copyCodeBlock() {
 
 /* ══ EVENTS ══ */
 editor.addEventListener('input', () => { if (!isMarking) { editorSnapshot = ''; tick(); scheduleAutoTitle(); } });
+editor.addEventListener('mouseover', e => {
+  const beside = e.target.closest('.img-beside');
+  if (beside) { clearTimeout(besideHideTimer); showBesideBar(beside); }
+});
+editor.addEventListener('mouseout', e => {
+  const from = e.target.closest('.img-beside');
+  const to   = e.relatedTarget?.closest('.img-beside');
+  if (from && from !== to) scheduleBesideBarHide();
+});
+editor.addEventListener('focusin', e => {
+  const beside = e.target.closest('.img-beside');
+  if (beside) showBesideBar(beside);
+});
+editor.addEventListener('focusout', e => {
+  const beside = e.target.closest('.img-beside');
+  if (beside && !beside.contains(e.relatedTarget)) scheduleBesideBarHide();
+});
+
 editor.addEventListener('mouseup', () => { syncState(); updateCodeBar(); updateTableBar(); updateSelToolbar(); });
 editor.addEventListener('keyup', e => {
   syncState(); updateCodeBar(); updateTableBar();
