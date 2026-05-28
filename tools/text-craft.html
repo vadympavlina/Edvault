@@ -816,13 +816,10 @@ figure { margin:1em 0; text-align:center; }
   position:relative;
   display:flex;
 }
-.beside-img-col .img-wrap {
-  width:100% !important;
-  margin:0 !important;
-  float:none !important;
-  display:flex !important;
-  align-items:var(--beside-valign, flex-start);
-}
+.beside-img-col .img-wrap.selected .img-toolbar { display:none !important; }
+.beside-img-col .img-wrap.selected img { outline:2px solid var(--accent); outline-offset:0; border-radius:6px; }
+.beside-img-col .img-handle { display:none !important; }
+.beside-img-col .img-size-tip { display:none !important; }
 .beside-img-col .img-wrap img {
   width:100% !important;
   height:auto !important;
