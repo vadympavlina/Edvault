@@ -7,6 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M8 10h16M8 14h12M8 18h14M8 22h10' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M20 20l4-4 2 2-4 4-2-2z' fill='white' opacity='0.9'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
 <style>
 /* ═══════════ DESIGN TOKENS ═══════════ */
 :root {
@@ -1016,9 +1017,151 @@ body{animation:fadeUp .3s ease}
   .page{padding:40px 22px 60px}
   .scroll-area{padding:14px 6px 48px}
 }
+
+/* ═══════════ CUSTOM MODALS ═══════════ */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(15,18,25,.48);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  z-index:10000;align-items:center;justify-content:center;
+}
+.modal-overlay.show{display:flex}
+.modal-card{
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--r-lg);box-shadow:var(--sh-lg);
+  padding:28px 32px 24px;width:min(400px,calc(100vw - 32px));
+  animation:popIn .18s ease;
+}
+.modal-icon{
+  width:46px;height:46px;margin:0 auto 14px;border-radius:13px;
+  display:flex;align-items:center;justify-content:center;
+}
+.modal-icon.danger{background:#fee2e2;color:#ef4444}
+.modal-icon svg{width:22px;height:22px}
+.modal-title{font-size:16px;font-weight:700;color:var(--text);text-align:center;margin-bottom:6px}
+.modal-desc{font-size:13px;color:var(--muted);text-align:center;line-height:1.55;margin-bottom:22px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.modal-inp-wrap{margin:16px 0 20px}
+.modal-inp-label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px}
+.modal-inp{
+  width:100%;height:36px;padding:0 10px;
+  border:1px solid var(--border2);border-radius:var(--r);
+  font-family:'Inter',system-ui,sans-serif;font-size:14px;color:var(--text);
+  background:var(--bg);outline:none;transition:border-color .13s,box-shadow .13s;
+}
+.modal-inp:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,107,244,.15)}
+.btn-danger{background:#ef4444;color:#fff;border-color:#ef4444}
+.btn-danger:hover{background:#dc2626;border-color:#dc2626}
+
+/* ═══════════ CODE BLOCK BAR ═══════════ */
+.code-lang-bar{
+  display:none;position:fixed;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--r);box-shadow:var(--sh);
+  padding:3px 6px;gap:4px;align-items:center;
+  z-index:600;white-space:nowrap;animation:popIn .12s ease;
+}
+.code-lang-bar.visible{display:flex}
+.code-lang-badge{
+  font-size:10px;font-weight:700;color:var(--accent);
+  background:var(--accent-bg);border-radius:4px;padding:2px 7px;
+  letter-spacing:.4px;flex-shrink:0;
+}
+.code-lang-sel{
+  height:24px;padding:0 5px;border:1px solid var(--border);border-radius:4px;
+  background:var(--surface);font-family:'Inter',system-ui,sans-serif;
+  font-size:11.5px;color:var(--muted);cursor:pointer;outline:none;transition:border-color .12s;
+}
+.code-lang-sel:focus{border-color:var(--accent)}
+.code-copy-btn{
+  height:24px;padding:0 8px;border:1px solid var(--border);border-radius:4px;
+  background:var(--surface);font-family:'Inter',system-ui,sans-serif;
+  font-size:11.5px;font-weight:500;color:var(--muted);
+  cursor:pointer;display:flex;align-items:center;gap:3px;transition:all .12s;flex-shrink:0;
+}
+.code-copy-btn:hover{background:var(--bg);color:var(--text)}
+.code-copy-btn.copied{color:#16a34a;border-color:#86efac;background:#f0fdf4}
+.code-copy-btn svg{width:11px;height:11px;flex-shrink:0}
+.code-bar-sep{width:1px;height:14px;background:var(--border);margin:0 1px;flex-shrink:0}
+
+/* Code block: language badge top-right corner */
+.editor pre{position:relative}
+.editor pre[data-lang]::after{
+  content:attr(data-lang);position:absolute;top:8px;right:10px;
+  font-size:10px;font-weight:700;color:var(--subtle);letter-spacing:.5px;
+  text-transform:uppercase;pointer-events:none;font-family:'Inter',system-ui,sans-serif;
+}
 </style>
 </head>
 <body>
+
+<!-- CLEAR DOC MODAL -->
+<div class="modal-overlay" id="clearModal" onclick="if(event.target===this)closeClearModal()">
+  <div class="modal-card">
+    <div class="modal-icon danger">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7">
+        <path d="M2 4h12M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M6 7v5M10 7v5M3 4l.8 9a1 1 0 001 .9h6.4a1 1 0 001-.9L13 4"/>
+      </svg>
+    </div>
+    <div class="modal-title">Очистити документ?</div>
+    <div class="modal-desc">Весь вміст буде видалено без можливості відновлення.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeClearModal()">Скасувати</button>
+      <button class="btn btn-danger" onclick="confirmClear()">Очистити</button>
+    </div>
+  </div>
+</div>
+
+<!-- LINK MODAL -->
+<div class="modal-overlay" id="linkModal" onclick="if(event.target===this)closeLinkModal()">
+  <div class="modal-card">
+    <div class="modal-title">Вставити посилання</div>
+    <div class="modal-inp-wrap">
+      <label class="modal-inp-label" for="linkInp">URL адреса</label>
+      <input class="modal-inp" id="linkInp" placeholder="https://…" onkeydown="linkModalKey(event)" autocomplete="off">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeLinkModal()">Скасувати</button>
+      <button class="btn btn-solid" onclick="confirmLink()">Вставити</button>
+    </div>
+  </div>
+</div>
+
+<!-- CODE LANGUAGE BAR -->
+<div class="code-lang-bar" id="codeLangBar">
+  <span class="code-lang-badge" id="codeLangBadge">CODE</span>
+  <span class="code-bar-sep"></span>
+  <select class="code-lang-sel" id="codeLangSel" onchange="setCodeLang(this.value)">
+    <option value="">Без мови</option>
+    <option value="javascript">JavaScript</option>
+    <option value="typescript">TypeScript</option>
+    <option value="python">Python</option>
+    <option value="html">HTML</option>
+    <option value="css">CSS</option>
+    <option value="json">JSON</option>
+    <option value="sql">SQL</option>
+    <option value="bash">Bash / Shell</option>
+    <option value="java">Java</option>
+    <option value="csharp">C#</option>
+    <option value="cpp">C++</option>
+    <option value="rust">Rust</option>
+    <option value="go">Go</option>
+    <option value="php">PHP</option>
+    <option value="ruby">Ruby</option>
+    <option value="kotlin">Kotlin</option>
+    <option value="swift">Swift</option>
+    <option value="yaml">YAML</option>
+    <option value="markdown">Markdown</option>
+  </select>
+  <span class="code-bar-sep"></span>
+  <button class="code-copy-btn" id="codeCopyBtn" onclick="copyCodeBlock()">
+    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="3" width="7" height="8" rx="1"/>
+      <path d="M3 3V2a1 1 0 011-1h5a1 1 0 011 1v6a1 1 0 01-1 1H8"/>
+    </svg>
+    Копіювати
+  </button>
+</div>
 
 <!-- FOCUS EXIT BTN -->
 <button class="btn btn-ghost focus-exit" onclick="toggleFocus()">
@@ -1501,14 +1644,34 @@ function wrapStyle(prop, val) {
 
 /* ══ LINK ══ */
 function insertLink() {
-  const url = prompt('URL посилання:');
-  if (url && url.trim()) {
-    exec('createLink', url.trim());
-    editor.querySelectorAll('a').forEach(a => {
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-    });
+  saveCursor();
+  document.getElementById('linkInp').value = '';
+  document.getElementById('linkModal').classList.add('show');
+  setTimeout(() => document.getElementById('linkInp').focus(), 60);
+}
+function closeLinkModal() {
+  document.getElementById('linkModal').classList.remove('show');
+  savedRange = null;
+}
+function confirmLink() {
+  const url = document.getElementById('linkInp').value.trim();
+  closeLinkModal();
+  if (!url) return;
+  if (savedRange) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+    savedRange = null;
   }
+  exec('createLink', url.startsWith('http') ? url : 'https://' + url);
+  editor.querySelectorAll('a').forEach(a => {
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+  });
+}
+function linkModalKey(e) {
+  if (e.key === 'Enter') confirmLink();
+  if (e.key === 'Escape') closeLinkModal();
 }
 
 /* ══════════════════════════════
@@ -1745,14 +1908,14 @@ function startResize(e, wrap, img, dir) {
 
     const pct = Math.round(newW / maxW * 100);
     if (tip) tip.textContent = newW + 'px · ' + pct + '%';
-    tick();
+    // no tick() here — avoid reflow on every px
   }
 
   function onUp() {
     wrap.classList.remove('resizing');
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
-    tick();
+    tick(); // single call after drag ends
   }
 
   document.addEventListener('mousemove', onMove);
@@ -1996,6 +2159,7 @@ document.addEventListener('click', e => {
 
 /* ══ TOC ══ */
 let tocVisible = true;
+let tocOffsetCache = []; // cached {el, top} for syncTocActive
 
 function toggleToc() {
   tocVisible = !tocVisible;
@@ -2010,6 +2174,7 @@ function buildToc() {
 
   if (headings.length === 0) {
     list.innerHTML = '<div class="toc-empty">Додайте заголовки H1–H3 щоб побачити зміст</div>';
+    tocOffsetCache = [];
     return;
   }
 
@@ -2023,18 +2188,27 @@ function buildToc() {
     btn.title = btn.textContent;
     btn.addEventListener('click', () => {
       const scrollArea = document.getElementById('scrollArea');
-      const page = document.getElementById('page');
-      // heading offset relative to page, plus page offset in scrollArea
-      const pageTop = page.offsetTop;
-      const headingTop = h.offsetTop; // relative to editor (inside page)
-      const editorTop = document.querySelector('.editor').offsetTop; // editor inside page
-      const target = pageTop + editorTop + headingTop - 80;
-      scrollArea.scrollTo({ top: target, behavior: 'smooth' });
+      const areaRect = scrollArea.getBoundingClientRect();
+      const hRect = h.getBoundingClientRect();
+      const target = scrollArea.scrollTop + hRect.top - areaRect.top - 80;
+      scrollArea.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
       list.querySelectorAll('.toc-item').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     });
     list.appendChild(btn);
   });
+
+  // Cache positions after DOM settles
+  requestAnimationFrame(cacheTocOffsets);
+}
+
+function cacheTocOffsets() {
+  const scrollArea = document.getElementById('scrollArea');
+  const areaRect = scrollArea.getBoundingClientRect();
+  tocOffsetCache = [...editor.querySelectorAll('h1,h2,h3')].map(h => ({
+    el: h,
+    top: h.getBoundingClientRect().top - areaRect.top + scrollArea.scrollTop
+  }));
 }
 
 let tocTimer;
@@ -2044,19 +2218,21 @@ function scheduleToc() {
 }
 
 function syncTocActive() {
-  const headings = [...editor.querySelectorAll('h1,h2,h3')];
-  if (!headings.length) return;
+  if (!tocOffsetCache.length) return;
   const scrollTop = document.getElementById('scrollArea').scrollTop;
-  const pageOffsetTop = document.getElementById('page').offsetTop;
-  let active = headings[0];
-  headings.forEach(h => {
-    if ((h.offsetTop + pageOffsetTop - 80) <= scrollTop) active = h;
-  });
+  let activeEl = tocOffsetCache[0].el;
+  for (const { el, top } of tocOffsetCache) {
+    if (top - 100 <= scrollTop) activeEl = el;
+  }
+  const headings = [...editor.querySelectorAll('h1,h2,h3')];
   const items = document.getElementById('tocList').querySelectorAll('.toc-item');
-  items.forEach((item, i) => item.classList.toggle('active', headings[i] === active));
+  items.forEach((item, i) => item.classList.toggle('active', headings[i] === activeEl));
 }
 
-document.getElementById('scrollArea').addEventListener('scroll', syncTocActive, { passive:true });
+document.getElementById('scrollArea').addEventListener('scroll', () => {
+  syncTocActive();
+  if (currentCodePre) positionCodeBar(currentCodePre);
+}, { passive:true });
 
 /* ══ SYNC TOOLBAR STATE ══ */
 function syncState() {
@@ -2125,12 +2301,19 @@ function loadSaved() {
 
 /* ══ CLEAR ══ */
 function clearDoc() {
-  if (!confirm('Очистити весь документ?')) return;
+  document.getElementById('clearModal').classList.add('show');
+}
+function closeClearModal() {
+  document.getElementById('clearModal').classList.remove('show');
+}
+function confirmClear() {
+  closeClearModal();
   editorSnapshot = '';
   findResults = []; findIdx = 0;
   document.getElementById('findBar').classList.remove('open');
   document.getElementById('findCount').textContent = '';
   editor.innerHTML = '';
+  hideCodeBar();
   try {
     localStorage.removeItem(STORE_KEY);
     localStorage.removeItem(STORE_NAME);
@@ -2188,6 +2371,17 @@ function exportHTML() {
     }
   });
 
+  // Wrap code blocks with Prism language class
+  clone.querySelectorAll('pre[data-lang]').forEach(pre => {
+    const lang = pre.dataset.lang;
+    delete pre.dataset.lang;
+    const code = document.createElement('code');
+    code.className = 'language-' + lang;
+    code.textContent = pre.innerText || pre.textContent;
+    pre.innerHTML = '';
+    pre.appendChild(code);
+  });
+
   const bodyHTML = clone.innerHTML;
 
   // H1/H2/H3 only
@@ -2208,6 +2402,7 @@ function exportHTML() {
 <title>${esc(name)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
@@ -2355,6 +2550,9 @@ function exportHTML() {
   a { color:#4F6BF4; }
   code { background:#f0f2f5; border-radius:4px; padding:2px 6px; font-family:'Courier New',monospace; font-size:.9em; }
   pre  { background:#f0f2f5; border-radius:7px; padding:14px 18px; margin:.8em 0; font-family:'Courier New',monospace; font-size:.88em; white-space:pre-wrap; border:1px solid #e2e5ea; overflow-x:auto; }
+  /* Prism overrides — keep border/radius from theme above */
+  pre[class*="language-"] { margin:.8em 0; border-radius:7px; border:none; }
+  code[class*="language-"] { font-size:.88em; }
   hr   { border:none; border-top:1.5px solid #e2e5ea; margin:1.5em 0; }
   img  { max-width:100%; height:auto; border-radius:4px; }
   /* Default: show images at reduced size (click to enlarge) */
@@ -2564,6 +2762,9 @@ ${hasToc ? `
   <img class="lightbox-img no-lightbox" id="lightboxImg" src="" alt="" onclick="event.stopPropagation()">
   <div class="lightbox-caption" id="lightboxCaption"></div>
 </div>
+
+<scr` + `ipt src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></scr` + `ipt>
+<scr` + `ipt src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></scr` + `ipt>
 
 <scr` + `ipt>
 // ── Lightbox ──
@@ -2877,17 +3078,13 @@ function replaceAll() {
   if (!q || !editorSnapshot) return;
 
   const re = new RegExp(escRe(q), 'gi');
+  let count = 0;
   const newSnap = editorSnapshot.replace(/(<[^>]*>)|([^<]+)/g, (match, tag, text) => {
     if (tag) return tag;
-    return text.replace(re, rep);
+    return text.replace(re, () => { count++; return rep; });
   });
 
-  const count = (editorSnapshot.match(/(<[^>]*>)|([^<]+)/g) || [])
-    .filter(s => !s.startsWith('<'))
-    .reduce((acc, t) => acc + (t.match(re) || []).length, 0);
-
   editorSnapshot = newSnap;
-  // Clear marks and show final result
   isMarking = true;
   editor.innerHTML = editorSnapshot;
   isMarking = false;
@@ -2897,10 +3094,90 @@ function replaceAll() {
   tick();
 }
 
+/* ══════════════════════════════
+   CODE BLOCK BAR
+══════════════════════════════ */
+let currentCodePre = null;
+
+function updateCodeBar() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) { hideCodeBar(); return; }
+  const node = sel.getRangeAt(0).commonAncestorContainer;
+  const el = node.nodeType === 3 ? node.parentElement : node;
+  const pre = el ? el.closest('pre') : null;
+  if (pre && editor.contains(pre)) {
+    showCodeBar(pre);
+  } else {
+    hideCodeBar();
+  }
+}
+
+function showCodeBar(pre) {
+  currentCodePre = pre;
+  const bar = document.getElementById('codeLangBar');
+  const sel = document.getElementById('codeLangSel');
+  const badge = document.getElementById('codeLangBadge');
+  const lang = pre.dataset.lang || '';
+  sel.value = lang;
+  badge.textContent = lang ? lang.toUpperCase() : 'CODE';
+  positionCodeBar(pre);
+  bar.classList.add('visible');
+}
+
+function hideCodeBar() {
+  if (!currentCodePre) return;
+  document.getElementById('codeLangBar').classList.remove('visible');
+  currentCodePre = null;
+}
+
+function positionCodeBar(pre) {
+  const bar = document.getElementById('codeLangBar');
+  const rect = pre.getBoundingClientRect();
+  const barH = 34;
+  const top = Math.max(8, rect.top - barH - 6);
+  bar.style.top = top + 'px';
+  bar.style.left = rect.left + 'px';
+  bar.style.maxWidth = rect.width + 'px';
+}
+
+function setCodeLang(lang) {
+  if (!currentCodePre) return;
+  if (lang) {
+    currentCodePre.dataset.lang = lang;
+  } else {
+    delete currentCodePre.dataset.lang;
+  }
+  document.getElementById('codeLangBadge').textContent = lang ? lang.toUpperCase() : 'CODE';
+  tick();
+}
+
+function copyCodeBlock() {
+  if (!currentCodePre) return;
+  const text = currentCodePre.innerText || currentCodePre.textContent;
+  const btn = document.getElementById('codeCopyBtn');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.classList.add('copied');
+    btn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6l3 3 5-5"/></svg>Скопійовано';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="7" height="8" rx="1"/><path d="M3 3V2a1 1 0 011-1h5a1 1 0 011 1v6a1 1 0 01-1 1H8"/></svg>Копіювати';
+    }, 1800);
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  });
+}
+
 /* ══ EVENTS ══ */
 editor.addEventListener('input', () => { if (!isMarking) { editorSnapshot = ''; tick(); } });
-editor.addEventListener('mouseup', syncState);
-editor.addEventListener('keyup', syncState);
+editor.addEventListener('mouseup', () => { syncState(); updateCodeBar(); });
+editor.addEventListener('keyup', () => { syncState(); updateCodeBar(); });
 editor.addEventListener('keydown', e => {
   // Enter near a contentEditable=false block — insert paragraph below it
   if (e.key === 'Enter' && !e.shiftKey) {
