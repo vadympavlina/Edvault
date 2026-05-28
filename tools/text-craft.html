@@ -2752,6 +2752,8 @@ function buildContainerBar(container, type, imgCol) {
   const bar = document.createElement('div');
   bar.className = 'container-bar';
   bar.contentEditable = 'false';
+  // Prevent stealing focus from text column when clicking bar buttons
+  bar.addEventListener('mousedown', e => e.preventDefault());
 
   if (type === 'row') {
     const addBtn = document.createElement('button'); addBtn.className = 'cbar-btn';
