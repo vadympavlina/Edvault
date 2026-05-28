@@ -795,34 +795,73 @@ figure { margin:1em 0; text-align:center; }
 /* Beside layout — image + text side by side */
 .img-beside {
   display:flex;
-  gap:18px;
-  align-items:flex-start;
-  margin:10px 0;
+  gap:0;
+  align-items:stretch;
+  margin:12px 0;
   width:100%;
   position:relative;
+  border-radius:var(--r);
+  border:1.5px solid transparent;
+  transition:border-color .15s;
+}
+.img-beside:hover {
+  border-color:var(--border);
 }
 .img-beside.beside-right {
   flex-direction:row-reverse;
 }
+/* Image column */
 .beside-img-col {
   flex-shrink:0;
-  width:45%;
+  position:relative;
+  display:flex;
 }
 .beside-img-col .img-wrap {
   width:100% !important;
   margin:0 !important;
   float:none !important;
-  display:block;
+  display:flex !important;
+  align-items:var(--beside-valign, flex-start);
 }
 .beside-img-col .img-wrap img {
   width:100% !important;
   height:auto !important;
   border-radius:6px;
+  display:block;
 }
 .beside-img-col .img-slot-ph {
   width:100%;
   min-height:160px;
 }
+/* Divider / resize handle */
+.beside-divider {
+  width:14px;
+  flex-shrink:0;
+  cursor:col-resize;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  z-index:2;
+  user-select:none;
+}
+.beside-divider::after {
+  content:'';
+  width:3px;
+  height:32px;
+  background:var(--border);
+  border-radius:2px;
+  transition:background .15s,height .15s;
+}
+.img-beside:hover .beside-divider::after,
+.beside-divider:hover::after {
+  background:var(--accent-lt);
+  height:48px;
+}
+.beside-divider:active::after {
+  background:var(--accent);
+}
+/* Text column */
 .beside-text-col {
   flex:1;
   min-width:0;
@@ -831,20 +870,28 @@ figure { margin:1em 0; text-align:center; }
   font-size:16px;
   line-height:1.85;
   color:var(--text);
-  min-height:60px;
-  padding:2px 0;
+  min-height:80px;
+  padding:8px 12px;
+  border-radius:0 var(--r) var(--r) 0;
+}
+.img-beside.beside-right .beside-text-col {
+  border-radius:var(--r) 0 0 var(--r);
+}
+.beside-text-col:focus {
+  background:rgba(79,107,244,.025);
 }
 .beside-text-col:empty::before {
   content:'Введіть текст тут…';
   color:#c5c9d4;
   pointer-events:none;
+  display:block;
 }
 
 /* Container action bar (shown on hover) */
 .container-bar {
   display:none;
   position:absolute;
-  top:-30px; left:0;
+  top:-34px; left:0;
   background:var(--surface);
   border:1px solid var(--border);
   border-radius:var(--r);
@@ -871,6 +918,7 @@ figure { margin:1em 0; text-align:center; }
 }
 .cbar-btn:hover { background:var(--bg); color:var(--text); }
 .cbar-btn.danger:hover { background:#fee2e2; color:#ef4444; }
+.cbar-btn.active { color:var(--accent); background:var(--accent-bg); }
 .cbar-btn svg { width:11px; height:11px; flex-shrink:0; }
 .cbar-sep { width:1px; height:14px; background:var(--border); margin:0 1px; }
 
@@ -2699,7 +2747,7 @@ function makeSlotPh(container, type) {
   return ph;
 }
 
-function buildContainerBar(container, type) {
+function buildContainerBar(container, type, imgCol) {
   const bar = document.createElement('div');
   bar.className = 'container-bar';
   bar.contentEditable = 'false';
@@ -2707,26 +2755,74 @@ function buildContainerBar(container, type) {
   if (type === 'row') {
     const addBtn = document.createElement('button'); addBtn.className = 'cbar-btn';
     addBtn.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2v8M2 6h8"/></svg>Додати фото`;
-    addBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      container.insertBefore(makeSlotPh(container, 'row'), bar);
-      tick();
-    });
+    addBtn.addEventListener('mousedown', e => { e.preventDefault(); container.insertBefore(makeSlotPh(container, 'row'), bar); tick(); });
     bar.appendChild(addBtn);
     const sep = document.createElement('span'); sep.className = 'cbar-sep'; bar.appendChild(sep);
   }
 
   if (type === 'beside') {
+    // Flip button
     const flipBtn = document.createElement('button'); flipBtn.className = 'cbar-btn';
+    flipBtn.title = 'Перевернути';
     flipBtn.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h8M7 3l3 3-3 3M5 3L2 6l3 3"/></svg>Перевернути`;
-    flipBtn.addEventListener('mousedown', (e) => { e.preventDefault(); container.classList.toggle('beside-right'); tick(); });
+    flipBtn.addEventListener('mousedown', e => { e.preventDefault(); container.classList.toggle('beside-right'); tick(); });
     bar.appendChild(flipBtn);
-    const sep = document.createElement('span'); sep.className = 'cbar-sep'; bar.appendChild(sep);
+
+    const sep1 = document.createElement('span'); sep1.className = 'cbar-sep'; bar.appendChild(sep1);
+
+    // Proportion presets
+    const pctLabel = document.createElement('span');
+    pctLabel.style.cssText = 'font-size:10px;color:var(--subtle);padding:0 3px;';
+    pctLabel.textContent = 'Ширина:';
+    bar.appendChild(pctLabel);
+
+    [[30,'30/70'],[40,'40/60'],[50,'50/50'],[60,'60/40']].forEach(([pct, label]) => {
+      const btn = document.createElement('button');
+      btn.className = 'cbar-btn' + (pct === 40 ? ' active' : '');
+      btn.dataset.pct = pct;
+      btn.textContent = label;
+      btn.addEventListener('mousedown', e => {
+        e.preventDefault();
+        container.dataset.imgPct = pct;
+        if (imgCol) imgCol.style.width = pct + '%';
+        bar.querySelectorAll('.cbar-btn[data-pct]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tick();
+      });
+      bar.appendChild(btn);
+    });
+
+    const sep2 = document.createElement('span'); sep2.className = 'cbar-sep'; bar.appendChild(sep2);
+
+    // Vertical align
+    const vaLabel = document.createElement('span');
+    vaLabel.style.cssText = 'font-size:10px;color:var(--subtle);padding:0 3px;';
+    vaLabel.textContent = 'Вирівн.:';
+    bar.appendChild(vaLabel);
+
+    [['flex-start','Верх'],['center','Центр'],['flex-end','Низ']].forEach(([val, label]) => {
+      const btn = document.createElement('button');
+      btn.className = 'cbar-btn' + (val === 'flex-start' ? ' active' : '');
+      btn.dataset.valign = val;
+      btn.textContent = label;
+      btn.addEventListener('mousedown', e => {
+        e.preventDefault();
+        container.style.alignItems = val;
+        // Also update img-wrap align via CSS var
+        if (imgCol) imgCol.style.setProperty('--beside-valign', val);
+        bar.querySelectorAll('.cbar-btn[data-valign]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tick();
+      });
+      bar.appendChild(btn);
+    });
+
+    const sep3 = document.createElement('span'); sep3.className = 'cbar-sep'; bar.appendChild(sep3);
   }
 
   const delBtn = document.createElement('button'); delBtn.className = 'cbar-btn danger';
   delBtn.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h8M4 3V2h4v1M3 3l.5 7h5l.5-7"/></svg>Видалити`;
-  delBtn.addEventListener('mousedown', (e) => {
+  delBtn.addEventListener('mousedown', e => {
     e.preventDefault();
     const parent = container.closest('p') || container.parentElement;
     parent ? parent.remove() : container.remove();
@@ -2742,23 +2838,60 @@ function insertImgBeside(side) {
   const beside = document.createElement('div');
   beside.className = 'img-beside' + (side === 'right' ? ' beside-right' : '');
   beside.contentEditable = 'false';
+  beside.dataset.imgPct = '40'; // image column %
 
   // Image column
   const imgCol = document.createElement('div');
   imgCol.className = 'beside-img-col';
   imgCol.contentEditable = 'false';
+  imgCol.style.width = '40%';
   imgCol.appendChild(makeSlotPh(imgCol, 'beside'));
   beside.appendChild(imgCol);
+
+  // Drag divider
+  const divider = document.createElement('div');
+  divider.className = 'beside-divider';
+  divider.contentEditable = 'false';
+  divider.title = 'Перетягніть щоб змінити ширину';
+  beside.appendChild(divider);
 
   // Text column
   const textCol = document.createElement('div');
   textCol.className = 'beside-text-col';
   textCol.contentEditable = 'true';
+  textCol.setAttribute('data-placeholder', 'Введіть текст тут…');
   beside.appendChild(textCol);
 
-  buildContainerBar(beside, 'beside');
+  // Divider drag logic
+  divider.addEventListener('mousedown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const totalW = beside.offsetWidth;
+    const startPct = parseFloat(beside.dataset.imgPct) || 40;
+
+    function onMove(ev) {
+      const dx = ev.clientX - startX;
+      let pct = startPct + (dx / totalW * 100);
+      pct = Math.max(20, Math.min(75, pct));
+      beside.dataset.imgPct = pct.toFixed(1);
+      imgCol.style.width = pct.toFixed(1) + '%';
+      // Update proportion buttons active state
+      beside.querySelectorAll('.cbar-btn[data-pct]').forEach(b =>
+        b.classList.remove('active'));
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      tick();
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  buildContainerBar(beside, 'beside', imgCol);
   insertBlockElement(beside);
-  setTimeout(() => textCol.focus(), 50);
+  setTimeout(() => { textCol.focus(); }, 50);
   tick();
 }
 
@@ -3273,12 +3406,13 @@ function exportHTML() {
 
   /* ── BESIDE (image + text) ── */
   .img-beside {
-    display:flex; gap:20px; align-items:flex-start;
+    display:flex; gap:0; align-items:flex-start;
     margin:12px 0; width:100%;
   }
   .img-beside.beside-right { flex-direction:row-reverse; }
+  .beside-divider { display:none; }
   .beside-img-col {
-    flex-shrink:0; width:45%;
+    flex-shrink:0; /* width set inline via data-imgPct */
   }
   .beside-img-col img {
     width:100% !important; max-width:none !important;
@@ -3289,7 +3423,7 @@ function exportHTML() {
   }
   .beside-img-col img:hover { opacity:.9; box-shadow:0 4px 16px rgba(0,0,0,.2); }
   .beside-text-col {
-    flex:1; min-width:0;
+    flex:1; min-width:0; padding:4px 14px;
     font-family:'Lora',Georgia,serif; font-size:16px;
     line-height:1.85; color:#1a1d23;
   }
