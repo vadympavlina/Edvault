@@ -816,8 +816,11 @@ figure { margin:1em 0; text-align:center; }
   position:relative;
   display:flex;
 }
-.beside-img-col .img-wrap.selected .img-toolbar { display:none !important; }
-.beside-img-col .img-wrap.selected img { outline:2px solid var(--accent); outline-offset:0; border-radius:6px; }
+.beside-img-col .img-wrap.selected .img-toolbar {
+  display:flex !important;
+  bottom:auto;
+  top:calc(100% + 8px);
+}
 .beside-img-col .img-handle { display:none !important; }
 .beside-img-col .img-size-tip { display:none !important; }
 .beside-img-col .img-wrap img {
