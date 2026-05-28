@@ -1091,6 +1091,106 @@ body{animation:fadeUp .3s ease}
   font-size:10px;font-weight:700;color:var(--subtle);letter-spacing:.5px;
   text-transform:uppercase;pointer-events:none;font-family:'Inter',system-ui,sans-serif;
 }
+
+/* ═══════════ TABLE IN EDITOR ═══════════ */
+.editor table{
+  border-collapse:collapse;width:100%;
+  margin:.8em 0;font-size:14.5px;
+}
+.editor th,.editor td{
+  border:1.5px solid var(--border2);
+  padding:7px 12px;text-align:left;
+  min-width:64px;vertical-align:top;
+  position:relative;
+}
+.editor th{
+  background:var(--bg);font-weight:600;
+  color:var(--text);font-size:13px;
+}
+.editor td{color:var(--text)}
+.editor tr:hover td{background:rgba(79,107,244,.025)}
+
+/* ═══════════ TABLE PICKER ═══════════ */
+.tb-table-wrap{position:relative;flex-shrink:0}
+.table-picker{
+  display:none;position:absolute;
+  top:calc(100% + 6px);left:0;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:var(--r-lg);
+  box-shadow:var(--sh-lg);
+  padding:10px;z-index:700;
+  animation:popIn .13s ease;
+}
+.table-picker.open{display:block}
+.table-picker-grid{
+  display:grid;
+  grid-template-columns:repeat(8,22px);
+  gap:3px;
+}
+.table-picker-cell{
+  width:22px;height:22px;
+  border:1.5px solid var(--border);
+  border-radius:3px;background:var(--bg);
+  cursor:pointer;transition:background .08s,border-color .08s;
+}
+.table-picker-cell.hl{
+  background:var(--accent-bg);border-color:var(--accent-lt);
+}
+.table-picker-cell.hl-dark{
+  background:#dde3fd;border-color:var(--accent);
+}
+.table-picker-label{
+  font-size:11px;color:var(--muted);text-align:center;
+  margin-top:8px;font-family:'Inter',system-ui,sans-serif;font-weight:500;
+}
+
+/* ═══════════ TABLE CONTEXT BAR ═══════════ */
+.table-ctx-bar{
+  display:none;position:fixed;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--r);box-shadow:var(--sh);
+  padding:3px 6px;gap:2px;align-items:center;
+  z-index:600;white-space:nowrap;animation:popIn .12s ease;
+}
+.table-ctx-bar.visible{display:flex}
+.tbl-btn{
+  height:24px;padding:0 7px;border:none;border-radius:4px;
+  background:transparent;font-family:'Inter',system-ui,sans-serif;
+  font-size:11.5px;font-weight:500;color:var(--muted);
+  cursor:pointer;display:flex;align-items:center;gap:3px;transition:all .1s;
+}
+.tbl-btn:hover{background:var(--bg);color:var(--text)}
+.tbl-btn.danger:hover{background:#fee2e2;color:#ef4444}
+.tbl-btn svg{width:12px;height:12px;flex-shrink:0}
+.tbl-bar-sep{width:1px;height:14px;background:var(--border);margin:0 2px;flex-shrink:0}
+.tbl-info{
+  font-size:10.5px;font-weight:700;color:var(--accent);
+  background:var(--accent-bg);border-radius:4px;padding:2px 7px;flex-shrink:0;
+}
+
+/* ═══════════ DRAG & DROP OVERLAY ═══════════ */
+.drag-overlay{
+  display:none;
+  position:absolute;inset:0;
+  background:rgba(79,107,244,.07);
+  border:2.5px dashed var(--accent);
+  border-radius:var(--r);
+  z-index:80;
+  align-items:center;justify-content:center;
+  pointer-events:none;
+  border-radius:var(--r);
+}
+.drag-overlay.active{display:flex}
+.drag-overlay-pill{
+  background:var(--accent);color:#fff;
+  border-radius:30px;padding:12px 26px;
+  font-family:'Inter',system-ui,sans-serif;
+  font-size:13.5px;font-weight:600;
+  display:flex;align-items:center;gap:10px;
+  box-shadow:var(--sh-lg);
+}
+.drag-overlay-pill svg{width:20px;height:20px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -1457,6 +1557,21 @@ body{animation:fadeUp .3s ease}
         <rect x="11" y="3.5" width="1" height="9" rx=".5" opacity=".3"/>
       </svg>
     </button>
+    <!-- Insert Table -->
+    <div class="tb-table-wrap" id="tbTableWrap">
+      <button class="tb" onclick="toggleTablePicker(event)" data-tip="Вставити таблицю" id="tbTableBtn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+          <rect x="1.5" y="2.5" width="13" height="11" rx="1.2"/>
+          <line x1="1.5" y1="6.5" x2="14.5" y2="6.5"/>
+          <line x1="6" y1="2.5" x2="6" y2="13.5"/>
+          <line x1="10.5" y1="2.5" x2="10.5" y2="13.5"/>
+        </svg>
+      </button>
+      <div class="table-picker" id="tablePicker">
+        <div class="table-picker-grid" id="tablePickerGrid"></div>
+        <div class="table-picker-label" id="tablePickerLabel">Наведіть для вибору</div>
+      </div>
+    </div>
     <!-- Insert Image -->
     <button class="tb" onclick="triggerImageInsert()" data-tip="Вставити зображення">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -1552,8 +1667,55 @@ body{animation:fadeUp .3s ease}
     </svg>
   </button>
   <div class="page" id="page">
+    <div class="drag-overlay" id="dragOverlay">
+      <div class="drag-overlay-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="M3 15l5-5 4 4 3-3 6 6"/>
+        </svg>
+        Відпустіть щоб вставити
+      </div>
+    </div>
     <div class="editor" id="editor" contenteditable="true" spellcheck="true"></div>
   </div>
+
+<!-- TABLE CONTEXT BAR -->
+<div class="table-ctx-bar" id="tableCtxBar">
+  <span class="tbl-info" id="tblInfo">1×1</span>
+  <span class="tbl-bar-sep"></span>
+  <button class="tbl-btn" onclick="tblAddRow()" title="Додати рядок">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="1" width="12" height="5" rx="1"/><rect x="1" y="8" width="12" height="5" rx="1" opacity=".3"/>
+      <path d="M7 9.5v3M5.5 11h3" stroke-width="1.6"/>
+    </svg>+ Рядок
+  </button>
+  <button class="tbl-btn" onclick="tblAddCol()" title="Додати стовпець">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="1" width="5" height="12" rx="1"/><rect x="8" y="1" width="5" height="12" rx="1" opacity=".3"/>
+      <path d="M9.5 7h3M11 5.5v3" stroke-width="1.6"/>
+    </svg>+ Колонку
+  </button>
+  <span class="tbl-bar-sep"></span>
+  <button class="tbl-btn" onclick="tblDelRow()" title="Видалити рядок">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="1" width="12" height="5" rx="1"/><rect x="1" y="8" width="12" height="5" rx="1" opacity=".3"/>
+      <path d="M5.5 11h3" stroke-width="1.6"/>
+    </svg>− Рядок
+  </button>
+  <button class="tbl-btn" onclick="tblDelCol()" title="Видалити стовпець">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="1" width="5" height="12" rx="1"/><rect x="8" y="1" width="5" height="12" rx="1" opacity=".3"/>
+      <path d="M9.5 11h3M11 9.5v3" opacity="0"/>
+    </svg>− Колонку
+  </button>
+  <span class="tbl-bar-sep"></span>
+  <button class="tbl-btn danger" onclick="tblDelete()" title="Видалити таблицю">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M2 3h10M5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M3 3l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9L11 3"/>
+    </svg>Видалити
+  </button>
+</div>
 </div>
 
 </div><!-- /main-layout -->
@@ -2232,6 +2394,7 @@ function syncTocActive() {
 document.getElementById('scrollArea').addEventListener('scroll', () => {
   syncTocActive();
   if (currentCodePre) positionCodeBar(currentCodePre);
+  if (currentTable) showTableBar(currentTable, null);
 }, { passive:true });
 
 /* ══ SYNC TOOLBAR STATE ══ */
@@ -2554,6 +2717,10 @@ function exportHTML() {
   pre[class*="language-"] { margin:.8em 0; border-radius:7px; border:none; }
   code[class*="language-"] { font-size:.88em; }
   hr   { border:none; border-top:1.5px solid #e2e5ea; margin:1.5em 0; }
+  table { border-collapse:collapse; width:100%; margin:.8em 0; font-size:14.5px; }
+  th, td { border:1.5px solid #d0d5dd; padding:7px 14px; text-align:left; vertical-align:top; }
+  th { background:#f0f2f5; font-weight:600; font-size:13px; }
+  tr:nth-child(even) td { background:#fafafa; }
   img  { max-width:100%; height:auto; border-radius:4px; }
   /* Default: show images at reduced size (click to enlarge) */
   .content img:not(.no-lightbox) {
@@ -3095,8 +3262,258 @@ function replaceAll() {
 }
 
 /* ══════════════════════════════
-   CODE BLOCK BAR
+   TABLE PICKER
 ══════════════════════════════ */
+(function initTablePicker() {
+  const grid = document.getElementById('tablePickerGrid');
+  const ROWS = 8, COLS = 8;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'table-picker-cell';
+      cell.dataset.r = r; cell.dataset.c = c;
+      cell.addEventListener('mouseover', () => {
+        grid.querySelectorAll('.table-picker-cell').forEach(cl => {
+          const cr = +cl.dataset.r, cc = +cl.dataset.c;
+          cl.classList.toggle('hl', cr <= r && cc <= c);
+          cl.classList.toggle('hl-dark', cr === r && cc === c);
+        });
+        document.getElementById('tablePickerLabel').textContent = `${r+1} × ${c+1} таблиця`;
+      });
+      cell.addEventListener('click', () => { insertTable(r+1, c+1); closeTablePicker(); });
+      grid.appendChild(cell);
+    }
+  }
+  grid.addEventListener('mouseleave', () => {
+    grid.querySelectorAll('.table-picker-cell').forEach(cl => cl.classList.remove('hl','hl-dark'));
+    document.getElementById('tablePickerLabel').textContent = 'Наведіть для вибору';
+  });
+})();
+
+let tablePickerOpen = false;
+
+function toggleTablePicker(e) {
+  e.stopPropagation();
+  tablePickerOpen = !tablePickerOpen;
+  document.getElementById('tablePicker').classList.toggle('open', tablePickerOpen);
+  if (tablePickerOpen) saveCursor();
+}
+function closeTablePicker() {
+  tablePickerOpen = false;
+  document.getElementById('tablePicker').classList.remove('open');
+}
+
+function insertTable(rows, cols) {
+  editor.focus();
+  if (savedRange) {
+    const s = window.getSelection();
+    s.removeAllRanges(); s.addRange(savedRange);
+    savedRange = null;
+  }
+
+  const table = document.createElement('table');
+  for (let r = 0; r < rows; r++) {
+    const tr = document.createElement('tr');
+    for (let c = 0; c < cols; c++) {
+      const cell = r === 0 ? document.createElement('th') : document.createElement('td');
+      cell.appendChild(document.createElement('br'));
+      tr.appendChild(cell);
+    }
+    table.appendChild(tr);
+  }
+  const after = document.createElement('p');
+  after.appendChild(document.createElement('br'));
+
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount && editor.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+    const range = sel.getRangeAt(0);
+    // Find block-level ancestor inside editor to insert after
+    let anchor = range.commonAncestorContainer;
+    if (anchor.nodeType === 3) anchor = anchor.parentElement;
+    while (anchor.parentElement && anchor.parentElement !== editor) anchor = anchor.parentElement;
+    anchor.after(after);
+    anchor.after(table);
+  } else {
+    editor.appendChild(table);
+    editor.appendChild(after);
+  }
+
+  // Place cursor in first cell
+  const firstCell = table.querySelector('th,td');
+  if (firstCell) {
+    const r2 = document.createRange();
+    r2.selectNodeContents(firstCell); r2.collapse(true);
+    sel.removeAllRanges(); sel.addRange(r2);
+  }
+  tick();
+}
+
+/* ── Table context bar ── */
+let currentTable = null;
+
+function updateTableBar() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) { hideTableBar(); return; }
+  const node = sel.getRangeAt(0).commonAncestorContainer;
+  const el = node.nodeType === 3 ? node.parentElement : node;
+  const cell = el ? el.closest('td,th') : null;
+  if (cell && editor.contains(cell)) {
+    showTableBar(cell.closest('table'), cell);
+  } else {
+    hideTableBar();
+  }
+}
+
+function showTableBar(table, cell) {
+  currentTable = table;
+  const bar = document.getElementById('tableCtxBar');
+  const rows = table.rows.length;
+  const cols = table.rows[0]?.cells.length || 0;
+  document.getElementById('tblInfo').textContent = `${rows}×${cols}`;
+  const rect = table.getBoundingClientRect();
+  bar.style.top = Math.max(8, rect.top - 38) + 'px';
+  bar.style.left = rect.left + 'px';
+  bar.classList.add('visible');
+}
+
+function hideTableBar() {
+  if (!currentTable) return;
+  document.getElementById('tableCtxBar').classList.remove('visible');
+  currentTable = null;
+}
+
+function tblAddRow() {
+  if (!currentTable) return;
+  const lastRow = currentTable.querySelector('tr:last-child');
+  const colCount = lastRow?.cells.length || 1;
+  const tr = document.createElement('tr');
+  for (let i = 0; i < colCount; i++) {
+    const td = document.createElement('td');
+    td.appendChild(document.createElement('br'));
+    tr.appendChild(td);
+  }
+  currentTable.appendChild(tr);
+  tick(); showTableBar(currentTable, tr.cells[0]);
+}
+
+function tblAddCol() {
+  if (!currentTable) return;
+  [...currentTable.rows].forEach((row, i) => {
+    const cell = i === 0 ? document.createElement('th') : document.createElement('td');
+    cell.appendChild(document.createElement('br'));
+    row.appendChild(cell);
+  });
+  tick(); showTableBar(currentTable, currentTable.rows[0]?.cells[0]);
+}
+
+function tblDelRow() {
+  if (!currentTable || currentTable.rows.length <= 1) return;
+  currentTable.querySelector('tr:last-child')?.remove();
+  tick(); showTableBar(currentTable, currentTable.rows[0]?.cells[0]);
+}
+
+function tblDelCol() {
+  if (!currentTable) return;
+  [...currentTable.rows].forEach(row => {
+    if (row.cells.length > 1) row.deleteCell(row.cells.length - 1);
+  });
+  tick(); showTableBar(currentTable, currentTable.rows[0]?.cells[0]);
+}
+
+function tblDelete() {
+  if (!currentTable) return;
+  const p = document.createElement('p');
+  p.appendChild(document.createElement('br'));
+  currentTable.replaceWith(p);
+  hideTableBar();
+  tick();
+}
+
+/* ══════════════════════════════
+   DRAG & DROP IMAGES
+══════════════════════════════ */
+(function initDragDrop() {
+  const scrollArea = document.getElementById('scrollArea');
+  const overlay = document.getElementById('dragOverlay');
+  let dragCount = 0;
+
+  function hasFiles(e) {
+    return [...(e.dataTransfer?.types || [])].includes('Files');
+  }
+
+  scrollArea.addEventListener('dragenter', e => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragCount++;
+    overlay.classList.add('active');
+  }, false);
+
+  scrollArea.addEventListener('dragleave', e => {
+    dragCount = Math.max(0, dragCount - 1);
+    if (dragCount === 0) overlay.classList.remove('active');
+  }, false);
+
+  scrollArea.addEventListener('dragover', e => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, false);
+
+  scrollArea.addEventListener('drop', e => {
+    e.preventDefault();
+    dragCount = 0;
+    overlay.classList.remove('active');
+
+    const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+
+    // Get drop position in document
+    let dropRange = null;
+    if (document.caretRangeFromPoint) {
+      dropRange = document.caretRangeFromPoint(e.clientX, e.clientY);
+    } else if (document.caretPositionFromPoint) {
+      const pos = document.caretPositionFromPoint(e.clientX, e.clientY);
+      if (pos) {
+        dropRange = document.createRange();
+        dropRange.setStart(pos.offsetNode, pos.offset);
+        dropRange.collapse(true);
+      }
+    }
+    // Validate range is inside editor
+    if (dropRange && !editor.contains(dropRange.commonAncestorContainer)) dropRange = null;
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const wrap = createImgWrap(ev.target.result, '100%', 'img-center');
+        const p = document.createElement('p');
+        p.style.textAlign = 'center';
+        p.appendChild(wrap);
+        const after = document.createElement('p');
+        after.appendChild(document.createElement('br'));
+
+        if (dropRange) {
+          dropRange.collapse(false);
+          dropRange.insertNode(after);
+          dropRange.insertNode(p);
+          const cur = document.createRange();
+          cur.setStart(after, 0); cur.collapse(true);
+          const s = window.getSelection();
+          s.removeAllRanges(); s.addRange(cur);
+          dropRange = cur.cloneRange(); // move insertion point down for next file
+        } else {
+          editor.appendChild(p);
+          editor.appendChild(after);
+        }
+        selectWrap(wrap);
+        tick();
+      };
+      reader.readAsDataURL(file);
+    });
+  }, false);
+})();
+
+/* ══ EVENTS ══ */
 let currentCodePre = null;
 
 function updateCodeBar() {
@@ -3176,8 +3593,8 @@ function copyCodeBlock() {
 
 /* ══ EVENTS ══ */
 editor.addEventListener('input', () => { if (!isMarking) { editorSnapshot = ''; tick(); } });
-editor.addEventListener('mouseup', () => { syncState(); updateCodeBar(); });
-editor.addEventListener('keyup', () => { syncState(); updateCodeBar(); });
+editor.addEventListener('mouseup', () => { syncState(); updateCodeBar(); updateTableBar(); });
+editor.addEventListener('keyup', () => { syncState(); updateCodeBar(); updateTableBar(); });
 editor.addEventListener('keydown', e => {
   // Enter near a contentEditable=false block — insert paragraph below it
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -3205,7 +3622,48 @@ editor.addEventListener('keydown', e => {
     }
   }
 
-  if (!(e.ctrlKey || e.metaKey)) return;
+  if (!(e.ctrlKey || e.metaKey)) {
+    // Tab inside table — navigate cells
+    if (e.key === 'Tab') {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        const node = sel.getRangeAt(0).commonAncestorContainer;
+        const el = node.nodeType === 3 ? node.parentElement : node;
+        const cell = el ? el.closest('td,th') : null;
+        if (cell && editor.contains(cell)) {
+          e.preventDefault();
+          const table = cell.closest('table');
+          const cells = [...table.querySelectorAll('td,th')];
+          const idx = cells.indexOf(cell);
+          if (!e.shiftKey && idx === cells.length - 1) {
+            // Last cell → add new row
+            const lastRow = table.querySelector('tr:last-child');
+            const colCount = lastRow.querySelectorAll('td,th').length;
+            const newRow = document.createElement('tr');
+            for (let i = 0; i < colCount; i++) {
+              const td = document.createElement('td');
+              td.appendChild(document.createElement('br'));
+              newRow.appendChild(td);
+            }
+            table.appendChild(newRow);
+            const firstNew = newRow.querySelector('td');
+            const r2 = document.createRange();
+            r2.selectNodeContents(firstNew); r2.collapse(true);
+            sel.removeAllRanges(); sel.addRange(r2);
+            tick(); return;
+          }
+          const next = e.shiftKey ? cells[idx-1] : cells[idx+1];
+          if (next) {
+            const r2 = document.createRange();
+            r2.selectNodeContents(next); r2.collapse(false);
+            sel.removeAllRanges(); sel.addRange(r2);
+          }
+          return;
+        }
+      }
+    }
+    return;
+  }
   const k = e.key.toLowerCase();
   if (k === 'b') { e.preventDefault(); exec('bold'); }
   if (k === 'i') { e.preventDefault(); exec('italic'); }
@@ -3259,6 +3717,12 @@ editor.addEventListener('paste', e => {
 document.addEventListener('click', e => {
   if (!e.target.closest('.img-wrap') && !e.target.closest('.img-toolbar')) {
     deselectAll();
+  }
+  if (!e.target.closest('.tb-table-wrap')) {
+    closeTablePicker();
+  }
+  if (!e.target.closest('table') && !e.target.closest('.table-ctx-bar')) {
+    hideTableBar();
   }
 });
 
