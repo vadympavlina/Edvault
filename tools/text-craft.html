@@ -539,9 +539,10 @@ body {
 }
 .editor a{color:var(--accent);text-decoration:underline}
 .editor code{
-  background:var(--bg);border-radius:5px;
-  padding:2px 5px;
-  font-family:'Courier New',monospace;font-size:.9em;
+  background:#f0f2f8;border-radius:5px;
+  padding:2px 6px;border:1px solid var(--border);
+  font-family:'Courier New',monospace;font-size:.88em;
+  color:#c7254e;white-space:pre-wrap;
 }
 .editor pre{
   background:var(--bg);border-radius:var(--r);
@@ -1420,6 +1421,13 @@ body{animation:fadeUp .3s ease}
         <path d="M2 4h12M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M6 7v5M10 7v5M3 4l.8 9a1 1 0 001 .9h6.4a1 1 0 001-.9L13 4"/>
       </svg>
     </button>
+    <button class="btn btn-ghost btn-icon" onclick="openDocFile()" data-tip="Відкрити збережений документ">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+        <path d="M2 4.5A1.5 1.5 0 013.5 3H7l1.5 2H13a1.5 1.5 0 011.5 1.5V12A1.5 1.5 0 0113 13.5H3A1.5 1.5 0 011.5 12V4.5z"/>
+        <path d="M8 7v4M6 9l2-2 2 2" stroke-width="1.5"/>
+      </svg>
+    </button>
+    <input type="file" id="openFileInput" accept=".html" style="display:none" onchange="loadDocFromFile(this)">
     <div class="topbar-div"></div>
     <button class="btn btn-outline" onclick="exportHTML()" data-tip="Зберегти як HTML">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -1459,6 +1467,10 @@ body{animation:fadeUp .3s ease}
     <button class="btn btn-ghost" onclick="clearDoc();closeTopbarMenu()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="13" height="13"><path d="M2 4h12M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M6 7v5M10 7v5M3 4l.8 9a1 1 0 001 .9h6.4a1 1 0 001-.9L13 4"/></svg>
       <span class="btn-label">Очистити</span>
+    </button>
+    <button class="btn btn-ghost" onclick="openDocFile();closeTopbarMenu()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="13" height="13"><path d="M2 4.5A1.5 1.5 0 013.5 3H7l1.5 2H13a1.5 1.5 0 011.5 1.5V12A1.5 1.5 0 0113 13.5H3A1.5 1.5 0 011.5 12V4.5z"/><path d="M8 7v4M6 9l2-2 2 2"/></svg>
+      <span class="btn-label">Відкрити</span>
     </button>
     <div class="topbar-dd-sep"></div>
     <button class="btn btn-outline" onclick="exportHTML();closeTopbarMenu()">
@@ -1553,6 +1565,45 @@ body{animation:fadeUp .3s ease}
     </button>
 
     <div class="tb-sep"></div>
+
+    <!-- Unordered list -->
+    <button class="tb" id="btn-insertUnorderedList" onclick="exec('insertUnorderedList')" data-tip="Маркований список">
+      <svg viewBox="0 0 16 16" fill="currentColor">
+        <circle cx="2.5" cy="4.5" r="1.5"/>
+        <circle cx="2.5" cy="9" r="1.5"/>
+        <circle cx="2.5" cy="13.5" r="1.5"/>
+        <rect x="6" y="3.5" width="9" height="2" rx="1"/>
+        <rect x="6" y="8" width="9" height="2" rx="1"/>
+        <rect x="6" y="12.5" width="9" height="2" rx="1"/>
+      </svg>
+    </button>
+    <!-- Ordered list -->
+    <button class="tb" id="btn-insertOrderedList" onclick="exec('insertOrderedList')" data-tip="Нумерований список">
+      <svg viewBox="0 0 16 16" fill="currentColor">
+        <path d="M1.5 2h1v3.5H1.5V3H1V2h.5zM1 8.5h1.5v.5H1.5v.5H3v1H1v-.5h1.5V10H1V8.5zM1 12.5h2v.5H1.5L3 14.5v.5H1v-.5h1.5L1 13v-.5z"/>
+        <rect x="5" y="3" width="9" height="2" rx="1"/>
+        <rect x="5" y="7.5" width="9" height="2" rx="1"/>
+        <rect x="5" y="12" width="9" height="2" rx="1"/>
+      </svg>
+    </button>
+
+    <div class="tb-sep"></div>
+
+    <!-- Inline code -->
+    <button class="tb" onclick="insertInlineCode()" data-tip="Inline код (`code`)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+        <path d="M5.5 5L2 8l3.5 3M10.5 5L14 8l-3.5 3"/>
+        <line x1="9" y1="4" x2="7" y2="12" stroke-width="1.4"/>
+      </svg>
+    </button>
+    <!-- Code block -->
+    <button class="tb" onclick="insertCodeBlock()" data-tip="Блок коду">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+        <rect x="1" y="2.5" width="14" height="11" rx="2"/>
+        <path d="M5.5 6L3 8l2.5 2M10.5 6L13 8l-2.5 2" stroke-width="1.6"/>
+        <line x1="8.5" y1="5" x2="7.5" y2="11" stroke-width="1.3"/>
+      </svg>
+    </button>
 
     <!-- Text color -->
     <button class="col-btn" onclick="document.getElementById('pickTxt').click()" data-tip="Колір тексту">
@@ -1821,7 +1872,39 @@ function exec(cmd, val = null) {
 function applyBlock(tag) {
   editor.focus();
   document.execCommand('formatBlock', false, tag);
+
+  // After converting to heading — strip inline font-size/font-family that fight the heading CSS
+  if (['h1','h2','h3'].includes(tag)) {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount) {
+      const node = sel.getRangeAt(0).commonAncestorContainer;
+      const el = node.nodeType === 3 ? node.parentElement : node;
+      const block = el ? el.closest('h1,h2,h3') : null;
+      if (block) cleanHeadingInlineStyles(block);
+    }
+  }
+  // When switching back to p/blockquote/pre — nothing to clean
   syncState();
+}
+
+/* Remove inline font-size and font-family from all descendants of a heading
+   so the heading's own CSS rules apply cleanly */
+function cleanHeadingInlineStyles(heading) {
+  // Clean the heading element itself
+  heading.style.removeProperty('font-size');
+  heading.style.removeProperty('font-family');
+
+  // Clean all descendant spans/elements
+  heading.querySelectorAll('[style]').forEach(el => {
+    el.style.removeProperty('font-size');
+    el.style.removeProperty('font-family');
+    // If span has no remaining style, unwrap it
+    if (!el.getAttribute('style') || el.getAttribute('style').trim() === '') {
+      const parent = el.parentNode;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+    }
+  });
 }
 
 /* ══ FONT FAMILY ══ */
@@ -1840,6 +1923,13 @@ function changeSize(d) {
 }
 function applyFontSize(px) {
   editor.focus();
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount) {
+    const node = sel.getRangeAt(0).commonAncestorContainer;
+    const el = node.nodeType === 3 ? node.parentElement : node;
+    // Don't apply inline font-size inside headings — they use CSS em-based sizes
+    if (el && el.closest('h1,h2,h3')) return;
+  }
   wrapStyle('fontSize', px + 'px');
 }
 
@@ -1877,7 +1967,120 @@ function wrapStyle(prop, val) {
   tick();
 }
 
-/* ══ LINK ══ */
+/* ══ INLINE CODE ══ */
+function insertInlineCode() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  editor.focus();
+  const range = sel.getRangeAt(0);
+  if (range.collapsed) {
+    // No selection — insert empty code element and place cursor inside
+    const code = document.createElement('code');
+    code.textContent = '\u200b'; // zero-width space to allow cursor
+    range.insertNode(code);
+    const r2 = document.createRange();
+    r2.setStart(code.firstChild, 1);
+    r2.collapse(true);
+    sel.removeAllRanges(); sel.addRange(r2);
+  } else {
+    // Wrap selection in <code>
+    const text = range.toString();
+    const code = document.createElement('code');
+    code.textContent = text;
+    range.deleteContents();
+    range.insertNode(code);
+    const r2 = document.createRange();
+    r2.selectNodeContents(code);
+    sel.removeAllRanges(); sel.addRange(r2);
+  }
+  tick();
+}
+
+/* ══ CODE BLOCK ══ */
+function insertCodeBlock() {
+  editor.focus();
+  const sel = window.getSelection();
+  let anchor = null;
+  if (sel && sel.rangeCount) {
+    let node = sel.getRangeAt(0).commonAncestorContainer;
+    if (node.nodeType === 3) node = node.parentElement;
+    while (node && node.parentElement !== editor) node = node.parentElement;
+    anchor = node;
+  }
+  const pre = document.createElement('pre');
+  pre.appendChild(document.createElement('br'));
+  const after = document.createElement('p');
+  after.appendChild(document.createElement('br'));
+  if (anchor) { anchor.after(after); anchor.after(pre); }
+  else { editor.appendChild(pre); editor.appendChild(after); }
+  // Place cursor in pre
+  const r2 = document.createRange();
+  r2.setStart(pre, 0); r2.collapse(true);
+  sel.removeAllRanges(); sel.addRange(r2);
+  showCodeBar(pre);
+  tick();
+}
+
+/* ══ OPEN FILE ══ */
+function openDocFile() {
+  document.getElementById('openFileInput').value = '';
+  document.getElementById('openFileInput').click();
+}
+
+function loadDocFromFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const html = ev.target.result;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    // Try to extract title
+    const titleEl = doc.querySelector('title');
+    const h1El = doc.querySelector('h1');
+    const docName = titleEl?.textContent?.replace(' — TextCraft','').trim()
+      || h1El?.textContent?.trim()
+      || file.name.replace('.html','');
+    // Try to extract content — look for .editor or main article content
+    const editorEl = doc.querySelector('.editor') || doc.querySelector('article') || doc.querySelector('main') || doc.body;
+    if (!editorEl) return;
+    // Clear and load
+    editor.innerHTML = editorEl.innerHTML;
+    document.getElementById('docTitle').value = docName;
+    document.title = docName + ' — TextCraft';
+    // Re-attach image listeners
+    attachAllImgListeners();
+    editorSnapshot = '';
+    hideCodeBar(); hideTableBar(); hideSelToolbar();
+    tick();
+    editor.focus();
+    // Scroll to top
+    document.getElementById('scrollArea').scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  reader.readAsText(file);
+}
+
+/* ══ AUTO-TITLE ══ */
+let autoTitleTimer = null;
+function scheduleAutoTitle() {
+  clearTimeout(autoTitleTimer);
+  autoTitleTimer = setTimeout(applyAutoTitle, 1200);
+}
+function applyAutoTitle() {
+  const titleInput = document.getElementById('docTitle');
+  // Only auto-set if title is still default
+  if (titleInput.value && titleInput.value !== 'Без назви') return;
+  // Try first H1, then H2, then first non-empty text line
+  const h1 = editor.querySelector('h1');
+  const h2 = editor.querySelector('h2');
+  const firstBlock = editor.querySelector('p,h1,h2,h3');
+  const candidate = h1 || h2 || firstBlock;
+  if (!candidate) return;
+  const text = candidate.textContent.trim();
+  if (text.length < 2) return;
+  titleInput.value = text.slice(0, 64);
+  document.title = titleInput.value + ' — TextCraft';
+}
 function insertLink() {
   saveCursor();
   document.getElementById('linkInp').value = '';
@@ -2472,7 +2675,7 @@ document.getElementById('scrollArea').addEventListener('scroll', () => {
 
 /* ══ SYNC TOOLBAR STATE ══ */
 function syncState() {
-  ['bold','italic','underline','strikeThrough','superscript','subscript'].forEach(cmd => {
+  ['bold','italic','underline','strikeThrough','superscript','subscript','insertUnorderedList','insertOrderedList'].forEach(cmd => {
     const b = document.getElementById('btn-' + cmd);
     if (b) b.classList.toggle('on', document.queryCommandState(cmd));
   });
@@ -2487,8 +2690,15 @@ function syncState() {
       const node = sel.getRangeAt(0).startContainer;
       const el = node.nodeType === 3 ? node.parentElement : node;
       if (el && editor.contains(el)) {
-        const fs = parseInt(getComputedStyle(el).fontSize);
-        if (fs > 0) document.getElementById('fontSize').value = fs;
+        // Inside a heading — don't show computed em-size as if it were user-set px
+        if (el.closest('h1,h2,h3')) {
+          document.getElementById('fontSize').value = '';
+          document.getElementById('fontSize').placeholder = '—';
+        } else {
+          document.getElementById('fontSize').placeholder = '16';
+          const fs = parseInt(getComputedStyle(el).fontSize);
+          if (fs > 0) document.getElementById('fontSize').value = fs;
+        }
       }
     }
   } catch(e) {}
@@ -2788,6 +2998,7 @@ function exportHTML() {
   blockquote { border-left:3px solid #4F6BF4; padding:8px 18px; margin:1em 0; color:#4b5563; font-style:italic; background:#eef0fe; border-radius:0 6px 6px 0; }
   a { color:#4F6BF4; }
   code { background:#f0f2f5; border-radius:4px; padding:2px 6px; font-family:'Courier New',monospace; font-size:.9em; }
+  code { background:#f0f2f8; border:1px solid #dde1ea; border-radius:4px; padding:2px 6px; font-family:'Courier New',monospace; font-size:.88em; color:#c7254e; white-space:pre-wrap; }
   pre  { background:#f0f2f5; border-radius:7px; padding:14px 18px; margin:.8em 0; font-family:'Courier New',monospace; font-size:.88em; white-space:pre-wrap; border:1px solid #e2e5ea; overflow-x:auto; }
   /* Prism overrides — keep border/radius from theme above */
   pre[class*="language-"] { margin:.8em 0; border-radius:7px; border:none; }
@@ -3414,7 +3625,7 @@ function selLink() {
 }
 
 function selFormat(tag) {
-  exec('formatBlock', tag);
+  applyBlock(tag);
   hideSelToolbar();
   scheduleToc();
 }
@@ -3762,7 +3973,7 @@ function copyCodeBlock() {
 }
 
 /* ══ EVENTS ══ */
-editor.addEventListener('input', () => { if (!isMarking) { editorSnapshot = ''; tick(); } });
+editor.addEventListener('input', () => { if (!isMarking) { editorSnapshot = ''; tick(); scheduleAutoTitle(); } });
 editor.addEventListener('mouseup', () => { syncState(); updateCodeBar(); updateTableBar(); updateSelToolbar(); });
 editor.addEventListener('keyup', e => {
   syncState(); updateCodeBar(); updateTableBar();
