@@ -2795,11 +2795,7 @@ function showBesideBar(container) {
 
   addSep();
 
-  // Width label
-  const wl = document.createElement('span');
-  wl.style.cssText = 'font-size:10px;color:var(--subtle);padding:0 2px;';
-  wl.textContent = 'Ширина:'; bar.appendChild(wl);
-
+  // Width presets (no label)
   const curPct = parseFloat(container.dataset.imgPct) || 40;
   [[30,'30/70'],[40,'40/60'],[50,'50/50'],[60,'60/40']].forEach(([pct, label]) => {
     const btn = document.createElement('button');
@@ -2817,11 +2813,7 @@ function showBesideBar(container) {
 
   addSep();
 
-  // Valign label
-  const vl = document.createElement('span');
-  vl.style.cssText = 'font-size:10px;color:var(--subtle);padding:0 2px;';
-  vl.textContent = 'Вирівн.:'; bar.appendChild(vl);
-
+  // Valign (no label)
   const curAlign = container.style.alignItems || 'flex-start';
   [['flex-start','Верх'],['center','Центр'],['flex-end','Низ']].forEach(([val, label]) => {
     const btn = document.createElement('button');
@@ -2894,10 +2886,11 @@ function insertImgBeside(side) {
   imgCol.appendChild(makeSlotPh(imgCol, 'beside'));
   beside.appendChild(imgCol);
 
-  // Drag divider
+  // Drag divider — data-attr for delegation
   const divider = document.createElement('div');
   divider.className = 'beside-divider';
   divider.contentEditable = 'false';
+  divider.dataset.besideDivider = 'true';
   divider.title = 'Перетягніть щоб змінити ширину';
   beside.appendChild(divider);
 
@@ -2907,33 +2900,6 @@ function insertImgBeside(side) {
   textCol.contentEditable = 'true';
   textCol.setAttribute('data-placeholder', 'Введіть текст тут…');
   beside.appendChild(textCol);
-
-  // Divider drag logic
-  divider.addEventListener('mousedown', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const startX = e.clientX;
-    const totalW = beside.offsetWidth;
-    const startPct = parseFloat(beside.dataset.imgPct) || 40;
-
-    function onMove(ev) {
-      const dx = ev.clientX - startX;
-      let pct = startPct + (dx / totalW * 100);
-      pct = Math.max(20, Math.min(75, pct));
-      beside.dataset.imgPct = pct.toFixed(1);
-      imgCol.style.width = pct.toFixed(1) + '%';
-      // Update proportion buttons active state
-      beside.querySelectorAll('.cbar-btn[data-pct]').forEach(b =>
-        b.classList.remove('active'));
-    }
-    function onUp() {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      tick();
-    }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  });
 
   buildContainerBar(beside, 'beside', imgCol);
   insertBlockElement(beside);
@@ -4598,6 +4564,31 @@ editor.addEventListener('focusin', e => {
 editor.addEventListener('focusout', e => {
   const beside = e.target.closest('.img-beside');
   if (beside && !beside.contains(e.relatedTarget)) scheduleBesideBarHide();
+});
+
+/* ── Divider drag delegation ── */
+editor.addEventListener('mousedown', e => {
+  if (!e.target.dataset.besideDivider) return;
+  e.preventDefault(); e.stopPropagation();
+  const beside  = e.target.closest('.img-beside');
+  const imgCol  = beside?._imgCol || beside?.querySelector('.beside-img-col');
+  if (!beside || !imgCol) return;
+  const startX   = e.clientX;
+  const totalW   = beside.offsetWidth;
+  const startPct = parseFloat(beside.dataset.imgPct) || 40;
+  function onMove(ev) {
+    const pct = Math.max(20, Math.min(75, startPct + (ev.clientX - startX) / totalW * 100));
+    beside.dataset.imgPct = pct.toFixed(1);
+    imgCol.style.width = pct.toFixed(1) + '%';
+    document.getElementById('besideCtxBar').querySelectorAll('[data-pct]').forEach(b => b.classList.remove('active'));
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    tick();
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
 });
 
 editor.addEventListener('mouseup', () => { syncState(); updateCodeBar(); updateTableBar(); updateSelToolbar(); });
