@@ -1168,6 +1168,52 @@ body{animation:fadeUp .3s ease}
   background:var(--accent-bg);border-radius:4px;padding:2px 7px;flex-shrink:0;
 }
 
+/* ═══════════ FLOATING SELECTION TOOLBAR ═══════════ */
+.sel-toolbar{
+  display:none;
+  position:fixed;
+  background:#1e2130;
+  border-radius:8px;
+  box-shadow:0 4px 20px rgba(0,0,0,.35),0 1px 4px rgba(0,0,0,.2);
+  padding:4px 5px;
+  gap:1px;
+  align-items:center;
+  z-index:8000;
+  white-space:nowrap;
+  transform:translateX(-50%);
+  transition:opacity .12s;
+}
+.sel-toolbar.visible{display:flex}
+.sel-toolbar::after{
+  content:'';
+  position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;
+  border-top-color:#1e2130;
+}
+.sel-btn{
+  width:30px;height:28px;
+  border:none;border-radius:5px;
+  background:transparent;
+  color:rgba(255,255,255,.82);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .1s,color .1s;
+  flex-shrink:0;
+  font-family:'Inter',system-ui,sans-serif;
+  font-size:12.5px;font-weight:600;
+}
+.sel-btn:hover{background:rgba(255,255,255,.12);color:#fff}
+.sel-btn.active{background:rgba(255,255,255,.18);color:#fff}
+.sel-btn svg{width:14px;height:14px;flex-shrink:0}
+.sel-sep{width:1px;height:16px;background:rgba(255,255,255,.15);margin:0 2px;flex-shrink:0}
+.sel-btn-color{
+  width:auto;padding:0 8px;gap:5px;font-size:11.5px;font-weight:500;
+}
+.sel-color-dot{
+  width:10px;height:10px;border-radius:50%;flex-shrink:0;
+  border:1.5px solid rgba(255,255,255,.3);
+}
+
 /* ═══════════ DRAG & DROP OVERLAY ═══════════ */
 .drag-overlay{
   display:none;
@@ -1259,6 +1305,34 @@ body{animation:fadeUp .3s ease}
       <path d="M3 3V2a1 1 0 011-1h5a1 1 0 011 1v6a1 1 0 01-1 1H8"/>
     </svg>
     Копіювати
+  </button>
+</div>
+
+<!-- FLOATING SELECTION TOOLBAR -->
+<div class="sel-toolbar" id="selToolbar">
+  <button class="sel-btn" id="selBold" onclick="selExec('bold')" title="Жирний (Ctrl+B)">
+    <svg viewBox="0 0 14 14" fill="currentColor"><path d="M3 2h4.5a3 3 0 010 6H3V2zm0 6h5a3 3 0 010 6H3V8z"/></svg>
+  </button>
+  <button class="sel-btn" id="selItalic" onclick="selExec('italic')" title="Курсив (Ctrl+I)">
+    <svg viewBox="0 0 14 14" fill="currentColor"><path d="M5.5 2h5l-.5 1.5h-2L5.5 11H8L7.5 12.5h-5L3 11h2l2.5-7.5H5L5.5 2z"/></svg>
+  </button>
+  <button class="sel-btn" id="selUnderline" onclick="selExec('underline')" title="Підкреслення (Ctrl+U)">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2v5a4 4 0 008 0V2"/><line x1="1.5" y1="12.5" x2="12.5" y2="12.5" stroke-width="1.4"/></svg>
+  </button>
+  <button class="sel-btn" id="selStrike" onclick="selExec('strikeThrough')" title="Закреслення">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="1" y1="7" x2="13" y2="7"/><path d="M4 4.5C4 3.1 5.3 2 7 2s3 1.1 3 2.5M4 10c0 1.4 1.3 2.5 3 2.5s3-1.1 3-2.5"/></svg>
+  </button>
+  <div class="sel-sep"></div>
+  <button class="sel-btn" onclick="selLink()" title="Вставити посилання">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.5 8.5a3 3 0 004.2 0l1.8-1.8a3 3 0 00-4.2-4.2L6.2 3.6"/><path d="M8.5 5.5a3 3 0 00-4.2 0L2.5 7.3a3 3 0 004.2 4.2l1-1"/></svg>
+  </button>
+  <div class="sel-sep"></div>
+  <button class="sel-btn" onclick="selFormat('h1')" title="Заголовок H1" style="font-size:11px;width:auto;padding:0 6px">H1</button>
+  <button class="sel-btn" onclick="selFormat('h2')" title="Заголовок H2" style="font-size:11px;width:auto;padding:0 6px">H2</button>
+  <button class="sel-btn" onclick="selFormat('h3')" title="Заголовок H3" style="font-size:11px;width:auto;padding:0 6px">H3</button>
+  <div class="sel-sep"></div>
+  <button class="sel-btn" onclick="selClearFormat()" title="Очистити форматування">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4m0 0L2 2h9l-3 6"/><line x1="10" y1="9" x2="13" y2="12"/><line x1="13" y1="9" x2="10" y2="12"/></svg>
   </button>
 </div>
 
@@ -2475,7 +2549,10 @@ function confirmClear() {
   document.getElementById('findBar').classList.remove('open');
   document.getElementById('findCount').textContent = '';
   editor.innerHTML = '';
+  document.getElementById('docTitle').value = 'Без назви';
+  document.title = 'TextCraft';
   hideCodeBar();
+  hideTableBar();
   try {
     localStorage.removeItem(STORE_KEY);
     localStorage.removeItem(STORE_NAME);
@@ -3261,6 +3338,93 @@ function replaceAll() {
 }
 
 /* ══════════════════════════════
+   FLOATING SELECTION TOOLBAR
+══════════════════════════════ */
+let selToolbarTimer = null;
+
+function updateSelToolbar() {
+  clearTimeout(selToolbarTimer);
+  selToolbarTimer = setTimeout(_doUpdateSelToolbar, 60);
+}
+
+function _doUpdateSelToolbar() {
+  const sel = window.getSelection();
+  const bar = document.getElementById('selToolbar');
+
+  if (!sel || sel.isCollapsed || !sel.rangeCount) {
+    bar.classList.remove('visible');
+    return;
+  }
+
+  const range = sel.getRangeAt(0);
+  // Only show inside editor
+  if (!editor.contains(range.commonAncestorContainer)) {
+    bar.classList.remove('visible');
+    return;
+  }
+  // Don't show if inside an image or code bar click
+  const node = range.commonAncestorContainer;
+  const el = node.nodeType === 3 ? node.parentElement : node;
+  if (el && (el.closest('.img-wrap') || el.closest('img'))) {
+    bar.classList.remove('visible');
+    return;
+  }
+
+  // Update active state
+  document.getElementById('selBold').classList.toggle('active', document.queryCommandState('bold'));
+  document.getElementById('selItalic').classList.toggle('active', document.queryCommandState('italic'));
+  document.getElementById('selUnderline').classList.toggle('active', document.queryCommandState('underline'));
+  document.getElementById('selStrike').classList.toggle('active', document.queryCommandState('strikeThrough'));
+
+  // Position above selection
+  const rect = range.getBoundingClientRect();
+  const barW = bar.offsetWidth || 340;
+  let left = rect.left + rect.width / 2;
+  let top = rect.top - 44;
+
+  // Clamp horizontally
+  left = Math.max(barW / 2 + 8, Math.min(left, window.innerWidth - barW / 2 - 8));
+  // If too close to top, show below
+  if (top < 10) top = rect.bottom + 10;
+
+  bar.style.left = left + 'px';
+  bar.style.top = top + 'px';
+  bar.classList.add('visible');
+}
+
+function hideSelToolbar() {
+  clearTimeout(selToolbarTimer);
+  document.getElementById('selToolbar').classList.remove('visible');
+}
+
+function selExec(cmd) {
+  exec(cmd);
+  // Re-check active state after slight delay
+  setTimeout(() => {
+    document.getElementById('selBold').classList.toggle('active', document.queryCommandState('bold'));
+    document.getElementById('selItalic').classList.toggle('active', document.queryCommandState('italic'));
+    document.getElementById('selUnderline').classList.toggle('active', document.queryCommandState('underline'));
+    document.getElementById('selStrike').classList.toggle('active', document.queryCommandState('strikeThrough'));
+  }, 30);
+}
+
+function selLink() {
+  hideSelToolbar();
+  insertLink();
+}
+
+function selFormat(tag) {
+  exec('formatBlock', tag);
+  hideSelToolbar();
+  scheduleToc();
+}
+
+function selClearFormat() {
+  exec('removeFormat');
+  hideSelToolbar();
+}
+
+/* ══════════════════════════════
    TABLE PICKER
 ══════════════════════════════ */
 (function initTablePicker() {
@@ -3599,8 +3763,16 @@ function copyCodeBlock() {
 
 /* ══ EVENTS ══ */
 editor.addEventListener('input', () => { if (!isMarking) { editorSnapshot = ''; tick(); } });
-editor.addEventListener('mouseup', () => { syncState(); updateCodeBar(); updateTableBar(); });
-editor.addEventListener('keyup', () => { syncState(); updateCodeBar(); updateTableBar(); });
+editor.addEventListener('mouseup', () => { syncState(); updateCodeBar(); updateTableBar(); updateSelToolbar(); });
+editor.addEventListener('keyup', e => {
+  syncState(); updateCodeBar(); updateTableBar();
+  // Update sel toolbar only on selection keys
+  if (e.shiftKey || ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)) {
+    updateSelToolbar();
+  } else if (!e.shiftKey) {
+    hideSelToolbar();
+  }
+});
 editor.addEventListener('keydown', e => {
   // Enter near a contentEditable=false block — insert paragraph below it
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -3730,6 +3902,17 @@ document.addEventListener('click', e => {
   if (!e.target.closest('table') && !e.target.closest('.table-ctx-bar')) {
     hideTableBar();
   }
+  if (!e.target.closest('.sel-toolbar') && !e.target.closest('.editor')) {
+    hideSelToolbar();
+  }
+});
+
+// Hide sel toolbar when clicking toolbar buttons (format applied, selection collapses)
+document.querySelector('.toolbar').addEventListener('mousedown', hideSelToolbar);
+
+document.addEventListener('selectionchange', () => {
+  const sel = window.getSelection();
+  if (sel && sel.isCollapsed) hideSelToolbar();
 });
 
 document.getElementById('scrollArea').addEventListener('click', e => {
