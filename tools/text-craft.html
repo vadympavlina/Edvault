@@ -4566,16 +4566,18 @@ editor.addEventListener('focusout', e => {
   if (beside && !beside.contains(e.relatedTarget)) scheduleBesideBarHide();
 });
 
-/* ── Divider drag delegation ── */
-editor.addEventListener('mousedown', e => {
-  if (!e.target.dataset.besideDivider) return;
+/* ── Divider drag delegation — document level (bypasses contentEditable blocking) ── */
+document.addEventListener('mousedown', e => {
+  const divider = e.target.closest('[data-beside-divider]');
+  if (!divider) return;
   e.preventDefault(); e.stopPropagation();
-  const beside  = e.target.closest('.img-beside');
+  const beside  = divider.closest('.img-beside');
   const imgCol  = beside?._imgCol || beside?.querySelector('.beside-img-col');
   if (!beside || !imgCol) return;
   const startX   = e.clientX;
   const totalW   = beside.offsetWidth;
   const startPct = parseFloat(beside.dataset.imgPct) || 40;
+  document.body.style.cursor = 'col-resize';
   function onMove(ev) {
     const pct = Math.max(20, Math.min(75, startPct + (ev.clientX - startX) / totalW * 100));
     beside.dataset.imgPct = pct.toFixed(1);
@@ -4583,6 +4585,7 @@ editor.addEventListener('mousedown', e => {
     document.getElementById('besideCtxBar').querySelectorAll('[data-pct]').forEach(b => b.classList.remove('active'));
   }
   function onUp() {
+    document.body.style.cursor = '';
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
     tick();
