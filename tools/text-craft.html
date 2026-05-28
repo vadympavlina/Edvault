@@ -887,35 +887,26 @@ figure { margin:1em 0; text-align:center; }
   display:block;
 }
 
-/* Container action bar (shown on hover) */
-.container-bar {
-  display:none;
-  position:absolute;
-  top:-34px; left:0;
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:var(--r);
-  box-shadow:var(--sh);
-  padding:2px 5px;
-  gap:2px;
-  align-items:center;
-  z-index:400;
-  white-space:nowrap;
+/* Container action bar — now fixed position outside contentEditable */
+.container-bar { display:none; } /* kept for row type */
+.img-row:hover > .container-bar { display:flex; }
+
+/* Beside bar — fixed floating, controlled by JS */
+.beside-ctx-bar {
+  display:none;position:fixed;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--r);box-shadow:var(--sh);
+  padding:2px 5px;gap:2px;align-items:center;
+  z-index:700;white-space:nowrap;
   animation:popIn .12s ease;
 }
-.img-row:hover > .container-bar,
-.img-beside:hover > .container-bar,
-.img-beside:focus-within > .container-bar { display:flex; }
+.beside-ctx-bar.visible { display:flex; }
 .cbar-btn {
-  height:22px; padding:0 7px;
-  border:none; border-radius:3px;
-  background:transparent;
-  font-family:'Inter',system-ui,sans-serif;
-  font-size:11px; font-weight:500;
-  color:var(--muted);
-  cursor:pointer;
-  display:flex; align-items:center; gap:3px;
-  transition:background .1s, color .1s;
+  height:22px;padding:0 7px;border:none;border-radius:3px;
+  background:transparent;font-family:'Inter',system-ui,sans-serif;
+  font-size:11px;font-weight:500;color:var(--muted);
+  cursor:pointer;display:flex;align-items:center;gap:3px;
+  transition:background .1s,color .1s;
 }
 .cbar-btn:hover { background:var(--bg); color:var(--text); }
 .cbar-btn.danger:hover { background:#fee2e2; color:#ef4444; }
@@ -1520,6 +1511,9 @@ body{animation:fadeUp .3s ease}
     <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4m0 0L2 2h9l-3 6"/><line x1="10" y1="9" x2="13" y2="12"/><line x1="13" y1="9" x2="10" y2="12"/></svg>
   </button>
 </div>
+
+<!-- BESIDE CONTEXT BAR -->
+<div class="beside-ctx-bar" id="besideCtxBar"></div>
 
 <!-- FOCUS EXIT BTN -->
 <button class="btn btn-ghost focus-exit" onclick="toggleFocus()">
@@ -2749,90 +2743,153 @@ function makeSlotPh(container, type) {
 }
 
 function buildContainerBar(container, type, imgCol) {
-  const bar = document.createElement('div');
-  bar.className = 'container-bar';
-  bar.contentEditable = 'false';
-  // Prevent stealing focus from text column when clicking bar buttons
-  bar.addEventListener('mousedown', e => e.preventDefault());
-
+  // ROW type — keep inline bar as before
   if (type === 'row') {
+    const bar = document.createElement('div');
+    bar.className = 'container-bar';
+    bar.contentEditable = 'false';
     const addBtn = document.createElement('button'); addBtn.className = 'cbar-btn';
     addBtn.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2v8M2 6h8"/></svg>Додати фото`;
     addBtn.addEventListener('mousedown', e => { e.preventDefault(); container.insertBefore(makeSlotPh(container, 'row'), bar); tick(); });
     bar.appendChild(addBtn);
     const sep = document.createElement('span'); sep.className = 'cbar-sep'; bar.appendChild(sep);
+    const delBtn = document.createElement('button'); delBtn.className = 'cbar-btn danger';
+    delBtn.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h8M4 3V2h4v1M3 3l.5 7h5l.5-7"/></svg>Видалити`;
+    delBtn.addEventListener('mousedown', e => { e.preventDefault(); (container.closest('p')||container.parentElement||container).remove(); tick(); });
+    bar.appendChild(delBtn);
+    container.appendChild(bar);
+    return;
   }
 
-  if (type === 'beside') {
-    // Flip button
-    const flipBtn = document.createElement('button'); flipBtn.className = 'cbar-btn';
-    flipBtn.title = 'Перевернути';
-    flipBtn.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h8M7 3l3 3-3 3M5 3L2 6l3 3"/></svg>Перевернути`;
-    flipBtn.addEventListener('mousedown', e => { e.preventDefault(); container.classList.toggle('beside-right'); tick(); });
-    bar.appendChild(flipBtn);
+  // BESIDE type — store reference for fixed bar
+  container.dataset.besideBar = 'true';
+  container._imgCol = imgCol; // direct ref
 
-    const sep1 = document.createElement('span'); sep1.className = 'cbar-sep'; bar.appendChild(sep1);
+  // Show/hide fixed bar on hover and focus
+  container.addEventListener('mouseenter', () => showBesideBar(container));
+  container.addEventListener('mouseleave', e => {
+    if (!e.relatedTarget || !document.getElementById('besideCtxBar').contains(e.relatedTarget)) {
+      scheduleBesideBarHide();
+    }
+  });
+  container.addEventListener('focusin', () => showBesideBar(container));
+  container.addEventListener('focusout', e => {
+    if (!document.getElementById('besideCtxBar').contains(e.relatedTarget) && !container.contains(e.relatedTarget)) {
+      scheduleBesideBarHide();
+    }
+  });
+}
 
-    // Proportion presets
-    const pctLabel = document.createElement('span');
-    pctLabel.style.cssText = 'font-size:10px;color:var(--subtle);padding:0 3px;';
-    pctLabel.textContent = 'Ширина:';
-    bar.appendChild(pctLabel);
+/* ══ BESIDE CONTEXT BAR (fixed, outside contentEditable) ══ */
+let currentBeside = null;
+let besideHideTimer = null;
 
-    [[30,'30/70'],[40,'40/60'],[50,'50/50'],[60,'60/40']].forEach(([pct, label]) => {
-      const btn = document.createElement('button');
-      btn.className = 'cbar-btn' + (pct === 40 ? ' active' : '');
-      btn.dataset.pct = pct;
-      btn.textContent = label;
-      btn.addEventListener('mousedown', e => {
-        e.preventDefault();
-        container.dataset.imgPct = pct;
-        if (imgCol) imgCol.style.width = pct + '%';
-        bar.querySelectorAll('.cbar-btn[data-pct]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        tick();
-      });
-      bar.appendChild(btn);
-    });
+function showBesideBar(container) {
+  clearTimeout(besideHideTimer);
+  currentBeside = container;
+  const bar = document.getElementById('besideCtxBar');
 
-    const sep2 = document.createElement('span'); sep2.className = 'cbar-sep'; bar.appendChild(sep2);
+  // Rebuild contents for this container
+  bar.innerHTML = '';
 
-    // Vertical align
-    const vaLabel = document.createElement('span');
-    vaLabel.style.cssText = 'font-size:10px;color:var(--subtle);padding:0 3px;';
-    vaLabel.textContent = 'Вирівн.:';
-    bar.appendChild(vaLabel);
+  const imgCol = container._imgCol || container.querySelector('.beside-img-col');
 
-    [['flex-start','Верх'],['center','Центр'],['flex-end','Низ']].forEach(([val, label]) => {
-      const btn = document.createElement('button');
-      btn.className = 'cbar-btn' + (val === 'flex-start' ? ' active' : '');
-      btn.dataset.valign = val;
-      btn.textContent = label;
-      btn.addEventListener('mousedown', e => {
-        e.preventDefault();
-        container.style.alignItems = val;
-        // Also update img-wrap align via CSS var
-        if (imgCol) imgCol.style.setProperty('--beside-valign', val);
-        bar.querySelectorAll('.cbar-btn[data-valign]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        tick();
-      });
-      bar.appendChild(btn);
-    });
-
-    const sep3 = document.createElement('span'); sep3.className = 'cbar-sep'; bar.appendChild(sep3);
+  function addSep() {
+    const s = document.createElement('span'); s.className = 'cbar-sep'; bar.appendChild(s);
+  }
+  function addBtn(html, title, onClick) {
+    const btn = document.createElement('button');
+    btn.className = 'cbar-btn'; btn.title = title; btn.innerHTML = html;
+    btn.addEventListener('click', onClick);
+    bar.appendChild(btn); return btn;
   }
 
-  const delBtn = document.createElement('button'); delBtn.className = 'cbar-btn danger';
-  delBtn.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h8M4 3V2h4v1M3 3l.5 7h5l.5-7"/></svg>Видалити`;
-  delBtn.addEventListener('mousedown', e => {
-    e.preventDefault();
+  // Flip
+  addBtn(`<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h8M7 3l3 3-3 3M5 3L2 6l3 3"/></svg>Перевернути`, 'Перевернути', () => { container.classList.toggle('beside-right'); tick(); });
+
+  addSep();
+
+  // Width label
+  const wl = document.createElement('span');
+  wl.style.cssText = 'font-size:10px;color:var(--subtle);padding:0 2px;';
+  wl.textContent = 'Ширина:'; bar.appendChild(wl);
+
+  const curPct = parseFloat(container.dataset.imgPct) || 40;
+  [[30,'30/70'],[40,'40/60'],[50,'50/50'],[60,'60/40']].forEach(([pct, label]) => {
+    const btn = document.createElement('button');
+    btn.className = 'cbar-btn' + (Math.abs(pct - curPct) < 2 ? ' active' : '');
+    btn.dataset.pct = pct; btn.textContent = label;
+    btn.addEventListener('click', () => {
+      container.dataset.imgPct = pct;
+      if (imgCol) imgCol.style.width = pct + '%';
+      bar.querySelectorAll('[data-pct]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      tick();
+    });
+    bar.appendChild(btn);
+  });
+
+  addSep();
+
+  // Valign label
+  const vl = document.createElement('span');
+  vl.style.cssText = 'font-size:10px;color:var(--subtle);padding:0 2px;';
+  vl.textContent = 'Вирівн.:'; bar.appendChild(vl);
+
+  const curAlign = container.style.alignItems || 'flex-start';
+  [['flex-start','Верх'],['center','Центр'],['flex-end','Низ']].forEach(([val, label]) => {
+    const btn = document.createElement('button');
+    btn.className = 'cbar-btn' + (curAlign === val ? ' active' : '');
+    btn.dataset.valign = val; btn.textContent = label;
+    btn.addEventListener('click', () => {
+      container.style.alignItems = val;
+      bar.querySelectorAll('[data-valign]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      tick();
+    });
+    bar.appendChild(btn);
+  });
+
+  addSep();
+
+  // Delete
+  const del = document.createElement('button');
+  del.className = 'cbar-btn danger';
+  del.innerHTML = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h8M4 3V2h4v1M3 3l.5 7h5l.5-7"/></svg>Видалити`;
+  del.addEventListener('click', () => {
+    hideBesideBar();
     const parent = container.closest('p') || container.parentElement;
     parent ? parent.remove() : container.remove();
     tick();
   });
-  bar.appendChild(delBtn);
-  container.appendChild(bar);
+  bar.appendChild(del);
+
+  // Position bar above the container
+  positionBesideBar(container);
+  bar.classList.add('visible');
+
+  // Keep bar alive when mouse is over it
+  bar.onmouseenter = () => clearTimeout(besideHideTimer);
+  bar.onmouseleave = () => scheduleBesideBarHide();
+}
+
+function positionBesideBar(container) {
+  const bar = document.getElementById('besideCtxBar');
+  const rect = container.getBoundingClientRect();
+  const barH = 34;
+  bar.style.top = Math.max(8, rect.top - barH - 6) + 'px';
+  bar.style.left = rect.left + 'px';
+  bar.style.maxWidth = rect.width + 'px';
+}
+
+function hideBesideBar() {
+  clearTimeout(besideHideTimer);
+  document.getElementById('besideCtxBar').classList.remove('visible');
+  currentBeside = null;
+}
+
+function scheduleBesideBarHide() {
+  besideHideTimer = setTimeout(hideBesideBar, 200);
 }
 
 /* ══ IMAGE LAYOUT: BESIDE (image + text) ══ */
@@ -3038,6 +3095,7 @@ document.getElementById('scrollArea').addEventListener('scroll', () => {
   syncTocActive();
   if (currentCodePre) positionCodeBar(currentCodePre);
   if (currentTable) showTableBar(currentTable, null);
+  if (currentBeside) positionBesideBar(currentBeside);
 }, { passive:true });
 
 /* ══ SYNC TOOLBAR STATE ══ */
