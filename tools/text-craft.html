@@ -2153,25 +2153,20 @@ function insertInlineCode() {
 /* ══ CODE BLOCK ══ */
 function insertCodeBlock() {
   editor.focus();
-  const sel = window.getSelection();
-  let anchor = null;
-  if (sel && sel.rangeCount) {
-    let node = sel.getRangeAt(0).commonAncestorContainer;
-    if (node.nodeType === 3) node = node.parentElement;
-    while (node && node.parentElement !== editor) node = node.parentElement;
-    anchor = node;
-  }
   const pre = document.createElement('pre');
-  pre.appendChild(document.createElement('br'));
-  const after = document.createElement('p');
-  after.appendChild(document.createElement('br'));
-  if (anchor) { anchor.after(after); anchor.after(pre); }
-  else { editor.appendChild(pre); editor.appendChild(after); }
-  // Place cursor in pre
-  const r2 = document.createRange();
-  r2.setStart(pre, 0); r2.collapse(true);
-  sel.removeAllRanges(); sel.addRange(r2);
-  showCodeBar(pre);
+  pre.innerHTML = '<br>';
+  const tmp = document.createElement('div');
+  tmp.appendChild(pre);
+  document.execCommand('insertHTML', false, tmp.innerHTML + '<p><br></p>');
+  // Find the inserted pre and show code bar
+  const pres = editor.querySelectorAll('pre');
+  const newPre = pres[pres.length - 1];
+  if (newPre) {
+    const r = document.createRange();
+    r.setStart(newPre, 0); r.collapse(true);
+    const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    showCodeBar(newPre);
+  }
   tick();
 }
 
@@ -2928,32 +2923,32 @@ function insertImgBeside(side) {
 }
 
 function insertBlockElement(el) {
-  let range = savedRange;
-  if (!range) {
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount && editor.contains(sel.getRangeAt(0).commonAncestorContainer)) range = sel.getRangeAt(0);
+  editor.focus();
+
+  // Restore saved cursor if any
+  if (savedRange) {
+    const s = window.getSelection();
+    s.removeAllRanges(); s.addRange(savedRange);
+    savedRange = null;
   }
-  const wrapper = document.createElement('p');
-  wrapper.appendChild(el);
 
-  // Empty paragraph below so the user can always type after the block
-  const after_p = document.createElement('p');
-  after_p.appendChild(document.createElement('br'));
+  // Serialize element + trailing paragraph to HTML string
+  const tmp = document.createElement('div');
+  tmp.appendChild(el);
+  const afterP = '<p><br></p>';
+  const htmlStr = tmp.innerHTML + afterP;
 
-  if (range) {
+  // insertHTML goes into the undo stack — Ctrl+Z works
+  document.execCommand('insertHTML', false, htmlStr);
+
+  // Re-query the inserted element from DOM (execCommand re-parses HTML)
+  // Place cursor after the inserted block
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount) {
+    const range = sel.getRangeAt(0);
     range.collapse(false);
-    range.insertNode(after_p);
-    range.insertNode(wrapper);
-    // Place cursor in the empty paragraph below
-    const cur = document.createRange();
-    cur.setStart(after_p, 0);
-    cur.collapse(true);
-    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(cur);
-  } else {
-    editor.appendChild(wrapper);
-    editor.appendChild(after_p);
   }
-  savedRange = null;
+  tick();
 }
 
 /* ══ TOOLBAR SCROLL ══ */
@@ -4286,39 +4281,29 @@ function insertTable(rows, cols) {
     savedRange = null;
   }
 
-  const table = document.createElement('table');
+  // Build table HTML
+  let html = '<table>';
   for (let r = 0; r < rows; r++) {
-    const tr = document.createElement('tr');
+    html += '<tr>';
     for (let c = 0; c < cols; c++) {
-      const cell = r === 0 ? document.createElement('th') : document.createElement('td');
-      cell.appendChild(document.createElement('br'));
-      tr.appendChild(cell);
+      html += r === 0 ? '<th><br></th>' : '<td><br></td>';
     }
-    table.appendChild(tr);
+    html += '</tr>';
   }
-  const after = document.createElement('p');
-  after.appendChild(document.createElement('br'));
+  html += '</table><p><br></p>';
 
-  const sel = window.getSelection();
-  if (sel && sel.rangeCount && editor.contains(sel.getRangeAt(0).commonAncestorContainer)) {
-    const range = sel.getRangeAt(0);
-    // Find block-level ancestor inside editor to insert after
-    let anchor = range.commonAncestorContainer;
-    if (anchor.nodeType === 3) anchor = anchor.parentElement;
-    while (anchor.parentElement && anchor.parentElement !== editor) anchor = anchor.parentElement;
-    anchor.after(after);
-    anchor.after(table);
-  } else {
-    editor.appendChild(table);
-    editor.appendChild(after);
-  }
+  document.execCommand('insertHTML', false, html);
 
   // Place cursor in first cell
-  const firstCell = table.querySelector('th,td');
-  if (firstCell) {
-    const r2 = document.createRange();
-    r2.selectNodeContents(firstCell); r2.collapse(true);
-    sel.removeAllRanges(); sel.addRange(r2);
+  const tables = editor.querySelectorAll('table');
+  const newTable = tables[tables.length - 1];
+  if (newTable) {
+    const firstCell = newTable.querySelector('th,td');
+    if (firstCell) {
+      const r = document.createRange();
+      r.selectNodeContents(firstCell); r.collapse(true);
+      const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    }
   }
   tick();
 }
