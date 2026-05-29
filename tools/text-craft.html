@@ -1287,6 +1287,24 @@ body{animation:fadeUp .3s ease}
   border:1.5px solid rgba(255,255,255,.3);
 }
 
+/* ═══════════ ALIGN PICKER ═══════════ */
+.align-picker{ min-width:auto; padding:6px; }
+.align-picker-grid{
+  display:grid;grid-template-columns:repeat(4,34px);gap:3px;
+}
+.align-pick-btn{
+  width:34px;height:32px;
+  border:1.5px solid transparent;border-radius:6px;
+  background:transparent;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .1s;color:var(--text);
+}
+.align-pick-btn svg{width:16px;height:16px;}
+.align-pick-btn:hover{background:var(--bg);border-color:var(--border);}
+.align-pick-btn.active{background:var(--accent-bg);border-color:var(--accent-lt);color:var(--accent);}
+.tb-align-btn{display:flex;align-items:center;gap:1px;padding:0 5px;}
+.tb-align-btn svg:first-child{width:16px;height:16px;}
+
 /* ═══════════ IMAGE PICKER DROPDOWN ═══════════ */
 .img-picker{
   min-width:190px;padding:5px;
@@ -1802,19 +1820,29 @@ body{animation:fadeUp .3s ease}
 
     <div class="tb-sep"></div>
 
-    <!-- Align -->
-    <button class="tb" onclick="exec('justifyLeft')" data-tip="По лівому краю">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1.4H2V3zm0 3.3h8v1.4H2V6.3zm0 3.4h12v1.4H2V9.7zm0 3.3h8v1.4H2v-1.4z"/></svg>
-    </button>
-    <button class="tb" onclick="exec('justifyCenter')" data-tip="По центру">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1.4H2V3zm2 3.3h8v1.4H4V6.3zm-2 3.4h12v1.4H2V9.7zm2 3.3h8v1.4H4v-1.4z"/></svg>
-    </button>
-    <button class="tb" onclick="exec('justifyRight')" data-tip="По правому краю">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1.4H2V3zm4 3.3h8v1.4H6V6.3zm-4 3.4h12v1.4H2V9.7zm4 3.3h8v1.4H6v-1.4z"/></svg>
-    </button>
-    <button class="tb" onclick="exec('justifyFull')" data-tip="По ширині">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1.4H2V3zm0 3.3h12v1.4H2V6.3zm0 3.4h12v1.4H2V9.7zm0 3.3h12v1.4H2v-1.4z"/></svg>
-    </button>
+    <!-- Align dropdown -->
+    <div class="tb-table-wrap" id="tbAlignWrap">
+      <button class="tb tb-align-btn" id="tbAlignBtn" onclick="toggleAlignPicker(event)" data-tip="Вирівнювання">
+        <svg id="tbAlignIcon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1.4H2V3zm0 3.3h8v1.4H2V6.3zm0 3.4h12v1.4H2V9.7zm0 3.3h8v1.4H2v-1.4z"/></svg>
+        <svg viewBox="0 0 6 4" fill="currentColor" style="width:6px;height:4px;margin-left:1px;flex-shrink:0"><path d="M0 0l3 4 3-4z"/></svg>
+      </button>
+      <div class="table-picker align-picker" id="alignPicker">
+        <div class="align-picker-grid">
+          <button class="align-pick-btn active" id="alignBtnLeft" onclick="applyAlign('justifyLeft')" title="По лівому краю">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1.4H2V3zm0 3.3h8v1.4H2V6.3zm0 3.4h12v1.4H2V9.7zm0 3.3h8v1.4H2v-1.4z"/></svg>
+          </button>
+          <button class="align-pick-btn" id="alignBtnCenter" onclick="applyAlign('justifyCenter')" title="По центру">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1.4H2V3zm2 3.3h8v1.4H4V6.3zm-2 3.4h12v1.4H2V9.7zm2 3.3h8v1.4H4v-1.4z"/></svg>
+          </button>
+          <button class="align-pick-btn" id="alignBtnRight" onclick="applyAlign('justifyRight')" title="По правому краю">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1.4H2V3zm4 3.3h8v1.4H6V6.3zm-4 3.4h12v1.4H2V9.7zm4 3.3h8v1.4H6v-1.4z"/></svg>
+          </button>
+          <button class="align-pick-btn" id="alignBtnFull" onclick="applyAlign('justifyFull')" title="По ширині">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1.4H2V3zm0 3.3h12v1.4H2V6.3zm0 3.4h12v1.4H2V9.7zm0 3.3h12v1.4H2v-1.4z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div class="tb-sep"></div>
 
@@ -3076,6 +3104,15 @@ function syncState() {
     const map = {p:'p',h1:'h1',h2:'h2',h3:'h3',blockquote:'blockquote',pre:'pre'};
     document.getElementById('blockStyle').value = map[bv] || 'p';
   } catch(e) {}
+  // Sync align button icon
+  try {
+    const alignCmds = ['justifyLeft','justifyCenter','justifyRight','justifyFull'];
+    const active = alignCmds.find(c => document.queryCommandState(c)) || 'justifyLeft';
+    const icon = document.getElementById('tbAlignIcon');
+    if (icon) icon.querySelector('path')?.setAttribute('d', ALIGN_ICONS[active]);
+    Object.entries(ALIGN_BTN_IDS).forEach(([c,id]) =>
+      document.getElementById(id)?.classList.toggle('active', c === active));
+  } catch(e) {}
   try {
     const sel = window.getSelection();
     if (sel && sel.rangeCount) {
@@ -4030,6 +4067,45 @@ function selClearFormat() {
   hideSelToolbar();
 }
 
+/* ══ ALIGN PICKER ══ */
+const ALIGN_ICONS = {
+  justifyLeft:   'M2 3h12v1.4H2V3zm0 3.3h8v1.4H2V6.3zm0 3.4h12v1.4H2V9.7zm0 3.3h8v1.4H2v-1.4z',
+  justifyCenter: 'M2 3h12v1.4H2V3zm2 3.3h8v1.4H4V6.3zm-2 3.4h12v1.4H2V9.7zm2 3.3h8v1.4H4v-1.4z',
+  justifyRight:  'M2 3h12v1.4H2V3zm4 3.3h8v1.4H6V6.3zm-4 3.4h12v1.4H2V9.7zm4 3.3h8v1.4H6v-1.4z',
+  justifyFull:   'M2 3h12v1.4H2V3zm0 3.3h12v1.4H2V6.3zm0 3.4h12v1.4H2V9.7zm0 3.3h12v1.4H2v-1.4z',
+};
+const ALIGN_BTN_IDS = {
+  justifyLeft:'alignBtnLeft', justifyCenter:'alignBtnCenter',
+  justifyRight:'alignBtnRight', justifyFull:'alignBtnFull'
+};
+let alignPickerOpen = false;
+
+function toggleAlignPicker(e) {
+  e.stopPropagation();
+  alignPickerOpen = !alignPickerOpen;
+  const picker = document.getElementById('alignPicker');
+  picker.classList.toggle('open', alignPickerOpen);
+  if (alignPickerOpen) {
+    const btn = document.getElementById('tbAlignBtn');
+    const rect = btn.getBoundingClientRect();
+    picker.style.top  = (rect.bottom + 6) + 'px';
+    picker.style.left = rect.left + 'px';
+  }
+}
+function closeAlignPicker() {
+  alignPickerOpen = false;
+  document.getElementById('alignPicker').classList.remove('open');
+}
+function applyAlign(cmd) {
+  exec(cmd);
+  closeAlignPicker();
+  const icon = document.getElementById('tbAlignIcon');
+  if (icon) icon.querySelector('path').setAttribute('d', ALIGN_ICONS[cmd]);
+  Object.entries(ALIGN_BTN_IDS).forEach(([c, id]) => {
+    document.getElementById(id)?.classList.toggle('active', c === cmd);
+  });
+}
+
 /* ══ IMAGE PICKER DROPDOWN ══ */
 let imgPickerOpen = false;
 
@@ -4707,6 +4783,7 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.tb-table-wrap')) {
     closeTablePicker();
     closeImgPicker();
+    closeAlignPicker();
   }
   if (!e.target.closest('table') && !e.target.closest('.table-ctx-bar')) {
     hideTableBar();
