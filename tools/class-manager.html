@@ -303,9 +303,13 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
               <svg viewBox="0 0 20 20" fill="none"><path d="M4 4l5 5-5 5M16 4l-5 5 5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Авторозсадка
             </button>
-            <button class="btn btn-ghost btn-sm" onclick="addDesk()" data-tip="Додати парту вручну">
-              <svg viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-              Парта
+            <button class="btn btn-ghost btn-sm" onclick="addDesk(1)" data-tip="Парта на 1 місце">
+              <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="5" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M10 8v4M7 10h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              + Одинарна
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="addDesk(2)" data-tip="Парта на 2 місця">
+              <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="1"/><path d="M10 6.5v2M7 7.5h6M10 11.5v2M7 12.5h6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              + Подвійна
             </button>
             <button class="btn btn-ghost btn-sm" onclick="addBoard()" data-tip="Додати дошку">
               <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 17h4M10 14v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -448,6 +452,18 @@ const AVCOL = [['#dbeafe','#1e40af'],['#dcfce7','#15803d'],['#fef3c7','#b45309']
 function avIdx(id){ const i=S.students.findIndex(s=>s.id===id); return i<0?0:i%8; }
 function studentById(id){ return S.students.find(s=>s.id===id); }
 function groupOfStudent(id){ return S.groups.find(g=>g.memberIds.includes(id))||null; }
+function groupColorOfStudent(id){
+  const g=groupOfStudent(id); if(!g) return null;
+  return GCOL[S.groups.indexOf(g)%GCOL.length];
+}
+function deskGroupColor(d){
+  // returns group color if ALL occupied seats belong to same group, else null
+  const sids=d.seats.filter(Boolean);
+  if(!sids.length) return null;
+  const cols=sids.map(groupColorOfStudent);
+  if(cols.every(c=>c&&c===cols[0])) return cols[0];
+  return null; // mixed or no group
+}
 
 function showToast(msg,dur=1800){
   let t=document.getElementById('_toast');
@@ -645,6 +661,9 @@ const DESK_W=130, DESK_H_BASE=44, SEAT_H=44, BOARD_W=180, BOARD_H=36;
 let cZoom=1, cOffX=40, cOffY=40;
 let snapEnabled=true;
 const SNAP_GRID=24; // world units — matches dot grid spacing
+let selectedIds=new Set(); // selected desk ids
+let dragSelect=null; // {sx,sy,ex,ey} screen coords of rubber-band rect
+let multiDrag=null;  // {offsets:[{id,ox,oy}], moved:false}
 let cDragging=null; // {type:'desk'|'board', id, ox, oy}
 let ctxDesk=null;   // id of right-clicked desk
 let seatTarget=null; // {deskId, seatIdx} for assign dropdown
@@ -664,6 +683,21 @@ function initCanvas(){
   // drop from right panel
   canvasEl.addEventListener('dragover',e=>e.preventDefault());
   canvasEl.addEventListener('drop',onCanvasDrop);
+  canvasEl.addEventListener('wheel',onCanvasWheel,{passive:false});
+  drawCanvas();
+}
+
+function onCanvasWheel(e){
+  e.preventDefault();
+  const r=canvasEl.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const oldZoom=cZoom;
+  const delta=e.deltaY<0?0.1:-0.1;
+  cZoom=Math.max(0.4,Math.min(2.5,cZoom+delta));
+  // zoom toward cursor
+  cOffX=mx-(mx-cOffX)*(cZoom/oldZoom);
+  cOffY=my-(my-cOffY)*(cZoom/oldZoom);
+  document.getElementById('zoom-label').textContent=Math.round(cZoom*100)+'%';
   drawCanvas();
 }
 
@@ -676,7 +710,11 @@ function resizeCanvas(){
 }
 
 function zoomCanvas(delta){
-  cZoom=Math.max(0.4,Math.min(2,cZoom+delta));
+  const mx=canvasEl.width/2, my=canvasEl.height/2;
+  const oldZoom=cZoom;
+  cZoom=Math.max(0.4,Math.min(2.5,cZoom+delta));
+  cOffX=mx-(mx-cOffX)*(cZoom/oldZoom);
+  cOffY=my-(my-cOffY)*(cZoom/oldZoom);
   document.getElementById('zoom-label').textContent=Math.round(cZoom*100)+'%';
   drawCanvas();
 }
@@ -747,6 +785,38 @@ function drawCanvas(){
   if(cDragging && (cDragging.type==='desk'||cDragging.type==='board') && snapEnabled){
     drawSnapHighlight(c);
   }
+  if(multiDrag && multiDrag.moved && snapEnabled){
+    drawMultiSnapHighlight(c);
+  }
+  if(dragSelect) drawDragSelect(c);
+}
+
+function drawDragSelect(c){
+  const x=Math.min(dragSelect.sx,dragSelect.ex), y=Math.min(dragSelect.sy,dragSelect.ey);
+  const w=Math.abs(dragSelect.ex-dragSelect.sx), h=Math.abs(dragSelect.ey-dragSelect.sy);
+  c.save();
+  c.fillStyle='rgba(79,107,244,0.08)';
+  c.strokeStyle='rgba(79,107,244,0.6)';
+  c.lineWidth=1.5;
+  c.setLineDash([5,3]);
+  c.fillRect(x,y,w,h);
+  c.strokeRect(x,y,w,h);
+  c.restore();
+}
+
+function drawMultiSnapHighlight(c){
+  multiDrag.offsets.forEach(({id,ox,oy})=>{
+    const d=S.desks.find(d=>d.id===id); if(!d) return;
+    const sh=DESK_H_BASE+d.spp*SEAT_H;
+    const ps=w2s(d.x,d.y);
+    c.save();
+    c.translate(ps.x,ps.y);
+    c.rotate((d.angle||0)*Math.PI/180);
+    c.strokeStyle='rgba(79,107,244,0.5)';
+    c.lineWidth=2; c.setLineDash([5,4]);
+    roundRect(c,0,0,DESK_W*cZoom,sh*cZoom,8*cZoom); c.stroke();
+    c.restore();
+  });
 }
 
 function drawSnapGrid(c,W,H){
@@ -823,19 +893,29 @@ function drawDesk(c,d){
   roundRect(c,0,0,W,totalH,8*cZoom); c.fill();
   c.shadowColor='transparent';
 
+  // group color
+  const gCol=deskGroupColor(d);
+  const isSelected=selectedIds.has(d.id);
+
   // border
-  c.strokeStyle='#e2e5ea'; c.lineWidth=1.5;
+  c.strokeStyle=isSelected?'#4F6BF4':(gCol||'#e2e5ea'); c.lineWidth=isSelected?2.5:1.5;
   roundRect(c,0,0,W,totalH,8*cZoom); c.stroke();
 
   // header
-  c.fillStyle='#f8f9fb';
+  c.fillStyle=gCol?gCol+'22':'#f8f9fb';
   roundRectTop(c,0,0,W,hdr,8*cZoom); c.fill();
-  c.strokeStyle='#e2e5ea'; c.lineWidth=1;
+  c.strokeStyle=gCol||'#e2e5ea'; c.lineWidth=1;
   c.beginPath(); c.moveTo(0,hdr); c.lineTo(W,hdr); c.stroke();
+
+  // selection ring
+  if(isSelected){
+    c.strokeStyle='rgba(79,107,244,0.35)'; c.lineWidth=4; c.setLineDash([]);
+    roundRect(c,-2,-2,W+4,totalH+4,10*cZoom); c.stroke();
+  }
 
   // header label
   if(cZoom>0.5){
-    c.fillStyle='#9ca3af';
+    c.fillStyle=gCol?gCol:'#9ca3af';
     c.font=`500 ${Math.round(10*cZoom)}px Inter,sans-serif`;
     c.textAlign='center'; c.textBaseline='middle';
     const deskNum=S.desks.indexOf(d)+1;
@@ -912,30 +992,84 @@ function onCanvasDown(e){
   const sx=e.clientX-r.left, sy=e.clientY-r.top;
   const hit=hitTest(sx,sy);
   mouseDownPos={x:sx,y:sy};
-  if(hit){
+
+  if(hit && hit.type==='desk'){
+    const d=S.desks.find(d=>d.id===hit.id);
     const wp=s2w(sx,sy);
-    if(hit.type==='desk'){
-      const d=S.desks.find(d=>d.id===hit.id);
-      cDragging={type:'desk',id:hit.id,ox:wp.x-d.x,oy:wp.y-d.y,moved:false,seatIdx:hit.seatIdx};
-    } else if(hit.type==='board'){
-      const b=S.boards.find(b=>b.id===hit.id);
-      cDragging={type:'board',id:hit.id,ox:wp.x-b.x,oy:wp.y-b.y,moved:false};
+    if(e.shiftKey){
+      // toggle selection
+      if(selectedIds.has(hit.id)) selectedIds.delete(hit.id);
+      else selectedIds.add(hit.id);
+      drawCanvas(); return;
     }
+    if(selectedIds.has(hit.id) && selectedIds.size>1){
+      // start multi-drag
+      const offsets=[...selectedIds].map(id=>{
+        const dd=S.desks.find(d=>d.id===id);
+        return {id, ox:wp.x-dd.x, oy:wp.y-dd.y};
+      });
+      multiDrag={offsets, moved:false};
+      cDragging=null;
+    } else {
+      // single desk drag
+      selectedIds.clear(); selectedIds.add(hit.id);
+      cDragging={type:'desk',id:hit.id,ox:wp.x-d.x,oy:wp.y-d.y,moved:false,seatIdx:hit.seatIdx};
+      multiDrag=null;
+    }
+  } else if(hit && hit.type==='board'){
+    selectedIds.clear();
+    const wp=s2w(sx,sy);
+    const b=S.boards.find(b=>b.id===hit.id);
+    cDragging={type:'board',id:hit.id,ox:wp.x-b.x,oy:wp.y-b.y,moved:false};
+    multiDrag=null;
   } else {
-    // pan
-    cDragging={type:'pan',ox:e.clientX,oy:e.clientY,offX:cOffX,offY:cOffY};
+    if(!e.shiftKey) selectedIds.clear();
+    // start drag-select or pan
+    if(!e.shiftKey && !hit){
+      // could be pan or drag-select — decide in move
+      cDragging={type:'pan-or-select',ox:e.clientX,oy:e.clientY,offX:cOffX,offY:cOffY,sx,sy};
+    }
+    multiDrag=null;
+    drawCanvas();
   }
 }
 
 function onCanvasMove(e){
-  if(!cDragging) return;
   const r=canvasEl.getBoundingClientRect();
   const sx=e.clientX-r.left, sy=e.clientY-r.top;
+
+  // multi-drag
+  if(multiDrag){
+    const wp=s2w(sx,sy);
+    multiDrag.offsets.forEach(({id,ox,oy})=>{
+      const d=S.desks.find(d=>d.id===id);
+      if(d){ d.x=snap(wp.x-ox); d.y=snap(wp.y-oy); }
+    });
+    multiDrag.moved=true; drawCanvas(); return;
+  }
+
+  if(!cDragging) return;
+
   if(cDragging.type==='pan'){
     cOffX=cDragging.offX+(e.clientX-cDragging.ox);
     cOffY=cDragging.offY+(e.clientY-cDragging.oy);
     drawCanvas(); return;
   }
+
+  if(cDragging.type==='pan-or-select'){
+    const dx=e.clientX-cDragging.ox, dy=e.clientY-cDragging.oy;
+    if(Math.abs(dx)>4||Math.abs(dy)>4){
+      // became drag-select
+      cDragging.type='drag-select';
+    }
+    return;
+  }
+
+  if(cDragging.type==='drag-select'){
+    dragSelect={sx:cDragging.sx, sy:cDragging.sy, ex:sx, ey:sy};
+    drawCanvas(); return;
+  }
+
   const wp=s2w(sx,sy);
   if(cDragging.type==='desk'){
     const d=S.desks.find(d=>d.id===cDragging.id);
@@ -947,10 +1081,29 @@ function onCanvasMove(e){
 }
 
 function onCanvasUp(e){
-  if(cDragging&&(cDragging.type==='desk'||cDragging.type==='board')&&cDragging.moved){
-    saveState();
+  if(multiDrag){
+    if(multiDrag.moved) saveState();
+    multiDrag=null; drawCanvas(); return;
   }
-  cDragging=null;
+
+  if(cDragging){
+    if(cDragging.type==='drag-select' && dragSelect){
+      // select desks inside rubber-band
+      const x1=Math.min(dragSelect.sx,dragSelect.ex), y1=Math.min(dragSelect.sy,dragSelect.ey);
+      const x2=Math.max(dragSelect.sx,dragSelect.ex), y2=Math.max(dragSelect.sy,dragSelect.ey);
+      S.desks.forEach(d=>{
+        const ps=w2s(d.x+DESK_W/2, d.y+(DESK_H_BASE+d.spp*SEAT_H)/2);
+        if(ps.x>=x1&&ps.x<=x2&&ps.y>=y1&&ps.y<=y2) selectedIds.add(d.id);
+      });
+      dragSelect=null;
+    } else if(cDragging.type==='pan-or-select'){
+      // was just a click on empty canvas — already cleared selection in down
+    } else if((cDragging.type==='desk'||cDragging.type==='board')&&cDragging.moved){
+      saveState();
+    }
+    cDragging=null;
+    drawCanvas();
+  }
 }
 
 let ctxType=null; // 'desk' | 'board'
@@ -990,11 +1143,11 @@ function onCanvasCtx(e){
 }
 
 function onCanvasClick(e){
-  if(cDragging&&cDragging.moved) return;
+  if(e.shiftKey) return; // shift handled in mousedown
   const r=canvasEl.getBoundingClientRect();
   const sx=e.clientX-r.left, sy=e.clientY-r.top;
   const hit=hitTest(sx,sy);
-  if(hit&&hit.type==='desk'&&hit.seatIdx!==null){
+  if(hit&&hit.type==='desk'&&hit.seatIdx!==null&&selectedIds.size<=1){
     openSeatDD(hit.id,hit.seatIdx,e.clientX,e.clientY);
   }
 }
@@ -1109,9 +1262,10 @@ function uaChipDragStart(e,sid){ e.dataTransfer.setData('sid',sid); setTimeout((
 function uaChipDragEnd(e){ e.target.style.opacity=''; }
 
 /* ════════ DESK / BOARD ADD ════════ */
-function addDesk(){
+function addDesk(spp=2){
   const wp=s2w(canvasEl.width/2-DESK_W/2, 80);
-  S.desks.push({id:uid(),x:wp.x+Math.random()*40-20,y:wp.y+Math.random()*40-20,angle:0,spp:2,seats:[null,null]});
+  const nx=snap(wp.x+Math.random()*48-24), ny=snap(wp.y+Math.random()*48-24);
+  S.desks.push({id:uid(),x:nx,y:ny,angle:0,spp,seats:Array(spp).fill(null)});
   saveState(); drawCanvas(); renderUnassigned();
 }
 function addBoard(){
@@ -1285,8 +1439,17 @@ setTimeout(()=>{
 
 // keyboard
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){ closeModal('import-modal'); closeContextMenu(); closeSeatDD(); }
+  if(e.key==='Escape'){
+    closeModal('import-modal'); closeContextMenu(); closeSeatDD();
+    selectedIds.clear(); drawCanvas();
+  }
   if(e.code==='Space'&&document.getElementById('panel-random').classList.contains('active')){ e.preventDefault(); pickRandom(); }
+  if((e.key==='Delete'||e.key==='Backspace')&&selectedIds.size>0&&!e.target.matches('input,textarea')){
+    if(confirm('Видалити вибрані парти ('+selectedIds.size+')?')){
+      S.desks=S.desks.filter(d=>!selectedIds.has(d.id));
+      selectedIds.clear(); saveState(); drawCanvas(); renderUnassigned();
+    }
+  }
 });
 </script>
 </body>
