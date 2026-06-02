@@ -1496,20 +1496,57 @@ document.addEventListener('keydown',e=>{
     })();
   }
 });
+
+/* ── DIALOG SYSTEM ── */
+function pluralDesk(n){
+  if(n%10===1&&n%100!==11) return 'парту';
+  if(n%10>=2&&n%10<=4&&!(n%100>=12&&n%100<=14)) return 'парти';
+  return 'парт';
+}
+
+let _dialogResolve=null;
+function showDialog({title,body,meta='',type='danger',confirmText='Підтвердити',cancelText='Скасувати',confirmClass='btn-danger',alertOnly=false}){
+  return new Promise(resolve=>{
+    _dialogResolve=resolve;
+    document.getElementById('dialog-title').textContent=title;
+    document.getElementById('dialog-body').innerHTML=body;
+    const metaEl=document.getElementById('dialog-meta');
+    if(meta){metaEl.innerHTML=meta;metaEl.style.display='block';}
+    else metaEl.style.display='none';
+    const iconEl=document.getElementById('dialog-icon');
+    const icons={
+      danger:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="1.8"/></svg>',
+      info:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><path d="M12 8h.01M12 12v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+      error:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+      success:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><path d="M8 12l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    };
+    iconEl.className='dialog-icon '+(type==='error'?'danger':type);
+    iconEl.innerHTML=icons[type]||icons.danger;
+    const actionsEl=document.getElementById('dialog-actions');
+    actionsEl.innerHTML=alertOnly
+      ? `<button class="btn btn-solid" onclick="_dialogClose(true)">${confirmText||'Зрозуміло'}</button>`
+      : `<button class="btn btn-ghost" onclick="_dialogClose(false)">${cancelText}</button><button class="btn ${confirmClass}" onclick="_dialogClose(true)">${confirmText}</button>`;
+    document.getElementById('dialog-modal').classList.add('open');
+    setTimeout(()=>actionsEl.querySelector('.btn:last-child')?.focus(),60);
+  });
+}
+function _dialogClose(result){
+  document.getElementById('dialog-modal').classList.remove('open');
+  if(_dialogResolve){_dialogResolve(result);_dialogResolve=null;}
+}
+document.getElementById('dialog-modal').addEventListener('click',function(e){if(e.target===this)_dialogClose(false);});
+
 </script>
 
-<!-- DIALOG MODAL (replaces confirm/alert) -->
+<!-- DIALOG MODAL -->
 <div class="modal-overlay" id="dialog-modal">
   <div class="modal dialog-modal" id="dialog-box">
-    <div class="dialog-icon" id="dialog-icon">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="1.8"/></svg>
-    </div>
-    <div class="dialog-title" id="dialog-title">Підтвердження</div>
+    <div class="dialog-icon" id="dialog-icon"></div>
+    <div class="dialog-title" id="dialog-title"></div>
     <div class="dialog-body" id="dialog-body"></div>
     <div class="dialog-meta" id="dialog-meta" style="display:none"></div>
     <div class="dialog-actions" id="dialog-actions"></div>
   </div>
 </div>
-
 </body>
 </html>
