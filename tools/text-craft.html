@@ -4791,48 +4791,36 @@ function cleanPastedHTML(html) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
-  // Remove truly unwanted elements only
+  // Remove only truly harmful elements
   doc.querySelectorAll('script,style,meta,link,colgroup,col').forEach(el => el.remove());
 
-  // Remove Google Docs / Word wrapper spans that add nothing
-  doc.querySelectorAll('span').forEach(span => {
-    // Keep spans that have meaningful formatting (color, font-weight etc via style)
-    const style = span.getAttribute('style') || '';
-    const hasUseful = /font-weight|font-style|text-decoration|color|background/.test(style);
-    if (!hasUseful && !span.className) {
-      span.replaceWith(...span.childNodes);
-    }
-  });
+  // Remove class attrs (broken external CSS refs)
+  doc.querySelectorAll('[class]').forEach(el => el.removeAttribute('class'));
 
-  // Strip layout-breaking inline styles from all elements
-  // but keep safe formatting properties
-  const KEEP_PROPS = new Set([
-    'font-weight','font-style','text-decoration','color',
-    'background-color','text-align','vertical-align'
-  ]);
+  // Strip only layout-breaking CSS properties, keep everything else
+  const STRIP_PROPS = [
+    'width','height','min-width','max-width','min-height','max-height',
+    'position','top','left','right','bottom','z-index','float','clear',
+    'overflow','display','flex','grid','column-width','columns',
+    'page-break','break-before','break-after','orphans','widows'
+  ];
   doc.querySelectorAll('[style]').forEach(el => {
-    const kept = [];
-    el.style.cssText.split(';').forEach(rule => {
-      const [prop] = rule.split(':');
-      if (prop && KEEP_PROPS.has(prop.trim().toLowerCase())) {
-        kept.push(rule.trim());
-      }
+    const kept = el.style.cssText.split(';').filter(rule => {
+      const prop = rule.split(':')[0]?.trim().toLowerCase();
+      return prop && !STRIP_PROPS.some(bad => prop.startsWith(bad));
     });
     if (kept.length) el.setAttribute('style', kept.join(';'));
     else el.removeAttribute('style');
   });
 
-  // Remove width/height/border attrs from tables (let CSS handle it)
-  doc.querySelectorAll('table,td,th,tr').forEach(el => {
+  // Fix tables — remove fixed widths but keep structure
+  doc.querySelectorAll('table,td,th').forEach(el => {
     el.removeAttribute('width');
     el.removeAttribute('height');
     el.removeAttribute('cellpadding');
     el.removeAttribute('cellspacing');
     el.removeAttribute('border');
   });
-
-  // Remove class attrs (they reference external stylesheets that aren't loaded)
-  doc.querySelectorAll('[class]').forEach(el => el.removeAttribute('class'));
 
   return doc.body.innerHTML;
 }
