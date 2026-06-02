@@ -176,6 +176,20 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .modal{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:24px;width:460px;max-width:calc(100vw - 32px);transform:translateY(10px);transition:transform .18s;max-height:80vh;overflow-y:auto}
 .modal-overlay.open .modal{transform:translateY(0)}
 .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+/* Dialog modal */
+.dialog-modal{width:360px;padding:28px 28px 22px}
+.dialog-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;flex-shrink:0}
+.dialog-icon svg{width:22px;height:22px}
+.dialog-icon.danger{background:var(--red-bg)}
+.dialog-icon.danger svg{color:var(--red)}
+.dialog-icon.info{background:var(--accent-bg)}
+.dialog-icon.info svg{color:var(--accent)}
+.dialog-icon.success{background:#dcfce7}
+.dialog-icon.success svg{color:#16a34a}
+.dialog-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:7px;line-height:1.3}
+.dialog-body{font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:6px}
+.dialog-meta{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:var(--r);font-size:12.5px;color:var(--muted);line-height:1.6}
+.dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
 .modal-title{font-size:16px;font-weight:700}
 .modal-close{width:30px;height:30px;border:none;background:none;cursor:pointer;color:var(--subtle);border-radius:var(--r);display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s}
 .modal-close:hover{background:var(--bg);color:var(--text)}
@@ -481,8 +495,15 @@ function saveState(){
   localStorage.setItem('ev-cm3',JSON.stringify(S));
   showToast('Збережено ✓');
 }
-function clearAll(){
-  if(!confirm('Очистити всіх студентів, команди та парти?')) return;
+async function clearAll(){
+  const ok=await showDialog({
+    title:'Очистити все',
+    body:'Весь список студентів, команди та план класу буде видалено.',
+    type:'danger',
+    confirmText:'Очистити',
+    confirmClass:'btn-danger'
+  });
+  if(!ok) return;
   S={students:[],groups:[],desks:[],boards:[],randHistory:[]};
   saveState(); renderAll();
 }
@@ -511,11 +532,18 @@ function openFileState(){ document.getElementById('file-state-input').click(); }
 function handleFileOpen(e){
   const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
-  reader.onload = ev => {
+  reader.onload = async ev => {
     try {
       const data = JSON.parse(ev.target.result);
       if(!data.students) throw new Error('Невірний формат файлу');
-      const ok = confirm('Відкрити клас із файлу?\n\nСтудентів: ' + data.students.length + '\nКоманд: ' + (data.groups||[]).length + '\nПарт: ' + (data.desks||[]).length + '\n\nПоточні дані буде замінено.');
+      const ok = await showDialog({
+        title:'Відкрити файл класу',
+        body:'Поточні дані буде замінено даними з файлу.',
+        meta:'Студентів: <b>'+data.students.length+'</b> &nbsp;·&nbsp; Команд: <b>'+(data.groups||[]).length+'</b> &nbsp;·&nbsp; Парт: <b>'+(data.desks||[]).length+'</b>',
+        type:'info',
+        confirmText:'Відкрити',
+        confirmClass:'btn-solid'
+      });
       if(!ok) return;
       S = {
         students: data.students || [],
@@ -527,7 +555,7 @@ function handleFileOpen(e){
       saveState(); renderAll();
       showToast('Відкрито: ' + data.students.length + ' студентів', 2500);
     } catch(err) {
-      alert('Не вдалося відкрити файл: ' + err.message);
+      await showDialog({title:'Помилка відкриття',body:'Не вдалося прочитати файл:<br><code style="font-size:12px">'+err.message+'</code>',type:'error',alertOnly:true,confirmText:'Зрозуміло'});
     }
   };
   reader.readAsText(file, 'UTF-8');
@@ -1274,8 +1302,15 @@ function addBoard(){
   saveState(); drawCanvas();
 }
 
-function clearCanvas(){
-  if(!confirm('Видалити всі парти та дошки з плану?')) return;
+async function clearCanvas(){
+  const ok=await showDialog({
+    title:'Очистити план класу',
+    body:'Всі парти та дошки буде видалено. Студенти залишаться у списку.',
+    type:'danger',
+    confirmText:'Очистити',
+    confirmClass:'btn-danger'
+  });
+  if(!ok) return;
   S.desks=[]; S.boards=[];
   saveState(); drawCanvas(); renderUnassigned();
 }
@@ -1445,12 +1480,36 @@ document.addEventListener('keydown',e=>{
   }
   if(e.code==='Space'&&document.getElementById('panel-random').classList.contains('active')){ e.preventDefault(); pickRandom(); }
   if((e.key==='Delete'||e.key==='Backspace')&&selectedIds.size>0&&!e.target.matches('input,textarea')){
-    if(confirm('Видалити вибрані парти ('+selectedIds.size+')?')){
+    ;(async()=>{
+    const n=selectedIds.size;
+    const ok2=await showDialog({
+      title:'Видалити парти',
+      body:'Буде видалено <b>'+n+'</b> '+pluralDesk(n)+'. Студенти повернуться до нерозміщених.',
+      type:'danger',
+      confirmText:'Видалити',
+      confirmClass:'btn-danger'
+    });
+    if(ok2){
       S.desks=S.desks.filter(d=>!selectedIds.has(d.id));
       selectedIds.clear(); saveState(); drawCanvas(); renderUnassigned();
     }
+    })();
   }
 });
 </script>
+
+<!-- DIALOG MODAL (replaces confirm/alert) -->
+<div class="modal-overlay" id="dialog-modal">
+  <div class="modal dialog-modal" id="dialog-box">
+    <div class="dialog-icon" id="dialog-icon">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="1.8"/></svg>
+    </div>
+    <div class="dialog-title" id="dialog-title">Підтвердження</div>
+    <div class="dialog-body" id="dialog-body"></div>
+    <div class="dialog-meta" id="dialog-meta" style="display:none"></div>
+    <div class="dialog-actions" id="dialog-actions"></div>
+  </div>
+</div>
+
 </body>
 </html>
