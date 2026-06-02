@@ -4737,10 +4737,11 @@ editor.addEventListener('keydown', e => {
 editor.addEventListener('paste', e => {
   const items = e.clipboardData?.items;
   if (!items) return;
+
+  // Image paste
   for (const item of items) {
     if (item.type.startsWith('image/')) {
       e.preventDefault();
-      // Capture cursor NOW before anything steals focus
       const sel = window.getSelection();
       let pasteRange = null;
       if (sel && sel.rangeCount && editor.contains(sel.getRangeAt(0).commonAncestorContainer)) {
@@ -4755,7 +4756,6 @@ editor.addEventListener('paste', e => {
         p.appendChild(wrap);
         const after_p = document.createElement('p');
         after_p.appendChild(document.createElement('br'));
-
         if (pasteRange) {
           pasteRange.collapse(false);
           pasteRange.insertNode(after_p);
@@ -4772,9 +4772,70 @@ editor.addEventListener('paste', e => {
         tick();
       };
       reader.readAsDataURL(file);
+      return;
     }
   }
+
+  // HTML paste — clean dirty markup from Word/Google Docs/Tables
+  const html = e.clipboardData.getData('text/html');
+  if (html) {
+    e.preventDefault();
+    const clean = cleanPastedHTML(html);
+    document.execCommand('insertHTML', false, clean);
+    tick();
+    return;
+  }
 });
+
+function cleanPastedHTML(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // Remove truly unwanted elements only
+  doc.querySelectorAll('script,style,meta,link,colgroup,col').forEach(el => el.remove());
+
+  // Remove Google Docs / Word wrapper spans that add nothing
+  doc.querySelectorAll('span').forEach(span => {
+    // Keep spans that have meaningful formatting (color, font-weight etc via style)
+    const style = span.getAttribute('style') || '';
+    const hasUseful = /font-weight|font-style|text-decoration|color|background/.test(style);
+    if (!hasUseful && !span.className) {
+      span.replaceWith(...span.childNodes);
+    }
+  });
+
+  // Strip layout-breaking inline styles from all elements
+  // but keep safe formatting properties
+  const KEEP_PROPS = new Set([
+    'font-weight','font-style','text-decoration','color',
+    'background-color','text-align','vertical-align'
+  ]);
+  doc.querySelectorAll('[style]').forEach(el => {
+    const kept = [];
+    el.style.cssText.split(';').forEach(rule => {
+      const [prop] = rule.split(':');
+      if (prop && KEEP_PROPS.has(prop.trim().toLowerCase())) {
+        kept.push(rule.trim());
+      }
+    });
+    if (kept.length) el.setAttribute('style', kept.join(';'));
+    else el.removeAttribute('style');
+  });
+
+  // Remove width/height/border attrs from tables (let CSS handle it)
+  doc.querySelectorAll('table,td,th,tr').forEach(el => {
+    el.removeAttribute('width');
+    el.removeAttribute('height');
+    el.removeAttribute('cellpadding');
+    el.removeAttribute('cellspacing');
+    el.removeAttribute('border');
+  });
+
+  // Remove class attrs (they reference external stylesheets that aren't loaded)
+  doc.querySelectorAll('[class]').forEach(el => el.removeAttribute('class'));
+
+  return doc.body.innerHTML;
+}
 
 document.addEventListener('click', e => {
   if (!e.target.closest('.img-wrap') && !e.target.closest('.img-toolbar')) {
