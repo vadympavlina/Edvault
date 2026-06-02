@@ -439,6 +439,17 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   </div>
 </div>
 
+<!-- DIALOG MODAL -->
+<div class="modal-overlay" id="dialog-modal">
+  <div class="modal dialog-modal" id="dialog-box">
+    <div class="dialog-icon" id="dialog-icon"></div>
+    <div class="dialog-title" id="dialog-title"></div>
+    <div class="dialog-body" id="dialog-body"></div>
+    <div class="dialog-meta" id="dialog-meta" style="display:none"></div>
+    <div class="dialog-actions" id="dialog-actions"></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ════════════════════════════════════════
@@ -1538,15 +1549,5 @@ document.getElementById('dialog-modal').addEventListener('click',function(e){if(
 
 </script>
 
-<!-- DIALOG MODAL -->
-<div class="modal-overlay" id="dialog-modal">
-  <div class="modal dialog-modal" id="dialog-box">
-    <div class="dialog-icon" id="dialog-icon"></div>
-    <div class="dialog-title" id="dialog-title"></div>
-    <div class="dialog-body" id="dialog-body"></div>
-    <div class="dialog-meta" id="dialog-meta" style="display:none"></div>
-    <div class="dialog-actions" id="dialog-actions"></div>
-  </div>
-</div>
 </body>
 </html>
