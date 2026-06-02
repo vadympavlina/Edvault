@@ -4776,50 +4776,34 @@ editor.addEventListener('paste', e => {
     }
   }
 
-  // HTML paste — clean dirty markup from Word/Google Docs/Tables
+  // HTML paste — let browser handle natively, then clean up only broken table widths
   const html = e.clipboardData.getData('text/html');
-  if (html) {
+  if (html && /<table/i.test(html)) {
+    // Only intervene if there are tables (the original broken-columns problem)
     e.preventDefault();
     const clean = cleanPastedHTML(html);
     document.execCommand('insertHTML', false, clean);
     tick();
     return;
   }
+  // All other HTML — let browser paste natively (preserves code, quotes, formatting)
 });
 
 function cleanPastedHTML(html) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
-  // Remove only truly harmful elements
-  doc.querySelectorAll('script,style,meta,link,colgroup,col').forEach(el => el.remove());
+  // Remove only colgroup/col elements that cause narrow fixed columns
+  doc.querySelectorAll('colgroup, col').forEach(el => el.remove());
 
-  // Remove class attrs (broken external CSS refs)
-  doc.querySelectorAll('[class]').forEach(el => el.removeAttribute('class'));
-
-  // Strip only layout-breaking CSS properties, keep everything else
-  const STRIP_PROPS = [
-    'width','height','min-width','max-width','min-height','max-height',
-    'position','top','left','right','bottom','z-index','float','clear',
-    'overflow','display','flex','grid','column-width','columns',
-    'page-break','break-before','break-after','orphans','widows'
-  ];
-  doc.querySelectorAll('[style]').forEach(el => {
-    const kept = el.style.cssText.split(';').filter(rule => {
-      const prop = rule.split(':')[0]?.trim().toLowerCase();
-      return prop && !STRIP_PROPS.some(bad => prop.startsWith(bad));
-    });
-    if (kept.length) el.setAttribute('style', kept.join(';'));
-    else el.removeAttribute('style');
-  });
-
-  // Fix tables — remove fixed widths but keep structure
-  doc.querySelectorAll('table,td,th').forEach(el => {
+  // Remove fixed width/height only from table cells — keep everything else untouched
+  doc.querySelectorAll('table, td, th').forEach(el => {
     el.removeAttribute('width');
     el.removeAttribute('height');
-    el.removeAttribute('cellpadding');
-    el.removeAttribute('cellspacing');
-    el.removeAttribute('border');
+    el.style.removeProperty('width');
+    el.style.removeProperty('height');
+    el.style.removeProperty('min-width');
+    el.style.removeProperty('max-width');
   });
 
   return doc.body.innerHTML;
