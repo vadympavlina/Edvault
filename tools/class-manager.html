@@ -48,8 +48,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .btn-sm{height:26px;padding:0 9px;font-size:12px}
 .btn-icon{width:32px;padding:0;justify-content:center}
 [data-tip]{position:relative}
-[data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--text);color:#fff;font-size:11px;font-weight:500;padding:3px 8px;border-radius:5px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s .1s;z-index:9999}
-[data-tip]:hover::after{opacity:1}
 
 /* MAIN LAYOUT */
 .main-layout{flex:1;display:flex;overflow:hidden}
@@ -1507,6 +1505,36 @@ document.addEventListener('keydown',e=>{
     })();
   }
 });
+
+/* ── TOOLTIP ── */
+(function(){
+  const tip=document.createElement('div');
+  tip.style.cssText='position:fixed;background:#1a1d23;color:#fff;font-size:11px;font-weight:500;padding:4px 9px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:99999;box-shadow:0 2px 8px rgba(0,0,0,.18)';
+  document.body.appendChild(tip);
+  let tid;
+  document.addEventListener('mouseover',e=>{
+    const el=e.target.closest('[data-tip]');
+    if(!el) return;
+    clearTimeout(tid);
+    tid=setTimeout(()=>{
+      tip.textContent=el.dataset.tip;
+      const r=el.getBoundingClientRect();
+      tip.style.opacity='0'; tip.style.display='block';
+      const tw=tip.offsetWidth, th=tip.offsetHeight;
+      // prefer below, fallback above
+      let top=r.bottom+6, left=r.left+r.width/2-tw/2;
+      if(top+th>window.innerHeight-8) top=r.top-th-6;
+      left=Math.max(8,Math.min(left,window.innerWidth-tw-8));
+      tip.style.top=top+'px'; tip.style.left=left+'px';
+      tip.style.opacity='1';
+    },200);
+  });
+  document.addEventListener('mouseout',e=>{
+    if(!e.target.closest('[data-tip]')) return;
+    clearTimeout(tid); tip.style.opacity='0';
+  });
+  document.addEventListener('mousedown',()=>{clearTimeout(tid);tip.style.opacity='0';});
+})();
 
 /* ── DIALOG SYSTEM ── */
 function pluralDesk(n){
