@@ -806,14 +806,24 @@
     </div>
     <div class="modal-body">
       <!-- Basic info -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        <div class="form-field" style="margin:0">
+      <div style="margin-bottom:14px">
+        <div class="form-field" style="margin-bottom:12px">
           <label class="form-label">Назва уроку</label>
           <input class="form-input" id="lessonTitleInp" placeholder="Вступ до JavaScript" />
         </div>
-        <div class="form-field" style="margin:0">
-          <label class="form-label">Предмет</label>
-          <select class="form-select" id="lessonSubjSel"></select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-field" style="margin:0">
+            <label class="form-label">Категорія</label>
+            <select class="form-select" id="lessonCatSel">
+              <option value="">— Оберіть категорію —</option>
+            </select>
+          </div>
+          <div class="form-field" style="margin:0">
+            <label class="form-label">Предмет</label>
+            <select class="form-select" id="lessonSubjSel" disabled>
+              <option value="">— Спочатку оберіть категорію —</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -1480,7 +1490,7 @@
     lessonIsUploaded = true;
     document.getElementById('lessonModalTitle').textContent = 'Новий урок (з .html файлу)';
     document.getElementById('lessonTitleInp').value = titleFromName || 'Урок';
-    populateSubjSelect('lessonSubjSel', '');
+    populateLessonCatSelect('');
     // raw + isolated:true — щоб lesson.html рендерив у iframe як standalone-документ
     lessonPages = [{ id: generateId(6), title: titleFromName || 'Урок', htmlContent: raw, isolated: true }];
     activePageIdx = 0;
@@ -1529,7 +1539,7 @@
     lessonIsUploaded = false;
     document.getElementById('lessonModalTitle').textContent = 'Новий урок';
     document.getElementById('lessonTitleInp').value = '';
-    populateSubjSelect('lessonSubjSel', '');
+    populateLessonCatSelect('');
     lessonPages = [{ id: generateId(6), title: 'Сторінка 1', htmlContent: '' }];
     activePageIdx = 0;
     lessonLinks = [];
@@ -2080,7 +2090,11 @@
           document.getElementById('lessonModalTitle').textContent =
             lessonIsUploaded ? 'Урок (з .html файлу)' : 'Редагувати урок';
           document.getElementById('lessonTitleInp').value = l.title || '';
-          populateSubjSelect('lessonSubjSel', l.subjectId);
+
+          // Pre-select category → then subject in that category
+          const catId = allSubjects[l.subjectId]?.categoryId || '';
+          populateLessonCatSelect(catId);
+          populateLessonSubjSelect(catId, l.subjectId);
           if (Array.isArray(l.pages) && l.pages.length > 0) {
             lessonPages = l.pages.map(p => ({ ...p }));
           } else {
@@ -2137,9 +2151,9 @@
   });
   function populateSubjSelects() {
     populateCatSelect('subjCatSel', '');
-    populateSubjSelect('lessonSubjSel', '');
+    populateLessonCatSelect(''); // init lesson modal category select
 
-    // Lesson filter
+    // Lesson filter dropdown in table header
     const filterEl = document.getElementById('lessonFilterSubj');
     filterEl.innerHTML = '<option value="">Всі предмети</option>';
     Object.entries(allSubjects).forEach(([id, s]) => {
@@ -2154,6 +2168,45 @@
       el.insertAdjacentHTML('beforeend', `<option value="${id}" ${id === selectedId ? 'selected' : ''}>${esc(cat.name)}</option>`);
     });
   }
+
+  // ── Lesson modal: cascading Category → Subject ─────────────
+  function populateLessonCatSelect(selectedCatId = '') {
+    const el = document.getElementById('lessonCatSel');
+    el.innerHTML = '<option value="">— Оберіть категорію —</option>';
+    Object.entries(allCategories).sort((a,b) => a[1].name.localeCompare(b[1].name,'uk')).forEach(([id, cat]) => {
+      el.insertAdjacentHTML('beforeend', `<option value="${id}" ${id === selectedCatId ? 'selected' : ''}>${esc(cat.name)}</option>`);
+    });
+    // Trigger subject population based on selected category
+    populateLessonSubjSelect(selectedCatId, '');
+  }
+
+  function populateLessonSubjSelect(catId, selectedSubjId = '') {
+    const el = document.getElementById('lessonSubjSel');
+    el.innerHTML = '';
+    if (!catId) {
+      el.innerHTML = '<option value="">— Спочатку оберіть категорію —</option>';
+      el.disabled = true;
+      return;
+    }
+    const filtered = Object.entries(allSubjects)
+      .filter(([, s]) => s.categoryId === catId)
+      .sort((a, b) => a[1].name.localeCompare(b[1].name, 'uk'));
+
+    if (!filtered.length) {
+      el.innerHTML = '<option value="">— Немає предметів у цій категорії —</option>';
+      el.disabled = true;
+      return;
+    }
+    el.disabled = false;
+    el.insertAdjacentHTML('beforeend', '<option value="">— Оберіть предмет —</option>');
+    filtered.forEach(([id, s]) => {
+      el.insertAdjacentHTML('beforeend', `<option value="${id}" ${id === selectedSubjId ? 'selected' : ''}>${esc(s.name)}</option>`);
+    });
+  }
+
+  document.getElementById('lessonCatSel').addEventListener('change', e => {
+    populateLessonSubjSelect(e.target.value, '');
+  });
 
   function populateSubjSelect(selId, selectedId) {
     const el = document.getElementById(selId);
