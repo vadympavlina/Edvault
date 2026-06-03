@@ -1236,10 +1236,8 @@ body{animation:fadeUp .3s ease}
 .tbl-btn.danger:hover{background:#fee2e2;color:#ef4444}
 .tbl-btn svg{width:12px;height:12px;flex-shrink:0}
 .tbl-bar-sep{width:1px;height:14px;background:var(--border);margin:0 2px;flex-shrink:0}
-.tbl-info{
-  font-size:10.5px;font-weight:700;color:var(--accent);
-  background:var(--accent-bg);border-radius:4px;padding:2px 7px;flex-shrink:0;
-}
+.tbl-color-btn { position:relative; cursor:pointer; user-select:none; }
+.tbl-color-btn input[type=color]{ position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer; }
 
 /* ═══════════ FLOATING SELECTION TOOLBAR ═══════════ */
 .sel-toolbar{
@@ -1990,32 +1988,68 @@ body{animation:fadeUp .3s ease}
 <div class="table-ctx-bar" id="tableCtxBar">
   <span class="tbl-info" id="tblInfo">1×1</span>
   <span class="tbl-bar-sep"></span>
-  <button class="tbl-btn" onclick="tblAddRow()" title="Додати рядок">
+
+  <!-- Row: above/below current, delete current -->
+  <button class="tbl-btn" onclick="tblAddRowAbove()" title="Додати рядок вище">
     <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="1" width="12" height="5" rx="1"/><rect x="1" y="8" width="12" height="5" rx="1" opacity=".3"/>
-      <path d="M7 9.5v3M5.5 11h3" stroke-width="1.6"/>
-    </svg>+ Рядок
+      <rect x="1" y="7" width="12" height="5" rx="1"/>
+      <path d="M7 1v4M5 3h4" stroke-width="1.6"/>
+    </svg>↑ Рядок
+  </button>
+  <button class="tbl-btn" onclick="tblAddRowBelow()" title="Додати рядок нижче">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="2" width="12" height="5" rx="1"/>
+      <path d="M7 9v4M5 11h4" stroke-width="1.6"/>
+    </svg>↓ Рядок
   </button>
   <button class="tbl-btn" onclick="tblAddCol()" title="Додати стовпець">
     <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="1" width="5" height="12" rx="1"/><rect x="8" y="1" width="5" height="12" rx="1" opacity=".3"/>
+      <rect x="1" y="1" width="5" height="12" rx="1"/>
       <path d="M9.5 7h3M11 5.5v3" stroke-width="1.6"/>
-    </svg>+ Колонку
+    </svg>+ Кол.
   </button>
+
   <span class="tbl-bar-sep"></span>
-  <button class="tbl-btn" onclick="tblDelRow()" title="Видалити рядок">
+
+  <!-- Delete current row / col -->
+  <button class="tbl-btn" onclick="tblDelCurrentRow()" title="Видалити поточний рядок">
     <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="1" width="12" height="5" rx="1"/><rect x="1" y="8" width="12" height="5" rx="1" opacity=".3"/>
-      <path d="M5.5 11h3" stroke-width="1.6"/>
+      <rect x="1" y="2" width="12" height="5" rx="1"/>
+      <path d="M5 9.5h4" stroke-width="1.6"/>
     </svg>− Рядок
   </button>
   <button class="tbl-btn" onclick="tblDelCol()" title="Видалити стовпець">
     <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="1" width="5" height="12" rx="1"/><rect x="8" y="1" width="5" height="12" rx="1" opacity=".3"/>
-      <path d="M9.5 11h3M11 9.5v3" opacity="0"/>
-    </svg>− Колонку
+      <rect x="1" y="1" width="5" height="12" rx="1"/>
+      <path d="M9 5.5l3 3m0-3l-3 3" stroke-width="1.6"/>
+    </svg>− Кол.
   </button>
+
   <span class="tbl-bar-sep"></span>
+
+  <!-- Color: cell & row -->
+  <label class="tbl-btn tbl-color-btn" title="Колір клітинки">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="1" width="5" height="5" rx="1" fill="currentColor" opacity=".3"/>
+      <rect x="1" y="1" width="12" height="12" rx="1"/>
+    </svg>
+    Клітинка
+    <input type="color" id="tblCellColor" value="#fef9c3" oninput="tblColorCell(this.value)" style="width:0;height:0;opacity:0;position:absolute">
+  </label>
+  <button class="tbl-btn tbl-color-btn" onclick="tblClearCellColor()" title="Прибрати колір клітинки">✕</button>
+
+  <label class="tbl-btn tbl-color-btn" title="Колір рядка">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="4" width="12" height="5" rx="1" fill="currentColor" opacity=".3"/>
+      <rect x="1" y="1" width="12" height="12" rx="1"/>
+    </svg>
+    Рядок
+    <input type="color" id="tblRowColor" value="#dbeafe" oninput="tblColorRow(this.value)" style="width:0;height:0;opacity:0;position:absolute">
+  </label>
+  <button class="tbl-btn tbl-color-btn" onclick="tblClearRowColor()" title="Прибрати колір рядка">✕</button>
+
+  <span class="tbl-bar-sep"></span>
+
   <button class="tbl-btn danger" onclick="tblDelete()" title="Видалити таблицю">
     <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
       <path d="M2 3h10M5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M3 3l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9L11 3"/>
@@ -4386,6 +4420,7 @@ function insertTable(rows, cols) {
 
 /* ── Table context bar ── */
 let currentTable = null;
+let currentCell = null;
 
 function updateTableBar() {
   const sel = window.getSelection();
@@ -4402,34 +4437,70 @@ function updateTableBar() {
 
 function showTableBar(table, cell) {
   currentTable = table;
+  currentCell = cell;
   const bar = document.getElementById('tableCtxBar');
   const rows = table.rows.length;
   const cols = table.rows[0]?.cells.length || 0;
   document.getElementById('tblInfo').textContent = `${rows}×${cols}`;
+  // Sync color inputs to current cell/row
+  if (cell) {
+    const cellBg = cell.style.backgroundColor || '';
+    const rowBg = cell.parentElement?.style?.backgroundColor || '';
+    document.getElementById('tblCellColor').value = bgToHex(cellBg) || '#fef9c3';
+    document.getElementById('tblRowColor').value  = bgToHex(rowBg)  || '#dbeafe';
+  }
   const rect = table.getBoundingClientRect();
-  bar.style.top = Math.max(8, rect.top - 38) + 'px';
+  bar.style.top  = Math.max(8, rect.top - 38) + 'px';
   bar.style.left = rect.left + 'px';
   bar.classList.add('visible');
+}
+
+function bgToHex(rgb) {
+  if (!rgb) return '';
+  const m = rgb.match(/\d+/g);
+  if (!m || m.length < 3) return '';
+  return '#' + m.slice(0,3).map(n => parseInt(n).toString(16).padStart(2,'0')).join('');
 }
 
 function hideTableBar() {
   if (!currentTable) return;
   document.getElementById('tableCtxBar').classList.remove('visible');
-  currentTable = null;
+  currentTable = null; currentCell = null;
 }
 
-function tblAddRow() {
-  if (!currentTable) return;
-  const lastRow = currentTable.querySelector('tr:last-child');
-  const colCount = lastRow?.cells.length || 1;
+function _makeRow(colCount) {
   const tr = document.createElement('tr');
   for (let i = 0; i < colCount; i++) {
     const td = document.createElement('td');
     td.appendChild(document.createElement('br'));
     tr.appendChild(td);
   }
-  currentTable.appendChild(tr);
-  tick(); showTableBar(currentTable, tr.cells[0]);
+  return tr;
+}
+
+function tblAddRowAbove() {
+  if (!currentTable) return;
+  const row = currentCell?.closest('tr') || currentTable.rows[0];
+  const cols = row?.cells.length || currentTable.rows[0]?.cells.length || 1;
+  const newRow = _makeRow(cols);
+  row ? row.before(newRow) : currentTable.prepend(newRow);
+  tick(); showTableBar(currentTable, currentCell);
+}
+
+function tblAddRowBelow() {
+  if (!currentTable) return;
+  const row = currentCell?.closest('tr') || currentTable.querySelector('tr:last-child');
+  const cols = row?.cells.length || 1;
+  const newRow = _makeRow(cols);
+  row ? row.after(newRow) : currentTable.appendChild(newRow);
+  // Move cursor to first cell of new row
+  const first = newRow.cells[0];
+  if (first) {
+    const r = document.createRange();
+    r.selectNodeContents(first); r.collapse(true);
+    const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+  tick(); showTableBar(currentTable, first || currentCell);
 }
 
 function tblAddCol() {
@@ -4439,13 +4510,18 @@ function tblAddCol() {
     cell.appendChild(document.createElement('br'));
     row.appendChild(cell);
   });
-  tick(); showTableBar(currentTable, currentTable.rows[0]?.cells[0]);
+  tick(); showTableBar(currentTable, currentCell);
 }
 
-function tblDelRow() {
-  if (!currentTable || currentTable.rows.length <= 1) return;
-  currentTable.querySelector('tr:last-child')?.remove();
-  tick(); showTableBar(currentTable, currentTable.rows[0]?.cells[0]);
+function tblDelCurrentRow() {
+  if (!currentTable) return;
+  const row = currentCell?.closest('tr');
+  if (!row || currentTable.rows.length <= 1) return;
+  const prevRow = row.previousElementSibling || row.nextElementSibling;
+  row.remove();
+  currentCell = prevRow?.cells[0] || null;
+  tick(); if (currentTable.rows.length) showTableBar(currentTable, currentCell);
+  else hideTableBar();
 }
 
 function tblDelCol() {
@@ -4453,7 +4529,30 @@ function tblDelCol() {
   [...currentTable.rows].forEach(row => {
     if (row.cells.length > 1) row.deleteCell(row.cells.length - 1);
   });
-  tick(); showTableBar(currentTable, currentTable.rows[0]?.cells[0]);
+  tick(); showTableBar(currentTable, currentCell);
+}
+
+function tblColorCell(color) {
+  if (!currentCell) return;
+  currentCell.style.backgroundColor = color;
+  tick();
+}
+function tblClearCellColor() {
+  if (!currentCell) return;
+  currentCell.style.removeProperty('background-color');
+  tick();
+}
+function tblColorRow(color) {
+  const row = currentCell?.closest('tr');
+  if (!row) return;
+  [...row.cells].forEach(c => c.style.backgroundColor = color);
+  tick();
+}
+function tblClearRowColor() {
+  const row = currentCell?.closest('tr');
+  if (!row) return;
+  [...row.cells].forEach(c => c.style.removeProperty('background-color'));
+  tick();
 }
 
 function tblDelete() {
