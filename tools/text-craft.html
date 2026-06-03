@@ -339,6 +339,12 @@ body {
 
 /* Tooltip */
 [data-tip]{position:relative}
+/* Topbar and toolbar tooltips — show below (not above, where browser chrome cuts them) */
+.topbar [data-tip]::after,
+.toolbar-wrap [data-tip]::after {
+  bottom:auto;
+  top:calc(100% + 7px);
+}
 [data-tip]::after{
   content:attr(data-tip);
   position:absolute;
@@ -488,8 +494,7 @@ body {
 }
 
 .page{
-  width:85%;
-  
+  width:100%;max-width:900px;
   margin:0 auto;
   background:var(--paper);
   border-radius:var(--r);
@@ -2315,17 +2320,21 @@ function confirmLink() {
   const url = document.getElementById('linkInp').value.trim();
   closeLinkModal();
   if (!url) return;
+  // Focus editor FIRST, then restore selection — order matters
+  editor.focus();
   if (savedRange) {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(savedRange);
     savedRange = null;
   }
-  exec('createLink', url.startsWith('http') ? url : 'https://' + url);
+  // Use execCommand directly — not exec() which would call editor.focus() again and clear selection
+  document.execCommand('createLink', false, url.startsWith('http') ? url : 'https://' + url);
   editor.querySelectorAll('a').forEach(a => {
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
   });
+  syncState(); tick();
 }
 function linkModalKey(e) {
   if (e.key === 'Enter') confirmLink();
