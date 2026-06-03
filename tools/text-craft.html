@@ -1900,7 +1900,7 @@ body{animation:fadeUp .3s ease}
     <div class="tb-sep"></div>
 
     <!-- Link -->
-    <button class="tb" onclick="insertLink()" data-tip="Вставити посилання">
+    <button class="tb" onmousedown="event.preventDefault();insertLink()" data-tip="Вставити посилання">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
         <path d="M6.5 9.5a3.5 3.5 0 005 0l2-2a3.5 3.5 0 00-5-5L7 4"/>
         <path d="M9.5 6.5a3.5 3.5 0 00-5 0l-2 2a3.5 3.5 0 005 5L9 12"/>
@@ -2307,34 +2307,72 @@ function applyAutoTitle() {
   document.title = titleInput.value + ' — TextCraft';
 }
 function insertLink() {
-  saveCursor();
+  // Mark the selected text in DOM immediately — before any focus change
+  const sel = window.getSelection();
+  if (sel && !sel.isCollapsed && sel.rangeCount &&
+      editor.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+    const range = sel.getRangeAt(0);
+    const marker = document.createElement('span');
+    marker.id = '_tc_link_marker_';
+    try {
+      range.surroundContents(marker);
+    } catch(e) {
+      // Selection crosses element boundaries — extract and wrap
+      const frag = range.extractContents();
+      marker.appendChild(frag);
+      range.insertNode(marker);
+    }
+    sel.removeAllRanges();
+  }
   document.getElementById('linkInp').value = '';
   document.getElementById('linkModal').classList.add('show');
   setTimeout(() => document.getElementById('linkInp').focus(), 60);
 }
+
 function closeLinkModal() {
+  // Remove marker if user cancelled
+  const marker = document.getElementById('_tc_link_marker_');
+  if (marker) {
+    const parent = marker.parentNode;
+    while (marker.firstChild) parent.insertBefore(marker.firstChild, marker);
+    parent.removeChild(marker);
+  }
   document.getElementById('linkModal').classList.remove('show');
   savedRange = null;
 }
+
 function confirmLink() {
   const url = document.getElementById('linkInp').value.trim();
-  closeLinkModal();
-  if (!url) return;
-  // Focus editor FIRST, then restore selection — order matters
-  editor.focus();
-  if (savedRange) {
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(savedRange);
-    savedRange = null;
-  }
-  // Use execCommand directly — not exec() which would call editor.focus() again and clear selection
-  document.execCommand('createLink', false, url.startsWith('http') ? url : 'https://' + url);
-  editor.querySelectorAll('a').forEach(a => {
+  document.getElementById('linkModal').classList.remove('show');
+  if (!url) { closeLinkModal(); return; }
+
+  const finalUrl = url.startsWith('http') ? url : 'https://' + url;
+  savedRange = null;
+
+  const marker = document.getElementById('_tc_link_marker_');
+  if (marker) {
+    // Replace marker with <a>
+    const a = document.createElement('a');
+    a.href = finalUrl;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
-  });
-  syncState(); tick();
+    while (marker.firstChild) a.appendChild(marker.firstChild);
+    marker.replaceWith(a);
+    // Place cursor after link
+    editor.focus();
+    const sel = window.getSelection();
+    const r = document.createRange();
+    r.setStartAfter(a); r.collapse(true);
+    sel.removeAllRanges(); sel.addRange(r);
+  } else {
+    // No selection — insert link with URL as text at cursor
+    editor.focus();
+    const a = document.createElement('a');
+    a.href = finalUrl; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = finalUrl;
+    document.execCommand('insertHTML', false, a.outerHTML);
+  }
+  tick();
 }
 function linkModalKey(e) {
   if (e.key === 'Enter') confirmLink();
@@ -4815,6 +4853,11 @@ editor.addEventListener('focusin', e => {
 editor.addEventListener('focusout', e => {
   const beside = e.target.closest('.img-beside');
   if (beside && !beside.contains(e.relatedTarget)) scheduleBesideBarHide();
+});
+
+// Save selection on sel-toolbar mousedown — prevents focus loss
+document.getElementById('selToolbar').addEventListener('mousedown', e => {
+  e.preventDefault();
 });
 
 editor.addEventListener('mouseup', () => { syncState(); updateCodeBar(); updateTableBar(); updateSelToolbar(); });
