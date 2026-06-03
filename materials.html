@@ -251,6 +251,35 @@
 
 <body class="portal-page">
 
+  <!-- ══ AUTH SCREEN ══════════════════════════════════════ -->
+  <div id="authScreen" style="display:none;position:fixed;inset:0;z-index:1000;background:var(--bg);align-items:center;justify-content:center;flex-direction:column">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh);padding:48px 40px;text-align:center;max-width:380px;width:90%">
+      <div style="width:52px;height:52px;background:var(--accent-bg);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </div>
+      <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:8px">Edvault</div>
+      <div style="font-size:14px;color:var(--subtle);margin-bottom:32px">Навчальний портал для учнів</div>
+      <button id="googleSignInBtn" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:44px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);font-family:inherit;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:background .12s,box-shadow .12s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--surface)'">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Увійти через Google
+      </button>
+      <div id="authError" style="display:none;margin-top:14px;font-size:12px;color:#ef4444;padding:8px 12px;background:#fef2f2;border-radius:var(--r)"></div>
+    </div>
+  </div>
+
+  <!-- ══ BLOCKED SCREEN ════════════════════════════════════ -->
+  <div id="blockedScreen" style="display:none;position:fixed;inset:0;z-index:1000;background:var(--bg);align-items:center;justify-content:center;flex-direction:column">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh);padding:48px 40px;text-align:center;max-width:380px;width:90%">
+      <div style="font-size:40px;margin-bottom:16px">🚫</div>
+      <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">Доступ заблоковано</div>
+      <div style="font-size:13px;color:var(--subtle);line-height:1.6;margin-bottom:24px">Ваш обліковий запис заблоковано адміністратором. Зверніться до викладача для отримання доступу.</div>
+      <button onclick="import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js').then(({getAuth,signOut})=>signOut(getAuth()).then(()=>location.reload()))" style="height:36px;padding:0 20px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);font-family:inherit;font-size:13px;color:var(--muted);cursor:pointer">Вийти</button>
+    </div>
+  </div>
+
+  <!-- ══ PORTAL WRAP ════════════════════════════════════════ -->
+  <div id="portalWrap">
+
   <!-- ══ TOP BAR ══════════════════════════════════════════ -->
   <header class="topbar">
     <a href="index.html" class="brand">
@@ -281,6 +310,12 @@
             <line x1="3" y1="18" x2="3.01" y2="18"/>
           </svg>
         </button>
+      </div>
+      <!-- User info + sign out (only shown when logged in) -->
+      <div id="userInfo" style="display:flex;align-items:center;gap:8px;margin-left:4px">
+        <img id="userAvatar" style="display:none;width:28px;height:28px;border-radius:50%;object-fit:cover" referrerpolicy="no-referrer" />
+        <span id="userName" style="font-size:12.5px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <button id="signOutBtn" style="display:none;height:26px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);font-family:inherit;font-size:11.5px;color:var(--muted);cursor:pointer;transition:border-color .12s,color .12s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Вийти</button>
       </div>
     </div>
   </header>
@@ -350,7 +385,70 @@
 
   <!-- ══ SCRIPT ════════════════════════════════════════════ -->
   <script type="module">
-    import { dbGet, objToArray } from './firebase-config.js';
+    import { dbGet, dbUpdate, objToArray } from './firebase-config.js';
+    import {
+      getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+    // ── Auth ───────────────────────────────────────────────
+    const auth     = getAuth();
+    const provider = new GoogleAuthProvider();
+    const HAS_SUBJECT = new URLSearchParams(location.search).has('subject');
+
+    // Show auth screen or blocked screen if needed
+    const authScreen    = document.getElementById('authScreen');
+    const blockedScreen = document.getElementById('blockedScreen');
+    const portalWrap    = document.getElementById('portalWrap');
+
+    if (!HAS_SUBJECT) {
+      // Need auth — wait for Firebase to restore session
+      document.getElementById('portalWrap').style.display = 'none';
+      onAuthStateChanged(auth, async user => {
+        if (!user) {
+          authScreen.style.display = 'flex';
+          return;
+        }
+        // Check if blocked
+        const userData = await dbGet(`/users/${user.uid}`);
+        if (userData?.blocked) {
+          authScreen.style.display = 'none';
+          blockedScreen.style.display = 'flex';
+          return;
+        }
+        // Save/update user record
+        await dbUpdate(`/users/${user.uid}`, {
+          name:  user.displayName || '',
+          email: user.email || '',
+          photo: user.photoURL || ''
+        });
+        // Show portal
+        authScreen.style.display   = 'none';
+        blockedScreen.style.display = 'none';
+        portalWrap.style.display   = '';
+        // Update topbar with user info
+        document.getElementById('userAvatar').src = user.photoURL || '';
+        document.getElementById('userAvatar').style.display = user.photoURL ? 'block' : 'none';
+        document.getElementById('userName').textContent = user.displayName || user.email || '';
+        document.getElementById('signOutBtn').style.display = 'block';
+        bootstrap();
+      });
+    } else {
+      // Direct link with subject — no auth required
+      portalWrap.style.display = '';
+      bootstrap();
+    }
+
+    document.getElementById('googleSignInBtn').addEventListener('click', () => {
+      signInWithPopup(auth, provider).catch(e => {
+        document.getElementById('authError').textContent = 'Помилка входу: ' + (e.message || e.code);
+        document.getElementById('authError').style.display = 'block';
+      });
+    });
+
+    document.getElementById('signOutBtn')?.addEventListener('click', async () => {
+      await signOut(auth);
+      location.reload();
+    });
 
     // ── State ──────────────────────────────────────────────
     let allSubjects    = [];
@@ -914,5 +1012,6 @@
 
     bootstrap();
   </script>
+  </div><!-- end portalWrap -->
 </body>
 </html>
