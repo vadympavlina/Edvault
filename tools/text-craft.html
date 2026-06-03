@@ -488,7 +488,7 @@ body {
 }
 
 .page{
-  width:100%;max-width:752px;
+  width:100%;max-width:900px;
   margin:0 auto;
   background:var(--paper);
   border-radius:var(--r);
@@ -1239,6 +1239,45 @@ body{animation:fadeUp .3s ease}
 .tbl-color-btn { position:relative; cursor:pointer; user-select:none; }
 .tbl-color-btn input[type=color]{ position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer; }
 
+/* Table color palette popup */
+.tbl-palette{
+  display:none; position:fixed; z-index:8000;
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:var(--r-lg); box-shadow:var(--sh-lg);
+  padding:10px; width:224px;
+  animation:popIn .13s ease;
+}
+.tbl-palette.open{ display:block; }
+.tbl-palette-grid{
+  display:grid; grid-template-columns:repeat(8,22px); gap:4px;
+}
+.tbl-palette-swatch{
+  width:22px; height:22px; border-radius:5px;
+  border:1.5px solid rgba(0,0,0,.1); cursor:pointer;
+  transition:transform .1s, box-shadow .1s;
+}
+.tbl-palette-swatch:hover{ transform:scale(1.25); box-shadow:0 2px 8px rgba(0,0,0,.22); }
+.tbl-palette-footer{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-top:8px; padding-top:8px; border-top:1px solid var(--border);
+  gap:6px;
+}
+.tbl-palette-clear{
+  font-size:11px; font-weight:500; color:var(--muted);
+  border:none; background:none; cursor:pointer; padding:0;
+  font-family:'Inter',system-ui,sans-serif;
+  transition:color .1s;
+}
+.tbl-palette-clear:hover{ color:#ef4444; }
+.tbl-palette-custom{
+  font-size:11px; font-weight:500; color:var(--accent);
+  cursor:pointer; position:relative; display:flex; align-items:center; gap:4px;
+  font-family:'Inter',system-ui,sans-serif;
+}
+.tbl-palette-custom input[type=color]{
+  position:absolute; inset:0; opacity:0; cursor:pointer; width:100%;
+}
+
 /* ═══════════ FLOATING SELECTION TOOLBAR ═══════════ */
 .sel-toolbar{
   display:none;
@@ -1947,6 +1986,48 @@ body{animation:fadeUp .3s ease}
   </button>
 </div>
 
+<!-- TABLE CONTEXT BAR -->
+<div class="table-ctx-bar" id="tableCtxBar">
+  <span class="tbl-info" id="tblInfo">1×1</span>
+  <span class="tbl-bar-sep"></span>
+  <button class="tbl-btn" onclick="tblAddRowAbove()" title="Додати рядок вище">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="7" width="12" height="5" rx="1"/><path d="M7 1v4M5 3h4" stroke-width="1.6"/></svg>↑ Рядок
+  </button>
+  <button class="tbl-btn" onclick="tblAddRowBelow()" title="Додати рядок нижче">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="12" height="5" rx="1"/><path d="M7 9v4M5 11h4" stroke-width="1.6"/></svg>↓ Рядок
+  </button>
+  <button class="tbl-btn" onclick="tblAddCol()" title="Додати стовпець">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="5" height="12" rx="1"/><path d="M9.5 7h3M11 5.5v3" stroke-width="1.6"/></svg>+ Кол.
+  </button>
+  <span class="tbl-bar-sep"></span>
+  <button class="tbl-btn" onclick="tblDelCurrentRow()" title="Видалити поточний рядок">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="12" height="5" rx="1"/><path d="M5 9.5h4" stroke-width="1.6"/></svg>− Рядок
+  </button>
+  <button class="tbl-btn" onclick="tblDelCol()" title="Видалити стовпець">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="5" height="12" rx="1"/><path d="M9 5.5l3 3m0-3l-3 3" stroke-width="1.6"/></svg>− Кол.
+  </button>
+  <span class="tbl-bar-sep"></span>
+  <button class="tbl-btn" onclick="openTblColorPalette('cell', this)" title="Колір клітинки">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="5" height="5" rx="1" fill="currentColor" opacity=".3"/><rect x="1" y="1" width="12" height="12" rx="1"/></svg>Клітинка
+  </button>
+  <button class="tbl-btn" onclick="openTblColorPalette('row', this)" title="Колір рядка">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="12" height="5" rx="1" fill="currentColor" opacity=".3"/><rect x="1" y="1" width="12" height="12" rx="1"/></svg>Рядок
+  </button>
+  <span class="tbl-bar-sep"></span>
+  <button class="tbl-btn danger" onclick="tblDelete()" title="Видалити таблицю">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h10M5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M3 3l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9L11 3"/></svg>Видалити
+  </button>
+</div>
+
+<!-- TABLE COLOR PALETTE -->
+<div class="tbl-palette" id="tblPalette">
+  <div class="tbl-palette-grid" id="tblPaletteGrid"></div>
+  <div class="tbl-palette-footer">
+    <button class="tbl-palette-clear" onclick="tblPaletteClear()">✕ Без кольору</button>
+    <label class="tbl-palette-custom">Інший…<input type="color" id="tblCustomColor" value="#ffffff" oninput="tblPaletteApply(this.value)"></label>
+  </div>
+</div>
+
 <!-- MAIN LAYOUT -->
 <div class="main-layout" id="mainLayout">
 
@@ -1982,81 +2063,8 @@ body{animation:fadeUp .3s ease}
       </div>
     </div>
     <div class="editor" id="editor" contenteditable="true" spellcheck="true"></div>
-  </div>
-
-<!-- TABLE CONTEXT BAR -->
-<div class="table-ctx-bar" id="tableCtxBar">
-  <span class="tbl-info" id="tblInfo">1×1</span>
-  <span class="tbl-bar-sep"></span>
-
-  <!-- Row: above/below current, delete current -->
-  <button class="tbl-btn" onclick="tblAddRowAbove()" title="Додати рядок вище">
-    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="7" width="12" height="5" rx="1"/>
-      <path d="M7 1v4M5 3h4" stroke-width="1.6"/>
-    </svg>↑ Рядок
-  </button>
-  <button class="tbl-btn" onclick="tblAddRowBelow()" title="Додати рядок нижче">
-    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="2" width="12" height="5" rx="1"/>
-      <path d="M7 9v4M5 11h4" stroke-width="1.6"/>
-    </svg>↓ Рядок
-  </button>
-  <button class="tbl-btn" onclick="tblAddCol()" title="Додати стовпець">
-    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="1" width="5" height="12" rx="1"/>
-      <path d="M9.5 7h3M11 5.5v3" stroke-width="1.6"/>
-    </svg>+ Кол.
-  </button>
-
-  <span class="tbl-bar-sep"></span>
-
-  <!-- Delete current row / col -->
-  <button class="tbl-btn" onclick="tblDelCurrentRow()" title="Видалити поточний рядок">
-    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="2" width="12" height="5" rx="1"/>
-      <path d="M5 9.5h4" stroke-width="1.6"/>
-    </svg>− Рядок
-  </button>
-  <button class="tbl-btn" onclick="tblDelCol()" title="Видалити стовпець">
-    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="1" width="5" height="12" rx="1"/>
-      <path d="M9 5.5l3 3m0-3l-3 3" stroke-width="1.6"/>
-    </svg>− Кол.
-  </button>
-
-  <span class="tbl-bar-sep"></span>
-
-  <!-- Color: cell & row -->
-  <label class="tbl-btn tbl-color-btn" title="Колір клітинки">
-    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="1" width="5" height="5" rx="1" fill="currentColor" opacity=".3"/>
-      <rect x="1" y="1" width="12" height="12" rx="1"/>
-    </svg>
-    Клітинка
-    <input type="color" id="tblCellColor" value="#fef9c3" oninput="tblColorCell(this.value)" style="width:0;height:0;opacity:0;position:absolute">
-  </label>
-  <button class="tbl-btn tbl-color-btn" onclick="tblClearCellColor()" title="Прибрати колір клітинки">✕</button>
-
-  <label class="tbl-btn tbl-color-btn" title="Колір рядка">
-    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="4" width="12" height="5" rx="1" fill="currentColor" opacity=".3"/>
-      <rect x="1" y="1" width="12" height="12" rx="1"/>
-    </svg>
-    Рядок
-    <input type="color" id="tblRowColor" value="#dbeafe" oninput="tblColorRow(this.value)" style="width:0;height:0;opacity:0;position:absolute">
-  </label>
-  <button class="tbl-btn tbl-color-btn" onclick="tblClearRowColor()" title="Прибрати колір рядка">✕</button>
-
-  <span class="tbl-bar-sep"></span>
-
-  <button class="tbl-btn danger" onclick="tblDelete()" title="Видалити таблицю">
-    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M2 3h10M5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M3 3l.7 8a1 1 0 001 .9h4.6a1 1 0 001-.9L11 3"/>
-    </svg>Видалити
-  </button>
-</div>
-</div>
+  </div><!-- /page -->
+</div><!-- /scroll-area -->
 
 </div><!-- /main-layout -->
 
@@ -4446,9 +4454,7 @@ function showTableBar(table, cell) {
   // Sync color inputs to current cell/row
   if (cell) {
     const cellBg = cell.style.backgroundColor || '';
-    const rowBg = cell.parentElement?.style?.backgroundColor || '';
-    document.getElementById('tblCellColor').value = bgToHex(cellBg) || '#fef9c3';
-    document.getElementById('tblRowColor').value  = bgToHex(rowBg)  || '#dbeafe';
+    document.getElementById('tblCustomColor').value = bgToHex(cellBg) || '#ffffff';
   }
 
   // Position near current cell (or row), fallback to table top
@@ -4540,26 +4546,73 @@ function tblDelCol() {
   tick(); showTableBar(currentTable, currentCell);
 }
 
-function tblColorCell(color) {
-  if (!currentCell) return;
-  currentCell.style.backgroundColor = color;
+/* ── Table color palette ── */
+const TBL_PALETTE_COLORS = [
+  // Row 1 — пастельні
+  '#ffffff','#fef9c3','#dcfce7','#dbeafe','#f3e8ff','#fce7f3','#ffedd5','#fee2e2',
+  // Row 2 — середні
+  '#f1f5f9','#fef08a','#86efac','#93c5fd','#d8b4fe','#f9a8d4','#fdba74','#fca5a5',
+  // Row 3 — насичені
+  '#e2e8f0','#eab308','#22c55e','#3b82f6','#a855f7','#ec4899','#f97316','#ef4444',
+  // Row 4 — темні
+  '#334155','#713f12','#14532d','#1e3a5f','#581c87','#831843','#7c2d12','#7f1d1d',
+];
+
+let tblPaletteTarget = 'cell'; // 'cell' or 'row'
+
+function openTblColorPalette(target, btn) {
+  tblPaletteTarget = target;
+  const palette = document.getElementById('tblPalette');
+
+  // Build swatches if not yet built
+  const grid = document.getElementById('tblPaletteGrid');
+  if (!grid.children.length) {
+    TBL_PALETTE_COLORS.forEach(color => {
+      const sw = document.createElement('div');
+      sw.className = 'tbl-palette-swatch';
+      sw.style.background = color;
+      sw.title = color;
+      sw.addEventListener('click', () => { tblPaletteApply(color); });
+      grid.appendChild(sw);
+    });
+  }
+
+  // Set custom color input to current
+  const cur = tblPaletteTarget === 'cell'
+    ? (currentCell?.style.backgroundColor || '#ffffff')
+    : (currentCell?.parentElement?.style?.backgroundColor || '#ffffff');
+  document.getElementById('tblCustomColor').value = bgToHex(cur) || '#ffffff';
+
+  // Position below the button
+  const rect = btn.getBoundingClientRect();
+  palette.style.top  = (rect.bottom + 6) + 'px';
+  palette.style.left = rect.left + 'px';
+  palette.classList.add('open');
+}
+
+function closeTblPalette() {
+  document.getElementById('tblPalette').classList.remove('open');
+}
+
+function tblPaletteApply(color) {
+  if (tblPaletteTarget === 'cell') {
+    if (currentCell) currentCell.style.backgroundColor = color;
+  } else {
+    const row = currentCell?.closest('tr');
+    if (row) [...row.cells].forEach(c => c.style.backgroundColor = color);
+  }
+  closeTblPalette();
   tick();
 }
-function tblClearCellColor() {
-  if (!currentCell) return;
-  currentCell.style.removeProperty('background-color');
-  tick();
-}
-function tblColorRow(color) {
-  const row = currentCell?.closest('tr');
-  if (!row) return;
-  [...row.cells].forEach(c => c.style.backgroundColor = color);
-  tick();
-}
-function tblClearRowColor() {
-  const row = currentCell?.closest('tr');
-  if (!row) return;
-  [...row.cells].forEach(c => c.style.removeProperty('background-color'));
+
+function tblPaletteClear() {
+  if (tblPaletteTarget === 'cell') {
+    if (currentCell) currentCell.style.removeProperty('background-color');
+  } else {
+    const row = currentCell?.closest('tr');
+    if (row) [...row.cells].forEach(c => c.style.removeProperty('background-color'));
+  }
+  closeTblPalette();
   tick();
 }
 
@@ -4925,7 +4978,10 @@ document.addEventListener('click', e => {
     closeImgPicker();
     closeAlignPicker();
   }
-  if (!e.target.closest('table') && !e.target.closest('.table-ctx-bar')) {
+  if (!e.target.closest('.tbl-palette') && !e.target.closest('.tbl-btn[onclick*="openTblColor"]')) {
+    closeTblPalette();
+  }
+  if (!e.target.closest('table') && !e.target.closest('.table-ctx-bar') && !e.target.closest('.tbl-palette')) {
     hideTableBar();
   }
   if (!e.target.closest('.sel-toolbar') && !e.target.closest('.editor')) {
