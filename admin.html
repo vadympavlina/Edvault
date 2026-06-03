@@ -1285,18 +1285,16 @@
   // а не /lessons з повним htmlContent. Повний урок підтягується
   // тільки при кліку "Редагувати".
   async function bootstrap() {
-    const [catData, subjData, lessonMetaData, tagData, folderData] = await Promise.all([
+    const [catData, subjData, lessonMetaData, tagData] = await Promise.all([
       dbGet('/categories'),
       dbGet('/subjects'),
       dbGet('/lesson_meta'),
-      dbGet('/tags'),
-      dbGet('/folders')
+      dbGet('/tags')
     ]);
     allCategories = catData        || {};
     allSubjects   = subjData       || {};
     allLessons    = lessonMetaData || {};
     allTags       = tagData        || {};
-    allFolders    = folderData     || {};
 
     updateCounts();
     renderCatTable();
@@ -1306,6 +1304,15 @@
     renderDashboard();
     populateSubjSelects();
     populateStructureSubjSel();
+
+    // Load folders separately — requires own Firebase Rule
+    // If rule not set yet, silently skip (won't break the rest)
+    try {
+      const folderData = await dbGet('/folders');
+      allFolders = folderData || {};
+    } catch(e) {
+      console.warn('Папки не завантажено — перевір Firebase Rules (/folders):', e.code || e.message);
+    }
   }
 
   function updateCounts() {
