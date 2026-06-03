@@ -389,6 +389,68 @@
     .page-num-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
     .page-num-btn:disabled { opacity: .35; cursor: default; }
 
+    /* ── File manager ── */
+    .fm-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; border-bottom: 1px solid var(--border);
+      background: var(--surface); transition: background .1s;
+      cursor: default; user-select: none;
+    }
+    .fm-item:last-child { border-bottom: none; }
+    .fm-item:hover { background: var(--bg); }
+    .fm-item.drag-over { background: var(--accent-bg); outline: 2px dashed var(--accent); outline-offset: -2px; }
+    .fm-item.dragging { opacity: .35; }
+
+    .fm-drag-handle {
+      width: 16px; height: 16px; color: var(--border2);
+      cursor: grab; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .fm-drag-handle:active { cursor: grabbing; }
+    .fm-drag-handle svg { width: 14px; height: 14px; }
+
+    .fm-icon { width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+               display: flex; align-items: center; justify-content: center; }
+    .fm-icon.folder { background: #fef9c3; }
+    .fm-icon.folder svg { color: #ca8a04; width: 16px; height: 16px; }
+    .fm-icon.lesson { background: var(--accent-bg); }
+    .fm-icon.lesson svg { color: var(--accent); width: 14px; height: 14px; }
+
+    .fm-name { flex: 1; min-width: 0; }
+    .fm-name-text {
+      font-size: 13.5px; font-weight: 500; color: var(--text);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .fm-name-text.folder-name { cursor: pointer; }
+    .fm-name-text.folder-name:hover { color: var(--accent); text-decoration: underline; }
+    .fm-meta { font-size: 11px; color: var(--subtle); margin-top: 2px; }
+
+    .fm-actions { display: flex; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity .1s; }
+    .fm-item:hover .fm-actions { opacity: 1; }
+
+    .fm-drop-zone {
+      padding: 28px; text-align: center;
+      border: 2px dashed var(--border); border-radius: var(--r);
+      color: var(--subtle); font-size: 13px; margin: 8px;
+      transition: border-color .15s, background .15s;
+    }
+    .fm-drop-zone.active { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+
+    .fm-breadcrumb { display: flex; align-items: center; gap: 5px; padding: 0 0 12px; flex-wrap: wrap; }
+    .fm-bc-btn {
+      font-size: 12.5px; color: var(--muted); background: none; border: none;
+      cursor: pointer; padding: 2px 4px; border-radius: 4px;
+    }
+    .fm-bc-btn:hover { background: var(--bg); color: var(--accent); }
+    .fm-bc-btn.current { font-weight: 600; color: var(--text); cursor: default; }
+    .fm-bc-sep { color: var(--subtle); font-size: 13px; }
+
+    /* inline rename input */
+    .fm-rename-inp {
+      flex: 1; padding: 2px 6px; border: 1px solid var(--accent);
+      border-radius: 4px; font-size: 13.5px; font-weight: 500;
+      background: var(--surface); color: var(--text); outline: none;
+    }
+
     /* ── Subject toggle ── */
     .toggle-btn {
       display: inline-flex; align-items: center; gap: 5px;
@@ -545,6 +607,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
           Теги
           <span class="nav-count" id="navTagCount">0</span>
+        </button>
+        <button class="nav-item" data-section="structure">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h6v6H3z"/><path d="M15 3h6v6h-6z"/><path d="M3 15h6v6H3z"/><path d="M15 15h6v6h-6z"/></svg>
+          Структура
         </button>
         <button class="nav-item" data-section="users">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -703,6 +769,31 @@
         </div>
 
         <!-- ── Users ── -->
+        <!-- ── Structure ── -->
+        <div class="section" id="sectionStructure">
+          <div class="content-header">
+            <div>
+              <div class="content-title">Структура</div>
+              <div class="content-subtitle">Папки та уроки по предметах</div>
+            </div>
+            <div class="content-header-actions">
+              <select class="form-select" id="structureSubjSel" style="width:200px;height:34px">
+                <option value="">— Оберіть предмет —</option>
+              </select>
+              <button class="btn btn-outline" id="btnNewFolder" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                Нова папка
+              </button>
+            </div>
+          </div>
+          <!-- Breadcrumb -->
+          <div id="structureBreadcrumb" style="display:none;padding:0 0 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap"></div>
+          <!-- File manager -->
+          <div class="table-card" id="structureArea">
+            <div class="table-empty">Оберіть предмет для перегляду структури</div>
+          </div>
+        </div>
+
         <div class="section" id="sectionUsers">
           <div class="content-header">
             <div>
@@ -914,6 +1005,26 @@
   </div>
 </div>
 
+<!-- Folder modal -->
+<div class="modal-bg" id="folderModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title" id="folderModalTitle">Нова папка</div>
+      <button class="modal-close" data-close="folderModal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label class="form-label">Назва папки</label>
+        <input class="form-input" id="folderNameInp" placeholder="Наприклад: Модуль 1" autocomplete="off" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="folderModal">Скасувати</button>
+      <button class="btn btn-solid" id="saveFolderBtn">Зберегти</button>
+    </div>
+  </div>
+</div>
+
 <!-- Confirm delete modal -->
 <div class="modal-bg" id="confirmModal">
   <div class="modal confirm-modal">
@@ -948,6 +1059,7 @@
   let allSubjects   = {};
   let allLessons    = {};
   let allTags       = {};
+  let allFolders    = {};
 
   // Lesson editor state
   let lessonPages   = []; // [{id, title, htmlContent}]
@@ -1173,16 +1285,18 @@
   // а не /lessons з повним htmlContent. Повний урок підтягується
   // тільки при кліку "Редагувати".
   async function bootstrap() {
-    const [catData, subjData, lessonMetaData, tagData] = await Promise.all([
+    const [catData, subjData, lessonMetaData, tagData, folderData] = await Promise.all([
       dbGet('/categories'),
       dbGet('/subjects'),
       dbGet('/lesson_meta'),
-      dbGet('/tags')
+      dbGet('/tags'),
+      dbGet('/folders')
     ]);
     allCategories = catData        || {};
     allSubjects   = subjData       || {};
-    allLessons    = lessonMetaData || {};   // тепер це meta, не повні уроки!
+    allLessons    = lessonMetaData || {};
     allTags       = tagData        || {};
+    allFolders    = folderData     || {};
 
     updateCounts();
     renderCatTable();
@@ -1191,6 +1305,7 @@
     renderTagTable();
     renderDashboard();
     populateSubjSelects();
+    populateStructureSubjSel();
   }
 
   function updateCounts() {
@@ -2419,6 +2534,350 @@
     if (!s) return '';
     const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML;
   }
+
+  // ══════════════════════════════════════════════════════════
+  // STRUCTURE — File manager
+  // ══════════════════════════════════════════════════════════
+  let structureSubjId  = '';
+  let structurePath    = [];
+  let editingFolderId  = null;
+
+  // ── Structure state ────────────────────────────────────────
+  function populateStructureSubjSel() {
+    const sel = document.getElementById('structureSubjSel');
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— Оберіть предмет —</option>';
+    Object.entries(allSubjects)
+      .sort((a,b) => a[1].name.localeCompare(b[1].name,'uk'))
+      .forEach(([id, s]) => {
+        sel.insertAdjacentHTML('beforeend', `<option value="${id}" ${id===prev?'selected':''}>${esc(s.name)}</option>`);
+      });
+  }
+
+  document.getElementById('structureSubjSel').addEventListener('change', e => {
+    structureSubjId = e.target.value;
+    structurePath   = [];
+    document.getElementById('btnNewFolder').disabled = !structureSubjId;
+    renderStructure();
+  });
+
+  // ── Navigation ────────────────────────────────────────────
+  function structureCurrentFolderId() {
+    return structurePath.length ? structurePath[structurePath.length - 1].id : null;
+  }
+
+  function structureNavigateTo(folderId, folderName) {
+    structurePath.push({ id: folderId, name: folderName });
+    renderStructure();
+  }
+
+  function structureNavigateBack(toIndex) {
+    // toIndex = -1 means root
+    structurePath = toIndex < 0 ? [] : structurePath.slice(0, toIndex + 1);
+    renderStructure();
+  }
+
+  // ── Render ────────────────────────────────────────────────
+  function renderStructure() {
+    const area = document.getElementById('structureArea');
+    const bcEl = document.getElementById('structureBreadcrumb');
+
+    if (!structureSubjId) {
+      area.innerHTML = '<div class="table-empty">Оберіть предмет для перегляду структури</div>';
+      bcEl.style.display = 'none';
+      return;
+    }
+
+    // Breadcrumb
+    bcEl.style.display = 'flex';
+    bcEl.innerHTML = '';
+    const rootBtn = document.createElement('button');
+    rootBtn.className = 'fm-bc-btn' + (structurePath.length === 0 ? ' current' : '');
+    rootBtn.textContent = allSubjects[structureSubjId]?.name || 'Корінь';
+    if (structurePath.length > 0) rootBtn.addEventListener('click', () => structureNavigateBack(-1));
+    bcEl.appendChild(rootBtn);
+
+    structurePath.forEach((seg, i) => {
+      const sep = document.createElement('span');
+      sep.className = 'fm-bc-sep'; sep.textContent = '›';
+      bcEl.appendChild(sep);
+      const btn = document.createElement('button');
+      btn.className = 'fm-bc-btn' + (i === structurePath.length - 1 ? ' current' : '');
+      btn.textContent = seg.name;
+      if (i < structurePath.length - 1) btn.addEventListener('click', () => structureNavigateBack(i));
+      bcEl.appendChild(btn);
+    });
+
+    // Get items in current folder
+    const curFolderId = structureCurrentFolderId();
+
+    const folders = Object.entries(allFolders)
+      .filter(([, f]) => f.subjectId === structureSubjId &&
+        (curFolderId ? f.parentId === curFolderId : !f.parentId))
+      .sort((a,b) => a[1].name.localeCompare(b[1].name,'uk'));
+
+    const lessons = Object.entries(allLessons)
+      .filter(([, l]) => l.subjectId === structureSubjId &&
+        (curFolderId ? l.folderId === curFolderId : !l.folderId))
+      .sort((a,b) => (a[1].title||'').localeCompare(b[1].title||'','uk'));
+
+    area.innerHTML = '';
+
+    if (!folders.length && !lessons.length) {
+      area.innerHTML = '<div class="table-empty">Папка порожня</div>';
+      return;
+    }
+
+    // Drop zone for moving items UP (to parent)
+    if (structurePath.length > 0) {
+      const upZone = document.createElement('div');
+      upZone.className = 'fm-drop-zone';
+      upZone.innerHTML = '⬆ Перетягни сюди щоб перемістити на рівень вище';
+      upZone.dataset.dropTarget = 'parent';
+      area.appendChild(upZone);
+      setupDropTarget(upZone, null); // null = parent folder
+    }
+
+    // Render folders
+    folders.forEach(([id, folder]) => {
+      const childFolderCount = Object.values(allFolders).filter(f => f.parentId === id).length;
+      const childLessonCount = Object.values(allLessons).filter(l => l.folderId === id).length;
+      const total = childFolderCount + childLessonCount;
+
+      const row = document.createElement('div');
+      row.className = 'fm-item';
+      row.draggable = true;
+      row.dataset.id   = id;
+      row.dataset.type = 'folder';
+      row.innerHTML = `
+        <div class="fm-drag-handle" title="Перетягни">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+        </div>
+        <div class="fm-icon folder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="fm-name">
+          <div class="fm-name-text folder-name" data-open-folder="${id}">${esc(folder.name)}</div>
+          <div class="fm-meta">${total} елемент${ukEnd(total,'ів','','и')}</div>
+        </div>
+        <div class="fm-actions">
+          <button class="icon-btn" title="Перейменувати" data-rename-folder="${id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="icon-btn danger" title="Видалити" data-del-folder="${id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>`;
+
+      // Open folder on click
+      row.querySelector('[data-open-folder]').addEventListener('click', () =>
+        structureNavigateTo(id, folder.name));
+
+      // Rename
+      row.querySelector('[data-rename-folder]').addEventListener('click', () => {
+        editingFolderId = id;
+        document.getElementById('folderModalTitle').textContent = 'Перейменувати папку';
+        document.getElementById('folderNameInp').value = folder.name;
+        openModal('folderModal');
+        setTimeout(() => document.getElementById('folderNameInp').select(), 50);
+      });
+
+      // Delete
+      row.querySelector('[data-del-folder]').addEventListener('click', () => {
+        confirmDelete(`Видалити папку "${folder.name}"? Вміст буде переміщено на рівень вище.`, async () => {
+          await deleteFolderRecursive(id);
+          renderStructure();
+          toast('Папку видалено');
+        });
+      });
+
+      setupDragSource(row);
+      setupDropTarget(row, id); // can drop INTO folder
+      area.appendChild(row);
+    });
+
+    // Render lessons
+    lessons.forEach(([id, lesson]) => {
+      const tag = lesson.tagId ? allTags[lesson.tagId] : null;
+      const row = document.createElement('div');
+      row.className = 'fm-item';
+      row.draggable = true;
+      row.dataset.id   = id;
+      row.dataset.type = 'lesson';
+      row.innerHTML = `
+        <div class="fm-drag-handle" title="Перетягни">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+        </div>
+        <div class="fm-icon lesson">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="fm-name">
+          <div class="fm-name-text">${esc(lesson.title || 'Без назви')}</div>
+          <div class="fm-meta">${lesson.pagesCount||1} стор.${tag ? ` · <span style="color:${tag.text}">${esc(tag.name)}</span>` : ''}</div>
+        </div>
+        <div class="fm-actions">
+          <button class="icon-btn danger" title="Видалити з папки (перемістити в корінь)" data-unroot-lesson="${id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        </div>`;
+
+      // Remove from folder → move to root
+      if (lesson.folderId) {
+        row.querySelector('[data-unroot-lesson]').addEventListener('click', async () => {
+          await moveLessonToFolder(id, null);
+          renderStructure();
+          toast('Переміщено в корінь');
+        });
+      } else {
+        row.querySelector('[data-unroot-lesson]').style.display = 'none';
+      }
+
+      setupDragSource(row);
+      area.appendChild(row);
+    });
+  }
+
+  // ── Drag & Drop ───────────────────────────────────────────
+  let draggedItem = null; // { id, type }
+
+  function setupDragSource(row) {
+    row.addEventListener('dragstart', e => {
+      draggedItem = { id: row.dataset.id, type: row.dataset.type };
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.fm-item.drag-over, .fm-drop-zone.active')
+        .forEach(el => el.classList.remove('drag-over', 'active'));
+    });
+  }
+
+  function setupDropTarget(el, targetFolderId) {
+    el.addEventListener('dragover', e => {
+      if (!draggedItem) return;
+      // Can't drop folder into itself
+      if (draggedItem.type === 'folder' && draggedItem.id === targetFolderId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      el.classList.add(el.classList.contains('fm-drop-zone') ? 'active' : 'drag-over');
+    });
+    el.addEventListener('dragleave', () => {
+      el.classList.remove('drag-over', 'active');
+    });
+    el.addEventListener('drop', async e => {
+      e.preventDefault();
+      el.classList.remove('drag-over', 'active');
+      if (!draggedItem) return;
+
+      // Determine actual target folder
+      let destFolderId;
+      if (el.dataset.dropTarget === 'parent') {
+        // Move to parent of current folder
+        const curId = structureCurrentFolderId();
+        destFolderId = curId ? (allFolders[curId]?.parentId || null) : null;
+      } else {
+        destFolderId = targetFolderId;
+      }
+
+      // Don't drop on itself
+      if (draggedItem.type === 'folder' && draggedItem.id === destFolderId) return;
+      // Don't drop into a descendant
+      if (draggedItem.type === 'folder' && isFolderDescendant(draggedItem.id, destFolderId)) return;
+
+      if (draggedItem.type === 'folder') {
+        await moveFolderTo(draggedItem.id, destFolderId);
+      } else {
+        await moveLessonToFolder(draggedItem.id, destFolderId);
+      }
+      draggedItem = null;
+      renderStructure();
+    });
+  }
+
+  function isFolderDescendant(ancestorId, folderId) {
+    if (!folderId) return false;
+    if (folderId === ancestorId) return true;
+    const parent = allFolders[folderId]?.parentId;
+    return parent ? isFolderDescendant(ancestorId, parent) : false;
+  }
+
+  // ── DB operations ─────────────────────────────────────────
+  async function moveFolderTo(folderId, newParentId) {
+    await dbUpdate(`/folders/${folderId}`, { parentId: newParentId || null });
+    allFolders[folderId].parentId = newParentId || null;
+  }
+
+  async function moveLessonToFolder(lessonId, folderId) {
+    const updates = { folderId: folderId || null };
+    await Promise.all([
+      dbUpdate(`/lessons/${lessonId}`, updates),
+      dbUpdate(`/lesson_meta/${lessonId}`, updates)
+    ]);
+    if (allLessons[lessonId]) allLessons[lessonId].folderId = folderId || null;
+  }
+
+  async function deleteFolderRecursive(folderId) {
+    // Move lessons in this folder to its parent
+    const parentId = allFolders[folderId]?.parentId || null;
+    const lessonsToMove = Object.entries(allLessons)
+      .filter(([, l]) => l.folderId === folderId);
+    await Promise.all(lessonsToMove.map(([id]) => moveLessonToFolder(id, parentId)));
+
+    // Recursively handle sub-folders
+    const subFolders = Object.entries(allFolders)
+      .filter(([, f]) => f.parentId === folderId);
+    for (const [id] of subFolders) {
+      await deleteFolderRecursive(id);
+    }
+
+    // Delete the folder itself
+    await dbRemove(`/folders/${folderId}`);
+    delete allFolders[folderId];
+  }
+
+  // ── Folder modal ──────────────────────────────────────────
+  document.getElementById('btnNewFolder').addEventListener('click', () => {
+    editingFolderId = null;
+    document.getElementById('folderModalTitle').textContent = 'Нова папка';
+    document.getElementById('folderNameInp').value = '';
+    openModal('folderModal');
+    setTimeout(() => document.getElementById('folderNameInp').focus(), 50);
+  });
+
+  document.getElementById('saveFolderBtn').addEventListener('click', async () => {
+    const name = document.getElementById('folderNameInp').value.trim();
+    if (!name) { toast('Введіть назву', 'error'); return; }
+    const btn = document.getElementById('saveFolderBtn');
+    btn.disabled = true; btn.textContent = 'Збереження...';
+    try {
+      if (editingFolderId) {
+        await dbUpdate(`/folders/${editingFolderId}`, { name });
+        allFolders[editingFolderId].name = name;
+        // Update breadcrumb if renaming current path segment
+        structurePath = structurePath.map(seg =>
+          seg.id === editingFolderId ? { ...seg, name } : seg);
+        toast('Папку перейменовано');
+      } else {
+        const id = generateId(10);
+        const folder = {
+          name,
+          parentId:  structureCurrentFolderId() || null,
+          subjectId: structureSubjId
+        };
+        await dbSet(`/folders/${id}`, folder);
+        allFolders[id] = folder;
+        toast('Папку створено');
+      }
+      closeModal('folderModal');
+      renderStructure();
+    } catch(e) { toast('Помилка', 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Зберегти'; }
+  });
+
+  document.getElementById('folderNameInp').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('saveFolderBtn').click();
+  });
 
 </script>
 </body>
