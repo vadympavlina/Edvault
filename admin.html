@@ -1084,8 +1084,9 @@
   // Check session — Firebase Auth сам пам'ятає сесію між перезавантаженнями
   onAuthStateChanged(auth, user => {
     if (user) {
-      const provider = user.providerData[0]?.providerId;
-      if (provider !== 'password') {
+      // Check any provider is email/password (user may have multiple providers linked)
+      const hasPassword = user.providerData.some(p => p.providerId === 'password');
+      if (!hasPassword) {
         signOut(auth);
         showAuthError('Адмінка доступна тільки через email та пароль');
         return;
