@@ -3123,7 +3123,7 @@ function syncTocActive() {
 document.getElementById('scrollArea').addEventListener('scroll', () => {
   syncTocActive();
   if (currentCodePre) positionCodeBar(currentCodePre);
-  if (currentTable) showTableBar(currentTable, null);
+  if (currentTable) showTableBar(currentTable, currentCell);
   if (currentBeside) positionBesideBar(currentBeside);
 }, { passive:true });
 
@@ -4442,6 +4442,7 @@ function showTableBar(table, cell) {
   const rows = table.rows.length;
   const cols = table.rows[0]?.cells.length || 0;
   document.getElementById('tblInfo').textContent = `${rows}×${cols}`;
+
   // Sync color inputs to current cell/row
   if (cell) {
     const cellBg = cell.style.backgroundColor || '';
@@ -4449,8 +4450,15 @@ function showTableBar(table, cell) {
     document.getElementById('tblCellColor').value = bgToHex(cellBg) || '#fef9c3';
     document.getElementById('tblRowColor').value  = bgToHex(rowBg)  || '#dbeafe';
   }
-  const rect = table.getBoundingClientRect();
-  bar.style.top  = Math.max(8, rect.top - 38) + 'px';
+
+  // Position near current cell (or row), fallback to table top
+  const anchor = cell || table;
+  const rect = anchor.getBoundingClientRect();
+  const barH = 34;
+  const top = rect.top - barH - 6;
+
+  // If cell is near the top of viewport, show below instead
+  bar.style.top  = (top < 8 ? rect.bottom + 6 : Math.max(8, top)) + 'px';
   bar.style.left = rect.left + 'px';
   bar.classList.add('visible');
 }
