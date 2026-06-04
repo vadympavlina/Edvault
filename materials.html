@@ -277,6 +277,19 @@
     </div>
   </div>
 
+  <!-- ══ PENDING SCREEN ════════════════════════════════════ -->
+  <div id="pendingScreen" style="display:none;position:fixed;inset:0;z-index:1000;background:var(--bg);align-items:center;justify-content:center;flex-direction:column">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh);padding:48px 40px;text-align:center;max-width:380px;width:90%">
+      <div style="font-size:40px;margin-bottom:16px">⏳</div>
+      <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">Очікування підтвердження</div>
+      <div style="font-size:13px;color:var(--subtle);line-height:1.6;margin-bottom:24px">Ваш запит на доступ відправлено адміністратору. Після підтвердження перезавантажте сторінку.</div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button onclick="location.reload()" style="height:36px;padding:0 16px;border:1px solid var(--accent);border-radius:var(--r);background:var(--accent-bg);font-family:inherit;font-size:13px;color:var(--accent);cursor:pointer;font-weight:500">Оновити</button>
+        <button onclick="import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js').then(({getAuth,signOut})=>signOut(getAuth()).then(()=>location.reload()))" style="height:36px;padding:0 16px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);font-family:inherit;font-size:13px;color:var(--muted);cursor:pointer">Вийти</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ PORTAL WRAP ════════════════════════════════════════ -->
   <div id="portalWrap">
 
@@ -385,7 +398,7 @@
 
   <!-- ══ SCRIPT ════════════════════════════════════════════ -->
   <script type="module">
-    import { dbGet, dbUpdate, objToArray } from './firebase-config.js';
+    import { dbGet, dbSet, dbUpdate, objToArray } from './firebase-config.js';
     import {
       getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider
     } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
@@ -393,48 +406,90 @@
     // ── Auth ───────────────────────────────────────────────
     const auth     = getAuth();
     const provider = new GoogleAuthProvider();
-    const HAS_SUBJECT = new URLSearchParams(location.search).has('subject');
 
-    // Show auth screen or blocked screen if needed
     const authScreen    = document.getElementById('authScreen');
     const blockedScreen = document.getElementById('blockedScreen');
+    const pendingScreen = document.getElementById('pendingScreen');
     const portalWrap    = document.getElementById('portalWrap');
 
-    if (!HAS_SUBJECT) {
-      // Need auth — wait for Firebase to restore session
-      document.getElementById('portalWrap').style.display = 'none';
+    portalWrap.style.display = 'none';
+
+    // ── Startup: check URL subject validity first ──────────
+    async function init() {
+      const urlSubjId = new URLSearchParams(location.search).get('subject');
+
+      if (urlSubjId) {
+        // Verify subject actually exists in DB
+        const subj = await dbGet(`/subjects/${urlSubjId}`);
+        if (subj) {
+          // Valid subject link — open without login
+          showPortal(null);
+          return;
+        }
+      }
+
+      // No valid subject — require login
       onAuthStateChanged(auth, async user => {
-        if (!user) {
-          authScreen.style.display = 'flex';
-          return;
-        }
-        // Check if blocked
-        const userData = await dbGet(`/users/${user.uid}`);
-        if (userData?.blocked) {
-          authScreen.style.display = 'none';
-          blockedScreen.style.display = 'flex';
-          return;
-        }
-        // Save/update user record
-        await dbUpdate(`/users/${user.uid}`, {
-          name:  user.displayName || '',
-          email: user.email || '',
-          photo: user.photoURL || ''
+        if (!user) { showScreen(authScreen); return; }
+        await handleUser(user);
+      });
+    }
+
+    async function handleUser(user) {
+      const userData = await dbGet(`/users/${user.uid}`);
+
+      if (userData?.blocked) {
+        showScreen(blockedScreen);
+        return;
+      }
+
+      if (!userData) {
+        // Brand new user — save with approved: false
+        await dbSet(`/users/${user.uid}`, {
+          name:     user.displayName || '',
+          email:    user.email || '',
+          photo:    user.photoURL || '',
+          approved: false,
+          blocked:  false
         });
-        // Show portal
-        authScreen.style.display   = 'none';
-        blockedScreen.style.display = 'none';
-        portalWrap.style.display   = '';
-        // Update topbar with user info
+        showScreen(pendingScreen);
+        return;
+      }
+
+      if (!userData.approved) {
+        // Existing but not yet approved
+        showScreen(pendingScreen);
+        return;
+      }
+
+      // Update profile info and show portal
+      await dbUpdate(`/users/${user.uid}`, {
+        name:  user.displayName || '',
+        email: user.email || '',
+        photo: user.photoURL || ''
+      });
+      showPortal(user);
+    }
+
+    function showScreen(el) {
+      authScreen.style.display    = 'none';
+      blockedScreen.style.display = 'none';
+      pendingScreen.style.display = 'none';
+      portalWrap.style.display    = 'none';
+      el.style.display = 'flex';
+    }
+
+    function showPortal(user) {
+      authScreen.style.display    = 'none';
+      blockedScreen.style.display = 'none';
+      pendingScreen.style.display = 'none';
+      portalWrap.style.display    = '';
+      if (user) {
         document.getElementById('userAvatar').src = user.photoURL || '';
         document.getElementById('userAvatar').style.display = user.photoURL ? 'block' : 'none';
         document.getElementById('userName').textContent = user.displayName || user.email || '';
         document.getElementById('signOutBtn').style.display = 'block';
-        bootstrap();
-      });
-    } else {
-      // Direct link with subject — no auth required
-      portalWrap.style.display = '';
+      }
       bootstrap();
     }
 
@@ -449,6 +504,8 @@
       await signOut(auth);
       location.reload();
     });
+
+    init();
 
     // ── State ──────────────────────────────────────────────
     let allSubjects    = [];
