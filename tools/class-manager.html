@@ -159,14 +159,32 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .seat-dd-none{padding:8px;font-size:12px;color:var(--subtle);text-align:center}
 
 /* RANDOM */
-.random-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
-.random-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:40px 48px;text-align:center;max-width:480px;width:100%}
-.random-title{font-size:28px;font-weight:700;color:var(--text);min-height:40px;line-height:1.2;margin:16px 0;transition:all .1s}
+.random-wrap{flex:1;display:flex;overflow:hidden}
+.random-left{flex:1;display:flex;align-items:center;justify-content:center;padding:32px;border-right:1px solid var(--border)}
+.random-right{width:260px;min-width:260px;display:flex;flex-direction:column;overflow:hidden;background:var(--surface)}
+.random-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:36px 40px;text-align:center;max-width:440px;width:100%}
+.random-source-label{font-size:11px;font-weight:600;color:var(--subtle);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.random-source-tabs{display:flex;gap:4px;background:var(--bg);border-radius:var(--r);padding:3px;margin-bottom:20px}
+.rs-tab{flex:1;padding:6px 8px;border:none;border-radius:5px;font-family:Inter,sans-serif;font-size:12.5px;font-weight:500;color:var(--muted);background:transparent;cursor:pointer;transition:all .13s;white-space:nowrap}
+.rs-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--sh-sm)}
+.random-group-sel{width:100%;border:1px solid var(--border2);border-radius:var(--r);padding:7px 10px;font-family:Inter,sans-serif;font-size:13px;color:var(--text);background:var(--surface);outline:none;cursor:pointer;margin-bottom:16px;display:none}
+.random-group-sel.visible{display:block}
+.random-title{font-size:30px;font-weight:700;color:var(--text);min-height:44px;line-height:1.2;margin:10px 0 4px;transition:all .1s}
+.random-subtitle{font-size:12px;color:var(--subtle);margin-bottom:20px;min-height:18px}
 .random-title.spinning{animation:rSpin .07s infinite alternate}
 @keyframes rSpin{from{opacity:.2;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
-.random-hist-items{display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto;margin-top:8px}
-.r-hist-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:var(--r);background:var(--bg);font-size:12.5px}
-.r-hist-time{font-size:11px;color:var(--subtle);min-width:38px}
+/* queue section */
+.rand-right-head{padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.rand-right-label{font-size:11px;font-weight:600;color:var(--subtle);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between}
+.rand-queue{flex:1;overflow-y:auto;padding:6px;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.rand-queue-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r);font-size:12.5px;transition:background .1s}
+.rand-queue-item.picked{background:var(--green-bg);color:var(--green)}
+.rand-queue-item.pending{}
+.rand-queue-item:hover{background:var(--bg)}
+.rq-num{font-size:10px;font-weight:600;color:var(--subtle);min-width:16px;text-align:right}
+.rq-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rq-check{flex-shrink:0;color:var(--green)}
+.rq-check svg{width:14px;height:14px}
 
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:999;opacity:0;pointer-events:none;transition:opacity .18s}
@@ -361,27 +379,38 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <!-- RANDOM -->
     <div class="panel" id="panel-random">
       <div class="random-wrap">
-        <div class="random-card">
-          <div style="font-size:12px;font-weight:600;color:var(--subtle);text-transform:uppercase;letter-spacing:.5px">Рандомний вибір</div>
-          <div class="random-title" id="random-result">—</div>
-          <p style="font-size:13px;color:var(--subtle);margin-bottom:20px">Натисни кнопку, щоб обрати студента</p>
-          <div style="display:flex;gap:8px;justify-content:center">
-            <button class="btn btn-solid" style="padding:0 24px;height:40px;font-size:14px" onclick="pickRandom()">
-              <svg viewBox="0 0 20 20" fill="none" style="width:16px;height:16px"><path d="M13 3h4v4M17 3l-5 5M7 17H3v-4M3 17l5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="10" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
-              Вибрати
-            </button>
-            <button class="btn btn-ghost btn-sm" onclick="clearRandHistory()">Скинути</button>
-          </div>
-          <div style="display:flex;justify-content:center;margin-top:12px">
-            <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer">
-              <input type="checkbox" id="rand-no-repeat" style="accent-color:var(--accent)"> Не повторювати підряд
-            </label>
-          </div>
-          <div id="rand-hist-wrap" style="margin-top:20px;display:none">
-            <div style="font-size:11px;font-weight:600;color:var(--subtle);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Нещодавно</div>
-            <div class="random-hist-items" id="rand-hist-list"></div>
+        <!-- LEFT: picker -->
+        <div class="random-left">
+          <div class="random-card">
+            <div class="random-source-label">Режим вибору</div>
+            <div class="random-source-tabs">
+              <button class="rs-tab active" id="rs-student" onclick="setRandMode('student')">Студент</button>
+              <button class="rs-tab" id="rs-group" onclick="setRandMode('group')">Команда</button>
+            </div>
+            <div class="random-title" id="random-result">—</div>
+            <div class="random-subtitle" id="random-subtitle">Натисни кнопку, щоб обрати</div>
+            <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">
+              <button class="btn btn-solid" style="padding:0 28px;height:40px;font-size:14px" onclick="pickRandom()">
+                <svg viewBox="0 0 20 20" fill="none" style="width:16px;height:16px"><path d="M13 3h4v4M17 3l-5 5M7 17H3v-4M3 17l5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="10" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
+                Вибрати
+              </button>
+            </div>
+            <div style="font-size:12px;color:var(--subtle);text-align:center">
+              <kbd style="background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;font-size:11px">Space</kbd> — швидкий вибір
+            </div>
           </div>
         </div>
+        <!-- RIGHT: queue -->
+        <aside class="random-right">
+          <div class="rand-right-head">
+            <div class="rand-right-label">
+              <span id="rand-queue-label">Черга студентів</span>
+              <button class="btn btn-ghost btn-sm" onclick="resetRandQueue()" data-tip="Скинути — всі знову доступні">Скинути</button>
+            </div>
+            <div style="font-size:11.5px;color:var(--subtle);margin-top:4px" id="rand-queue-status">Ще нікого не вибрано</div>
+          </div>
+          <div class="rand-queue" id="rand-queue-list"></div>
+        </aside>
       </div>
     </div>
   </div>
@@ -1385,33 +1414,153 @@ function applyTemplate(name){
    RANDOM
 ════════════════════════════════════════ */
 let rTimer=null;
+/* ── RANDOM ── */
+let randMode='student'; // 'student' | 'group'
+// queues stored in memory — separate for students and groups
+let studentQueue=null;  // Set of student ids remaining
+let groupQueue=null;    // Set of group ids remaining
+
+function setRandMode(mode){
+  randMode=mode;
+  document.getElementById('rs-student').classList.toggle('active',mode==='student');
+  document.getElementById('rs-group').classList.toggle('active',mode==='group');
+  document.getElementById('random-result').textContent='—';
+  document.getElementById('random-subtitle').textContent='Натисни кнопку, щоб обрати';
+  document.getElementById('rand-queue-label').textContent=
+    mode==='student' ? 'Черга студентів' : 'Черга команд';
+  renderRandQueue();
+}
+
+function ensureStudentQueue(){
+  const valid=new Set(S.students.map(s=>s.id));
+  if(!studentQueue) studentQueue=new Set(S.students.map(s=>s.id));
+  // remove invalid ids
+  studentQueue.forEach(id=>{ if(!valid.has(id)) studentQueue.delete(id); });
+  if(studentQueue.size===0) studentQueue=new Set(S.students.map(s=>s.id));
+}
+
+function ensureGroupQueue(){
+  const valid=new Set(S.groups.map(g=>g.id));
+  if(!groupQueue) groupQueue=new Set(S.groups.map(g=>g.id));
+  groupQueue.forEach(id=>{ if(!valid.has(id)) groupQueue.delete(id); });
+  if(groupQueue.size===0) groupQueue=new Set(S.groups.map(g=>g.id));
+}
+
 function pickRandom(){
-  if(!S.students.length){ showToast('Список порожній'); return; }
-  const noR=document.getElementById('rand-no-repeat').checked;
-  let pool=[...S.students];
-  if(noR&&S.randHistory.length>0&&pool.length>1) pool=pool.filter(s=>s.name!==S.randHistory[0]?.name);
+  if(randMode==='student') pickRandomStudent();
+  else pickRandomGroup();
+}
+
+function pickRandomStudent(){
+  if(!S.students.length){ showToast('Список студентів порожній'); return; }
+  ensureStudentQueue();
+  const remaining=[...studentQueue].map(id=>studentById(id)).filter(Boolean);
   const el=document.getElementById('random-result');
+  const sub=document.getElementById('random-subtitle');
   el.classList.add('spinning'); clearInterval(rTimer); let t=0;
   rTimer=setInterval(()=>{
-    el.textContent=pool[Math.floor(Math.random()*pool.length)].name;
-    t+=80; if(t>1100){
+    el.textContent=remaining[Math.floor(Math.random()*remaining.length)].name;
+    t+=80;
+    if(t>1100){
       clearInterval(rTimer); el.classList.remove('spinning');
-      const w=pool[Math.floor(Math.random()*pool.length)];
+      const w=remaining[Math.floor(Math.random()*remaining.length)];
       el.textContent=w.name;
-      const now=new Date();
-      S.randHistory.unshift({name:w.name,time:`${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`});
-      if(S.randHistory.length>20) S.randHistory.pop();
-      saveState(); renderRandHistory();
+      studentQueue.delete(w.id);
+      const left=studentQueue.size, total=S.students.length;
+      if(left===0){
+        sub.textContent='Всі студенти відповіли! Черга скинута';
+        setTimeout(()=>{ studentQueue=new Set(S.students.map(s=>s.id)); renderRandQueue(); },1500);
+      } else {
+        sub.textContent=`Залишилось: ${left} з ${total}`;
+      }
+      saveState(); renderRandQueue();
     }
   },80);
 }
-function clearRandHistory(){ S.randHistory=[]; saveState(); renderRandHistory(); }
-function renderRandHistory(){
-  const w=document.getElementById('rand-hist-wrap'), l=document.getElementById('rand-hist-list');
-  if(!S.randHistory.length){ w.style.display='none'; return; }
-  w.style.display='block';
-  l.innerHTML=S.randHistory.map(h=>`<div class="r-hist-item"><span class="r-hist-time">${h.time}</span>${esc(h.name)}</div>`).join('');
+
+function pickRandomGroup(){
+  if(!S.groups.length){ showToast('Команд немає. Спочатку створи команди.'); return; }
+  ensureGroupQueue();
+  const remaining=[...groupQueue].map(id=>S.groups.find(g=>g.id===id)).filter(Boolean);
+  const el=document.getElementById('random-result');
+  const sub=document.getElementById('random-subtitle');
+  el.classList.add('spinning'); clearInterval(rTimer); let t=0;
+  rTimer=setInterval(()=>{
+    el.textContent=remaining[Math.floor(Math.random()*remaining.length)].name;
+    t+=80;
+    if(t>1100){
+      clearInterval(rTimer); el.classList.remove('spinning');
+      const w=remaining[Math.floor(Math.random()*remaining.length)];
+      const gi=S.groups.indexOf(w);
+      // show group name with color
+      el.textContent=w.name;
+      el.style.color=GCOL[gi%GCOL.length];
+      groupQueue.delete(w.id);
+      const left=groupQueue.size, total=S.groups.length;
+      if(left===0){
+        sub.textContent='Всі команди вийшли! Черга скинута';
+        setTimeout(()=>{ groupQueue=new Set(S.groups.map(g=>g.id)); el.style.color=''; renderRandQueue(); },1500);
+      } else {
+        sub.textContent=`Залишилось команд: ${left} з ${total}`;
+      }
+      saveState(); renderRandQueue();
+    }
+  },80);
 }
+
+function resetRandQueue(){
+  if(randMode==='student'){
+    studentQueue=new Set(S.students.map(s=>s.id));
+  } else {
+    groupQueue=new Set(S.groups.map(g=>g.id));
+    document.getElementById('random-result').style.color='';
+  }
+  document.getElementById('random-result').textContent='—';
+  document.getElementById('random-subtitle').textContent='Натисни кнопку, щоб обрати';
+  renderRandQueue();
+  showToast('Черга скинута');
+}
+
+function renderRandQueue(){
+  const list=document.getElementById('rand-queue-list');
+  const statusEl=document.getElementById('rand-queue-status');
+  if(randMode==='student'){
+    if(!S.students.length){ list.innerHTML='<div style="padding:16px;font-size:12px;color:var(--subtle);text-align:center">Немає студентів</div>'; statusEl.textContent=''; return; }
+    ensureStudentQueue();
+    const picked=S.students.filter(s=>!studentQueue.has(s.id));
+    const notPicked=S.students.filter(s=>studentQueue.has(s.id));
+    statusEl.textContent=picked.length===0?'Ще нікого не вибрано':picked.length===S.students.length?'Всі відповіли!': `Відповіли ${picked.length} з ${S.students.length}`;
+    list.innerHTML=[
+      ...picked.map(s=>{
+        const [bg,fg]=AVCOL[S.students.indexOf(s)%8];
+        return `<div class="rand-queue-item picked"><div style="width:24px;height:24px;border-radius:50%;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0;opacity:.5">${initials(s.name)}</div><span class="rq-name" style="text-decoration:line-through;opacity:.45">${esc(s.name)}</span><span class="rq-check"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>`;
+      }),
+      ...notPicked.map(s=>{
+        const [bg,fg]=AVCOL[S.students.indexOf(s)%8];
+        return `<div class="rand-queue-item pending"><div style="width:24px;height:24px;border-radius:50%;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0">${initials(s.name)}</div><span class="rq-name">${esc(s.name)}</span></div>`;
+      })
+    ].join('');
+  } else {
+    // group mode
+    if(!S.groups.length){ list.innerHTML='<div style="padding:16px;font-size:12px;color:var(--subtle);text-align:center">Немає команд</div>'; statusEl.textContent=''; return; }
+    ensureGroupQueue();
+    const picked=S.groups.filter(g=>!groupQueue.has(g.id));
+    const notPicked=S.groups.filter(g=>groupQueue.has(g.id));
+    statusEl.textContent=picked.length===0?'Ще жодної команди':picked.length===S.groups.length?'Всі команди вийшли!': `Вийшло ${picked.length} з ${S.groups.length}`;
+    list.innerHTML=[
+      ...picked.map(g=>{
+        const gi=S.groups.indexOf(g);
+        return `<div class="rand-queue-item picked"><div style="width:10px;height:10px;border-radius:50%;background:${GCOL[gi%8]};flex-shrink:0;opacity:.4"></div><span class="rq-name" style="text-decoration:line-through;opacity:.45">${esc(g.name)}</span><span class="rq-check"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>`;
+      }),
+      ...notPicked.map(g=>{
+        const gi=S.groups.indexOf(g);
+        return `<div class="rand-queue-item pending"><div style="width:10px;height:10px;border-radius:50%;background:${GCOL[gi%8]};flex-shrink:0"></div><span class="rq-name" style="font-weight:500">${esc(g.name)}</span><span style="font-size:11px;color:var(--subtle);flex-shrink:0">${g.memberIds.length} ос.</span></div>`;
+      })
+    ].join('');
+  }
+}
+
+function renderRandHistory(){ /* compat stub */ }
 
 /* ════════════════════════════════════════
    IMPORT
@@ -1454,7 +1603,7 @@ function switchTab(name){
   document.getElementById(`tab-${name}-btn`).classList.add('active');
   document.getElementById(`panel-${name}`).classList.add('active');
   if(name==='seats'){ setTimeout(()=>{resizeCanvas();renderUnassigned();},30); }
-  if(name==='random') renderRandHistory();
+  if(name==='random'){ renderRandQueue(); }
 }
 
 /* ════════════════════════════════════════
@@ -1465,7 +1614,6 @@ function renderAll(){
   renderGroups();
   drawCanvas();
   renderUnassigned();
-  renderRandHistory();
 }
 
 /* ════════════════════════════════════════
