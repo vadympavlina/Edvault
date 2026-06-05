@@ -225,6 +225,33 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;color:var(--subtle);gap:12px;text-align:center}
 .empty-state svg{width:44px;height:44px;opacity:.35}
 .empty-state p{font-size:13.5px;line-height:1.5}
+/* TIMER */
+.timer-wrap{flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:24px}
+.timer-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:32px 40px;text-align:center;width:380px}
+.timer-presets{display:flex;gap:6px;justify-content:center;margin-bottom:18px;flex-wrap:wrap}
+.preset-btn{padding:5px 14px;border:1px solid var(--border2);border-radius:999px;font-family:Inter,sans-serif;font-size:12.5px;font-weight:500;color:var(--muted);background:var(--surface);cursor:pointer;transition:all .13s}
+.preset-btn:hover{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-lt)}
+.preset-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.timer-custom-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px}
+.timer-custom-field{display:flex;align-items:center;gap:4px}
+.timer-digit-inp{width:56px;height:36px;border:1px solid var(--border2);border-radius:var(--r);text-align:center;font-family:Inter,sans-serif;font-size:16px;font-weight:600;color:var(--text);background:var(--surface);outline:none;-moz-appearance:textfield}
+.timer-digit-inp::-webkit-inner-spin-button{-webkit-appearance:none}
+.timer-digit-inp:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,107,244,.15)}
+.timer-digit-label{font-size:12px;color:var(--subtle)}
+.timer-colon{font-size:20px;font-weight:700;color:var(--muted);margin:0 2px}
+.timer-ring-wrap{position:relative;width:220px;height:220px;margin:0 auto 24px}
+.timer-ring-svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.timer-ring-bg{fill:none;stroke:var(--border);stroke-width:10}
+.timer-ring-fg{fill:none;stroke:var(--accent);stroke-width:10;stroke-linecap:round;stroke-dasharray:603;stroke-dashoffset:0;transition:stroke-dashoffset .8s linear,stroke .3s}
+.timer-ring-fg.warning{stroke:#f59e0b}
+.timer-ring-fg.danger{stroke:#ef4444}
+.timer-display{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-2px}
+.timer-display.warning{color:#f59e0b}
+.timer-display.danger{color:#ef4444;animation:timerPulse .5s infinite alternate}
+@keyframes timerPulse{from{opacity:.6}to{opacity:1}}
+.timer-state-label{position:absolute;bottom:28px;left:0;right:0;font-size:12px;font-weight:500;color:var(--subtle);text-transform:uppercase;letter-spacing:.5px}
+.timer-controls{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px}
+.timer-sound-row{display:flex;align-items:center;justify-content:center;gap:10px;padding-top:12px;border-top:1px solid var(--border)}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 </style>
@@ -292,6 +319,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
       <button class="tab" id="tab-random-btn" onclick="switchTab('random')">
         <svg viewBox="0 0 20 20" fill="none"><path d="M13 3h4v4M17 3l-5 5M7 17H3v-4M3 17l5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="10" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
         Рандом
+      </button>
+      <button class="tab" id="tab-timer-btn" onclick="switchTab('timer')">
+        <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="11" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 7v4l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 2h4M10 2v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Таймер
+        <span id="timer-tab-badge" style="display:none;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;min-width:18px;text-align:center" id="timer-badge"></span>
       </button>
     </nav>
 
@@ -422,6 +454,65 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
           </div>
           <div class="rand-queue" id="rand-queue-list"></div>
         </aside>
+      </div>
+    </div>
+    <!-- TIMER PANEL -->
+    <div class="panel" id="panel-timer">
+      <div class="timer-wrap">
+        <div class="timer-card">
+          <!-- presets -->
+          <div class="timer-presets">
+            <button class="preset-btn" onclick="setPreset(60)">1 хв</button>
+            <button class="preset-btn" onclick="setPreset(120)">2 хв</button>
+            <button class="preset-btn" onclick="setPreset(300)">5 хв</button>
+            <button class="preset-btn" onclick="setPreset(600)">10 хв</button>
+            <button class="preset-btn" onclick="setPreset(900)">15 хв</button>
+          </div>
+          <!-- custom input -->
+          <div class="timer-custom-row">
+            <div class="timer-custom-field">
+              <input class="timer-digit-inp" id="t-min" type="number" min="0" max="99" value="2" oninput="onTimerInput()">
+              <span class="timer-digit-label">хв</span>
+            </div>
+            <span class="timer-colon">:</span>
+            <div class="timer-custom-field">
+              <input class="timer-digit-inp" id="t-sec" type="number" min="0" max="59" value="0" oninput="onTimerInput()">
+              <span class="timer-digit-label">сек</span>
+            </div>
+          </div>
+          <!-- ring display -->
+          <div class="timer-ring-wrap">
+            <svg class="timer-ring-svg" viewBox="0 0 220 220">
+              <circle class="timer-ring-bg" cx="110" cy="110" r="96"/>
+              <circle class="timer-ring-fg" id="timer-ring-fg" cx="110" cy="110" r="96"/>
+            </svg>
+            <div class="timer-display" id="timer-display">02:00</div>
+            <div class="timer-state-label" id="timer-state-label">Готово</div>
+          </div>
+          <!-- controls -->
+          <div class="timer-controls">
+            <button class="btn btn-ghost btn-icon" id="timer-reset-btn" onclick="timerReset()" data-tip="Скинути">
+              <svg viewBox="0 0 20 20" fill="none"><path d="M4 8H13a4 4 0 010 8H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 5L4 8l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="btn btn-solid" id="timer-main-btn" onclick="timerToggle()" style="padding:0 36px;height:44px;font-size:15px;min-width:140px">
+              <svg viewBox="0 0 20 20" fill="none" style="width:16px;height:16px" id="timer-main-icon"><path d="M6 4l12 6-12 6V4z" fill="currentColor"/></svg>
+              <span id="timer-main-label">Старт</span>
+            </button>
+            <button class="btn btn-ghost btn-icon" id="timer-sound-btn" onclick="toggleTimerSound()" data-tip="Фонова музика">
+              <svg viewBox="0 0 20 20" fill="none" id="timer-sound-icon"><path d="M9 4L5 8H2v4h3l4 4V4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13 7a4 4 0 010 6M15.5 4.5a8 8 0 010 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <!-- sound selector -->
+          <div class="timer-sound-row" id="timer-sound-row">
+            <span style="font-size:12px;color:var(--muted)">Фонова мелодія:</span>
+            <select id="timer-music-sel" style="border:1px solid var(--border2);border-radius:var(--r);padding:5px 8px;font-family:Inter,sans-serif;font-size:12.5px;color:var(--text);background:var(--surface);outline:none">
+              <option value="lofi">Lo-fi beats</option>
+              <option value="focus">Focus drone</option>
+              <option value="tick">Тихий тік</option>
+              <option value="none">Без музики</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1732,6 +1823,236 @@ function switchTab(name){
   document.getElementById(`panel-${name}`).classList.add('active');
   if(name==='seats'){ setTimeout(()=>{resizeCanvas();renderUnassigned();},30); }
   if(name==='random'){ renderRandQueue(); }
+  if(name==='timer'){ updateTimerUI(); }
+}
+
+/* ════════════════════════════════════════
+   TIMER
+════════════════════════════════════════ */
+let timerTotal=120, timerLeft=120, timerRunning=false, timerInterval=null;
+let timerSoundOn=false, timerMusicNode=null, timerAudioCtx=null;
+const RING_C=2*Math.PI*96; // circumference
+
+function getAudioCtx(){
+  if(!timerAudioCtx) timerAudioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  return timerAudioCtx;
+}
+
+/* ── Synth sounds ── */
+function playBeep(freq=880, dur=0.15, vol=0.4, type='sine', delay=0){
+  try{
+    const ac=getAudioCtx();
+    const osc=ac.createOscillator(), g=ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    osc.frequency.value=freq; osc.type=type;
+    g.gain.setValueAtTime(0,ac.currentTime+delay);
+    g.gain.linearRampToValueAtTime(vol,ac.currentTime+delay+0.01);
+    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+delay+dur);
+    osc.start(ac.currentTime+delay); osc.stop(ac.currentTime+delay+dur+0.05);
+  }catch(e){}
+}
+
+function playFinishSound(){
+  // triumphant arpeggio
+  [[523,0],[659,0.18],[784,0.36],[1047,0.54],[784,0.72],[1047,0.9],[1319,1.1]].forEach(([f,d])=>playBeep(f,0.3,0.5,'triangle',d));
+}
+
+function playWarningSound(){
+  // 3 urgent ticks
+  [0,0.22,0.44].forEach(d=>playBeep(1100,0.08,0.5,'square',d));
+}
+
+function playTickSound(){
+  playBeep(800,0.05,0.15,'sine');
+}
+
+/* ── Background music (Web Audio synth) ── */
+function startBgMusic(){
+  stopBgMusic();
+  const sel=document.getElementById('timer-music-sel')?.value||'lofi';
+  if(sel==='none') return;
+  try{
+    const ac=getAudioCtx();
+    const master=ac.createGain(); master.gain.value=0.08; master.connect(ac.destination);
+    timerMusicNode=master;
+    if(sel==='tick'){
+      // subtle metronome
+      let beat=0;
+      function tick(){
+        if(!timerMusicNode) return;
+        const osc=ac.createOscillator(), g=ac.createGain();
+        osc.connect(g); g.connect(master);
+        osc.frequency.value=beat%4===0?900:600; osc.type='sine';
+        g.gain.setValueAtTime(0.6,ac.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.06);
+        osc.start(); osc.stop(ac.currentTime+0.07);
+        beat++; timerMusicNode._tick=setTimeout(tick,500);
+      }
+      tick(); return;
+    }
+    if(sel==='focus'){
+      // low drone + slow filter sweep
+      const osc=ac.createOscillator(), lfo=ac.createOscillator();
+      const lfoG=ac.createGain(), filt=ac.createBiquadFilter();
+      osc.type='sawtooth'; osc.frequency.value=55;
+      lfo.type='sine'; lfo.frequency.value=0.07; lfoG.gain.value=400;
+      filt.type='lowpass'; filt.frequency.value=200; filt.Q.value=4;
+      lfo.connect(lfoG); lfoG.connect(filt.frequency);
+      osc.connect(filt); filt.connect(master);
+      osc.start(); lfo.start();
+      master._osc=osc; master._lfo=lfo; return;
+    }
+    // lofi — simple chord progression loop
+    const notes=[[261,329,392],[220,277,349],[196,261,330],[233,293,370]];
+    let ci=0;
+    function chord(){
+      if(!timerMusicNode) return;
+      notes[ci%notes.length].forEach((f,i)=>{
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.type='triangle'; o.frequency.value=f;
+        g.gain.setValueAtTime(0,ac.currentTime);
+        g.gain.linearRampToValueAtTime(0.15,ac.currentTime+0.3);
+        g.gain.setValueAtTime(0.15,ac.currentTime+1.6);
+        g.gain.linearRampToValueAtTime(0,ac.currentTime+2.0);
+        o.connect(g); g.connect(master);
+        o.start(); o.stop(ac.currentTime+2.1);
+      });
+      ci++; timerMusicNode._chord=setTimeout(chord,2000);
+    }
+    chord();
+  }catch(e){}
+}
+
+function stopBgMusic(){
+  if(!timerMusicNode) return;
+  try{
+    if(timerMusicNode._osc) timerMusicNode._osc.stop();
+    if(timerMusicNode._lfo) timerMusicNode._lfo.stop();
+    clearTimeout(timerMusicNode._tick);
+    clearTimeout(timerMusicNode._chord);
+    timerMusicNode.disconnect();
+  }catch(e){}
+  timerMusicNode=null;
+}
+
+/* ── Timer logic ── */
+function setPreset(secs){
+  timerReset();
+  timerTotal=secs; timerLeft=secs;
+  document.getElementById('t-min').value=Math.floor(secs/60);
+  document.getElementById('t-sec').value=secs%60;
+  document.querySelectorAll('.preset-btn').forEach(b=>{
+    b.classList.toggle('active',parseInt(b.getAttribute('onclick').match(/\d+/)?.[0]||0)===secs);
+  });
+  updateTimerUI();
+}
+
+function onTimerInput(){
+  if(timerRunning) return;
+  const m=parseInt(document.getElementById('t-min').value)||0;
+  const s=parseInt(document.getElementById('t-sec').value)||0;
+  timerTotal=m*60+s; timerLeft=timerTotal;
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+  updateTimerUI();
+}
+
+function timerToggle(){
+  if(timerLeft<=0){ timerReset(); return; }
+  timerRunning=!timerRunning;
+  if(timerRunning){
+    if(timerSoundOn) startBgMusic();
+    timerInterval=setInterval(timerTick,1000);
+  } else {
+    clearInterval(timerInterval);
+    stopBgMusic();
+  }
+  updateTimerUI();
+}
+
+function timerTick(){
+  if(timerLeft<=0){ timerFinish(); return; }
+  timerLeft--;
+  if(timerLeft===5){ stopBgMusic(); playWarningSound(); }
+  else if(timerLeft>0 && timerLeft<=5){ playTickSound(); }
+  updateTimerUI();
+  updateTabBadge();
+  if(timerLeft<=0) timerFinish();
+}
+
+function timerFinish(){
+  clearInterval(timerInterval); timerRunning=false;
+  stopBgMusic(); playFinishSound();
+  updateTimerUI(); updateTabBadge();
+}
+
+function timerReset(){
+  clearInterval(timerInterval); timerRunning=false;
+  stopBgMusic();
+  const m=parseInt(document.getElementById('t-min')?.value)||2;
+  const s=parseInt(document.getElementById('t-sec')?.value)||0;
+  timerTotal=m*60+s; timerLeft=timerTotal;
+  updateTimerUI(); updateTabBadge();
+}
+
+function updateTimerUI(){
+  const m=Math.floor(timerLeft/60), s=timerLeft%60;
+  const display=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const dEl=document.getElementById('timer-display');
+  const rEl=document.getElementById('timer-ring-fg');
+  const lEl=document.getElementById('timer-state-label');
+  const mbtn=document.getElementById('timer-main-btn');
+  const mlbl=document.getElementById('timer-main-label');
+  const mico=document.getElementById('timer-main-icon');
+  if(!dEl) return;
+
+  dEl.textContent=display;
+  const pct=timerTotal>0?timerLeft/timerTotal:1;
+  const offset=RING_C*(1-pct);
+  rEl.style.strokeDashoffset=offset;
+
+  const warn=timerLeft<=10&&timerLeft>5;
+  const danger=timerLeft<=5&&timerLeft>0;
+  const done=timerLeft===0;
+
+  dEl.className='timer-display'+(danger?' danger':warn?' warning':'');
+  rEl.className='timer-ring-fg'+(danger?' danger':warn?' warning':'');
+
+  if(done){
+    lEl.textContent='Час вийшов!'; lEl.style.color='#ef4444';
+    mlbl.textContent='Скинути';
+    mico.innerHTML='<path d="M4 8H13a4 4 0 010 8H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 5L4 8l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  } else if(timerRunning){
+    lEl.textContent='Йде відлік…'; lEl.style.color='';
+    mlbl.textContent='Пауза';
+    mico.innerHTML='<rect x="5" y="4" width="3" height="12" rx="1" fill="currentColor"/><rect x="12" y="4" width="3" height="12" rx="1" fill="currentColor"/>';
+  } else {
+    lEl.textContent=timerLeft===timerTotal?'Готово':'Пауза';
+    lEl.style.color='';
+    mlbl.textContent='Старт';
+    mico.innerHTML='<path d="M6 4l12 6-12 6V4z" fill="currentColor"/>';
+  }
+}
+
+function updateTabBadge(){
+  const badge=document.getElementById('timer-tab-badge');
+  if(!badge) return;
+  const active=document.getElementById('panel-timer').classList.contains('active');
+  if(timerRunning && !active){
+    const m=Math.floor(timerLeft/60), s=timerLeft%60;
+    badge.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    badge.style.display='inline-block';
+  } else {
+    badge.style.display='none';
+  }
+}
+
+function toggleTimerSound(){
+  timerSoundOn=!timerSoundOn;
+  const btn=document.getElementById('timer-sound-btn');
+  const row=document.getElementById('timer-sound-row');
+  btn.style.color=timerSoundOn?'var(--accent)':'';
+  row.style.opacity=timerSoundOn?'1':'0.4';
+  if(timerRunning){ timerSoundOn?startBgMusic():stopBgMusic(); }
 }
 
 /* ════════════════════════════════════════
@@ -1749,6 +2070,9 @@ function renderAll(){
 ════════════════════════════════════════ */
 loadState();
 renderAll();
+// init timer state
+setTimeout(()=>{ try{ updateTimerUI(); }catch(e){} }, 200);
+
 // init canvas after layout
 setTimeout(()=>{
   initCanvas();
@@ -1766,6 +2090,20 @@ document.addEventListener('keydown',e=>{
   if(e.code==='Space'&&document.getElementById('panel-random').classList.contains('active')){ e.preventDefault(); pickRandom(); }
   if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey&&!e.target.matches('input,textarea')){ e.preventDefault(); doUndo(); }
   if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.key==='z'&&e.shiftKey))&&!e.target.matches('input,textarea')){ e.preventDefault(); doRedo(); }
+  if((e.ctrlKey||e.metaKey)&&e.key==='d'&&selectedIds.size>0&&!e.target.matches('input,textarea')){
+    e.preventDefault();
+    pushUndo();
+    const copies=[];
+    [...selectedIds].forEach(id=>{
+      const d=S.desks.find(d=>d.id===id); if(!d) return;
+      copies.push({...d, id:uid(), x:snap(d.x+SNAP_GRID*2), y:snap(d.y+SNAP_GRID*2), seats:d.seats.map(()=>null)});
+    });
+    S.desks.push(...copies);
+    selectedIds.clear();
+    copies.forEach(c=>selectedIds.add(c.id));
+    saveState(); drawCanvas(); renderUnassigned();
+    showToast(`Скопійовано ${copies.length} парт${copies.length===1?'у':copies.length<5?'и':''}`);
+  }
   if((e.key==='Delete'||e.key==='Backspace')&&selectedIds.size>0&&!e.target.matches('input,textarea')){
     ;(async()=>{
     const n=selectedIds.size;
