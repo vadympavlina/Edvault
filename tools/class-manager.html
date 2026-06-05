@@ -345,6 +345,17 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
               <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 17h4M10 14v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
               Дошка
             </button>
+            <button class="btn btn-ghost btn-sm" onclick="addTeacherDesk()" data-tip="Стіл викладача">
+              <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M6 15v2M14 15v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="10.5" r="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
+              + Викладач
+            </button>
+            <div class="canvas-tool-sep"></div>
+            <button class="btn btn-ghost btn-sm" id="undo-btn" onclick="doUndo()" data-tip="Скасувати (Ctrl+Z)" style="opacity:.4" disabled>
+              <svg viewBox="0 0 20 20" fill="none"><path d="M4 8H13a4 4 0 010 8H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 5L4 8l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="btn btn-ghost btn-sm" id="redo-btn" onclick="doRedo()" data-tip="Повторити (Ctrl+Y)" style="opacity:.4" disabled>
+              <svg viewBox="0 0 20 20" fill="none"><path d="M16 8H7a4 4 0 000 8h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 5l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
             <div class="canvas-tool-sep"></div>
             <button class="btn btn-ghost btn-sm" onclick="clearCanvas()" style="color:var(--red)">Очистити клас</button>
             <div class="canvas-tool-sep"></div>
@@ -487,8 +498,39 @@ let S = {
   groups: [],     // {id,name,memberIds:[]}
   desks: [],      // {id, x, y, angle, spp, seats:[sid|null,...]}  angle in degrees
   boards: [],     // {id, x, y, angle, label}
+  teachers: [],   // {id, x, y, angle, label}
   randHistory: []
 };
+
+// Undo/Redo — canvas-only (desks, boards, teachers positions/layout)
+const UNDO_MAX=40;
+let undoStack=[], redoStack=[];
+function pushUndo(){
+  undoStack.push(JSON.stringify({desks:S.desks,boards:S.boards,teachers:S.teachers}));
+  if(undoStack.length>UNDO_MAX) undoStack.shift();
+  redoStack=[];
+  updateUndoButtons();
+}
+function doUndo(){
+  if(!undoStack.length) return;
+  redoStack.push(JSON.stringify({desks:S.desks,boards:S.boards,teachers:S.teachers}));
+  const prev=JSON.parse(undoStack.pop());
+  S.desks=prev.desks; S.boards=prev.boards; S.teachers=prev.teachers||[];
+  saveState(); drawCanvas(); renderUnassigned(); updateUndoButtons();
+}
+function doRedo(){
+  if(!redoStack.length) return;
+  undoStack.push(JSON.stringify({desks:S.desks,boards:S.boards,teachers:S.teachers}));
+  const next=JSON.parse(redoStack.pop());
+  S.desks=next.desks; S.boards=next.boards; S.teachers=next.teachers||[];
+  saveState(); drawCanvas(); renderUnassigned(); updateUndoButtons();
+}
+function updateUndoButtons(){
+  const ub=document.getElementById('undo-btn'), rb=document.getElementById('redo-btn');
+  if(!ub||!rb) return;
+  ub.style.opacity=undoStack.length?'1':'.35'; ub.disabled=!undoStack.length;
+  rb.style.opacity=redoStack.length?'1':'.35'; rb.disabled=!redoStack.length;
+}
 
 /* ════════════════════════════════════════
    UTILS
@@ -528,6 +570,7 @@ function showToast(msg,dur=1800){
 ════════════════════════════════════════ */
 function loadState(){
   try{ const d=localStorage.getItem('ev-cm3'); if(d) S={...S,...JSON.parse(d)}; }catch(e){}
+  if(!S.teachers) S.teachers=[];
 }
 function saveState(){
   localStorage.setItem('ev-cm3',JSON.stringify(S));
@@ -644,6 +687,28 @@ function removeStudent(id){
   S.desks.forEach(d=>d.seats=d.seats.map(s=>s===id?null:s));
   saveState(); renderAll();
 }
+
+function startEditStudent(id, row){
+  if(row.querySelector('input')) return; // already editing
+  const s=studentById(id); if(!s) return;
+  const span=row.querySelector('.s-name');
+  const orig=s.name;
+  const inp=document.createElement('input');
+  inp.value=orig;
+  inp.style.cssText='flex:1;border:none;border-bottom:1.5px solid var(--accent);background:transparent;font-family:Inter,sans-serif;font-size:13px;color:var(--text);outline:none;min-width:0;padding:0';
+  span.replaceWith(inp);
+  inp.focus(); inp.select();
+  function commit(){
+    const val=inp.value.trim()||orig;
+    s.name=val;
+    saveState(); renderAll(); drawCanvas();
+  }
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }
+    if(e.key==='Escape'){ s.name=orig; inp.removeEventListener('blur',commit); renderAll(); }
+  });
+}
 function renderStudentList(){
   const el=document.getElementById('student-list');
   document.getElementById('student-count').textContent=S.students.length;
@@ -656,7 +721,7 @@ function renderStudentList(){
     const gi=g?S.groups.indexOf(g):-1;
     const badge=g?`<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:${GCOL[gi%8]}22;color:${GCOL[gi%8]};font-weight:600;flex-shrink:0">${esc(g.name)}</span>`:
       (assignedDesk(s.id)?`<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:#f0fdf4;color:#166534;flex-shrink:0">парта</span>`:'');
-    return `<div class="student-item"><div class="s-avatar ${AV[i%8]}">${initials(s.name)}</div><span class="s-name">${esc(s.name)}</span>${badge}<button class="s-del" onclick="removeStudent('${s.id}')"><svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>`;
+    return `<div class="student-item" ondblclick="startEditStudent('${s.id}',this)"><div class="s-avatar ${AV[i%8]}">${initials(s.name)}</div><span class="s-name" id="sn-${s.id}">${esc(s.name)}</span>${badge}<button class="s-del" onclick="removeStudent('${s.id}')" title="Видалити"><svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>`;
   }).join('');
 }
 function assignedDesk(sid){ return S.desks.some(d=>d.seats.includes(sid)); }
@@ -724,6 +789,7 @@ function renderGroups(){
    CANVAS SEATS — core
 ════════════════════════════════════════ */
 const DESK_W=130, DESK_H_BASE=44, SEAT_H=44, BOARD_W=180, BOARD_H=36;
+const TEACHER_W=160, TEACHER_H=52;
 let cZoom=1, cOffX=40, cOffY=40;
 let snapEnabled=true;
 const SNAP_GRID=24; // world units — matches dot grid spacing
@@ -798,6 +864,10 @@ function hitTest(sx,sy){
     const p=s2w(sx,sy);
     if(pointInRect(p.x,p.y,b.x,b.y,BOARD_W,BOARD_H,b.angle)) return {type:'board',id:b.id};
   }
+  for(let t of (S.teachers||[])){
+    const p=s2w(sx,sy);
+    if(pointInRect(p.x,p.y,t.x,t.y,TEACHER_W,TEACHER_H,t.angle)) return {type:'teacher',id:t.id};
+  }
   for(let d of S.desks){
     const p=s2w(sx,sy);
     const h=deskHeight(d);
@@ -846,6 +916,7 @@ function drawCanvas(){
   if(snapEnabled) drawSnapGrid(c,W,H);
 
   S.boards.forEach(b=>drawBoard(c,b));
+  (S.teachers||[]).forEach(t=>drawTeacher(c,t));
   S.desks.forEach(d=>drawDesk(c,d));
 
   if(cDragging && (cDragging.type==='desk'||cDragging.type==='board') && snapEnabled){
@@ -941,6 +1012,36 @@ function drawBoard(c,b){
   if(cZoom>0.7){
     c.strokeStyle='rgba(255,255,255,.2)'; c.lineWidth=1;
     c.strokeRect(4*cZoom,4*cZoom,W-8*cZoom,H-8*cZoom);
+  }
+  c.restore();
+}
+
+function drawTeacher(c,t){
+  c.save();
+  const s=w2s(t.x,t.y);
+  c.translate(s.x,s.y);
+  c.rotate((t.angle||0)*Math.PI/180);
+  const W=TEACHER_W*cZoom, H=TEACHER_H*cZoom;
+  c.shadowColor='rgba(0,0,0,.12)'; c.shadowBlur=8*cZoom; c.shadowOffsetY=2*cZoom;
+  // warm beige background
+  c.fillStyle='#fef3c7';
+  roundRect(c,0,0,W,H,8*cZoom); c.fill();
+  c.shadowColor='transparent';
+  c.strokeStyle='#d97706'; c.lineWidth=1.5;
+  roundRect(c,0,0,W,H,8*cZoom); c.stroke();
+  // icon row
+  if(cZoom>0.5){
+    // small person icon
+    const cx2=22*cZoom, cy2=H/2;
+    c.fillStyle='#92400e';
+    c.beginPath(); c.arc(cx2,cy2-6*cZoom,5*cZoom,0,Math.PI*2); c.fill();
+    c.beginPath(); c.arc(cx2,cy2+7*cZoom,7*cZoom,0,Math.PI); c.fill();
+    // label
+    c.fillStyle='#92400e';
+    c.font=`600 ${Math.round(11*cZoom)}px Inter,sans-serif`;
+    c.textAlign='left'; c.textBaseline='middle';
+    const label=t.label||'Викладач';
+    c.fillText(clipText(c,label,W-38*cZoom), 36*cZoom, H/2);
   }
   c.restore();
 }
@@ -1088,6 +1189,12 @@ function onCanvasDown(e){
     const b=S.boards.find(b=>b.id===hit.id);
     cDragging={type:'board',id:hit.id,ox:wp.x-b.x,oy:wp.y-b.y,moved:false};
     multiDrag=null;
+  } else if(hit && hit.type==='teacher'){
+    selectedIds.clear();
+    const wp=s2w(sx,sy);
+    const t=(S.teachers||[]).find(t=>t.id===hit.id);
+    cDragging={type:'teacher',id:hit.id,ox:wp.x-t.x,oy:wp.y-t.y,moved:false};
+    multiDrag=null;
   } else {
     if(!e.shiftKey) selectedIds.clear();
     // start drag-select or pan
@@ -1143,12 +1250,15 @@ function onCanvasMove(e){
   } else if(cDragging.type==='board'){
     const b=S.boards.find(b=>b.id===cDragging.id);
     if(b){ b.x=snap(wp.x-cDragging.ox); b.y=snap(wp.y-cDragging.oy); cDragging.moved=true; drawCanvas(); }
+  } else if(cDragging.type==='teacher'){
+    const t=(S.teachers||[]).find(t=>t.id===cDragging.id);
+    if(t){ t.x=snap(wp.x-cDragging.ox); t.y=snap(wp.y-cDragging.oy); cDragging.moved=true; drawCanvas(); }
   }
 }
 
 function onCanvasUp(e){
   if(multiDrag){
-    if(multiDrag.moved) saveState();
+    if(multiDrag.moved){ pushUndo(); saveState(); }
     multiDrag=null; drawCanvas(); return;
   }
 
@@ -1164,7 +1274,7 @@ function onCanvasUp(e){
       dragSelect=null;
     } else if(cDragging.type==='pan-or-select'){
       // was just a click on empty canvas — already cleared selection in down
-    } else if((cDragging.type==='desk'||cDragging.type==='board')&&cDragging.moved){
+    } else if((cDragging.type==='desk'||cDragging.type==='board'||cDragging.type==='teacher')&&cDragging.moved){
       saveState();
     }
     cDragging=null;
@@ -1172,7 +1282,7 @@ function onCanvasUp(e){
   }
 }
 
-let ctxType=null; // 'desk' | 'board'
+let ctxType=null; // 'desk' | 'board' | 'teacher'
 
 function onCanvasCtx(e){
   e.preventDefault();
@@ -1181,25 +1291,23 @@ function onCanvasCtx(e){
   if(!hit) return;
 
   ctxType=hit.type;
-  ctxDesk=hit.id; // used for both desk and board id
+  ctxDesk=hit.id;
 
   const sppRow=document.getElementById('ctx-spp-row');
-  const rotateItems=document.querySelectorAll('#ctx-rotate-cw, #ctx-rotate-cw ~ .ctx-item:not(.danger)');
-
   if(hit.type==='desk'){
     const d=S.desks.find(d=>d.id===hit.id);
-    // update SPP label
-    const next=d.spp===1?2:1;
     document.getElementById('ctx-spp-label').textContent=
       d.spp===1 ? '1 місце → 2 місця' : '2 місця → 1 місце';
     sppRow.style.display='flex';
     document.getElementById('ctx-delete-label').textContent='Видалити парту';
+  } else if(hit.type==='teacher'){
+    sppRow.style.display='none';
+    document.getElementById('ctx-delete-label').textContent='Видалити стіл викладача';
   } else {
     sppRow.style.display='none';
     document.getElementById('ctx-delete-label').textContent='Видалити дошку';
   }
 
-  // position menu (keep inside viewport)
   const menu=document.getElementById('desk-ctx');
   menu.classList.add('open');
   const mw=menu.offsetWidth||200, mh=menu.offsetHeight||160;
@@ -1238,9 +1346,13 @@ function closeContextMenu(){ document.getElementById('desk-ctx').classList.remov
 document.addEventListener('click',e=>{ if(!e.target.closest('#desk-ctx')) closeContextMenu(); });
 
 function ctxRotate(deg){
+  pushUndo();
   if(ctxType==='board'){
     const b=S.boards.find(b=>b.id===ctxDesk); if(!b) return;
     b.angle=(b.angle+deg+360)%360;
+  } else if(ctxType==='teacher'){
+    const t=(S.teachers||[]).find(t=>t.id===ctxDesk); if(!t) return;
+    t.angle=(t.angle+deg+360)%360;
   } else {
     const d=S.desks.find(d=>d.id===ctxDesk); if(!d) return;
     d.angle=(d.angle+deg+360)%360;
@@ -1254,8 +1366,11 @@ function ctxChangeSPP(){
   closeContextMenu(); saveState(); drawCanvas(); renderUnassigned();
 }
 function ctxDelete(){
+  pushUndo();
   if(ctxType==='board'){
     S.boards=S.boards.filter(b=>b.id!==ctxDesk);
+  } else if(ctxType==='teacher'){
+    S.teachers=(S.teachers||[]).filter(t=>t.id!==ctxDesk);
   } else {
     S.desks=S.desks.filter(d=>d.id!==ctxDesk);
     renderUnassigned();
@@ -1329,14 +1444,25 @@ function uaChipDragEnd(e){ e.target.style.opacity=''; }
 
 /* ════════ DESK / BOARD ADD ════════ */
 function addDesk(spp=2){
+  pushUndo();
   const wp=s2w(canvasEl.width/2-DESK_W/2, 80);
   const nx=snap(wp.x+Math.random()*48-24), ny=snap(wp.y+Math.random()*48-24);
   S.desks.push({id:uid(),x:nx,y:ny,angle:0,spp,seats:Array(spp).fill(null)});
   saveState(); drawCanvas(); renderUnassigned();
 }
 function addBoard(){
+  pushUndo();
   const wp=s2w(canvasEl.width/2-BOARD_W/2,20);
   S.boards.push({id:uid(),x:wp.x,y:wp.y,angle:0,label:'Дошка'});
+  saveState(); drawCanvas();
+}
+
+function addTeacherDesk(){
+  pushUndo();
+  const wp=s2w(canvasEl.width/2-TEACHER_W/2, 80);
+  const nx=snap(wp.x), ny=snap(wp.y);
+  if(!S.teachers) S.teachers=[];
+  S.teachers.push({id:uid(),x:nx,y:ny,angle:0,label:'Стіл викладача'});
   saveState(); drawCanvas();
 }
 
@@ -1349,12 +1475,14 @@ async function clearCanvas(){
     confirmClass:'btn-danger'
   });
   if(!ok) return;
-  S.desks=[]; S.boards=[];
+  pushUndo();
+  S.desks=[]; S.boards=[]; S.teachers=[];
   saveState(); drawCanvas(); renderUnassigned();
 }
 
 /* ════════ AUTO FILL ════════ */
 function autoFillSeats(){
+  pushUndo();
   const all=S.desks.flatMap(d=>d.seats.map((_,i)=>({deskId:d.id,i})));
   const sh=[...S.students].sort(()=>Math.random()-.5);
   S.desks.forEach(d=>d.seats=d.seats.map(()=>null));
@@ -1636,6 +1764,8 @@ document.addEventListener('keydown',e=>{
     selectedIds.clear(); drawCanvas();
   }
   if(e.code==='Space'&&document.getElementById('panel-random').classList.contains('active')){ e.preventDefault(); pickRandom(); }
+  if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey&&!e.target.matches('input,textarea')){ e.preventDefault(); doUndo(); }
+  if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.key==='z'&&e.shiftKey))&&!e.target.matches('input,textarea')){ e.preventDefault(); doRedo(); }
   if((e.key==='Delete'||e.key==='Backspace')&&selectedIds.size>0&&!e.target.matches('input,textarea')){
     ;(async()=>{
     const n=selectedIds.size;
