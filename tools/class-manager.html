@@ -226,32 +226,89 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .empty-state svg{width:44px;height:44px;opacity:.35}
 .empty-state p{font-size:13.5px;line-height:1.5}
 /* TIMER */
-.timer-wrap{flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:24px}
-.timer-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:32px 40px;text-align:center;width:380px}
-.timer-presets{display:flex;gap:6px;justify-content:center;margin-bottom:18px;flex-wrap:wrap}
+.timer-wrap{flex:1;display:flex;align-items:stretch;overflow:hidden}
+.timer-main-col{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
+.timer-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:var(--sh-lg);padding:28px 36px 24px;text-align:center;width:420px}
+.timer-presets{display:flex;gap:6px;justify-content:center;margin-bottom:16px;flex-wrap:wrap}
 .preset-btn{padding:5px 14px;border:1px solid var(--border2);border-radius:999px;font-family:Inter,sans-serif;font-size:12.5px;font-weight:500;color:var(--muted);background:var(--surface);cursor:pointer;transition:all .13s}
 .preset-btn:hover{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-lt)}
 .preset-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .timer-custom-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px}
-.timer-custom-field{display:flex;align-items:center;gap:4px}
-.timer-digit-inp{width:56px;height:36px;border:1px solid var(--border2);border-radius:var(--r);text-align:center;font-family:Inter,sans-serif;font-size:16px;font-weight:600;color:var(--text);background:var(--surface);outline:none;-moz-appearance:textfield}
+.timer-custom-field{display:flex;align-items:center;gap:5px}
+.timer-digit-inp{width:60px;height:38px;border:1px solid var(--border2);border-radius:var(--r);text-align:center;font-family:Inter,sans-serif;font-size:18px;font-weight:700;color:var(--text);background:var(--bg);outline:none;-moz-appearance:textfield;transition:border-color .13s,box-shadow .13s}
 .timer-digit-inp::-webkit-inner-spin-button{-webkit-appearance:none}
-.timer-digit-inp:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,107,244,.15)}
-.timer-digit-label{font-size:12px;color:var(--subtle)}
-.timer-colon{font-size:20px;font-weight:700;color:var(--muted);margin:0 2px}
-.timer-ring-wrap{position:relative;width:220px;height:220px;margin:0 auto 24px}
-.timer-ring-svg{position:absolute;inset:0;transform:rotate(-90deg)}
-.timer-ring-bg{fill:none;stroke:var(--border);stroke-width:10}
-.timer-ring-fg{fill:none;stroke:var(--accent);stroke-width:10;stroke-linecap:round;stroke-dasharray:603;stroke-dashoffset:0;transition:stroke-dashoffset .8s linear,stroke .3s}
+.timer-digit-inp:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,107,244,.15);background:var(--surface)}
+.timer-digit-label{font-size:11px;font-weight:600;color:var(--subtle);text-transform:uppercase;letter-spacing:.4px}
+.timer-colon{font-size:24px;font-weight:700;color:var(--border2);margin:0 4px;margin-bottom:12px}
+/* ring */
+.timer-ring-wrap{position:relative;width:240px;height:240px;margin:0 auto 22px}
+.timer-ring-svg{position:absolute;inset:0;transform:rotate(-90deg);filter:drop-shadow(0 0 0px transparent);transition:filter .3s}
+.timer-ring-svg.glowing{filter:drop-shadow(0 0 12px rgba(79,107,244,.35))}
+.timer-ring-svg.glowing-warn{filter:drop-shadow(0 0 12px rgba(245,158,11,.4))}
+.timer-ring-svg.glowing-danger{filter:drop-shadow(0 0 14px rgba(239,68,68,.5))}
+.timer-ring-track{fill:none;stroke:var(--bg);stroke-width:16}
+.timer-ring-bg{fill:none;stroke:var(--border);stroke-width:14}
+.timer-ring-fg{fill:none;stroke:var(--accent);stroke-width:14;stroke-linecap:round;stroke-dasharray:691;stroke-dashoffset:0;transition:stroke-dashoffset .9s cubic-bezier(.4,0,.2,1),stroke .4s}
 .timer-ring-fg.warning{stroke:#f59e0b}
 .timer-ring-fg.danger{stroke:#ef4444}
-.timer-display{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-2px}
+/* inner display */
+.timer-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.timer-display{font-size:52px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-3px;line-height:1;transition:color .3s}
 .timer-display.warning{color:#f59e0b}
 .timer-display.danger{color:#ef4444;animation:timerPulse .5s infinite alternate}
-@keyframes timerPulse{from{opacity:.6}to{opacity:1}}
-.timer-state-label{position:absolute;bottom:28px;left:0;right:0;font-size:12px;font-weight:500;color:var(--subtle);text-transform:uppercase;letter-spacing:.5px}
-.timer-controls{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px}
-.timer-sound-row{display:flex;align-items:center;justify-content:center;gap:10px;padding-top:12px;border-top:1px solid var(--border)}
+@keyframes timerPulse{from{opacity:.55}to{opacity:1}}
+.timer-state-label{font-size:11px;font-weight:600;color:var(--subtle);text-transform:uppercase;letter-spacing:.6px}
+.timer-pct-label{font-size:11px;color:var(--subtle)}
+/* controls */
+.timer-controls{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px}
+.timer-btn-play{display:inline-flex;align-items:center;gap:7px;padding:0 32px;height:46px;font-size:15px;font-weight:600;font-family:Inter,sans-serif;border:none;border-radius:999px;background:var(--accent);color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(79,107,244,.3);transition:all .15s}
+.timer-btn-play:hover{background:var(--accent-h);transform:scale(1.02)}
+.timer-btn-play:active{transform:scale(.97)}
+.timer-btn-play.paused{background:var(--surface);color:var(--accent);border:1.5px solid var(--accent-lt);box-shadow:none}
+.timer-btn-play.finished{background:#dcfce7;color:#16a34a;border:1.5px solid #86efac;box-shadow:none}
+.timer-btn-sq{width:40px;height:40px;border:1px solid var(--border2);border-radius:50%;background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .13s;font-family:Inter,sans-serif}
+.timer-btn-sq:hover{background:var(--bg);color:var(--text);border-color:var(--border2)}
+.timer-btn-sq svg{width:16px;height:16px}
+.timer-btn-sq.active{color:var(--accent);border-color:var(--accent-lt);background:var(--accent-bg)}
+/* music selector */
+.timer-bottom{padding-top:14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px}
+.timer-music-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.music-btn{padding:8px 4px;border:1px solid var(--border2);border-radius:var(--r);font-family:Inter,sans-serif;font-size:11.5px;font-weight:500;color:var(--muted);background:var(--surface);cursor:pointer;transition:all .13s;text-align:center;line-height:1.4}
+.music-btn:hover{background:var(--bg);color:var(--text)}
+.music-btn.active{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-lt);font-weight:600}
+.music-btn-icon{font-size:16px;display:block;margin-bottom:3px}
+
+/* TASKS PANEL */
+.tasks-panel{position:fixed;top:var(--topbar);right:0;bottom:0;width:320px;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--sh-lg);z-index:400;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.tasks-panel.open{transform:translateX(0)}
+.tasks-toggle{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:401;background:var(--accent);color:#fff;border:none;border-radius:10px 0 0 10px;padding:12px 8px;cursor:pointer;box-shadow:var(--sh);transition:background .13s,right .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;align-items:center;gap:6px;font-family:Inter,sans-serif;font-size:10px;font-weight:600;letter-spacing:.3px}
+.tasks-toggle:hover{background:var(--accent-h)}
+.tasks-toggle svg{width:18px;height:18px}
+.tasks-toggle.shifted{right:320px}
+.tasks-head{padding:16px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:8px}
+.tasks-head-title{font-size:15px;font-weight:700;flex:1}
+.tasks-add-row{padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:6px}
+.tasks-add-inp{flex:1;height:34px;border:1px solid var(--border2);border-radius:var(--r);padding:0 10px;font-family:Inter,sans-serif;font-size:13px;color:var(--text);background:var(--surface);outline:none;transition:border-color .13s,box-shadow .13s}
+.tasks-add-inp:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,107,244,.15)}
+.tasks-list{flex:1;overflow-y:auto;padding:8px;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.task-item{display:flex;align-items:flex-start;gap:10px;padding:10px 10px 10px 12px;border-radius:var(--r-lg);border:1px solid transparent;transition:all .15s;margin-bottom:4px;cursor:pointer;position:relative;background:var(--surface)}
+.task-item:hover{background:var(--bg);border-color:var(--border)}
+.task-item.done{opacity:.55}
+.task-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .2s;cursor:pointer}
+.task-item:hover .task-radio{border-color:var(--accent)}
+.task-item.done .task-radio{background:var(--green);border-color:var(--green)}
+.task-radio svg{width:11px;height:11px;color:#fff;opacity:0;transition:opacity .15s}
+.task-item.done .task-radio svg{opacity:1}
+.task-text{flex:1;font-size:13.5px;color:var(--text);line-height:1.45;word-break:break-word;transition:color .15s}
+.task-item.done .task-text{text-decoration:line-through;color:var(--subtle)}
+.task-del{width:22px;height:22px;border:none;background:none;cursor:pointer;color:var(--subtle);border-radius:4px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s,color .12s;flex-shrink:0}
+.task-item:hover .task-del{opacity:1}
+.task-del:hover{color:var(--red)}
+.task-del svg{width:13px;height:13px}
+.tasks-footer{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:8px}
+.tasks-progress{flex:1;height:4px;background:var(--border);border-radius:999px;overflow:hidden}
+.tasks-progress-bar{height:100%;background:var(--green);border-radius:999px;transition:width .3s}
+.tasks-stats{font-size:12px;color:var(--subtle);white-space:nowrap}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 </style>
@@ -459,58 +516,69 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <!-- TIMER PANEL -->
     <div class="panel" id="panel-timer">
       <div class="timer-wrap">
-        <div class="timer-card">
-          <!-- presets -->
-          <div class="timer-presets">
-            <button class="preset-btn" onclick="setPreset(60)">1 хв</button>
-            <button class="preset-btn" onclick="setPreset(120)">2 хв</button>
-            <button class="preset-btn" onclick="setPreset(300)">5 хв</button>
-            <button class="preset-btn" onclick="setPreset(600)">10 хв</button>
-            <button class="preset-btn" onclick="setPreset(900)">15 хв</button>
-          </div>
-          <!-- custom input -->
-          <div class="timer-custom-row">
-            <div class="timer-custom-field">
-              <input class="timer-digit-inp" id="t-min" type="number" min="0" max="99" value="2" oninput="onTimerInput()">
-              <span class="timer-digit-label">хв</span>
+        <div class="timer-main-col">
+          <div class="timer-card">
+            <!-- presets -->
+            <div class="timer-presets">
+              <button class="preset-btn" onclick="setPreset(60)">1 хв</button>
+              <button class="preset-btn" onclick="setPreset(120)">2 хв</button>
+              <button class="preset-btn" onclick="setPreset(300)">5 хв</button>
+              <button class="preset-btn" onclick="setPreset(600)">10 хв</button>
+              <button class="preset-btn" onclick="setPreset(900)">15 хв</button>
+              <button class="preset-btn" onclick="setPreset(1800)">30 хв</button>
             </div>
-            <span class="timer-colon">:</span>
-            <div class="timer-custom-field">
-              <input class="timer-digit-inp" id="t-sec" type="number" min="0" max="59" value="0" oninput="onTimerInput()">
-              <span class="timer-digit-label">сек</span>
+            <!-- custom -->
+            <div class="timer-custom-row">
+              <div class="timer-custom-field">
+                <input class="timer-digit-inp" id="t-min" type="number" min="0" max="99" value="2" oninput="onTimerInput()">
+                <span class="timer-digit-label">хв</span>
+              </div>
+              <span class="timer-colon">:</span>
+              <div class="timer-custom-field">
+                <input class="timer-digit-inp" id="t-sec" type="number" min="0" max="59" value="0" oninput="onTimerInput()">
+                <span class="timer-digit-label">сек</span>
+              </div>
             </div>
-          </div>
-          <!-- ring display -->
-          <div class="timer-ring-wrap">
-            <svg class="timer-ring-svg" viewBox="0 0 220 220">
-              <circle class="timer-ring-bg" cx="110" cy="110" r="96"/>
-              <circle class="timer-ring-fg" id="timer-ring-fg" cx="110" cy="110" r="96"/>
-            </svg>
-            <div class="timer-display" id="timer-display">02:00</div>
-            <div class="timer-state-label" id="timer-state-label">Готово</div>
-          </div>
-          <!-- controls -->
-          <div class="timer-controls">
-            <button class="btn btn-ghost btn-icon" id="timer-reset-btn" onclick="timerReset()" data-tip="Скинути">
-              <svg viewBox="0 0 20 20" fill="none"><path d="M4 8H13a4 4 0 010 8H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 5L4 8l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <button class="btn btn-solid" id="timer-main-btn" onclick="timerToggle()" style="padding:0 36px;height:44px;font-size:15px;min-width:140px">
-              <svg viewBox="0 0 20 20" fill="none" style="width:16px;height:16px" id="timer-main-icon"><path d="M6 4l12 6-12 6V4z" fill="currentColor"/></svg>
-              <span id="timer-main-label">Старт</span>
-            </button>
-            <button class="btn btn-ghost btn-icon" id="timer-sound-btn" onclick="toggleTimerSound()" data-tip="Фонова музика">
-              <svg viewBox="0 0 20 20" fill="none" id="timer-sound-icon"><path d="M9 4L5 8H2v4h3l4 4V4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13 7a4 4 0 010 6M15.5 4.5a8 8 0 010 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            </button>
-          </div>
-          <!-- sound selector -->
-          <div class="timer-sound-row" id="timer-sound-row">
-            <span style="font-size:12px;color:var(--muted)">Фонова мелодія:</span>
-            <select id="timer-music-sel" style="border:1px solid var(--border2);border-radius:var(--r);padding:5px 8px;font-family:Inter,sans-serif;font-size:12.5px;color:var(--text);background:var(--surface);outline:none">
-              <option value="lofi">Lo-fi beats</option>
-              <option value="focus">Focus drone</option>
-              <option value="tick">Тихий тік</option>
-              <option value="none">Без музики</option>
-            </select>
+            <!-- ring -->
+            <div class="timer-ring-wrap">
+              <svg class="timer-ring-svg" id="timer-ring-svg" viewBox="0 0 240 240">
+                <circle class="timer-ring-track" cx="120" cy="120" r="110"/>
+                <circle class="timer-ring-bg" cx="120" cy="120" r="110"/>
+                <circle class="timer-ring-fg" id="timer-ring-fg" cx="120" cy="120" r="110"/>
+              </svg>
+              <div class="timer-inner">
+                <div class="timer-display" id="timer-display">02:00</div>
+                <div class="timer-state-label" id="timer-state-label">Готово</div>
+                <div class="timer-pct-label" id="timer-pct-label"></div>
+              </div>
+            </div>
+            <!-- controls -->
+            <div class="timer-controls">
+              <button class="timer-btn-sq" onclick="timerReset()" data-tip="Скинути">
+                <svg viewBox="0 0 20 20" fill="none"><path d="M4 8H13a4 4 0 010 8H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 5L4 8l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button class="timer-btn-play" id="timer-main-btn" onclick="timerToggle()">
+                <svg viewBox="0 0 20 20" fill="none" style="width:16px;height:16px" id="timer-main-icon"><path d="M6 4l12 6-12 6V4z" fill="currentColor"/></svg>
+                <span id="timer-main-label">Старт</span>
+              </button>
+              <button class="timer-btn-sq" id="timer-sound-btn" onclick="toggleTimerSound()" data-tip="Фонова музика">
+                <svg viewBox="0 0 20 20" fill="none"><path d="M9 4L5 8H2v4h3l4 4V4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13 7a4 4 0 010 6M15.5 4.5a8 8 0 010 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+            <!-- music grid -->
+            <div class="timer-bottom">
+              <div style="font-size:11px;font-weight:600;color:var(--subtle);text-transform:uppercase;letter-spacing:.5px;text-align:left">Мелодія під час таймера</div>
+              <div class="timer-music-grid" id="timer-music-grid">
+                <button class="music-btn active" data-music="lofi" onclick="selectMusic(this,'lofi')"><span class="music-btn-icon">🎵</span>Lo-fi</button>
+                <button class="music-btn" data-music="piano" onclick="selectMusic(this,'piano')"><span class="music-btn-icon">🎹</span>Піаніно</button>
+                <button class="music-btn" data-music="nature" onclick="selectMusic(this,'nature')"><span class="music-btn-icon">🌿</span>Природа</button>
+                <button class="music-btn" data-music="cafe" onclick="selectMusic(this,'cafe')"><span class="music-btn-icon">☕</span>Кафе</button>
+                <button class="music-btn" data-music="focus" onclick="selectMusic(this,'focus')"><span class="music-btn-icon">🔮</span>Focus</button>
+                <button class="music-btn" data-music="jazz" onclick="selectMusic(this,'jazz')"><span class="music-btn-icon">🎷</span>Jazz</button>
+                <button class="music-btn" data-music="tick" onclick="selectMusic(this,'tick')"><span class="music-btn-icon">⏱</span>Тік</button>
+                <button class="music-btn" data-music="none" onclick="selectMusic(this,'none')"><span class="music-btn-icon">🔇</span>Тихо</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1866,32 +1934,39 @@ function playTickSound(){
   playBeep(800,0.05,0.15,'sine');
 }
 
+let currentMusic='lofi';
+function selectMusic(btn, key){
+  currentMusic=key;
+  document.querySelectorAll('.music-btn').forEach(b=>b.classList.toggle('active',b.dataset.music===key));
+  if(timerRunning && timerSoundOn){ stopBgMusic(); startBgMusic(); }
+}
+
 /* ── Background music (Web Audio synth) ── */
 function startBgMusic(){
   stopBgMusic();
-  const sel=document.getElementById('timer-music-sel')?.value||'lofi';
+  const sel=currentMusic||'lofi';
   if(sel==='none') return;
   try{
     const ac=getAudioCtx();
-    const master=ac.createGain(); master.gain.value=0.08; master.connect(ac.destination);
+    const master=ac.createGain(); master.gain.value=0.07; master.connect(ac.destination);
     timerMusicNode=master;
+
     if(sel==='tick'){
-      // subtle metronome
       let beat=0;
-      function tick(){
+      function doTick(){
         if(!timerMusicNode) return;
-        const osc=ac.createOscillator(), g=ac.createGain();
-        osc.connect(g); g.connect(master);
-        osc.frequency.value=beat%4===0?900:600; osc.type='sine';
-        g.gain.setValueAtTime(0.6,ac.currentTime);
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.connect(g); g.connect(master);
+        o.frequency.value=beat%4===0?880:550; o.type='sine';
+        g.gain.setValueAtTime(0.7,ac.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.06);
-        osc.start(); osc.stop(ac.currentTime+0.07);
-        beat++; timerMusicNode._tick=setTimeout(tick,500);
+        o.start(); o.stop(ac.currentTime+0.07);
+        beat++; timerMusicNode._tick=setTimeout(doTick,500);
       }
-      tick(); return;
+      doTick(); return;
     }
+
     if(sel==='focus'){
-      // low drone + slow filter sweep
       const osc=ac.createOscillator(), lfo=ac.createOscillator();
       const lfoG=ac.createGain(), filt=ac.createBiquadFilter();
       osc.type='sawtooth'; osc.frequency.value=55;
@@ -1902,24 +1977,117 @@ function startBgMusic(){
       osc.start(); lfo.start();
       master._osc=osc; master._lfo=lfo; return;
     }
-    // lofi — simple chord progression loop
-    const notes=[[261,329,392],[220,277,349],[196,261,330],[233,293,370]];
-    let ci=0;
-    function chord(){
-      if(!timerMusicNode) return;
-      notes[ci%notes.length].forEach((f,i)=>{
-        const o=ac.createOscillator(), g=ac.createGain();
-        o.type='triangle'; o.frequency.value=f;
-        g.gain.setValueAtTime(0,ac.currentTime);
-        g.gain.linearRampToValueAtTime(0.15,ac.currentTime+0.3);
-        g.gain.setValueAtTime(0.15,ac.currentTime+1.6);
-        g.gain.linearRampToValueAtTime(0,ac.currentTime+2.0);
-        o.connect(g); g.connect(master);
-        o.start(); o.stop(ac.currentTime+2.1);
-      });
-      ci++; timerMusicNode._chord=setTimeout(chord,2000);
+
+    if(sel==='lofi'){
+      const notes=[[261,329,392],[220,277,349],[196,261,330],[233,293,370]];
+      let ci=0;
+      function chord(){
+        if(!timerMusicNode) return;
+        notes[ci%4].forEach(f=>{
+          const o=ac.createOscillator(), g=ac.createGain();
+          o.type='triangle'; o.frequency.value=f;
+          g.gain.setValueAtTime(0,ac.currentTime);
+          g.gain.linearRampToValueAtTime(0.14,ac.currentTime+0.4);
+          g.gain.setValueAtTime(0.14,ac.currentTime+1.6);
+          g.gain.linearRampToValueAtTime(0,ac.currentTime+2.1);
+          o.connect(g); g.connect(master);
+          o.start(); o.stop(ac.currentTime+2.2);
+        });
+        ci++; timerMusicNode._chord=setTimeout(chord,2100);
+      }
+      chord(); return;
     }
-    chord();
+
+    if(sel==='piano'){
+      // pentatonic piano-like arpeggios
+      const scale=[261,294,330,392,440,523,587,659];
+      let idx=0, dir=1;
+      function arp(){
+        if(!timerMusicNode) return;
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.type='sine'; o.frequency.value=scale[idx];
+        g.gain.setValueAtTime(0,ac.currentTime);
+        g.gain.linearRampToValueAtTime(0.3,ac.currentTime+0.05);
+        g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.6);
+        o.connect(g); g.connect(master);
+        o.start(); o.stop(ac.currentTime+0.65);
+        idx+=dir; if(idx>=scale.length-1||idx<=0) dir=-dir;
+        timerMusicNode._chord=setTimeout(arp,320);
+      }
+      arp(); return;
+    }
+
+    if(sel==='nature'){
+      // white noise + slow filter = wind/rain
+      const buf=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+      const src=ac.createBufferSource(); src.buffer=buf; src.loop=true;
+      const filt=ac.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=400; filt.Q.value=0.5;
+      const lfo=ac.createOscillator(); const lfoG=ac.createGain();
+      lfo.frequency.value=0.12; lfoG.gain.value=200;
+      lfo.connect(lfoG); lfoG.connect(filt.frequency);
+      src.connect(filt); filt.connect(master);
+      src.start(); lfo.start();
+      master._osc=lfo; master._src=src; return;
+    }
+
+    if(sel==='cafe'){
+      // gentle background murmur = pink-ish noise + hi melody
+      const buf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);
+      const d=buf.getChannelData(0); let last=0;
+      for(let i=0;i<d.length;i++){last=(last+Math.random()-0.5)*0.8; d[i]=last;}
+      const ns=ac.createBufferSource(); ns.buffer=buf; ns.loop=true;
+      const fNs=ac.createBiquadFilter(); fNs.type='lowpass'; fNs.frequency.value=600;
+      ns.connect(fNs); fNs.connect(master);
+      ns.start();
+      // gentle melody on top
+      const mel=[392,440,392,349,330,392];
+      let mi=0;
+      function mNote(){
+        if(!timerMusicNode) return;
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.type='sine'; o.frequency.value=mel[mi%mel.length];
+        g.gain.setValueAtTime(0,ac.currentTime);
+        g.gain.linearRampToValueAtTime(0.18,ac.currentTime+0.1);
+        g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.7);
+        o.connect(g); g.connect(master);
+        o.start(); o.stop(ac.currentTime+0.75);
+        mi++; timerMusicNode._chord=setTimeout(mNote,900);
+      }
+      mNote(); master._src=ns; return;
+    }
+
+    if(sel==='jazz'){
+      // jazz walking bass + chord stabs
+      const bass=[98,110,123,131,146,164,174,196];
+      const chords=[[261,311,369],[233,277,349],[220,261,329],[196,246,311]];
+      let bi=0, ci=0;
+      function jBass(){
+        if(!timerMusicNode) return;
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.type='triangle'; o.frequency.value=bass[bi%bass.length];
+        g.gain.setValueAtTime(0.5,ac.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.22);
+        o.connect(g); g.connect(master);
+        o.start(); o.stop(ac.currentTime+0.25);
+        bi++; timerMusicNode._tick=setTimeout(jBass,240);
+      }
+      function jChord(){
+        if(!timerMusicNode) return;
+        chords[ci%4].forEach(f=>{
+          const o=ac.createOscillator(), g=ac.createGain();
+          o.type='triangle'; o.frequency.value=f;
+          g.gain.setValueAtTime(0,ac.currentTime);
+          g.gain.linearRampToValueAtTime(0.09,ac.currentTime+0.04);
+          g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.5);
+          o.connect(g); g.connect(master);
+          o.start(); o.stop(ac.currentTime+0.55);
+        });
+        ci++; timerMusicNode._chord=setTimeout(jChord,960);
+      }
+      jBass(); jChord(); return;
+    }
   }catch(e){}
 }
 
@@ -1928,6 +2096,7 @@ function stopBgMusic(){
   try{
     if(timerMusicNode._osc) timerMusicNode._osc.stop();
     if(timerMusicNode._lfo) timerMusicNode._lfo.stop();
+    if(timerMusicNode._src) timerMusicNode._src.stop();
     clearTimeout(timerMusicNode._tick);
     clearTimeout(timerMusicNode._chord);
     timerMusicNode.disconnect();
@@ -1996,19 +2165,22 @@ function timerReset(){
 
 function updateTimerUI(){
   const m=Math.floor(timerLeft/60), s=timerLeft%60;
-  const display=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   const dEl=document.getElementById('timer-display');
   const rEl=document.getElementById('timer-ring-fg');
+  const svgEl=document.getElementById('timer-ring-svg');
   const lEl=document.getElementById('timer-state-label');
+  const pEl=document.getElementById('timer-pct-label');
   const mbtn=document.getElementById('timer-main-btn');
   const mlbl=document.getElementById('timer-main-label');
   const mico=document.getElementById('timer-main-icon');
-  if(!dEl) return;
+  // panel may be hidden — skip if key elements missing
+  if(!dEl||!rEl||!lEl) return;
 
-  dEl.textContent=display;
+  dEl.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   const pct=timerTotal>0?timerLeft/timerTotal:1;
-  const offset=RING_C*(1-pct);
-  rEl.style.strokeDashoffset=offset;
+  const C=2*Math.PI*110;
+  rEl.style.strokeDasharray=C;
+  rEl.style.strokeDashoffset=C*(1-pct);
 
   const warn=timerLeft<=10&&timerLeft>5;
   const danger=timerLeft<=5&&timerLeft>0;
@@ -2016,20 +2188,26 @@ function updateTimerUI(){
 
   dEl.className='timer-display'+(danger?' danger':warn?' warning':'');
   rEl.className='timer-ring-fg'+(danger?' danger':warn?' warning':'');
+  if(svgEl) svgEl.className='timer-ring-svg'+(danger?' glowing-danger':warn?' glowing-warn':timerRunning?' glowing':'');
+  if(pEl) pEl.textContent=timerTotal>0&&!done?Math.round(pct*100)+'%':'';
+
+  lEl.style.color=done?'#ef4444':'';
 
   if(done){
-    lEl.textContent='Час вийшов!'; lEl.style.color='#ef4444';
-    mlbl.textContent='Скинути';
-    mico.innerHTML='<path d="M4 8H13a4 4 0 010 8H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 5L4 8l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+    lEl.textContent='Час вийшов! 🎉';
+    if(mbtn) mbtn.className='timer-btn-play finished';
+    if(mlbl) mlbl.textContent='Ще раз';
+    if(mico) mico.innerHTML='<path d="M4 8H13a4 4 0 010 8H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 5L4 8l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
   } else if(timerRunning){
-    lEl.textContent='Йде відлік…'; lEl.style.color='';
-    mlbl.textContent='Пауза';
-    mico.innerHTML='<rect x="5" y="4" width="3" height="12" rx="1" fill="currentColor"/><rect x="12" y="4" width="3" height="12" rx="1" fill="currentColor"/>';
+    lEl.textContent='Йде відлік…';
+    if(mbtn) mbtn.className='timer-btn-play';
+    if(mlbl) mlbl.textContent='Пауза';
+    if(mico) mico.innerHTML='<rect x="5" y="4" width="3" height="12" rx="1" fill="currentColor"/><rect x="12" y="4" width="3" height="12" rx="1" fill="currentColor"/>';
   } else {
     lEl.textContent=timerLeft===timerTotal?'Готово':'Пауза';
-    lEl.style.color='';
-    mlbl.textContent='Старт';
-    mico.innerHTML='<path d="M6 4l12 6-12 6V4z" fill="currentColor"/>';
+    if(mbtn) mbtn.className='timer-btn-play'+(timerLeft<timerTotal?' paused':'');
+    if(mlbl) mlbl.textContent='Старт';
+    if(mico) mico.innerHTML='<path d="M6 4l12 6-12 6V4z" fill="currentColor"/>';
   }
 }
 
@@ -2049,9 +2227,9 @@ function updateTabBadge(){
 function toggleTimerSound(){
   timerSoundOn=!timerSoundOn;
   const btn=document.getElementById('timer-sound-btn');
-  const row=document.getElementById('timer-sound-row');
-  btn.style.color=timerSoundOn?'var(--accent)':'';
-  row.style.opacity=timerSoundOn?'1':'0.4';
+  const grid=document.getElementById('timer-music-grid');
+  if(btn) btn.classList.toggle('active', timerSoundOn);
+  if(grid) grid.style.opacity=timerSoundOn?'1':'0.4';
   if(timerRunning){ timerSoundOn?startBgMusic():stopBgMusic(); }
 }
 
@@ -2070,8 +2248,7 @@ function renderAll(){
 ════════════════════════════════════════ */
 loadState();
 renderAll();
-// init timer state
-setTimeout(()=>{ try{ updateTimerUI(); }catch(e){} }, 200);
+// timer UI updates when tab is opened via switchTab
 
 // init canvas after layout
 setTimeout(()=>{
@@ -2152,6 +2329,87 @@ document.addEventListener('keydown',e=>{
   document.addEventListener('mousedown',()=>{clearTimeout(tid);tip.style.opacity='0';});
 })();
 
+
+/* ════════════════════════════════════════
+   TASKS
+════════════════════════════════════════ */
+let tasks = []; // {id, text, done}
+let tasksPanelOpen = false;
+
+function loadTasks(){
+  try{ const d=localStorage.getItem('ev-tasks'); if(d) tasks=JSON.parse(d); }catch(e){}
+}
+function saveTasks(){ localStorage.setItem('ev-tasks', JSON.stringify(tasks)); }
+
+function toggleTasksPanel(){
+  tasksPanelOpen=!tasksPanelOpen;
+  document.getElementById('tasks-panel').classList.toggle('open', tasksPanelOpen);
+  document.getElementById('tasks-toggle-btn').classList.toggle('shifted', tasksPanelOpen);
+  if(tasksPanelOpen){ document.getElementById('task-inp').focus(); }
+}
+
+function addTask(){
+  const inp=document.getElementById('task-inp');
+  const text=inp.value.trim(); if(!text) return;
+  tasks.push({id:uid(), text, done:false});
+  inp.value='';
+  saveTasks(); renderTasks();
+  inp.focus();
+}
+
+function toggleTask(id){
+  const t=tasks.find(t=>t.id===id); if(!t) return;
+  t.done=!t.done;
+  saveTasks(); renderTasks();
+}
+
+function deleteTask(id){
+  tasks=tasks.filter(t=>t.id!==id);
+  saveTasks(); renderTasks();
+}
+
+function clearDoneTasks(){
+  tasks=tasks.filter(t=>!t.done);
+  saveTasks(); renderTasks();
+}
+
+function renderTasks(){
+  const list=document.getElementById('tasks-list');
+  const bar=document.getElementById('tasks-progress-bar');
+  const stats=document.getElementById('tasks-stats');
+  const badge=document.getElementById('tasks-toggle-count');
+  if(!list) return; // DOM not ready yet
+  const done=tasks.filter(t=>t.done).length;
+  const total=tasks.length;
+
+  if(badge) badge.textContent=total;
+  if(bar){ bar.style.width=total?Math.round(done/total*100)+'%':'0%'; }
+  if(stats) stats.textContent=`${done} / ${total}`;
+
+  if(!total){
+    list.innerHTML=`<div style="padding:32px 16px;text-align:center;color:var(--subtle)">
+      <svg viewBox="0 0 24 24" fill="none" style="width:36px;height:36px;margin:0 auto 10px;opacity:.3"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" stroke-width="1.5"/></svg>
+      <div style="font-size:13px">Завдань ще немає</div>
+      <div style="font-size:12px;margin-top:4px">Додай перше завдання вище</div>
+    </div>`; return;
+  }
+
+  // sort: not done first
+  const sorted=[...tasks.filter(t=>!t.done), ...tasks.filter(t=>t.done)];
+  list.innerHTML=sorted.map(t=>`
+    <div class="task-item${t.done?' done':''}" onclick="toggleTask('${t.id}')">
+      <div class="task-radio">
+        <svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <span class="task-text">${esc(t.text)}</span>
+      <button class="task-del" onclick="event.stopPropagation();deleteTask('${t.id}')" title="Видалити">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>`).join('');
+}
+
+document.addEventListener('DOMContentLoaded',()=>{ loadTasks(); renderTasks(); });
+
 /* ── DIALOG SYSTEM ── */
 function pluralDesk(n){
   if(n%10===1&&n%100!==11) return 'парту';
@@ -2159,7 +2417,7 @@ function pluralDesk(n){
   return 'парт';
 }
 
-let _dialogResolve=null;
+var _dialogResolve=null;
 function showDialog({title,body,meta='',type='danger',confirmText='Підтвердити',cancelText='Скасувати',confirmClass='btn-danger',alertOnly=false}){
   return new Promise(resolve=>{
     _dialogResolve=resolve;
@@ -2193,5 +2451,36 @@ document.getElementById('dialog-modal').addEventListener('click',function(e){if(
 
 </script>
 
+
+<!-- TASKS TOGGLE BUTTON -->
+<button class="tasks-toggle" id="tasks-toggle-btn" onclick="toggleTasksPanel()" data-tip="Завдання уроку">
+  <svg viewBox="0 0 20 20" fill="none"><path d="M5 10l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/></svg>
+  <span id="tasks-toggle-count" style="background:rgba(255,255,255,.25);border-radius:999px;padding:1px 6px;font-size:10px">0</span>
+</button>
+
+<!-- TASKS PANEL -->
+<div class="tasks-panel" id="tasks-panel">
+  <div class="tasks-head">
+    <svg viewBox="0 0 20 20" fill="none" style="width:18px;height:18px;color:var(--accent);flex-shrink:0"><path d="M5 10l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/></svg>
+    <span class="tasks-head-title">Завдання уроку</span>
+    <button class="btn btn-ghost btn-sm btn-icon" onclick="clearDoneTasks()" data-tip="Видалити виконані">
+      <svg viewBox="0 0 20 20" fill="none"><path d="M3 5h14M8 5V3h4v2M6 5l1 12h6l1-12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="btn btn-ghost btn-sm btn-icon" onclick="toggleTasksPanel()" data-tip="Закрити">
+      <svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="tasks-add-row">
+    <input class="tasks-add-inp" id="task-inp" placeholder="Нове завдання…" onkeydown="if(event.key==='Enter')addTask()">
+    <button class="btn btn-solid btn-icon" onclick="addTask()">
+      <svg viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="tasks-list" id="tasks-list"></div>
+  <div class="tasks-footer">
+    <div class="tasks-progress"><div class="tasks-progress-bar" id="tasks-progress-bar"></div></div>
+    <div class="tasks-stats" id="tasks-stats">0 / 0</div>
+  </div>
+</div>
 </body>
 </html>
