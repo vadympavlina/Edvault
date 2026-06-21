@@ -1121,73 +1121,92 @@ async function handleVideoUpload(e) {
 
   const isFirstClip = state.clips.length === 0;
 
-  const url = URL.createObjectURL(file);
-  const video = document.createElement('video');
-  video.src = url;
-  video.muted = true;
-  video.preload = 'metadata';
+  try {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.src = url;
+    video.muted = true;
+    video.preload = 'metadata';
+    video.playsInline = true;
 
-  await new Promise((resolve, reject) => {
-    video.onloadedmetadata = resolve;
-    video.onerror = () => reject(new Error('Не вдалося прочитати відео'));
-  });
+    await new Promise((resolve, reject) => {
+      video.onloadedmetadata = resolve;
+      video.onerror = () => reject(new Error('Браузер не зміг прочитати цей файл'));
+      // safety net: don't hang forever if metadata never fires
+      setTimeout(() => reject(new Error('Час очікування вичерпано — файл завеликий або пошкоджений')), 20000);
+    });
 
-  if (isFirstClip) {
-    state.videoEl = video;
-    state.videoFile = file;
-    state.videoName = file.name.replace(/\.[^.]+$/, '');
-    state.canvasW = video.videoWidth || 1280;
-    state.canvasH = video.videoHeight || 720;
-    setupCanvas();
+    if (isFirstClip) {
+      state.videoEl = video;
+      state.videoFile = file;
+      state.videoName = file.name.replace(/\.[^.]+$/, '');
+      state.canvasW = video.videoWidth || 1280;
+      state.canvasH = video.videoHeight || 720;
+      setupCanvas();
+    }
+
+    const clip = {
+      id: newId(),
+      file, url,
+      srcIn: 0,
+      srcOut: video.duration,
+      fullDuration: video.duration,
+      volume: 100,
+      peaks: null,
+      videoEl: video,
+      w: video.videoWidth, h: video.videoHeight,
+    };
+    state.clips.push(clip);
+    recalcDuration();
+
+    document.getElementById('stage-empty').style.display = 'none';
+    document.getElementById('stage-canvas-wrap').style.display = 'block';
+    document.getElementById('transport').style.display = 'flex';
+    document.getElementById('btn-export').disabled = false;
+    document.getElementById('btn-split').disabled = false;
+
+    renderTimeline();
+    selectClip(clip.id);
+    drawFrameAt(state.playhead);
+    showToast(isFirstClip ? 'Відео завантажено' : 'Кліп додано на таймлайн');
+
+    // waveform is best-effort and runs in the background — never blocks the UI
+    extractWaveform(file).then(peaks => {
+      clip.peaks = peaks;
+      renderTimeline();
+    }).catch(() => { /* silently skip waveform if it fails or times out */ });
+
+  } catch (err) {
+    console.error(err);
+    showToast('Не вдалося завантажити відео: ' + (err.message || err), true);
   }
-
-  // waveform peaks (best-effort; skip silently if decode fails)
-  let peaks = null;
-  try { peaks = await extractWaveform(file); } catch (err) { peaks = null; }
-
-  const clip = {
-    id: newId(),
-    file, url,
-    srcIn: 0,
-    srcOut: video.duration,
-    fullDuration: video.duration,
-    volume: 100,
-    peaks,
-    videoEl: video,
-    w: video.videoWidth, h: video.videoHeight,
-  };
-  state.clips.push(clip);
-  recalcDuration();
-
-  document.getElementById('stage-empty').style.display = 'none';
-  document.getElementById('stage-canvas-wrap').style.display = 'block';
-  document.getElementById('transport').style.display = 'flex';
-  document.getElementById('btn-export').disabled = false;
-  document.getElementById('btn-split').disabled = false;
-
-  renderTimeline();
-  selectClip(clip.id);
-  drawFrameAt(state.playhead);
-  showToast(isFirstClip ? 'Відео завантажено' : 'Кліп додано на таймлайн');
 }
 
 async function extractWaveform(file) {
-  const arrayBuf = await file.arrayBuffer();
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
-  const raw = audioBuf.getChannelData(0);
-  const samples = 200;
-  const blockSize = Math.floor(raw.length / samples);
-  const peaks = [];
-  for (let i = 0; i < samples; i++) {
-    let sum = 0;
-    const start = i * blockSize;
-    for (let j = 0; j < blockSize; j++) sum += Math.abs(raw[start + j] || 0);
-    peaks.push(sum / blockSize);
-  }
-  const max = Math.max(...peaks, 0.0001);
-  ctx.close();
-  return peaks.map(p => Math.max(0.06, p / max));
+  // hard timeout so a slow/huge decode never hangs anything else
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('waveform timeout')), 15000));
+  const work = (async () => {
+    const arrayBuf = await file.arrayBuffer();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+      const audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
+      const raw = audioBuf.getChannelData(0);
+      const samples = 200;
+      const blockSize = Math.floor(raw.length / samples) || 1;
+      const peaks = [];
+      for (let i = 0; i < samples; i++) {
+        let sum = 0;
+        const start = i * blockSize;
+        for (let j = 0; j < blockSize; j++) sum += Math.abs(raw[start + j] || 0);
+        peaks.push(sum / blockSize);
+      }
+      const max = Math.max(...peaks, 0.0001);
+      return peaks.map(p => Math.max(0.06, p / max));
+    } finally {
+      ctx.close();
+    }
+  })();
+  return Promise.race([work, timeout]);
 }
 
 function recalcDuration() {
