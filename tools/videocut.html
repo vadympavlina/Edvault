@@ -272,21 +272,17 @@
   }
   .stage-canvas-wrap {
     position: relative;
-    display: inline-flex;
-    max-width: 100%;
-    max-height: 100%;
+    width: 100%;
+    height: 100%;
     box-shadow: 0 16px 50px rgba(0,0,0,.45);
     border-radius: 6px;
     overflow: hidden;
     background: #000;
-    margin: auto;
   }
   #previewCanvas {
     display: block;
-    width: auto;
-    height: auto;
-    max-width: 100%;
-    max-height: 100%;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
   }
   .canvas-overlay-layer {
@@ -1451,9 +1447,11 @@ function onClipMouseDown(ev, clip, el) {
   ev.preventDefault();
   selectClip(clip.id);
   pushUndo();
+  // selectClip() just rebuilt the timeline DOM — grab the fresh element, not the stale one passed in
+  const freshEl = document.querySelector(`.clip[data-clip-id="${clip.id}"]`) || el;
   const startX = ev.clientX;
   const origOffset = clip.trackOffset;
-  dragCtx = { type: 'move', clip, el, startX, origOffset };
+  dragCtx = { type: 'move', clip, el: freshEl, startX, origOffset };
   document.addEventListener('mousemove', onClipDragMove);
   document.addEventListener('mouseup', onClipDragEnd);
 }
@@ -1524,9 +1522,11 @@ function onOverlayMouseDown(ev, ov, el) {
   ev.preventDefault();
   selectOverlay(ov.id);
   pushUndo();
+  // selectOverlay() just rebuilt the timeline DOM — grab the fresh element, not the stale one passed in
+  const freshEl = document.querySelector(`.ov-clip[data-ov-id="${ov.id}"]`) || el;
   const startX = ev.clientX;
   const origStart = ov.start;
-  dragCtx = { type: 'ov-move', ov, el, startX, origStart };
+  dragCtx = { type: 'ov-move', ov, el: freshEl, startX, origStart };
   document.addEventListener('mousemove', onOverlayDragMove);
   document.addEventListener('mouseup', onOverlayDragEnd);
 }
