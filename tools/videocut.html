@@ -269,6 +269,26 @@
     padding: 18px;
     min-height: 0;
     min-width: 0;
+    transition: background-color .15s ease;
+  }
+  .stage.drag-over {
+    background-color: rgba(79,107,244,.12);
+  }
+  .stage.drag-over::after {
+    content: 'Відпустіть, щоб додати відео';
+    position: absolute;
+    inset: 10px;
+    border: 2px dashed var(--accent);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    background: rgba(20,22,28,.55);
+    pointer-events: none;
+    z-index: 50;
   }
   .stage-canvas-wrap {
     position: relative;
@@ -1058,7 +1078,7 @@
 </div>
 
 <!-- hidden inputs -->
-<input type="file" id="file-video" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mov" style="display:none" onchange="handleVideoUpload(event)">
+<input type="file" id="file-video" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mov" style="display:none" onchange="handleVideoUploadEvent(event)">
 <input type="file" id="file-photo" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handlePhotoUpload(event)">
 
 <script>
@@ -1088,6 +1108,7 @@ const state = {
   textColor: '#ffffff',
   textSize: 36,
   undoStack: [],
+  hasUnsavedChanges: false,
   canvasW: 1280, canvasH: 720,
   rafId: null,
   lastFrameTime: 0,
@@ -1195,9 +1216,16 @@ function fixInfiniteDuration(video) {
   });
 }
 
-async function handleVideoUpload(e) {
+function handleVideoUploadEvent(e) {
   const file = e.target.files[0];
-  if (!file) return;
+  if (file) processVideoFile(file);
+}
+
+async function processVideoFile(file) {
+  if (!file.type.startsWith('video/') && !/\.(mp4|webm|mov)$/i.test(file.name)) {
+    showToast('Цей файл не схожий на відео', true);
+    return;
+  }
 
   const isFirstClip = state.clips.length === 0;
 
@@ -1258,6 +1286,7 @@ async function handleVideoUpload(e) {
     selectClip(clip.id);
     drawFrameAt(state.playhead);
     showToast(isFirstClip ? 'Відео завантажено' : 'Кліп додано на таймлайн');
+    state.hasUnsavedChanges = true;
 
     // lightweight synthetic waveform — purely visual, no audio decoding involved.
     // (decodeAudioData is intentionally avoided: it can hang indefinitely on some
@@ -1690,6 +1719,7 @@ function pushUndo() {
   state.undoStack.push(snap);
   if (state.undoStack.length > 30) state.undoStack.shift();
   document.getElementById('btn-undo').disabled = false;
+  state.hasUnsavedChanges = true;
 }
 
 function undo() {
@@ -1725,6 +1755,7 @@ function undo() {
 function confirmNewProject() {
   if (state.clips.length === 0) return;
   if (confirm('Почати новий проєкт? Поточні зміни буде втрачено.')) {
+    state.hasUnsavedChanges = false; // user already confirmed — skip the native beforeunload prompt too
     location.reload();
   }
 }
@@ -1895,7 +1926,55 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   setupCanvasOverlayDrag();
+  setupDragDropUpload();
 });
+
+/* warn before closing/reloading the tab if there's unsaved editing work */
+window.addEventListener('beforeunload', (ev) => {
+  if (!state.hasUnsavedChanges) return;
+  ev.preventDefault();
+  ev.returnValue = ''; // required by Chrome to show the native confirmation dialog
+});
+
+/* ===================== DRAG & DROP VIDEO FILE ONTO STAGE ===================== */
+function setupDragDropUpload() {
+  const stage = document.getElementById('stage');
+  let dragDepth = 0; // tracks nested dragenter/dragleave on child elements
+
+  stage.addEventListener('dragenter', (ev) => {
+    ev.preventDefault();
+    dragDepth++;
+    stage.classList.add('drag-over');
+  });
+
+  stage.addEventListener('dragover', (ev) => {
+    ev.preventDefault(); // required to allow drop
+    ev.dataTransfer.dropEffect = 'copy';
+  });
+
+  stage.addEventListener('dragleave', (ev) => {
+    ev.preventDefault();
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) stage.classList.remove('drag-over');
+  });
+
+  stage.addEventListener('drop', (ev) => {
+    ev.preventDefault();
+    dragDepth = 0;
+    stage.classList.remove('drag-over');
+    const files = Array.from(ev.dataTransfer.files || []).filter(f =>
+      f.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name)
+    );
+    if (!files.length) {
+      showToast('Перетягніть файл відео (MP4, WebM або MOV)', true);
+      return;
+    }
+    // process sequentially so clips land on the timeline in drop order
+    (async () => {
+      for (const f of files) await processVideoFile(f);
+    })();
+  });
+}
 
 /* ===================== DRAG OVERLAYS DIRECTLY ON PREVIEW (Canva-style) ===================== */
 let canvasDragCtx = null;
@@ -2301,6 +2380,7 @@ async function doExport() {
 
     setProgress(100);
     setTimeout(() => { hideProgress(); showToast('Відео експортовано: ' + filename); }, 400);
+    state.hasUnsavedChanges = false;
 
   } catch (err) {
     console.error(err);
