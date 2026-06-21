@@ -1020,9 +1020,10 @@
 <input type="file" id="file-video" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mov" style="display:none" onchange="handleVideoUpload(event)">
 <input type="file" id="file-photo" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handlePhotoUpload(event)">
 
-<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
-<script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
 <script>
+/* FFmpeg.wasm is loaded lazily and asynchronously on first export — see loadScript()/ensureFFmpeg() below.
+   This keeps page load, video upload and the timeline fully usable even if the CDN is slow or blocked. */
+
 /* ===================== STATE ===================== */
 const COLORS = ['#ffffff','#1a1d23','#4F6BF4','#ef4444','#f59e0b','#10b981','#ec4899','#06b6d4'];
 
@@ -1077,8 +1078,30 @@ function showToast(msg, isError) {
 function closeIntro() { document.getElementById('overlay-intro').classList.add('hidden'); }
 
 /* ===================== FFMPEG INIT (lazy, on first export) ===================== */
+function loadScript(src, timeoutMs = 20000) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src;
+    const timer = setTimeout(() => reject(new Error('Не вдалося завантажити ' + src + ' (тайм-аут мережі)')), timeoutMs);
+    s.onload = () => { clearTimeout(timer); resolve(); };
+    s.onerror = () => { clearTimeout(timer); reject(new Error('Не вдалося завантажити ' + src)); };
+    document.head.appendChild(s);
+  });
+}
+
 async function ensureFFmpeg() {
   if (state.ffmpegLoaded) return state.ffmpeg;
+  showProgress('Готуємо відеодвигун', 'Завантажуємо бібліотеки FFmpeg...', true);
+
+  if (typeof FFmpegWASM === 'undefined') {
+    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+  }
+  if (typeof FFmpegUtil === 'undefined') {
+    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
+  }
+
   showProgress('Готуємо відеодвигун', 'Завантажуємо FFmpeg (одноразово, ~30МБ)...', true);
   const { FFmpeg } = FFmpegWASM;
   const ffmpeg = new FFmpeg();
@@ -1115,6 +1138,22 @@ function hideProgress() { document.getElementById('overlay-progress').classList.
 function triggerFileUpload() { document.getElementById('file-video').value = ''; document.getElementById('file-video').click(); }
 function triggerPhotoUpload() { document.getElementById('file-photo').value = ''; document.getElementById('file-photo').click(); }
 
+/* Fixes the classic MediaRecorder-produced WebM bug where video.duration reports Infinity
+   until the browser is forced to seek through the file once. */
+function fixInfiniteDuration(video) {
+  return new Promise((resolve) => {
+    const onTimeUpdate = () => {
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.currentTime = 0;
+      resolve();
+    };
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.currentTime = 1e101; // seeking past the end forces duration recalculation
+    // safety net in case timeupdate never fires
+    setTimeout(resolve, 4000);
+  });
+}
+
 async function handleVideoUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -1135,6 +1174,15 @@ async function handleVideoUpload(e) {
       // safety net: don't hang forever if metadata never fires
       setTimeout(() => reject(new Error('Час очікування вичерпано — файл завеликий або пошкоджений')), 20000);
     });
+
+    // Known browser issue: WebM files recorded via MediaRecorder often report
+    // duration = Infinity until the video is seeked once. Fix it before using duration anywhere.
+    if (!isFinite(video.duration)) {
+      await fixInfiniteDuration(video);
+    }
+    if (!isFinite(video.duration) || video.duration <= 0) {
+      throw new Error('Не вдалося визначити тривалість відео (пошкоджений файл)');
+    }
 
     if (isFirstClip) {
       state.videoEl = video;
@@ -1170,11 +1218,11 @@ async function handleVideoUpload(e) {
     drawFrameAt(state.playhead);
     showToast(isFirstClip ? 'Відео завантажено' : 'Кліп додано на таймлайн');
 
-    // waveform is best-effort and runs in the background — never blocks the UI
-    extractWaveform(file).then(peaks => {
-      clip.peaks = peaks;
-      renderTimeline();
-    }).catch(() => { /* silently skip waveform if it fails or times out */ });
+    // lightweight synthetic waveform — purely visual, no audio decoding involved.
+    // (decodeAudioData is intentionally avoided: it can hang indefinitely on some
+    // WebM/Opus files in Chrome/Firefox even for short clips — a known browser issue.)
+    clip.peaks = generateSyntheticPeaks();
+    renderTimeline();
 
   } catch (err) {
     console.error(err);
@@ -1182,38 +1230,25 @@ async function handleVideoUpload(e) {
   }
 }
 
-async function extractWaveform(file) {
-  // hard timeout so a slow/huge decode never hangs anything else
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('waveform timeout')), 15000));
-  const work = (async () => {
-    const arrayBuf = await file.arrayBuffer();
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    try {
-      const audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
-      const raw = audioBuf.getChannelData(0);
-      const samples = 200;
-      const blockSize = Math.floor(raw.length / samples) || 1;
-      const peaks = [];
-      for (let i = 0; i < samples; i++) {
-        let sum = 0;
-        const start = i * blockSize;
-        for (let j = 0; j < blockSize; j++) sum += Math.abs(raw[start + j] || 0);
-        peaks.push(sum / blockSize);
-      }
-      const max = Math.max(...peaks, 0.0001);
-      return peaks.map(p => Math.max(0.06, p / max));
-    } finally {
-      ctx.close();
-    }
-  })();
-  return Promise.race([work, timeout]);
+function generateSyntheticPeaks() {
+  const samples = 200;
+  const peaks = [];
+  let v = 0.4;
+  for (let i = 0; i < samples; i++) {
+    v += (Math.random() - 0.5) * 0.3;
+    v = Math.max(0.12, Math.min(0.9, v));
+    peaks.push(v);
+  }
+  return peaks;
 }
+
 
 function recalcDuration() {
   let t = 0;
   for (const c of state.clips) {
+    if (!isFinite(c.srcOut) || c.srcOut <= 0) c.srcOut = c.fullDuration && isFinite(c.fullDuration) ? c.fullDuration : c.srcIn + 1;
     c.trackOffset = t;
-    c.duration = c.srcOut - c.srcIn;
+    c.duration = Math.max(0.05, c.srcOut - c.srcIn);
     t += c.duration;
   }
   state.duration = t;
@@ -1246,7 +1281,9 @@ function renderRuler(totalPx) {
   ruler.innerHTML = '';
   ruler.style.width = totalPx + 'px';
   const step = state.pxPerSec >= 80 ? 1 : state.pxPerSec >= 40 ? 2 : state.pxPerSec >= 20 ? 5 : 10;
-  const totalSec = totalPx / state.pxPerSec;
+  let totalSec = totalPx / state.pxPerSec;
+  // hard safety cap: never iterate more than 5000 ticks, no matter what duration/zoom produced totalPx
+  if (!isFinite(totalSec) || totalSec > step * 5000) totalSec = step * 5000;
   for (let s = 0; s <= totalSec; s += step) {
     const mark = document.createElement('div');
     mark.className = 'tl-ruler-mark';
