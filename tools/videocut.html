@@ -405,6 +405,11 @@
   .field-row .input-styled { margin: 0; }
 
   .swatch-row { display: flex; gap: 7px; flex-wrap: wrap; }
+  .toggle-row {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 12.5px; color: var(--text2); cursor: pointer;
+  }
+  .toggle-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
   .swatch {
     width: 26px; height: 26px; border-radius: 7px;
     border: 2px solid var(--border);
@@ -413,6 +418,18 @@
   }
   .swatch:hover { transform: scale(1.08); }
   .swatch.active { border-color: var(--accent); transform: scale(1.08); }
+  .swatch-none {
+    background: var(--surface2);
+    position: relative;
+  }
+  .swatch-none::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 3px; right: 3px;
+    height: 2px;
+    background: var(--danger);
+    transform: translateY(-50%) rotate(-45deg);
+  }
 
   .slider-row { display: flex; align-items: center; gap: 10px; }
   .slider-row input[type=range] { flex: 1; accent-color: var(--accent); }
@@ -580,14 +597,38 @@
     display: flex; align-items: flex-end; gap: 1px;
     padding: 3px 4px;
     opacity: .55;
+    z-index: 1;
   }
   .clip-waveform .bar { flex: 1; background: rgba(255,255,255,.85); border-radius: 1px; min-height: 2px; }
+  .clip-filmstrip {
+    position: absolute; inset: 0;
+    display: flex;
+    overflow: hidden;
+    border-radius: 6px;
+  }
+  .clip-filmstrip img {
+    flex: 1; height: 100%; object-fit: cover;
+    opacity: .6; min-width: 0;
+  }
+  .clip-fade-indicator {
+    position: absolute; top: 0; bottom: 0;
+    z-index: 2; pointer-events: none;
+  }
+  .clip-fade-indicator.left {
+    left: 0;
+    background: linear-gradient(90deg, rgba(0,0,0,.65), transparent);
+  }
+  .clip-fade-indicator.right {
+    right: 0;
+    background: linear-gradient(270deg, rgba(0,0,0,.65), transparent);
+  }
   .clip-label {
     position: absolute; top: 3px; left: 7px; right: 7px;
     font-size: 10px; font-weight: 600; color: #fff;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     text-shadow: 0 1px 2px rgba(0,0,0,.4);
     pointer-events: none;
+    z-index: 3;
   }
   .clip-handle {
     position: absolute; top: 0; bottom: 0; width: 9px;
@@ -618,6 +659,11 @@
   .ov-clip.type-photo { background: linear-gradient(180deg,#10b981,#0d9c6e); border-color: #4ade9a; }
   .ov-clip.type-draw { background: linear-gradient(180deg,#ec4899,#d63384); border-color: #f472b6; }
   .ov-clip-label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; pointer-events: none; }
+  .ov-clip-thumb {
+    width: 20px; height: 20px; border-radius: 4px; object-fit: cover;
+    margin-right: 6px; flex-shrink: 0; pointer-events: none;
+    border: 1px solid rgba(255,255,255,.4);
+  }
   .ov-clip .clip-handle::after { height: 14px; }
 
   .tl-playhead {
@@ -928,6 +974,10 @@
             <div>
               <div class="panel-section-label">Вибраний кліп</div>
               <div class="field-group">
+                <div class="field-label">Назва</div>
+                <input class="input-styled" id="clip-name" oninput="updateClipName(this.value)">
+              </div>
+              <div class="field-group">
                 <div class="field-label">Початок / Кінець</div>
                 <div class="field-row">
                   <input class="input-styled mono" id="clip-start" style="font-size:12px;" readonly>
@@ -949,6 +999,31 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text2);flex-shrink:0;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                 <input type="range" id="clip-volume" min="0" max="100" value="100" oninput="updateClipVolume(this.value)">
                 <span class="slider-val mono" id="clip-volume-val">100</span>
+              </div>
+            </div>
+            <div>
+              <div class="panel-section-label">Швидкість відтворення</div>
+              <div class="slider-row">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text2);flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <input type="range" id="clip-speed" min="0.5" max="2" step="0.05" value="1" oninput="updateClipSpeed(this.value)">
+                <span class="slider-val mono" id="clip-speed-val">1.0x</span>
+              </div>
+            </div>
+            <div>
+              <div class="panel-section-label">Плавний перехід</div>
+              <div class="field-group">
+                <div class="field-label">Поява (fade in), сек</div>
+                <div class="slider-row">
+                  <input type="range" id="clip-fadein" min="0" max="2" step="0.1" value="0" oninput="updateClipFade('in', this.value)">
+                  <span class="slider-val mono" id="clip-fadein-val">0.0</span>
+                </div>
+              </div>
+              <div class="field-group">
+                <div class="field-label">Згасання (fade out), сек</div>
+                <div class="slider-row">
+                  <input type="range" id="clip-fadeout" min="0" max="2" step="0.1" value="0" oninput="updateClipFade('out', this.value)">
+                  <span class="slider-val mono" id="clip-fadeout-val">0.0</span>
+                </div>
               </div>
             </div>
           </div>
@@ -978,8 +1053,23 @@
               <input class="input-styled" id="text-edit-content" oninput="updateSelectedTextLive()">
             </div>
             <div class="field-group">
-              <div class="field-label">Колір</div>
+              <div class="field-label">Назва шару</div>
+              <input class="input-styled" id="text-edit-name" placeholder="Текст" oninput="updateOverlayName('text')">
+            </div>
+            <div class="field-group">
+              <div class="field-label">Колір тексту</div>
               <div class="swatch-row" id="text-color-swatches"></div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Обводка тексту</div>
+              <div class="swatch-row" id="text-stroke-swatches"></div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Підкладка під текстом</div>
+              <label class="toggle-row">
+                <input type="checkbox" id="text-bg-toggle" onchange="updateSelectedTextLive()">
+                <span>Напівпрозорий фон за написом</span>
+              </label>
             </div>
             <div class="field-group">
               <div class="field-label">Розмір шрифту</div>
@@ -994,6 +1084,10 @@
                 <input type="range" id="text-dur" min="0.5" max="20" step="0.1" value="3" oninput="updateOverlayDuration('text')">
                 <span class="slider-val mono" id="text-dur-val">3.0</span>
               </div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Колір блоку на таймлайні</div>
+              <div class="swatch-row" id="text-clipcolor-swatches"></div>
             </div>
           </div>
           <div>
@@ -1017,11 +1111,19 @@
           <div id="photo-style-section" style="display:none;">
             <div class="panel-section-label">Вибране фото</div>
             <div class="field-group">
+              <div class="field-label">Назва шару</div>
+              <input class="input-styled" id="photo-edit-name" placeholder="Фото" oninput="updateOverlayName('photo')">
+            </div>
+            <div class="field-group">
               <div class="field-label">Тривалість показу (сек)</div>
               <div class="slider-row">
                 <input type="range" id="photo-dur" min="0.5" max="20" step="0.1" value="3" oninput="updateOverlayDuration('photo')">
                 <span class="slider-val mono" id="photo-dur-val">3.0</span>
               </div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Колір блоку на таймлайні</div>
+              <div class="swatch-row" id="photo-clipcolor-swatches"></div>
             </div>
           </div>
           <div>
@@ -1057,11 +1159,19 @@
           <div id="draw-style-section" style="display:none;">
             <div class="panel-section-label">Вибраний малюнок</div>
             <div class="field-group">
+              <div class="field-label">Назва шару</div>
+              <input class="input-styled" id="draw-edit-name" placeholder="Малюнок" oninput="updateOverlayName('draw')">
+            </div>
+            <div class="field-group">
               <div class="field-label">Тривалість показу (сек)</div>
               <div class="slider-row">
                 <input type="range" id="draw-dur" min="0.5" max="20" step="0.1" value="3" oninput="updateOverlayDuration('draw')">
                 <span class="slider-val mono" id="draw-dur-val">3.0</span>
               </div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Колір блоку на таймлайні</div>
+              <div class="swatch-row" id="draw-clipcolor-swatches"></div>
             </div>
           </div>
           <div>
@@ -1265,10 +1375,14 @@ async function processVideoFile(file) {
     const clip = {
       id: newId(),
       file, url,
+      name: file.name.replace(/\.[^.]+$/, ''),
       srcIn: 0,
       srcOut: video.duration,
       fullDuration: video.duration,
       volume: 100,
+      speed: 1,
+      fadeIn: 0,
+      fadeOut: 0,
       peaks: null,
       videoEl: video,
       w: video.videoWidth, h: video.videoHeight,
@@ -1318,7 +1432,8 @@ function recalcDuration() {
   for (const c of state.clips) {
     if (!isFinite(c.srcOut) || c.srcOut <= 0) c.srcOut = c.fullDuration && isFinite(c.fullDuration) ? c.fullDuration : c.srcIn + 1;
     c.trackOffset = t;
-    c.duration = Math.max(0.05, c.srcOut - c.srcIn);
+    const speed = c.speed || 1;
+    c.duration = Math.max(0.05, (c.srcOut - c.srcIn) / speed);
     t += c.duration;
   }
   state.duration = t;
@@ -1373,6 +1488,20 @@ function renderVideoTrack() {
     el.style.width = Math.max(clip.duration * state.pxPerSec, 14) + 'px';
     el.dataset.clipId = clip.id;
 
+    // filmstrip thumbnails (cached per clip, generated once)
+    if (!clip.thumbStrip) {
+      ensureClipThumbnails(clip); // async, re-renders timeline when ready
+    } else {
+      const strip = document.createElement('div');
+      strip.className = 'clip-filmstrip';
+      for (const thumbSrc of clip.thumbStrip) {
+        const img = document.createElement('img');
+        img.src = thumbSrc;
+        strip.appendChild(img);
+      }
+      el.appendChild(strip);
+    }
+
     const wf = document.createElement('div');
     wf.className = 'clip-waveform';
     if (clip.peaks) {
@@ -1390,9 +1519,22 @@ function renderVideoTrack() {
     }
     el.appendChild(wf);
 
+    if (clip.fadeIn > 0) {
+      const fi = document.createElement('div');
+      fi.className = 'clip-fade-indicator left';
+      fi.style.width = Math.min(clip.fadeIn, clip.duration) * state.pxPerSec + 'px';
+      el.appendChild(fi);
+    }
+    if (clip.fadeOut > 0) {
+      const fo = document.createElement('div');
+      fo.className = 'clip-fade-indicator right';
+      fo.style.width = Math.min(clip.fadeOut, clip.duration) * state.pxPerSec + 'px';
+      el.appendChild(fo);
+    }
+
     const label = document.createElement('div');
     label.className = 'clip-label';
-    label.textContent = clip.file.name;
+    label.textContent = (clip.name || clip.file.name) + (clip.speed && clip.speed !== 1 ? ` · ${clip.speed}x` : '');
     el.appendChild(label);
 
     const hL = document.createElement('div'); hL.className = 'clip-handle left';
@@ -1407,6 +1549,49 @@ function renderVideoTrack() {
   }
 }
 
+/* Generates a strip of small JPEG thumbnails by seeking through the video once.
+   Cached on the clip object so it only runs a single time per clip. */
+async function ensureClipThumbnails(clip) {
+  if (clip.thumbStripLoading) return;
+  clip.thumbStripLoading = true;
+  const COUNT = 6;
+  try {
+    const src = clip.url;
+    const v = document.createElement('video');
+    v.src = src;
+    v.muted = true;
+    v.preload = 'auto';
+    await new Promise((res, rej) => {
+      v.onloadedmetadata = res;
+      v.onerror = rej;
+      setTimeout(rej, 8000);
+    });
+    const tCanvas = document.createElement('canvas');
+    tCanvas.width = 80; tCanvas.height = 45;
+    const tctx = tCanvas.getContext('2d');
+    const thumbs = [];
+    for (let i = 0; i < COUNT; i++) {
+      const frac = (i + 0.5) / COUNT;
+      const seekT = Math.min(v.duration - 0.05, Math.max(0, frac * v.duration));
+      await new Promise((res) => {
+        const onSeeked = () => { v.removeEventListener('seeked', onSeeked); res(); };
+        v.addEventListener('seeked', onSeeked);
+        v.currentTime = seekT;
+        setTimeout(res, 1500); // safety net per-frame
+      });
+      try {
+        tctx.drawImage(v, 0, 0, tCanvas.width, tCanvas.height);
+        thumbs.push(tCanvas.toDataURL('image/jpeg', 0.6));
+      } catch (e) { /* skip frame on decode error */ }
+    }
+    clip.thumbStrip = thumbs;
+  } catch (e) {
+    clip.thumbStrip = []; // give up silently — waveform still shows
+  }
+  clip.thumbStripLoading = false;
+  renderTimeline();
+}
+
 function renderOverlayTrack() {
   const track = document.getElementById('track-overlay');
   track.querySelectorAll('.ov-clip').forEach(el => el.remove());
@@ -1415,10 +1600,18 @@ function renderOverlayTrack() {
     el.className = `ov-clip type-${ov.type}` + (ov.id === state.selectedOverlayId ? ' selected' : '');
     el.style.left = (ov.start * state.pxPerSec) + 'px';
     el.style.width = Math.max(ov.dur * state.pxPerSec, 14) + 'px';
+    if (ov.clipColor) { el.style.background = ov.clipColor; el.style.borderColor = shadeColor(ov.clipColor, 20); }
+
+    if (ov.type === 'photo' && ov.imgEl) {
+      const thumb = document.createElement('img');
+      thumb.className = 'ov-clip-thumb';
+      thumb.src = ov.imgEl.src;
+      el.appendChild(thumb);
+    }
 
     const label = document.createElement('span');
     label.className = 'ov-clip-label';
-    label.textContent = ov.type === 'text' ? ov.text : ov.type === 'photo' ? 'Фото' : 'Малюнок';
+    label.textContent = ov.type === 'text' ? ov.text : ov.type === 'photo' ? (ov.name || 'Фото') : (ov.name || 'Малюнок');
     el.appendChild(label);
 
     const hL = document.createElement('div'); hL.className = 'clip-handle left';
@@ -1437,6 +1630,15 @@ function renderOverlayTrack() {
   }
 }
 
+function shadeColor(hex, percent) {
+  if (!hex || !hex.startsWith('#')) return hex;
+  let r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  r = Math.min(255, Math.round(r + (255-r)*percent/100));
+  g = Math.min(255, Math.round(g + (255-g)*percent/100));
+  b = Math.min(255, Math.round(b + (255-b)*percent/100));
+  return `rgb(${r},${g},${b})`;
+}
+
 function onOverlayResizeStart(ev, ov, side) {
   ev.preventDefault();
   selectOverlay(ov.id);
@@ -1452,11 +1654,14 @@ function onOverlayResizeMove(ev) {
   const dxSec = (ev.clientX - dragCtx.startX) / state.pxPerSec;
   const ov = dragCtx.ov;
   if (dragCtx.side === 'left') {
-    const newStart = Math.max(0, Math.min(dragCtx.origStart + dxSec, dragCtx.origStart + dragCtx.origDur - 0.3));
+    let newStart = Math.max(0, Math.min(dragCtx.origStart + dxSec, dragCtx.origStart + dragCtx.origDur - 0.3));
+    newStart = applySnap(newStart, ov.id);
     ov.dur = (dragCtx.origStart + dragCtx.origDur) - newStart;
     ov.start = newStart;
   } else {
-    ov.dur = Math.max(0.3, dragCtx.origDur + dxSec);
+    let newEnd = dragCtx.origStart + Math.max(0.3, dragCtx.origDur + dxSec);
+    newEnd = applySnap(newEnd, ov.id);
+    ov.dur = Math.max(0.3, newEnd - ov.start);
   }
   renderTimeline();
   drawFrameAt(state.playhead);
@@ -1485,12 +1690,40 @@ function onClipMouseDown(ev, clip, el) {
   document.addEventListener('mouseup', onClipDragEnd);
 }
 
+/* Returns the snap-adjusted time for a dragged edge, snapping to other clip/overlay
+   edges and the playhead within a fixed pixel threshold (works at any zoom level). */
+function getSnapPoints(excludeId) {
+  const points = [0, state.playhead];
+  for (const c of state.clips) {
+    if (c.id === excludeId) continue;
+    points.push(c.trackOffset, c.trackOffset + c.duration);
+  }
+  for (const o of state.overlays) {
+    if (o.id === excludeId) continue;
+    points.push(o.start, o.start + o.dur);
+  }
+  return points;
+}
+
+function applySnap(proposedTime, excludeId) {
+  const thresholdSec = 8 / state.pxPerSec; // ~8px snap radius regardless of zoom
+  const points = getSnapPoints(excludeId);
+  let best = proposedTime, bestDist = thresholdSec;
+  for (const p of points) {
+    const d = Math.abs(p - proposedTime);
+    if (d < bestDist) { bestDist = d; best = p; }
+  }
+  return best;
+}
+
 function onClipDragMove(ev) {
   if (!dragCtx || dragCtx.type !== 'move') return;
   const dx = ev.clientX - dragCtx.startX;
   const dxSec = dx / state.pxPerSec;
-  dragCtx.el.style.left = Math.max(0, (dragCtx.origOffset + dxSec)) * state.pxPerSec + 'px';
-  dragCtx.proposedOffset = Math.max(0, dragCtx.origOffset + dxSec);
+  let proposed = Math.max(0, dragCtx.origOffset + dxSec);
+  proposed = applySnap(proposed, dragCtx.clip.id);
+  dragCtx.el.style.left = proposed * state.pxPerSec + 'px';
+  dragCtx.proposedOffset = proposed;
 }
 
 function onClipDragEnd() {
@@ -1530,9 +1763,17 @@ function onClipResizeMove(ev) {
   const clip = dragCtx.clip;
   if (dragCtx.side === 'left') {
     let newIn = Math.min(Math.max(0, dragCtx.origIn + dxSec), clip.srcOut - 0.2);
+    // snap: the left edge maps to trackOffset which shifts with srcIn
+    const snapTime = applySnap(clip.trackOffset + (newIn - dragCtx.origIn), clip.id);
+    const deltaSnap = snapTime - clip.trackOffset;
+    newIn = Math.min(Math.max(0, dragCtx.origIn + deltaSnap), clip.srcOut - 0.2);
     clip.srcIn = newIn;
   } else {
     let newOut = Math.max(Math.min(clip.fullDuration, dragCtx.origOut + dxSec), clip.srcIn + 0.2);
+    const speed = clip.speed || 1;
+    const proposedEnd = clip.trackOffset + (newOut - clip.srcIn) / speed;
+    const snappedEnd = applySnap(proposedEnd, clip.id);
+    newOut = Math.max(clip.srcIn + 0.2, Math.min(clip.fullDuration, clip.srcIn + (snappedEnd - clip.trackOffset) * speed));
     clip.srcOut = newOut;
   }
   recalcDuration();
@@ -1562,7 +1803,8 @@ function onOverlayMouseDown(ev, ov, el) {
 function onOverlayDragMove(ev) {
   if (!dragCtx || dragCtx.type !== 'ov-move') return;
   const dxSec = (ev.clientX - dragCtx.startX) / state.pxPerSec;
-  const newStart = Math.max(0, dragCtx.origStart + dxSec);
+  let newStart = Math.max(0, dragCtx.origStart + dxSec);
+  newStart = applySnap(newStart, dragCtx.ov.id);
   dragCtx.ov.start = newStart;
   dragCtx.el.style.left = newStart * state.pxPerSec + 'px';
 }
@@ -1632,6 +1874,12 @@ function selectClip(id) {
     updateClipPanelFields(clip);
     document.getElementById('clip-volume').value = clip.volume;
     document.getElementById('clip-volume-val').textContent = clip.volume;
+    document.getElementById('clip-speed').value = clip.speed || 1;
+    document.getElementById('clip-speed-val').textContent = (clip.speed || 1).toFixed(2).replace(/0$/,'').replace(/\.$/,'.0') + 'x';
+    document.getElementById('clip-fadein').value = clip.fadeIn || 0;
+    document.getElementById('clip-fadein-val').textContent = (clip.fadeIn || 0).toFixed(1);
+    document.getElementById('clip-fadeout').value = clip.fadeOut || 0;
+    document.getElementById('clip-fadeout-val').textContent = (clip.fadeOut || 0).toFixed(1);
     document.getElementById('btn-delete-clip').disabled = false;
   }
 }
@@ -1643,6 +1891,7 @@ function hideOverlayStyleSections() {
 }
 
 function updateClipPanelFields(clip) {
+  document.getElementById('clip-name').value = clip.name || clip.file.name;
   document.getElementById('clip-start').value = fmtTime(clip.trackOffset);
   document.getElementById('clip-end').value = fmtTime(clip.trackOffset + clip.duration);
 }
@@ -1656,7 +1905,38 @@ function showClipPanelEmpty() {
 function updateClipVolume(v) {
   document.getElementById('clip-volume-val').textContent = v;
   const clip = state.clips.find(c => c.id === state.selectedClipId);
-  if (clip) clip.volume = +v;
+  if (clip) { clip.volume = +v; state.hasUnsavedChanges = true; }
+}
+
+function updateClipSpeed(v) {
+  const speed = +v;
+  document.getElementById('clip-speed-val').textContent = speed.toFixed(2).replace(/0$/,'').replace(/\.$/,'.0') + 'x';
+  const clip = state.clips.find(c => c.id === state.selectedClipId);
+  if (!clip) return;
+  clip.speed = speed;
+  recalcDuration();
+  renderTimeline();
+  updateClipPanelFields(clip);
+  drawFrameAt(state.playhead);
+  state.hasUnsavedChanges = true;
+}
+
+function updateClipFade(which, v) {
+  const val = +v;
+  document.getElementById(`clip-fade${which}-val`).textContent = val.toFixed(1);
+  const clip = state.clips.find(c => c.id === state.selectedClipId);
+  if (!clip) return;
+  if (which === 'in') clip.fadeIn = val; else clip.fadeOut = val;
+  drawFrameAt(state.playhead);
+  state.hasUnsavedChanges = true;
+}
+
+function updateClipName(name) {
+  const clip = state.clips.find(c => c.id === state.selectedClipId);
+  if (!clip) return;
+  clip.name = name.trim() || clip.file.name;
+  renderTimeline();
+  state.hasUnsavedChanges = true;
 }
 
 function selectOverlay(id) {
@@ -1672,26 +1952,47 @@ function selectOverlay(id) {
     document.getElementById('text-style-section').style.flexDirection = 'column';
     document.getElementById('text-style-section').style.gap = '16px';
     document.getElementById('text-edit-content').value = ov.text;
+    document.getElementById('text-edit-name').value = ov.name || '';
+    document.getElementById('text-edit-name').placeholder = ov.text;
     document.getElementById('text-size').value = ov.size;
     document.getElementById('text-size-val').textContent = ov.size;
     document.getElementById('text-dur').value = ov.dur;
     document.getElementById('text-dur-val').textContent = ov.dur.toFixed(1);
-    buildSwatches('text-color-swatches', state.textColor, (c) => { ov.color = c; drawFrameAt(state.playhead); }, ov.color);
+    document.getElementById('text-bg-toggle').checked = !!ov.bg;
+    buildSwatches('text-color-swatches', state.textColor, (c) => { ov.color = c; drawFrameAt(state.playhead); renderOverlayLayerLists(); state.hasUnsavedChanges = true; }, ov.color);
+    buildSwatches('text-stroke-swatches', null, (c) => { ov.strokeColor = c; drawFrameAt(state.playhead); state.hasUnsavedChanges = true; }, ov.strokeColor, true);
+    buildSwatches('text-clipcolor-swatches', null, (c) => { ov.clipColor = c; renderTimeline(); state.hasUnsavedChanges = true; }, ov.clipColor, true);
   } else if (ov.type === 'photo') {
     switchTab('photo');
     document.getElementById('photo-style-section').style.display = 'flex';
     document.getElementById('photo-style-section').style.flexDirection = 'column';
     document.getElementById('photo-style-section').style.gap = '16px';
+    document.getElementById('photo-edit-name').value = ov.name || '';
+    document.getElementById('photo-edit-name').placeholder = 'Фото';
     document.getElementById('photo-dur').value = ov.dur;
     document.getElementById('photo-dur-val').textContent = ov.dur.toFixed(1);
+    buildSwatches('photo-clipcolor-swatches', null, (c) => { ov.clipColor = c; renderTimeline(); state.hasUnsavedChanges = true; }, ov.clipColor, true);
   } else if (ov.type === 'draw') {
     switchTab('draw');
     document.getElementById('draw-style-section').style.display = 'flex';
     document.getElementById('draw-style-section').style.flexDirection = 'column';
     document.getElementById('draw-style-section').style.gap = '16px';
+    document.getElementById('draw-edit-name').value = ov.name || '';
+    document.getElementById('draw-edit-name').placeholder = 'Малюнок';
     document.getElementById('draw-dur').value = ov.dur;
     document.getElementById('draw-dur-val').textContent = ov.dur.toFixed(1);
+    buildSwatches('draw-clipcolor-swatches', null, (c) => { ov.clipColor = c; renderTimeline(); state.hasUnsavedChanges = true; }, ov.clipColor, true);
   }
+}
+
+function updateOverlayName(type) {
+  const ov = state.overlays.find(o => o.id === state.selectedOverlayId);
+  if (!ov) return;
+  const val = document.getElementById(`${type}-edit-name`).value.trim();
+  ov.name = val;
+  renderOverlayLayerLists();
+  renderTimeline();
+  state.hasUnsavedChanges = true;
 }
 
 function updateOverlayDuration(type) {
@@ -1771,18 +2072,30 @@ function drawFrameAt(t) {
 
   const clip = state.clips.find(c => t >= c.trackOffset && t < c.trackOffset + c.duration) || state.clips[state.clips.length - 1];
   if (clip) {
-    const localT = clip.srcIn + (t - clip.trackOffset);
+    const speed = clip.speed || 1;
+    const localT = clip.srcIn + (t - clip.trackOffset) * speed;
     const v = clip.videoEl;
     if (Math.abs(v.currentTime - localT) > 0.05 && !state.playing) {
       v.currentTime = Math.max(0, Math.min(localT, clip.fullDuration - 0.01));
     }
     try {
+      // fade in/out: compute opacity based on position within the clip's timeline duration
+      let opacity = 1;
+      const into = t - clip.trackOffset;
+      const fromEnd = (clip.trackOffset + clip.duration) - t;
+      if (clip.fadeIn > 0 && into < clip.fadeIn) opacity = Math.min(opacity, into / clip.fadeIn);
+      if (clip.fadeOut > 0 && fromEnd < clip.fadeOut) opacity = Math.min(opacity, fromEnd / clip.fadeOut);
+      opacity = Math.max(0, Math.min(1, opacity));
+
       // scale/letterbox to canvas keeping aspect
       const vw = v.videoWidth || canvas.width, vh = v.videoHeight || canvas.height;
       const scale = Math.min(canvas.width / vw, canvas.height / vh);
       const dw = vw * scale, dh = vh * scale;
       const dx = (canvas.width - dw) / 2, dy = (canvas.height - dh) / 2;
+      ctx.save();
+      ctx.globalAlpha = opacity;
       ctx.drawImage(v, dx, dy, dw, dh);
+      ctx.restore();
     } catch (e) {}
   }
 
@@ -1805,23 +2118,52 @@ function drawFrameAt(t) {
   document.getElementById('time-current').textContent = fmtTime(t);
 }
 
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
 function drawOverlay(ctx, ov, canvas) {
   if (ov.type === 'text') {
     ctx.save();
     ctx.font = `700 ${ov.size}px Inter, sans-serif`;
-    ctx.fillStyle = ov.color;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,.55)';
-    ctx.shadowBlur = 8;
-    ctx.shadowOffsetY = 2;
     const x = canvas.width * (ov.x ?? 0.5);
     const y = canvas.height * (ov.y ?? 0.85);
-    ctx.fillText(ov.text, x, y);
-    ctx.restore();
     const metrics = ctx.measureText(ov.text);
     const w = metrics.width;
     const h = ov.size * 1.1;
+
+    if (ov.bg) {
+      ctx.fillStyle = 'rgba(0,0,0,.55)';
+      const padX = ov.size * 0.35, padY = ov.size * 0.22;
+      roundRect(ctx, x - w/2 - padX, y - h/2 - padY, w + padX*2, h + padY*2, 8);
+      ctx.fill();
+    }
+
+    if (!ov.bg) {
+      ctx.shadowColor = 'rgba(0,0,0,.55)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 2;
+    }
+
+    if (ov.strokeColor) {
+      ctx.lineWidth = Math.max(2, ov.size * 0.08);
+      ctx.strokeStyle = ov.strokeColor;
+      ctx.lineJoin = 'round';
+      ctx.miterLimit = 2;
+      ctx.strokeText(ov.text, x, y);
+    }
+
+    ctx.fillStyle = ov.color;
+    ctx.fillText(ov.text, x, y);
+    ctx.restore();
     return { x: x - w / 2, y: y - h / 2, w, h };
   } else if (ov.type === 'photo') {
     if (ov.imgEl && ov.imgEl.complete) {
@@ -1886,9 +2228,11 @@ function syncVideoForPlayback() {
   const clip = currentClipAtPlayhead();
   if (!clip) return;
   for (const c of state.clips) { if (c !== clip) c.videoEl.pause(); }
-  const localT = clip.srcIn + (state.playhead - clip.trackOffset);
+  const speed = clip.speed || 1;
+  const localT = clip.srcIn + (state.playhead - clip.trackOffset) * speed;
   clip.videoEl.currentTime = localT;
   clip.videoEl.volume = clip.volume / 100;
+  clip.videoEl.playbackRate = speed;
   clip.videoEl.play().catch(() => {});
 }
 
@@ -1927,7 +2271,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupCanvasOverlayDrag();
   setupDragDropUpload();
+  setupTimelineWheelZoom();
 });
+
+/* ===================== CTRL+WHEEL ZOOM ON TIMELINE ===================== */
+function setupTimelineWheelZoom() {
+  const scrollEl = document.getElementById('timeline-scroll');
+  scrollEl.addEventListener('wheel', (ev) => {
+    if (!ev.ctrlKey && !ev.metaKey) return; // plain wheel still scrolls normally
+    ev.preventDefault();
+
+    const rect = scrollEl.getBoundingClientRect();
+    const cursorX = ev.clientX - rect.left + scrollEl.scrollLeft;
+    const timeAtCursor = cursorX / state.pxPerSec;
+
+    const dir = ev.deltaY < 0 ? 1 : -1;
+    const oldPxPerSec = state.pxPerSec;
+    state.pxPerSec = Math.max(15, Math.min(300, state.pxPerSec + dir * Math.max(4, Math.round(state.pxPerSec * 0.12))));
+    document.getElementById('tl-zoom-label').textContent = state.pxPerSec + 'px/с';
+
+    if (state.pxPerSec === oldPxPerSec) return; // hit min/max clamp — nothing to re-render
+    renderTimeline();
+
+    // keep the same timestamp under the cursor after zoom
+    const newCursorX = timeAtCursor * state.pxPerSec;
+    scrollEl.scrollLeft = Math.max(0, newCursorX - (ev.clientX - rect.left));
+  }, { passive: false });
+}
 
 /* warn before closing/reloading the tab if there's unsaved editing work */
 window.addEventListener('beforeunload', (ev) => {
@@ -2054,12 +2424,23 @@ document.addEventListener('keydown', (ev) => {
 });
 
 /* ===================== SWATCHES ===================== */
-function buildSwatches(containerId, defaultColor, onPick, activeColor) {
+function buildSwatches(containerId, defaultColor, onPick, activeColor, allowNone) {
   const wrap = document.getElementById(containerId);
   wrap.innerHTML = '';
+  if (allowNone) {
+    const none = document.createElement('div');
+    none.className = 'swatch swatch-none' + (!activeColor ? ' active' : '');
+    none.title = 'Без кольору';
+    none.onclick = () => {
+      wrap.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+      none.classList.add('active');
+      onPick(null);
+    };
+    wrap.appendChild(none);
+  }
   for (const c of COLORS) {
     const sw = document.createElement('div');
-    sw.className = 'swatch' + (c === (activeColor || defaultColor) ? ' active' : '');
+    sw.className = 'swatch' + (c === activeColor ? ' active' : '');
     sw.style.background = c;
     sw.style.borderColor = c === '#ffffff' ? '#d0d5dd' : 'transparent';
     sw.onclick = () => {
@@ -2121,9 +2502,13 @@ function updateSelectedTextLive() {
   if (!ov) return;
   ov.text = document.getElementById('text-edit-content').value || ov.text;
   ov.size = +document.getElementById('text-size').value;
+  ov.bg = document.getElementById('text-bg-toggle').checked;
   document.getElementById('text-size-val').textContent = ov.size;
+  document.getElementById('text-edit-name').placeholder = ov.text;
   renderOverlayLayerLists();
+  renderTimeline();
   drawFrameAt(state.playhead);
+  state.hasUnsavedChanges = true;
 }
 
 /* ===================== PHOTO OVERLAY ===================== */
@@ -2328,12 +2713,30 @@ async function doExport() {
       const src = fileMap.get(clip.file);
       const seg = `seg${i}.mp4`;
       const volFactor = (clip.volume ?? 100) / 100;
+      const speed = clip.speed || 1;
+
+      // video filter chain: scale -> speed (setpts) -> fade in/out
+      const vFilters = [`scale=${state.canvasW}:${state.canvasH}`];
+      if (speed !== 1) vFilters.push(`setpts=${(1/speed).toFixed(4)}*PTS`);
+      if (clip.fadeIn > 0) vFilters.push(`fade=t=in:st=0:d=${clip.fadeIn.toFixed(2)}`);
+      if (clip.fadeOut > 0) {
+        // fade-out start time must be measured in the OUTPUT (post-speed) duration
+        const outDur = clip.duration; // already speed-adjusted by recalcDuration()
+        const foStart = Math.max(0, outDur - clip.fadeOut);
+        vFilters.push(`fade=t=out:st=${foStart.toFixed(2)}:d=${clip.fadeOut.toFixed(2)}`);
+      }
+
+      // audio filter chain: volume -> atempo (speed up/down audio to match video)
+      // atempo only supports 0.5–2.0 per stage, which matches our slider range exactly
+      const aFilters = [`volume=${volFactor}`];
+      if (speed !== 1) aFilters.push(`atempo=${speed.toFixed(3)}`);
+
       await ffmpeg.exec([
         '-i', src,
         '-ss', String(clip.srcIn),
         '-to', String(clip.srcOut),
-        '-vf', 'scale=' + state.canvasW + ':' + state.canvasH,
-        '-af', `volume=${volFactor}`,
+        '-vf', vFilters.join(','),
+        '-af', aFilters.join(','),
         '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23',
         '-c:a', 'aac',
         '-r', '30',
