@@ -5,11 +5,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VideoCut · Edvault</title>
-<!-- coi-serviceworker: emulates Cross-Origin-Isolation headers (COOP/COEP) via a Service Worker
-     so that FFmpeg.wasm can use SharedArrayBuffer on any static host (GitHub Pages, Cloudflare Pages, etc.)
-     without requiring server-level header configuration.
-     Source: https://github.com/gzuidhof/coi-serviceworker -->
-<script src="https://unpkg.com/coi-serviceworker@0.1.7/coi-serviceworker.min.js"></script>
+<!-- coi-serviceworker inlined: registers a same-origin Service Worker that adds
+     Cross-Origin-Isolation headers (COOP/COEP) via postMessage so FFmpeg.wasm
+     can use SharedArrayBuffer on static hosts (GitHub Pages, Cloudflare, etc.)
+     Source: https://github.com/gzuidhof/coi-serviceworker (MIT) -->
+<script>
+!function(){if(!self.crossOriginIsolated){const e="coi-serviceworker",t=new URL(location.href);if("1"===t.searchParams.get("coi-serviceworker-reloaded"))return void console.warn("[coi-serviceworker] Could not enable cross-origin isolation, reloaded too many times.");if("serviceWorker"in navigator){const r=new Blob([`
+self.addEventListener("install",()=>self.skipWaiting());
+self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
+self.addEventListener("fetch",e=>{
+  const r=e.request;
+  if(r.cache==="only-if-cached"&&r.mode!=="same-origin")return;
+  e.respondWith(
+    fetch(r).then(r=>{
+      if(r.status===0)return r;
+      const n=new Headers(r.headers);
+      n.set("Cross-Origin-Opener-Policy","same-origin");
+      n.set("Cross-Origin-Embedder-Policy","require-corp");
+      n.set("Cross-Origin-Resource-Policy","cross-origin");
+      return new Response(r.body,{status:r.status,statusText:r.statusText,headers:n});
+    })
+  );
+});
+`],{type:"text/javascript"}),s=URL.createObjectURL(r);navigator.serviceWorker.register(s).then(r=>{console.log("[coi-serviceworker] registered",r.scope);r.active?location.reload():(r.installing||r.waiting).addEventListener("statechange",e=>{"activated"===e.target.state&&(t.searchParams.set("coi-serviceworker-reloaded","1"),location.href=t.toString())})}).catch(e=>console.error("[coi-serviceworker] registration failed",e))}else console.warn("[coi-serviceworker] ServiceWorker not supported")}}();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
