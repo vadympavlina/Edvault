@@ -1288,36 +1288,31 @@ async function fetchAsBlob(url, mimeType) {
 
 async function ensureFFmpeg() {
   if (state.ffmpegLoaded) return state.ffmpeg;
-  showProgress('Готуємо відеодвигун', 'Завантажуємо бібліотеки FFmpeg...', true);
 
-  // Use single-threaded FFmpeg core (@ffmpeg/core, NOT @ffmpeg/core-mt).
-  // The multi-threaded version requires SharedArrayBuffer + CrossOriginIsolation
-  // which cannot be set on static hosts (GitHub Pages, Cloudflare) without a server.
-  // The single-threaded version works everywhere without any special headers.
+  showProgress('Готуємо відеодвигун', 'Завантажуємо FFmpeg...', true);
+
+  // @ffmpeg/ffmpeg@0.11.x runs entirely in the main thread — no Worker,
+  // no SharedArrayBuffer, no CORS issues on any static host.
   if (typeof FFmpegWASM === 'undefined') {
-    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
-  }
-  if (typeof FFmpegUtil === 'undefined') {
-    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
+    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js');
   }
 
-  showProgress('Готуємо відеодвигун', 'Завантажуємо FFmpeg (одноразово, ~25МБ)...', true);
-  const { FFmpeg } = FFmpegWASM;
-  const ffmpeg = new FFmpeg();
-  ffmpeg.on('progress', ({ progress }) => {
-    setProgress(Math.min(99, Math.round(progress * 100)));
+  showProgress('Готуємо відеодвигун', 'Завантажуємо FFmpeg WASM (~25МБ, одноразово)...', true);
+
+  const { createFFmpeg, fetchFile } = FFmpegWASM;
+  const ffmpeg = createFFmpeg({
+    log: false,
+    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
+    progress: ({ ratio }) => {
+      if (isFinite(ratio) && ratio > 0) setProgress(Math.min(99, Math.round(ratio * 100)));
+    },
   });
 
-  // @ffmpeg/core (single-threaded) — no SharedArrayBuffer required
-  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-  const { toBlobURL } = FFmpegUtil;
-  await ffmpeg.load({
-    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    // no workerURL = single-threaded mode, works without CrossOriginIsolation
-  });
+  await ffmpeg.load();
 
+  // store fetchFile alongside ffmpeg for use in doExport
   state.ffmpeg = ffmpeg;
+  state.ffetchFile = fetchFile;
   state.ffmpegLoaded = true;
   hideProgress();
   return ffmpeg;
@@ -2719,23 +2714,23 @@ async function doExport() {
 
   try {
     const ffmpeg = await ensureFFmpeg();
-    const { fetchFile } = FFmpegUtil;
+    const fetchFile = state.ffetchFile;
 
     showProgress('Експортуємо відео', 'Записуємо файли у відеодвигун...', false);
     setProgress(2);
 
-    // 1. write unique source files
-    const fileMap = new Map(); // file object -> ffmpeg filename
+    // 1. write unique source files into FFmpeg FS
+    const fileMap = new Map();
     let fIdx = 0;
     for (const clip of state.clips) {
       if (!fileMap.has(clip.file)) {
         const fname = `src${fIdx++}${extOf(clip.file.name)}`;
-        await ffmpeg.writeFile(fname, await fetchFile(clip.file));
+        ffmpeg.FS('writeFile', fname, await fetchFile(clip.file));
         fileMap.set(clip.file, fname);
       }
     }
 
-    // 2. trim each clip to its own segment, then concat
+    // 2. trim + speed + fade each clip into its own segment
     setProgress(8);
     showProgress('Експортуємо відео', 'Обрізаємо кліпи...', false);
     const segFiles = [];
@@ -2746,23 +2741,18 @@ async function doExport() {
       const volFactor = (clip.volume ?? 100) / 100;
       const speed = clip.speed || 1;
 
-      // video filter chain: scale -> speed (setpts) -> fade in/out
       const vFilters = [`scale=${state.canvasW}:${state.canvasH}`];
       if (speed !== 1) vFilters.push(`setpts=${(1/speed).toFixed(4)}*PTS`);
       if (clip.fadeIn > 0) vFilters.push(`fade=t=in:st=0:d=${clip.fadeIn.toFixed(2)}`);
       if (clip.fadeOut > 0) {
-        // fade-out start time must be measured in the OUTPUT (post-speed) duration
-        const outDur = clip.duration; // already speed-adjusted by recalcDuration()
-        const foStart = Math.max(0, outDur - clip.fadeOut);
+        const foStart = Math.max(0, clip.duration - clip.fadeOut);
         vFilters.push(`fade=t=out:st=${foStart.toFixed(2)}:d=${clip.fadeOut.toFixed(2)}`);
       }
 
-      // audio filter chain: volume -> atempo (speed up/down audio to match video)
-      // atempo only supports 0.5–2.0 per stage, which matches our slider range exactly
       const aFilters = [`volume=${volFactor}`];
       if (speed !== 1) aFilters.push(`atempo=${speed.toFixed(3)}`);
 
-      await ffmpeg.exec([
+      await ffmpeg.run(
         '-i', src,
         '-ss', String(clip.srcIn),
         '-to', String(clip.srcOut),
@@ -2772,7 +2762,7 @@ async function doExport() {
         '-c:a', 'aac',
         '-r', '30',
         seg
-      ]);
+      );
       segFiles.push(seg);
       setProgress(8 + Math.round((i + 1) / state.clips.length * 27));
     }
@@ -2780,29 +2770,22 @@ async function doExport() {
     // 3. concat segments
     showProgress('Експортуємо відео', 'Склеюємо кліпи...', false);
     const listContent = segFiles.map(f => `file '${f}'`).join('\n');
-    await ffmpeg.writeFile('list.txt', listContent);
-    await ffmpeg.exec(['-f', 'concat', '-safe', '0', '-i', 'list.txt', '-c', 'copy', 'concat.mp4']);
+    ffmpeg.FS('writeFile', 'list.txt', listContent);
+    await ffmpeg.run('-f', 'concat', '-safe', '0', '-i', 'list.txt', '-c', 'copy', 'concat.mp4');
     setProgress(40);
 
     let finalInput = 'concat.mp4';
 
-    // 4. overlays: render each overlay as a transparent PNG and composite with filter_complex
+    // 4. overlay PNGs composited one by one
     if (state.overlays.length > 0) {
       showProgress('Експортуємо відео', 'Додаємо текст, фото та малюнки...', false);
-      finalInput = await applyOverlays(ffmpeg, 'concat.mp4');
-      setProgress(85);
-    } else {
+      finalInput = await applyOverlays(ffmpeg, fetchFile, 'concat.mp4');
       setProgress(85);
     }
 
-    // 5. finalize / rename
+    // 5. read result and trigger download
     showProgress('Експортуємо відео', 'Завершуємо файл...', false);
-    let outData;
-    if (finalInput === 'concat.mp4') {
-      outData = await ffmpeg.readFile('concat.mp4');
-    } else {
-      outData = await ffmpeg.readFile(finalInput);
-    }
+    const outData = ffmpeg.FS('readFile', finalInput);
     setProgress(98);
 
     const blob = new Blob([outData.buffer], { type: 'video/mp4' });
@@ -2829,8 +2812,7 @@ function extOf(name) {
 }
 
 /* Render overlay PNGs per-second-segment and apply via overlay filter with enable timing */
-async function applyOverlays(ffmpeg, inputName) {
-  // group overlays, render each to a PNG via offscreen canvas
+async function applyOverlays(ffmpeg, fetchFile, inputName) {
   let current = inputName;
   let stepIdx = 0;
 
@@ -2838,13 +2820,13 @@ async function applyOverlays(ffmpeg, inputName) {
     const png = renderOverlayToPNGDataURL(ov);
     const pngBytes = dataURLToUint8(png);
     const pngName = `ov${stepIdx}.png`;
-    await ffmpeg.writeFile(pngName, pngBytes);
+    ffmpeg.FS('writeFile', pngName, pngBytes);
 
     const outName = `comp${stepIdx}.mp4`;
     const start = ov.start.toFixed(2);
     const end = (ov.start + ov.dur).toFixed(2);
 
-    await ffmpeg.exec([
+    await ffmpeg.run(
       '-i', current,
       '-i', pngName,
       '-filter_complex', `[0:v][1:v]overlay=0:0:enable='between(t,${start},${end})'[v]`,
@@ -2852,7 +2834,7 @@ async function applyOverlays(ffmpeg, inputName) {
       '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23',
       '-c:a', 'copy',
       outName
-    ]);
+    );
 
     current = outName;
     stepIdx++;
