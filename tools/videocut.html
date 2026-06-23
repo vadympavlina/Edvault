@@ -5,6 +5,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VideoCut · Edvault</title>
+<!-- coi-serviceworker: emulates Cross-Origin-Isolation headers (COOP/COEP) via a Service Worker
+     so that FFmpeg.wasm can use SharedArrayBuffer on any static host (GitHub Pages, Cloudflare Pages, etc.)
+     without requiring server-level header configuration.
+     Source: https://github.com/gzuidhof/coi-serviceworker -->
+<script src="https://unpkg.com/coi-serviceworker@0.1.7/coi-serviceworker.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1263,15 +1268,38 @@ function loadScript(src, timeoutMs = 20000) {
   });
 }
 
+async function fetchAsBlob(url, mimeType) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Не вдалося завантажити ${url}: ${res.status}`);
+  const blob = await res.blob();
+  return URL.createObjectURL(new Blob([await blob.text()], { type: mimeType }));
+}
+
 async function ensureFFmpeg() {
   if (state.ffmpegLoaded) return state.ffmpeg;
   showProgress('Готуємо відеодвигун', 'Завантажуємо бібліотеки FFmpeg...', true);
 
+  // Load ffmpeg.js and util.js via fetch→blob so they work under Cross-Origin-Isolation
+  // (plain <script src="https://..."> is blocked after coi-serviceworker activates)
   if (typeof FFmpegWASM === 'undefined') {
-    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+    const blobUrl = await fetchAsBlob('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js', 'text/javascript');
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = blobUrl;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
   }
   if (typeof FFmpegUtil === 'undefined') {
-    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
+    const blobUrl = await fetchAsBlob('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js', 'text/javascript');
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = blobUrl;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
   }
 
   showProgress('Готуємо відеодвигун', 'Завантажуємо FFmpeg (одноразово, ~30МБ)...', true);
