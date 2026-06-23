@@ -5,7 +5,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VideoCut · Edvault</title>
-<!-- FFmpeg.wasm loads lazily on first export via ensureFFmpeg() -->
+<!-- Registers coi-serviceworker.js (must be in the same directory on your domain).
+     It adds COOP/COEP headers so FFmpeg.wasm can use SharedArrayBuffer. -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./coi-serviceworker.js').then(function(reg) {
+    // If the SW just installed, reload once so the page runs under isolation
+    if (!navigator.serviceWorker.controller) {
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        window.location.reload();
+      });
+    }
+  }).catch(function(err) {
+    console.warn('[coi-sw] registration failed:', err);
+  });
+}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
