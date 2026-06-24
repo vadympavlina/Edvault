@@ -1291,15 +1291,21 @@ async function ensureFFmpeg() {
 
   showProgress('Готуємо відеодвигун', 'Завантажуємо FFmpeg...', true);
 
-  // @ffmpeg/ffmpeg@0.11.x runs entirely in the main thread — no Worker,
-  // no SharedArrayBuffer, no CORS issues on any static host.
-  if (typeof FFmpegWASM === 'undefined') {
-    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js');
+  await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js');
+
+  // @ffmpeg/ffmpeg@0.11.x may export as window.FFmpeg, or expose createFFmpeg/fetchFile directly
+  let createFFmpeg, fetchFile;
+  if (window.FFmpeg && typeof window.FFmpeg.createFFmpeg === 'function') {
+    ({ createFFmpeg, fetchFile } = window.FFmpeg);
+  } else if (typeof window.createFFmpeg === 'function') {
+    createFFmpeg = window.createFFmpeg;
+    fetchFile = window.fetchFile;
+  } else {
+    throw new Error('Не вдалося знайти createFFmpeg після завантаження ffmpeg.min.js. Перевірте консоль.');
   }
 
   showProgress('Готуємо відеодвигун', 'Завантажуємо FFmpeg WASM (~25МБ, одноразово)...', true);
 
-  const { createFFmpeg, fetchFile } = FFmpegWASM;
   const ffmpeg = createFFmpeg({
     log: false,
     corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
@@ -1310,7 +1316,6 @@ async function ensureFFmpeg() {
 
   await ffmpeg.load();
 
-  // store fetchFile alongside ffmpeg for use in doExport
   state.ffmpeg = ffmpeg;
   state.ffetchFile = fetchFile;
   state.ffmpegLoaded = true;
