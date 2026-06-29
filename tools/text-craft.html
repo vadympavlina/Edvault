@@ -1423,6 +1423,69 @@ body{animation:fadeUp .3s ease}
 /* ═══════════ IMG URL MODAL ═══════════ */
 #imgUrlModal .modal-inp-wrap{margin-bottom:0}
 
+/* ═══════════ CALLOUT BLOCKS ═══════════ */
+.editor .callout{
+  display:flex;gap:12px;align-items:flex-start;
+  border-radius:var(--r);padding:13px 16px;margin:.8em 0;
+  border-left:4px solid;
+  font-family:'Inter',system-ui,sans-serif;font-size:14.5px;line-height:1.6;
+}
+.editor .callout-icon{
+  font-size:18px;line-height:1;flex-shrink:0;margin-top:1px;
+  font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;
+}
+.editor .callout-body{flex:1;min-width:0;outline:none;}
+.editor .callout-body:empty::before{content:'Введіть текст…';color:#b0b7c3;pointer-events:none}
+
+.editor .callout.callout-info  {background:#eef6ff;border-color:#60a5fa;color:#1e3a5f}
+.editor .callout.callout-tip   {background:#f0fdf4;border-color:#4ade80;color:#14532d}
+.editor .callout.callout-warn  {background:#fffbeb;border-color:#fbbf24;color:#78350f}
+.editor .callout.callout-error {background:#fff1f2;border-color:#f87171;color:#7f1d1d}
+.editor .callout.callout-note  {background:#f5f3ff;border-color:#a78bfa;color:#3b0764}
+
+/* ═══════════ CALLOUT PICKER DROPDOWN ═══════════ */
+.callout-picker{min-width:200px;padding:5px;}
+.callout-pick-item{
+  display:flex;align-items:center;gap:10px;
+  width:100%;padding:7px 10px;
+  border:none;border-radius:6px;background:transparent;
+  font-family:'Inter',system-ui,sans-serif;font-size:12.5px;
+  color:var(--text);cursor:pointer;text-align:left;
+  transition:background .1s;white-space:nowrap;
+}
+.callout-pick-item:hover{background:var(--bg)}
+.callout-pick-icon{
+  width:24px;height:24px;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;flex-shrink:0;
+  font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;
+}
+.callout-pick-icon.ci {background:#eef6ff}
+.callout-pick-icon.ct {background:#f0fdf4}
+.callout-pick-icon.cw {background:#fffbeb}
+.callout-pick-icon.ce {background:#fff1f2}
+.callout-pick-icon.cn {background:#f5f3ff}
+
+/* ═══════════ TEXT DIVIDER ═══════════ */
+.editor .text-divider{
+  display:flex;align-items:center;gap:10px;
+  margin:1.4em 0;color:var(--subtle);
+  font-family:'Inter',system-ui,sans-serif;
+  font-size:12px;font-weight:500;letter-spacing:.4px;
+  user-select:none;
+}
+.editor .text-divider::before,
+.editor .text-divider::after{
+  content:'';flex:1;height:1px;background:var(--border);
+}
+.editor .text-divider-label{
+  outline:none;white-space:nowrap;min-width:20px;
+  color:var(--subtle);text-align:center;
+}
+.editor .text-divider-label:empty::before{
+  content:'Секція';color:#d1d5db;pointer-events:none;
+}
+
 /* ═══════════ DRAG & DROP OVERLAY ═══════════ */
 .drag-overlay{
   display:none;
@@ -1962,14 +2025,56 @@ body{animation:fadeUp .3s ease}
         <path d="M9.5 6.5a3.5 3.5 0 00-5 0l-2 2a3.5 3.5 0 005 5L9 12"/>
       </svg>
     </button>
-    <!-- HR -->
-    <button class="tb" onclick="exec('insertHorizontalRule')" data-tip="Горизонтальна лінія">
-      <svg viewBox="0 0 16 16" fill="currentColor">
-        <path d="M1 7.5h14v1H1z"/>
-        <rect x="4" y="3.5" width="1" height="9" rx=".5" opacity=".3"/>
-        <rect x="11" y="3.5" width="1" height="9" rx=".5" opacity=".3"/>
-      </svg>
-    </button>
+    <!-- HR / Divider dropdown -->
+    <div class="tb-table-wrap" id="tbDivWrap">
+      <button class="tb" onclick="toggleDivPicker(event)" data-tip="Роздільник">
+        <svg viewBox="0 0 16 16" fill="currentColor">
+          <path d="M1 7.5h14v1H1z"/>
+          <rect x="4" y="3.5" width="1" height="9" rx=".5" opacity=".3"/>
+          <rect x="11" y="3.5" width="1" height="9" rx=".5" opacity=".3"/>
+        </svg>
+      </button>
+      <div class="table-picker img-picker" id="divPicker" style="min-width:210px">
+        <button class="img-pick-item" onclick="exec('insertHorizontalRule');closeDivPicker()">
+          <svg viewBox="0 0 16 16" fill="currentColor" width="15" height="15"><path d="M1 7.5h14v1H1z"/></svg>
+          Проста лінія
+        </button>
+        <button class="img-pick-item" onclick="insertTextDivider();closeDivPicker()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" width="15" height="15">
+            <line x1="1" y1="8" x2="5" y2="8"/><line x1="11" y1="8" x2="15" y2="8"/>
+            <rect x="5" y="5.5" width="6" height="5" rx="1.5"/>
+          </svg>
+          Розділювач з текстом
+        </button>
+      </div>
+    </div>
+    <!-- Callout dropdown -->
+    <div class="tb-table-wrap" id="tbCalloutWrap">
+      <button class="tb" onclick="toggleCalloutPicker(event)" data-tip="Callout-блок">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="1.5" y="2.5" width="13" height="11" rx="2"/>
+          <line x1="4.5" y1="2.5" x2="4.5" y2="13.5" stroke-width="2.5" stroke="currentColor" opacity=".5"/>
+          <line x1="7" y1="6" x2="12" y2="6"/><line x1="7" y1="9" x2="11" y2="9"/>
+        </svg>
+      </button>
+      <div class="table-picker callout-picker" id="calloutPicker">
+        <button class="callout-pick-item" onclick="insertCallout('info');closeCalloutPicker()">
+          <span class="callout-pick-icon ci">💡</span>Порада
+        </button>
+        <button class="callout-pick-item" onclick="insertCallout('tip');closeCalloutPicker()">
+          <span class="callout-pick-icon ct">✅</span>Результат / Добре знати
+        </button>
+        <button class="callout-pick-item" onclick="insertCallout('warn');closeCalloutPicker()">
+          <span class="callout-pick-icon cw">⚠️</span>Увага
+        </button>
+        <button class="callout-pick-item" onclick="insertCallout('error');closeCalloutPicker()">
+          <span class="callout-pick-icon ce">❌</span>Помилка / Не робити
+        </button>
+        <button class="callout-pick-item" onclick="insertCallout('note');closeCalloutPicker()">
+          <span class="callout-pick-icon cn">📌</span>Нотатка
+        </button>
+      </div>
+    </div>
     <!-- Insert Table -->
     <div class="tb-table-wrap" id="tbTableWrap">
       <button class="tb" onclick="toggleTablePicker(event)" data-tip="Вставити таблицю" id="tbTableBtn">
@@ -2334,6 +2439,103 @@ function insertCodeBlock() {
     showCodeBar(newPre);
   }
   tick();
+}
+
+/* ══ CALLOUT BLOCKS ══ */
+const CALLOUT_DEFS = {
+  info:  { icon: '💡', label: 'Порада' },
+  tip:   { icon: '✅', label: 'Результат' },
+  warn:  { icon: '⚠️', label: 'Увага' },
+  error: { icon: '❌', label: 'Помилка' },
+  note:  { icon: '📌', label: 'Нотатка' },
+};
+
+function insertCallout(type) {
+  saveCursor();
+  const def = CALLOUT_DEFS[type] || CALLOUT_DEFS.info;
+  const callout = document.createElement('div');
+  callout.className = `callout callout-${type}`;
+  callout.contentEditable = 'false';
+
+  const icon = document.createElement('span');
+  icon.className = 'callout-icon';
+  icon.textContent = def.icon;
+
+  const body = document.createElement('div');
+  body.className = 'callout-body';
+  body.contentEditable = 'true';
+  body.innerHTML = '<br>';
+
+  callout.appendChild(icon);
+  callout.appendChild(body);
+
+  insertBlockElement(callout);
+  setTimeout(() => { body.focus(); placeCursorAtEnd(body); }, 50);
+  tick();
+}
+
+function placeCursorAtEnd(el) {
+  const r = document.createRange();
+  r.selectNodeContents(el); r.collapse(false);
+  const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+
+/* ══ TEXT DIVIDER ══ */
+function insertTextDivider() {
+  saveCursor();
+  const div = document.createElement('div');
+  div.className = 'text-divider';
+  div.contentEditable = 'false';
+
+  const label = document.createElement('span');
+  label.className = 'text-divider-label';
+  label.contentEditable = 'true';
+  label.innerHTML = '<br>';
+
+  div.appendChild(label);
+  insertBlockElement(div);
+  setTimeout(() => { label.focus(); placeCursorAtEnd(label); }, 50);
+  tick();
+}
+
+/* ══ DIV PICKER ══ */
+let divPickerOpen = false;
+function toggleDivPicker(e) {
+  e.stopPropagation();
+  divPickerOpen = !divPickerOpen;
+  const picker = document.getElementById('divPicker');
+  picker.classList.toggle('open', divPickerOpen);
+  if (divPickerOpen) {
+    saveCursor();
+    const btn = document.getElementById('tbDivWrap').querySelector('.tb');
+    const rect = btn.getBoundingClientRect();
+    picker.style.top = (rect.bottom + 6) + 'px';
+    picker.style.left = rect.left + 'px';
+  }
+}
+function closeDivPicker() {
+  divPickerOpen = false;
+  document.getElementById('divPicker').classList.remove('open');
+}
+
+/* ══ CALLOUT PICKER ══ */
+let calloutPickerOpen = false;
+function toggleCalloutPicker(e) {
+  e.stopPropagation();
+  calloutPickerOpen = !calloutPickerOpen;
+  const picker = document.getElementById('calloutPicker');
+  picker.classList.toggle('open', calloutPickerOpen);
+  if (calloutPickerOpen) {
+    saveCursor();
+    const btn = document.getElementById('tbCalloutWrap').querySelector('.tb');
+    const rect = btn.getBoundingClientRect();
+    picker.style.top = (rect.bottom + 6) + 'px';
+    picker.style.left = rect.left + 'px';
+  }
+}
+function closeCalloutPicker() {
+  calloutPickerOpen = false;
+  document.getElementById('calloutPicker').classList.remove('open');
 }
 
 /* ══ OPEN FILE ══ */
@@ -3395,6 +3597,8 @@ function exportHTML() {
 
   // Remove editor-only UI elements
   clone.querySelectorAll('.img-handle,.img-toolbar,.img-size-tip,.container-bar').forEach(el => el.remove());
+  // Strip contentEditable from callout body and text-divider label
+  clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
   // Remove empty placeholder slots (no image loaded)
   clone.querySelectorAll('.img-slot-ph').forEach(el => el.remove());
   clone.querySelectorAll('[class*="selected"]').forEach(el => { el.classList.remove('img-selected','selected'); });
@@ -3621,6 +3825,19 @@ function exportHTML() {
   li { margin-bottom:.25em; }
   blockquote { border-left:3px solid #4F6BF4; padding:8px 18px; margin:1em 0; color:#4b5563; font-style:italic; background:#eef0fe; border-radius:0 6px 6px 0; }
   a { color:#4F6BF4; }
+  /* Callout blocks */
+  .callout { display:flex; gap:12px; align-items:flex-start; border-radius:7px; padding:13px 16px; margin:.8em 0; border-left:4px solid; font-family:'Inter',system-ui,sans-serif; font-size:14.5px; line-height:1.6; }
+  .callout-icon { font-size:18px; line-height:1; flex-shrink:0; margin-top:1px; }
+  .callout-body { flex:1; min-width:0; }
+  .callout.callout-info  { background:#eef6ff; border-color:#60a5fa; color:#1e3a5f; }
+  .callout.callout-tip   { background:#f0fdf4; border-color:#4ade80; color:#14532d; }
+  .callout.callout-warn  { background:#fffbeb; border-color:#fbbf24; color:#78350f; }
+  .callout.callout-error { background:#fff1f2; border-color:#f87171; color:#7f1d1d; }
+  .callout.callout-note  { background:#f5f3ff; border-color:#a78bfa; color:#3b0764; }
+  /* Text divider */
+  .text-divider { display:flex; align-items:center; gap:10px; margin:1.4em 0; color:#9ca3af; font-family:'Inter',system-ui,sans-serif; font-size:12px; font-weight:500; letter-spacing:.4px; }
+  .text-divider::before, .text-divider::after { content:''; flex:1; height:1px; background:#e2e5ea; }
+  .text-divider-label { white-space:nowrap; }
   code { background:#f0f2f5; border-radius:4px; padding:2px 6px; font-family:'Courier New',monospace; font-size:.9em; }
   code { background:#f0f2f8; border:1px solid #dde1ea; border-radius:4px; padding:2px 6px; font-family:'Courier New',monospace; font-size:.88em; color:#c7254e; white-space:pre-wrap; }
   pre  { background:#f0f2f5; border-radius:7px; padding:14px 18px; margin:.8em 0; font-family:'Courier New',monospace; font-size:.88em; white-space:pre-wrap; border:1px solid #e2e5ea; overflow-x:auto; }
@@ -3975,6 +4192,17 @@ function exportPDF() {
   li { margin-bottom: 3pt; }
   blockquote { border-left: 3pt solid #4F6BF4; padding: 6pt 14pt; margin: 10pt 0; color: #4b5563; font-style: italic; background: #eef0fe; }
   a  { color: #4F6BF4; }
+  .callout { display:flex; gap:10pt; align-items:flex-start; border-radius:5pt; padding:10pt 13pt; margin:8pt 0; border-left:3pt solid; font-family:'Inter',sans-serif; font-size:11pt; line-height:1.5; }
+  .callout-icon { font-size:14pt; flex-shrink:0; }
+  .callout-body { flex:1; }
+  .callout.callout-info  { background:#eef6ff; border-color:#60a5fa; color:#1e3a5f; }
+  .callout.callout-tip   { background:#f0fdf4; border-color:#4ade80; color:#14532d; }
+  .callout.callout-warn  { background:#fffbeb; border-color:#fbbf24; color:#78350f; }
+  .callout.callout-error { background:#fff1f2; border-color:#f87171; color:#7f1d1d; }
+  .callout.callout-note  { background:#f5f3ff; border-color:#a78bfa; color:#3b0764; }
+  .text-divider { display:flex; align-items:center; gap:8pt; margin:12pt 0; color:#9ca3af; font-family:'Inter',sans-serif; font-size:9pt; font-weight:500; }
+  .text-divider::before, .text-divider::after { content:''; flex:1; height:.5pt; background:#e2e5ea; }
+  .text-divider-label { white-space:nowrap; }
   code { background: #f0f2f5; padding: 1pt 4pt; font-family: 'Courier New', monospace; font-size: .88em; }
   pre  { background: #f0f2f5; padding: 10pt 14pt; margin: 8pt 0; font-family: 'Courier New', monospace; font-size: .85em; white-space: pre-wrap; border: 1pt solid #e2e5ea; }
   hr   { border: none; border-top: 1pt solid #e2e5ea; margin: 14pt 0; }
@@ -5200,6 +5428,8 @@ document.addEventListener('click', e => {
     closeTablePicker();
     closeImgPicker();
     closeAlignPicker();
+    closeDivPicker();
+    closeCalloutPicker();
   }
   if (!e.target.closest('.tbl-palette') && !e.target.closest('.tbl-btn[onclick*="openTblColor"]')) {
     closeTblPalette();
