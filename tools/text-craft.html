@@ -187,6 +187,7 @@ body {
   flex-shrink:0;
   z-index:55;
   position:relative;
+  overflow:visible;
 }
 
 .toolbar {
@@ -196,7 +197,7 @@ body {
   gap:3px;
   height:var(--toolbar);
   overflow-x:auto;
-  overflow-y:hidden;
+  overflow-y:visible;
   scrollbar-width:none;
   -ms-overflow-style:none;
   scroll-behavior:smooth;
@@ -236,6 +237,7 @@ body {
   border-radius:9px;
   padding:2px;
   flex-shrink:0;
+  position:relative;
 }
 
 /* Tool button */
@@ -363,11 +365,11 @@ body {
 
 /* Tooltip */
 [data-tip]{position:relative}
-/* Topbar and toolbar tooltips — show below (not above, where browser chrome cuts them) */
+/* Topbar and toolbar tooltips — show below */
 .topbar [data-tip]::after,
 .toolbar-wrap [data-tip]::after {
   bottom:auto;
-  top:calc(100% + 7px);
+  top:calc(100% + 8px);
 }
 [data-tip]::after{
   content:attr(data-tip);
@@ -380,7 +382,7 @@ body {
   padding:3px 8px;border-radius:5px;
   white-space:nowrap;pointer-events:none;
   opacity:0;transition:opacity .15s .1s;
-  z-index:999;
+  z-index:10000;
 }
 [data-tip]:hover::after{opacity:1}
 
