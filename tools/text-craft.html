@@ -559,6 +559,7 @@ body {
 /* Kill per-line borders that browsers inject inside contenteditable pre */
 .editor pre *{
   border:none !important;
+  border-bottom:none !important;
   background:transparent !important;
   padding:0 !important;
   margin:0 !important;
@@ -566,7 +567,13 @@ body {
   font-family:inherit !important;
   font-size:inherit !important;
   white-space:inherit !important;
+  text-decoration:none !important;
+  outline:none !important;
+  box-shadow:none !important;
 }
+/* Spellcheck underlines inside pre — kill them */
+.editor pre [style*="border"]{border:none !important}
+.editor pre span{border:none !important;text-decoration:none !important}
 .editor hr{border:none;border-top:1.5px solid var(--border);margin:1.5em 0}
 
 /* ═══════════ IMAGE IN EDITOR ═══════════ */
@@ -3379,6 +3386,9 @@ function confirmClear() {
 function exportHTML() {
   const name = document.getElementById('docTitle').value || 'document';
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  // Read current page width from the input (most reliable)
+  const pwInp = document.getElementById('pageWidthInp');
+  const exportPw = pwInp ? Math.max(40, Math.min(100, parseInt(pwInp.value) || 80)) : pageWidthPct;
 
   // Clone editor, unwrap img-wraps → plain <img>; clean layout containers
   const clone = editor.cloneNode(true);
@@ -3421,6 +3431,16 @@ function exportHTML() {
     if (img) {
       ['img-left','img-center','img-right'].forEach(c => { if (wrap.classList.contains(c)) img.classList.add(c); });
       wrap.replaceWith(img);
+    }
+  });
+
+  // Normalize pre blocks — flatten any divs/spans injected by contenteditable
+  clone.querySelectorAll('pre').forEach(pre => {
+    const hasBlocks = [...pre.childNodes].some(n => n.nodeType === 1 && /^(DIV|P|BR|SPAN)$/.test(n.tagName) && n.style && n.style.borderBottom);
+    // Always normalize: extract plain text and reset
+    if ([...pre.childNodes].some(n => n.nodeType === 1 && /^(DIV|P)$/.test(n.tagName))) {
+      const text = pre.innerText;
+      pre.textContent = text;
     }
   });
 
@@ -3578,7 +3598,7 @@ function exportHTML() {
 
   .content {
     width: 100%;
-    max-width: ${Math.round(pageWidthPct * 9.6)}px;
+    max-width: ${Math.round(exportPw * 9.6)}px;
     background: #fff;
     border-radius: 8px;
     padding: 64px 72px 88px;
@@ -3604,6 +3624,9 @@ function exportHTML() {
   code { background:#f0f2f5; border-radius:4px; padding:2px 6px; font-family:'Courier New',monospace; font-size:.9em; }
   code { background:#f0f2f8; border:1px solid #dde1ea; border-radius:4px; padding:2px 6px; font-family:'Courier New',monospace; font-size:.88em; color:#c7254e; white-space:pre-wrap; }
   pre  { background:#f0f2f5; border-radius:7px; padding:14px 18px; margin:.8em 0; font-family:'Courier New',monospace; font-size:.88em; white-space:pre-wrap; border:1px solid #e2e5ea; overflow-x:auto; }
+  /* Code inside pre — no border, no background, no padding */
+  pre code { background:none !important; border:none !important; padding:0 !important; border-radius:0 !important; color:inherit !important; font-size:inherit !important; box-shadow:none !important; }
+  pre code * { border:none !important; box-shadow:none !important; }
   /* Prism overrides — keep border/radius from theme above */
   pre[class*="language-"] { margin:.8em 0; border-radius:7px; border:none; }
   code[class*="language-"] { font-size:.88em; }
@@ -3912,6 +3935,8 @@ function closeToc() {
 /* ══ EXPORT PDF ══ */
 function exportPDF() {
   const name = document.getElementById('docTitle').value || 'document';
+  const pwInp = document.getElementById('pageWidthInp');
+  const exportPw = pwInp ? Math.max(40, Math.min(100, parseInt(pwInp.value) || 80)) : pageWidthPct;
 
   // Clean clone
   const clone = editor.cloneNode(true);
@@ -3941,7 +3966,7 @@ function exportPDF() {
     line-height: 1.8;
     color: #1c1917;
     background: #fff;
-    max-width: ${Math.round(pageWidthPct * 7)}pt;
+    max-width: ${Math.round(exportPw * 7)}pt;
     margin: 0 auto;
   }
   h1 { font-size: 22pt; font-weight: 700; line-height: 1.2; margin: 6pt 0 14pt; color: #0f172a; }
