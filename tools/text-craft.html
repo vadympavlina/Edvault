@@ -494,14 +494,14 @@ body {
 }
 
 .page{
-  width:80%;
+  width:var(--page-w, 80%);
   margin:0 auto;
   background:var(--paper);
   border-radius:var(--r);
   box-shadow:var(--sh-lg),0 0 0 1px rgba(0,0,0,.04);
   padding:76px 84px 100px;
   position:relative;
-  transition:box-shadow .25s;
+  transition:box-shadow .25s, width .2s;
 }
 /* Accent bar on top */
 .page::before{
@@ -555,6 +555,17 @@ body {
   padding:14px 18px;margin:.8em 0;
   font-family:'Courier New',monospace;font-size:.9em;
   white-space:pre-wrap;border:1px solid var(--border);
+}
+/* Kill per-line borders that browsers inject inside contenteditable pre */
+.editor pre *{
+  border:none !important;
+  background:transparent !important;
+  padding:0 !important;
+  margin:0 !important;
+  display:inline !important;
+  font-family:inherit !important;
+  font-size:inherit !important;
+  white-space:inherit !important;
 }
 .editor hr{border:none;border-top:1.5px solid var(--border);margin:1.5em 0}
 
@@ -1131,6 +1142,44 @@ body{animation:fadeUp .3s ease}
 .modal-inp:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,107,244,.15)}
 .btn-danger{background:#ef4444;color:#fff;border-color:#ef4444}
 .btn-danger:hover{background:#dc2626;border-color:#dc2626}
+
+/* ═══════════ PAGE WIDTH CONTROL ═══════════ */
+.pw-ctrl{
+  display:flex;align-items:center;
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+  height:30px;flex-shrink:0;
+  transition:border-color .13s;
+}
+.pw-ctrl:focus-within{border-color:var(--accent)}
+.pw-btn{
+  width:22px;height:28px;
+  border:none;background:var(--bg);
+  cursor:pointer;font-size:14px;line-height:1;
+  color:var(--muted);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .12s,color .12s;
+  flex-shrink:0;user-select:none;
+}
+.pw-btn:hover{background:var(--border2);color:var(--text)}
+.pw-inp{
+  width:38px;height:28px;
+  border:none;
+  border-left:1px solid var(--border);
+  border-right:1px solid var(--border);
+  outline:none;text-align:center;
+  font-family:'Inter',system-ui,sans-serif;
+  font-size:12px;color:var(--text);
+  background:var(--surface);
+  -moz-appearance:textfield;
+}
+.pw-inp::-webkit-inner-spin-button,
+.pw-inp::-webkit-outer-spin-button{-webkit-appearance:none}
+.pw-unit{
+  font-size:10px;color:var(--subtle);font-weight:600;
+  padding:0 5px;white-space:nowrap;
+}
 
 /* ═══════════ CODE BLOCK BAR ═══════════ */
 .code-lang-bar{
@@ -1972,6 +2021,17 @@ body{animation:fadeUp .3s ease}
 
     <div class="tb-sep"></div>
 
+    <!-- Page width control -->
+    <div class="pw-ctrl" data-tip="Ширина сторінки">
+      <button class="pw-btn" onclick="changePageWidth(-5)" title="Вужче">−</button>
+      <input type="number" class="pw-inp" id="pageWidthInp" value="80" min="40" max="100"
+             onchange="setPageWidth(+this.value)" onkeydown="if(event.key==='Enter')setPageWidth(+this.value)">
+      <button class="pw-btn" onclick="changePageWidth(5)" title="Ширше">+</button>
+    </div>
+    <span class="pw-unit">%</span>
+
+    <div class="tb-sep"></div>
+
     <!-- Undo / Redo -->
     <button class="tb" onclick="exec('undo')" data-tip="Скасувати (Ctrl+Z)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7">
@@ -2089,7 +2149,30 @@ body{animation:fadeUp .3s ease}
 /* ══ STATE ══ */
 const editor = document.getElementById('editor');
 let saveTimer, selectedImg = null;
-const STORE_KEY = 'tc3_html', STORE_NAME = 'tc3_name';
+const STORE_KEY = 'tc3_html', STORE_NAME = 'tc3_name', STORE_PW = 'tc3_pw';
+
+/* ══ PAGE WIDTH ══ */
+let pageWidthPct = 80;
+
+function applyPageWidth(pct, updateInput = true) {
+  pct = Math.max(40, Math.min(100, pct));
+  pageWidthPct = pct;
+  document.documentElement.style.setProperty('--page-w', pct + '%');
+  if (updateInput) {
+    const inp = document.getElementById('pageWidthInp');
+    if (inp) inp.value = pct;
+  }
+  try { localStorage.setItem(STORE_PW, pct); } catch(e) {}
+}
+
+function setPageWidth(pct) {
+  if (isNaN(pct)) return;
+  applyPageWidth(pct);
+}
+
+function changePageWidth(delta) {
+  applyPageWidth(pageWidthPct + delta);
+}
 
 /* ══ execCommand ══ */
 function exec(cmd, val = null) {
@@ -3259,6 +3342,8 @@ function loadSaved() {
       editor.innerHTML = h;
     }
     if (n) document.getElementById('docTitle').value = n;
+    const pw = parseInt(localStorage.getItem(STORE_PW));
+    if (pw >= 40 && pw <= 100) applyPageWidth(pw);
   } catch(e) {}
   attachAllImgListeners();
   tick();
@@ -3493,7 +3578,7 @@ function exportHTML() {
 
   .content {
     width: 100%;
-    max-width: 860px;
+    max-width: ${Math.round(pageWidthPct * 9.6)}px;
     background: #fff;
     border-radius: 8px;
     padding: 64px 72px 88px;
@@ -3856,6 +3941,8 @@ function exportPDF() {
     line-height: 1.8;
     color: #1c1917;
     background: #fff;
+    max-width: ${Math.round(pageWidthPct * 7)}pt;
+    margin: 0 auto;
   }
   h1 { font-size: 22pt; font-weight: 700; line-height: 1.2; margin: 6pt 0 14pt; color: #0f172a; }
   h2 { font-size: 15pt; font-weight: 600; line-height: 1.3; margin: 18pt 0 8pt; }
@@ -4836,7 +4923,23 @@ function copyCodeBlock() {
 }
 
 /* ══ EVENTS ══ */
-editor.addEventListener('input', () => { if (!isMarking) { editorSnapshot = ''; tick(); scheduleAutoTitle(); } });
+editor.addEventListener('input', () => {
+  if (!isMarking) {
+    editorSnapshot = '';
+    // Normalize <pre> blocks — flatten any divs/spans injected by browser
+    editor.querySelectorAll('pre').forEach(pre => {
+      // Check if browser injected block-level children
+      const children = [...pre.childNodes];
+      const hasBlocks = children.some(n => n.nodeType === 1 && /^(DIV|P|BR)$/.test(n.tagName));
+      if (hasBlocks) {
+        const text = pre.innerText; // innerText respects \n from block elements
+        pre.textContent = text;
+      }
+    });
+    tick();
+    scheduleAutoTitle();
+  }
+});
 editor.addEventListener('mouseover', e => {
   const beside = e.target.closest('.img-beside');
   if (beside) { clearTimeout(besideHideTimer); showBesideBar(beside); }
@@ -4898,6 +5001,50 @@ editor.addEventListener('keydown', e => {
   }
 
   if (!(e.ctrlKey || e.metaKey)) {
+    // Enter inside <pre> — insert plain newline text node, no divs
+    if (e.key === 'Enter') {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        const node = sel.getRangeAt(0).commonAncestorContainer;
+        const el = node.nodeType === 3 ? node.parentElement : node;
+        const pre = el ? el.closest('pre') : null;
+        if (pre && editor.contains(pre)) {
+          e.preventDefault();
+          const range = sel.getRangeAt(0);
+          range.deleteContents();
+          const nl = document.createTextNode('\n');
+          range.insertNode(nl);
+          range.setStartAfter(nl); range.collapse(true);
+          sel.removeAllRanges(); sel.addRange(range);
+          // Ensure there's a trailing newline so last line is visible
+          if (!pre.textContent.endsWith('\n')) {
+            pre.appendChild(document.createTextNode('\n'));
+          }
+          tick();
+          return;
+        }
+      }
+    }
+    // Tab inside <pre> — insert spaces
+    if (e.key === 'Tab') {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        const node = sel.getRangeAt(0).commonAncestorContainer;
+        const el = node.nodeType === 3 ? node.parentElement : node;
+        const pre = el ? el.closest('pre') : null;
+        if (pre && editor.contains(pre)) {
+          e.preventDefault();
+          const range = sel.getRangeAt(0);
+          range.deleteContents();
+          const spaces = document.createTextNode('    ');
+          range.insertNode(spaces);
+          range.setStartAfter(spaces); range.collapse(true);
+          sel.removeAllRanges(); sel.addRange(range);
+          tick();
+          return;
+        }
+      }
+    }
     // Tab inside table — navigate cells
     if (e.key === 'Tab') {
       const sel = window.getSelection();
