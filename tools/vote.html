@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M16 6l3 6 6.5 1-4.5 4.5 1 6.5-6-3-6 3 1-6.5L6 13l6.5-1z' fill='white'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Голосування · Edvault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* light editor system — matches screen-recorder.html / videocut.html */
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #f7f8fa;
+    --border: #e2e5ea;
+    --border2: #d0d5dd;
+    --accent: #4F6BF4;
+    --accent-light: #eef0fe;
+    --accent-hover: #3d57e0;
+    --danger: #ef4444;
+    --danger-light: #fef2f2;
+    --danger-border: #fecaca;
+    --success: #10b981;
+    --success-light: #ecfdf5;
+    --success-border: #a7f3d0;
+    --warn: #f59e0b;
+    --warn-light: #fffbeb;
+    --warn-border: #fde68a;
+    --gold: #eab308;
+    --text: #1a1d23;
+    --text2: #4b5563;
+    --muted: #9ca3af;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
+
+    /* presentation stage system — dark, high-contrast, built for projectors */
+    --stage-bg: #0d0e14;
+    --stage-bg2: #15171f;
+    --stage-card: #1c1f29;
+    --stage-card-border: #2a2d3a;
+    --stage-text: #f4f5f8;
+    --stage-muted: #8b8fa3;
+    --stage-accent: #6c7fff;
+    --stage-accent2: #ff5fa8;
+    --stage-gold: #ffc93c;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+  .stage-root ::-webkit-scrollbar-thumb { background: #34384a; }
+
+  button { font-family: inherit; }
+
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(12px) scale(.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
+
+  /* ============ EDITOR SHELL ============ */
+  .app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  .topbar {
+    height: 64px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(79,107,244,.3);
+  }
+  .topbar-icon svg { width: 18px; height: 18px; color: white; }
+  .topbar-text h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); line-height: 1.2; }
+  .topbar-text p { font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 1px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 600; font-size: 13.5px;
+    cursor: pointer; border: 1px solid transparent;
+    transition: all 0.13s ease;
+    letter-spacing: -0.1px;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(79,107,244,.28); }
+  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn-outline { background: var(--surface); border-color: var(--border2); color: var(--text2); }
+  .btn-outline:hover { background: var(--surface2); color: var(--text); }
+  .btn-ghost { background: var(--surface2); border-color: var(--border); color: var(--text2); }
+  .btn-ghost:hover { background: var(--border); color: var(--text); }
+  .btn-danger { background: var(--danger-light); border-color: var(--danger-border); color: var(--danger); }
+  .btn-danger:hover { background: #fee2e2; }
+  .btn-full { width: 100%; }
+  .btn-sm { padding: 7px 13px; font-size: 12.5px; border-radius: 8px; }
+  .btn-lg { padding: 13px 26px; font-size: 15px; border-radius: 12px; }
+
+  .icon-btn {
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all .13s ease;
+  }
+  .icon-btn:hover { background: var(--surface2); color: var(--text); }
+  .icon-btn svg { width: 16px; height: 16px; }
+
+  .main {
+    flex: 1;
+    max-width: 1180px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 36px 24px 80px;
+  }
+
+  .session-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 28px; flex-wrap: wrap; }
+  .session-title-group { flex: 1; min-width: 240px; }
+  .session-eyebrow { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+  .session-title-input {
+    font-size: 28px; font-weight: 800; letter-spacing: -0.6px; color: var(--text);
+    border: none; background: transparent; outline: none; width: 100%;
+    border-bottom: 2px solid transparent; padding: 2px 0; transition: border-color .15s ease;
+  }
+  .session-title-input:hover, .session-title-input:focus { border-bottom-color: var(--border2); }
+  .session-actions { display: flex; gap: 10px; }
+
+  .stats-row { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+  .stat-pill {
+    display: flex; align-items: center; gap: 9px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 16px; box-shadow: var(--shadow-sm);
+  }
+  .stat-pill .stat-icon {
+    width: 30px; height: 30px; border-radius: 8px; background: var(--accent-light);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .stat-pill .stat-icon svg { width: 14px; height: 14px; color: var(--accent); }
+  .stat-pill .stat-num { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; line-height: 1; }
+  .stat-pill .stat-label { font-size: 10.5px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .team-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow .15s ease, transform .15s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .team-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .team-card-photo {
+    width: 100%; height: 140px; object-fit: cover; background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .team-card-photo-placeholder {
+    width: 100%; height: 140px; background: var(--surface2); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; color: var(--muted);
+  }
+  .team-card-photo-placeholder svg { width: 30px; height: 30px; }
+  .team-card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .team-card-name { font-size: 15.5px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
+  .team-card-desc { font-size: 12.5px; color: var(--text2); line-height: 1.5; flex: 1; }
+  .team-card-text { font-size: 12px; color: var(--muted); line-height: 1.5; max-height: 54px; overflow: hidden; }
+  .team-card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-top: 1px solid var(--border); background: var(--surface2);
+  }
+  .team-card-votes { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--text2); }
+  .team-card-votes svg { width: 14px; height: 14px; color: var(--gold); }
+  .team-card-actions { display: flex; gap: 6px; }
+  .team-card-actions .icon-btn { width: 30px; height: 30px; border-radius: 8px; }
+  .team-card-actions .icon-btn svg { width: 13px; height: 13px; }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; padding: 70px 20px; text-align: center;
+    border: 2px dashed var(--border2); border-radius: 18px; background: var(--surface);
+  }
+  .empty-state .empty-icon {
+    width: 64px; height: 64px; border-radius: 16px; background: var(--accent-light);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .empty-state .empty-icon svg { width: 28px; height: 28px; color: var(--accent); }
+  .empty-state h3 { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+  .empty-state p { font-size: 13.5px; color: var(--muted); max-width: 320px; line-height: 1.6; }
+
+  /* ============ MODAL ============ */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,18,25,.45);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 700; padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+  .overlay.hidden { display: none; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+    padding: 28px; width: 100%; max-width: 460px;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.25s cubic-bezier(0.22,1,0.36,1);
+    max-height: 88vh; overflow-y: auto;
+  }
+  .modal-icon {
+    width: 46px; height: 46px; border-radius: 12px; background: var(--accent-light);
+    border: 1px solid #c7d0fc; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+  }
+  .modal-icon svg { width: 21px; height: 21px; }
+  .modal-icon.danger { background: var(--danger-light); border-color: var(--danger-border); }
+  .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.3px; }
+  .modal p.modal-desc { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 18px; }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .field-label { font-size: 12.5px; font-weight: 600; color: var(--text2); }
+  .input-styled {
+    width: 100%; padding: 10px 13px; border-radius: 10px; border: 1px solid var(--border2);
+    background: var(--surface2); font-family: inherit; font-size: 14px; color: var(--text);
+    outline: none; transition: border-color .13s ease, background .13s ease;
+  }
+  .input-styled:focus { border-color: var(--accent); background: var(--surface); }
+  textarea.input-styled { resize: vertical; min-height: 70px; line-height: 1.5; }
+
+  .photo-upload-zone {
+    border: 1.5px dashed var(--border2); border-radius: 12px; padding: 16px; text-align: center;
+    cursor: pointer; transition: all .13s ease; background: var(--surface2); position: relative; overflow: hidden;
+  }
+  .photo-upload-zone:hover { border-color: var(--accent); background: var(--accent-light); }
+  .photo-upload-zone svg { width: 22px; height: 22px; color: var(--muted); margin-bottom: 6px; }
+  .photo-upload-zone p { font-size: 12px; color: var(--text2); font-weight: 500; }
+  .photo-preview { width: 100%; height: 130px; object-fit: cover; border-radius: 10px; display: block; }
+  .photo-remove-btn {
+    position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 7px;
+    background: rgba(0,0,0,.6); color: #fff; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 2;
+  }
+  .photo-remove-btn svg { width: 13px; height: 13px; }
+
+  .modal-btns { display: flex; gap: 10px; margin-top: 6px; }
+  .modal-btns .btn { flex: 1; }
+
+  /* ============ PRESENTATION STAGE ============ */
+  .stage-root {
+    position: fixed; inset: 0; z-index: 500;
+    background: radial-gradient(ellipse 120% 80% at 50% -10%, #1c2040 0%, var(--stage-bg) 55%);
+    color: var(--stage-text);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .stage-root.active { display: flex; }
+
+  .stage-topbar {
+    height: 64px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px;
+    position: relative; z-index: 5;
+  }
+  .stage-title {
+    font-size: 17px; font-weight: 800; letter-spacing: -0.3px; color: var(--stage-text);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .stage-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--stage-accent2); animation: pulse-dot 1.6s ease-in-out infinite; }
+  @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
+
+  .stage-topbar-right { display: flex; align-items: center; gap: 10px; }
+  .stage-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 11px;
+    font-weight: 700; font-size: 13.5px; letter-spacing: -.1px;
+    cursor: pointer; border: 1px solid var(--stage-card-border);
+    background: var(--stage-card); color: var(--stage-text);
+    transition: all .15s ease;
+  }
+  .stage-btn:hover { background: #252837; border-color: #3a3e52; transform: translateY(-1px); }
+  .stage-btn:active { transform: translateY(0) scale(.97); }
+  .stage-btn.primary {
+    background: linear-gradient(135deg, var(--stage-accent), #4a5ae8);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 4px 20px rgba(108,127,255,.35);
+  }
+  .stage-btn.primary:hover { box-shadow: 0 6px 26px rgba(108,127,255,.5); }
+  .stage-btn svg { width: 15px; height: 15px; }
+
+  .stage-body { flex: 1; overflow-y: auto; padding: 8px 28px 36px; position: relative; z-index: 2; }
+
+  .stage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+
+  .vote-card {
+    background: var(--stage-card);
+    border: 1.5px solid var(--stage-card-border);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .18s cubic-bezier(.34,1.56,.64,1), border-color .2s ease, box-shadow .2s ease;
+    transform-origin: center;
+  }
+  .vote-card:hover { transform: translateY(-4px) scale(1.015); border-color: #444963; }
+  .vote-card.leading {
+    border-color: var(--stage-gold);
+    box-shadow: 0 0 0 1px var(--stage-gold), 0 8px 32px rgba(255,201,60,.18);
+  }
+  .vote-card.bumped { animation: card-bump .38s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes card-bump {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.06) rotate(-0.6deg); }
+    65% { transform: scale(0.99) rotate(0.4deg); }
+    100% { transform: scale(1); }
+  }
+
+  .vote-card-photo { width: 100%; height: 150px; object-fit: cover; display: block; background: #11131c; }
+  .vote-card-photo-placeholder {
+    width: 100%; height: 150px; background: linear-gradient(135deg, #1f2230, #161824);
+    display: flex; align-items: center; justify-content: center; color: var(--stage-muted);
+  }
+  .vote-card-photo-placeholder svg { width: 32px; height: 32px; opacity: .5; }
+
+  .vote-card-body { padding: 16px 18px 18px; }
+  .vote-card-name { font-size: 16.5px; font-weight: 800; letter-spacing: -0.3px; color: var(--stage-text); margin-bottom: 3px; }
+  .vote-card-desc { font-size: 12px; color: var(--stage-muted); line-height: 1.5; margin-bottom: 14px; min-height: 18px; }
+
+  .vote-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .vote-count-wrap { display: flex; align-items: baseline; gap: 6px; }
+  .vote-count {
+    font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 34px;
+    color: var(--stage-text); letter-spacing: -1px; line-height: 1;
+    transition: color .2s ease;
+  }
+  .vote-count.pop { animation: count-pop .32s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes count-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.35); color: var(--stage-gold); }
+    100% { transform: scale(1); }
+  }
+  .vote-count-label { font-size: 10.5px; color: var(--stage-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+
+  .vote-card-buttons { display: flex; gap: 6px; }
+  .vote-plus-btn {
+    width: 46px; height: 46px; border-radius: 13px;
+    background: linear-gradient(135deg, var(--stage-accent), #4a5ae8);
+    border: none; color: #fff; font-size: 22px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 4px 16px rgba(108,127,255,.3);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .vote-plus-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(108,127,255,.45); }
+  .vote-plus-btn:active { transform: scale(.92); }
+  .vote-minus-btn {
+    width: 34px; height: 46px; border-radius: 11px;
+    background: var(--stage-bg2); border: 1px solid var(--stage-card-border); color: var(--stage-muted);
+    font-size: 17px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .12s ease; opacity: .5;
+  }
+  .vote-minus-btn:hover { opacity: 1; color: var(--danger); border-color: var(--danger); }
+
+  .leading-badge {
+    position: absolute; top: 12px; left: 12px; z-index: 3;
+    background: var(--stage-gold); color: #1a1300;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .03em;
+    padding: 5px 10px 5px 8px; border-radius: 8px;
+    display: flex; align-items: center; gap: 4px;
+    box-shadow: 0 3px 10px rgba(255,201,60,.4);
+    animation: badge-in .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .leading-badge svg { width: 11px; height: 11px; }
+  @keyframes badge-in { from { opacity: 0; transform: translateY(-6px) scale(.8); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+  /* floating +1 burst */
+  .vote-burst {
+    position: absolute; pointer-events: none; z-index: 10;
+    font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 20px;
+    color: var(--stage-gold);
+    animation: burst-float .7s cubic-bezier(.16,1,.3,1) forwards;
+  }
+  @keyframes burst-float {
+    0% { opacity: 0; transform: translateY(0) scale(.6); }
+    20% { opacity: 1; transform: translateY(-8px) scale(1.15); }
+    100% { opacity: 0; transform: translateY(-46px) scale(1); }
+  }
+
+  /* ============ RESULTS / PODIUM ============ */
+  .results-screen {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px 28px 50px; position: relative; z-index: 2; overflow-y: auto;
+  }
+  .results-title {
+    font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--stage-accent2); margin-bottom: 10px; opacity: 0; animation: reveal-in .5s ease forwards;
+  }
+  .results-heading {
+    font-size: 38px; font-weight: 900; letter-spacing: -1px; color: var(--stage-text);
+    margin-bottom: 44px; text-align: center;
+    opacity: 0; animation: reveal-in .5s ease .1s forwards;
+  }
+  @keyframes reveal-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+  .podium { display: flex; align-items: flex-end; justify-content: center; gap: 18px; margin-bottom: 36px; flex-wrap: wrap; max-width: 900px; }
+  .podium-spot {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    opacity: 0; transform: translateY(30px);
+    animation: podium-rise .55s cubic-bezier(.16,1,.3,1) forwards;
+  }
+  .podium-spot.rank-1 { animation-delay: .5s; order: 2; position: relative; }
+  .podium-spot.rank-2 { animation-delay: .35s; order: 1; }
+  .podium-spot.rank-3 { animation-delay: .65s; order: 3; }
+  @keyframes podium-rise { to { opacity: 1; transform: translateY(0); } }
+
+  .podium-photo {
+    border-radius: 18px; object-fit: cover; background: var(--stage-card);
+    border: 3px solid var(--stage-card-border);
+  }
+  .podium-photo-placeholder {
+    border-radius: 18px; background: linear-gradient(135deg, #1f2230, #161824);
+    display: flex; align-items: center; justify-content: center; color: var(--stage-muted);
+    border: 3px solid var(--stage-card-border);
+  }
+  .rank-1 .podium-photo, .rank-1 .podium-photo-placeholder { width: 168px; height: 168px; border-color: var(--stage-gold); box-shadow: 0 0 0 4px rgba(255,201,60,.18), 0 12px 40px rgba(255,201,60,.3); }
+  .rank-2 .podium-photo, .rank-2 .podium-photo-placeholder { width: 136px; height: 136px; border-color: #c4c9d6; }
+  .rank-3 .podium-photo, .rank-3 .podium-photo-placeholder { width: 136px; height: 136px; border-color: #c97a45; }
+  .rank-1 .podium-photo-placeholder svg, .rank-2 .podium-photo-placeholder svg, .rank-3 .podium-photo-placeholder svg { width: 36px; height: 36px; opacity: .5; }
+
+  .podium-medal {
+    font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 20px;
+    display: flex; align-items: center; gap: 5px; letter-spacing: -.1px;
+  }
+  .rank-1 .podium-medal { background: var(--stage-gold); color: #1a1300; font-size: 14px; }
+  .rank-2 .podium-medal { background: #c4c9d6; color: #1a1d29; }
+  .rank-3 .podium-medal { background: #c97a45; color: #2a1408; }
+  .podium-medal svg { width: 14px; height: 14px; }
+
+  .podium-name { font-size: 16px; font-weight: 800; color: var(--stage-text); text-align: center; max-width: 180px; letter-spacing: -.2px; }
+  .rank-1 .podium-name { font-size: 19px; }
+  .podium-votes { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--stage-muted); }
+  .podium-votes b { color: var(--stage-gold); }
+
+  .results-rest {
+    width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 8px;
+    opacity: 0; animation: reveal-in .5s ease .9s forwards;
+  }
+  .results-rest-row {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--stage-card); border: 1px solid var(--stage-card-border); border-radius: 12px;
+    padding: 11px 16px;
+  }
+  .results-rest-rank { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--stage-muted); width: 24px; }
+  .results-rest-name { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--stage-text); }
+  .results-rest-votes { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--stage-muted); }
+
+  .tiebreak-banner {
+    background: linear-gradient(135deg, rgba(255,95,168,.15), rgba(108,127,255,.15));
+    border: 1.5px solid var(--stage-accent2);
+    border-radius: 14px;
+    padding: 16px 22px;
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 28px;
+    max-width: 700px;
+    opacity: 0; animation: reveal-in .4s ease forwards;
+  }
+  .tiebreak-banner svg { width: 26px; height: 26px; color: var(--stage-accent2); flex-shrink: 0; }
+  .tiebreak-banner-text h4 { font-size: 14.5px; font-weight: 800; color: var(--stage-text); margin-bottom: 2px; }
+  .tiebreak-banner-text p { font-size: 12.5px; color: var(--stage-muted); line-height: 1.5; }
+
+  .results-actions { display: flex; gap: 12px; margin-top: 36px; opacity: 0; animation: reveal-in .5s ease 1.1s forwards; }
+
+  /* confetti */
+  .confetti-piece {
+    position: fixed; top: -20px; z-index: 600; pointer-events: none;
+    border-radius: 2px;
+    animation: confetti-fall linear forwards;
+  }
+  @keyframes confetti-fall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* dark "stage" themed confirm modal — used while in presentation mode */
+  .overlay.stage-overlay { background: rgba(5,6,10,.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .overlay.stage-overlay .modal {
+    background: var(--stage-card); border: 1px solid var(--stage-card-border); color: var(--stage-text);
+    box-shadow: 0 30px 80px rgba(0,0,0,.55);
+  }
+  .overlay.stage-overlay .modal h2 { color: var(--stage-text); }
+  .overlay.stage-overlay .modal p.modal-desc { color: var(--stage-muted); }
+  .overlay.stage-overlay .modal-icon { background: rgba(108,127,255,.15); border-color: rgba(108,127,255,.3); }
+  .overlay.stage-overlay .modal-icon.danger { background: rgba(255,95,168,.15); border-color: rgba(255,95,168,.35); }
+  .overlay.stage-overlay .modal-icon svg { color: var(--stage-accent2); stroke: var(--stage-accent2); }
+  .overlay.stage-overlay .btn-ghost { background: var(--stage-bg2); border-color: var(--stage-card-border); color: var(--stage-muted); }
+  .overlay.stage-overlay .btn-ghost:hover { background: #21242f; color: var(--stage-text); }
+  .overlay.stage-overlay .btn-danger { background: linear-gradient(135deg, var(--stage-accent), #4a5ae8); border-color: transparent; color: #fff; }
+  .overlay.stage-overlay .btn-danger:hover { box-shadow: 0 6px 20px rgba(108,127,255,.4); }
+
+  /* click ripple feedback for stage buttons */
+  .stage-btn { position: relative; overflow: hidden; }
+  .ripple { position: absolute; border-radius: 50%; transform: scale(0); background: rgba(255,255,255,.35); animation: ripple-anim .55s ease-out forwards; pointer-events: none; }
+  @keyframes ripple-anim { to { transform: scale(2.6); opacity: 0; } }
+
+  /* leader spotlight beam sweeping behind the leading card */
+  .vote-card.leading::before {
+    content: ''; position: absolute; inset: -2px; border-radius: 20px; z-index: -1;
+    background: conic-gradient(from var(--spin, 0deg), var(--stage-gold), transparent 28%, transparent 72%, var(--stage-gold));
+    animation: spotlight-spin 3.2s linear infinite;
+    opacity: .55; filter: blur(2px);
+  }
+  @keyframes spotlight-spin { to { --spin: 360deg; } }
+  @property --spin { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+  /* countdown drumroll on finish button while confirming */
+  .stage-btn.primary.drumroll { animation: drumroll-shake .15s ease-in-out 4; }
+  @keyframes drumroll-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+
+  /* suspense flash before podium reveals */
+  .suspense-flash {
+    position: fixed; inset: 0; background: #fff; z-index: 650; pointer-events: none;
+    animation: suspense-flash-anim .5s ease-out forwards;
+  }
+  @keyframes suspense-flash-anim { 0% { opacity: 0; } 12% { opacity: .9; } 100% { opacity: 0; } }
+
+  .podium-spot.rank-1::after {
+    content: ''; position: absolute; top: -30px; left: 50%; width: 220px; height: 220px;
+    transform: translateX(-50%); border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle, rgba(255,201,60,.35), transparent 70%);
+    animation: gold-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes gold-pulse { 0%,100% { opacity: .5; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.12); } }
+
+  @media (max-width: 760px) {
+    .stage-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .vote-count { font-size: 26px; }
+    .vote-plus-btn { width: 40px; height: 40px; font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ EDITOR ============ -->
+<div class="app" id="editor-app">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z" fill="currentColor" stroke="none"/></svg>
+      </div>
+      <div class="topbar-text">
+        <h1>Голосування</h1>
+        <p>Edvault · оцінка робіт на занятті</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" title="Скинути всі голоси" onclick="confirmResetVotes()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+      </button>
+      <button class="btn btn-outline" onclick="confirmClearAll()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Очистити все
+      </button>
+      <button class="btn btn-primary btn-lg" id="btn-start-presentation" onclick="startPresentation()" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+        Почати голосування
+      </button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="session-header">
+      <div class="session-title-group">
+        <div class="session-eyebrow">Назва сесії</div>
+        <input class="session-title-input" id="session-title" value="Голосування за найкращу роботу" oninput="saveSessionTitle()">
+      </div>
+      <div class="session-actions">
+        <button class="btn btn-primary" onclick="openTeamModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Додати роботу
+        </button>
+      </div>
+    </div>
+
+    <div class="stats-row" id="stats-row" style="display:none;">
+      <div class="stat-pill">
+        <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div><div class="stat-num" id="stat-teams">0</div><div class="stat-label">робіт</div></div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg></div>
+        <div><div class="stat-num" id="stat-votes">0</div><div class="stat-label">голосів</div></div>
+      </div>
+    </div>
+
+    <div id="empty-state" class="empty-state">
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>
+      </div>
+      <h3>Ще немає жодної роботи</h3>
+      <p>Додайте команди чи роботи, які братимуть участь у голосуванні — з назвою, фото та описом.</p>
+      <button class="btn btn-primary" onclick="openTeamModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Додати першу роботу
+      </button>
+    </div>
+
+    <div class="team-grid" id="team-grid"></div>
+  </div>
+</div>
+
+<!-- TEAM ADD/EDIT MODAL -->
+<div class="overlay hidden" id="overlay-team">
+  <div class="modal">
+    <div class="modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#4F6BF4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <h2 id="team-modal-title">Додати роботу</h2>
+    <p class="modal-desc">Заповніть інформацію про команду чи роботу для голосування.</p>
+
+    <div class="field-group">
+      <div class="field-label">Назва команди / роботи</div>
+      <input class="input-styled" id="team-name-input" type="text" placeholder="Напр. Команда «Ракета»">
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Опис (необов'язково)</div>
+      <input class="input-styled" id="team-desc-input" type="text" placeholder="Короткий підзаголовок">
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Текст роботи (необов'язково)</div>
+      <textarea class="input-styled" id="team-text-input" placeholder="Повний текст, есе, опис ідеї..."></textarea>
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Фото (необов'язково)</div>
+      <div class="photo-upload-zone" id="photo-upload-zone" onclick="triggerPhotoUpload()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <p>Натисніть, щоб обрати фото</p>
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeTeamModal()">Скасувати</button>
+      <button class="btn btn-primary" onclick="saveTeam()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Зберегти
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL (generic) -->
+<div class="overlay hidden" id="overlay-confirm">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-icon danger">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <h2 id="confirm-title">Ви впевнені?</h2>
+    <p class="modal-desc" id="confirm-desc">Цю дію не можна скасувати.</p>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Скасувати</button>
+      <button class="btn btn-danger" id="confirm-action-btn">Підтвердити</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-photo" accept="image/png,image/jpeg,image/webp" style="display:none">
+
+<!-- ============ PRESENTATION STAGE ============ -->
+<div class="stage-root" id="stage-root">
+
+  <!-- voting screen -->
+  <div id="stage-voting-screen">
+    <div class="stage-topbar">
+      <div class="stage-title"><span class="dot"></span><span id="stage-session-title">Голосування</span></div>
+      <div class="stage-topbar-right">
+        <button class="stage-btn" onclick="exitPresentation(event)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          Вийти
+        </button>
+        <button class="stage-btn primary" onclick="confirmFinishVoting(event)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Завершити голосування
+        </button>
+      </div>
+    </div>
+    <div class="stage-body">
+      <div class="stage-grid" id="stage-grid"></div>
+    </div>
+  </div>
+
+  <!-- results screen -->
+  <div id="stage-results-screen" class="results-screen" style="display:none;"></div>
+</div>
+
+<script>
+/* ===================== STATE ===================== */
+const STORAGE_KEY = 'edvault_vote_v1';
+
+const state = {
+  sessionTitle: 'Голосування за найкращу роботу',
+  teams: [],           // {id, name, desc, text, photo (dataURL), votes}
+  phase: 'editing',    // 'editing' | 'voting' | 'results'
+  round: 1,            // increments on tiebreak rounds
+  tiebreakIds: null,   // array of team ids currently in a tiebreak round, or null
+  finalRanking: null,  // computed once voting finishes — array of {team, rank}
+  pendingPhotoDataUrl: null,
+  editingTeamId: null,
+};
+
+let idCounter = 1;
+const newId = () => 'team_' + Date.now() + '_' + (idCounter++);
+
+/* ===================== PERSISTENCE ===================== */
+function saveState() {
+  try {
+    const toSave = {
+      sessionTitle: state.sessionTitle,
+      teams: state.teams,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch (e) {
+    console.error('Save failed', e);
+    showToast('Не вдалося зберегти — можливо, забагато фото (сховище переповнене)', true);
+  }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed.sessionTitle) state.sessionTitle = parsed.sessionTitle;
+    if (Array.isArray(parsed.teams)) state.teams = parsed.teams;
+  } catch (e) {
+    console.error('Load failed', e);
+  }
+}
+
+/* ===================== TOAST ===================== */
+function showToast(msg, isError) {
+  const wrap = document.getElementById('toast-wrap') || createToastWrap();
+  const t = document.createElement('div');
+  t.style.cssText = `
+    background:${isError ? '#ef4444' : '#1a1d23'}; color:#fff; padding:11px 18px; border-radius:10px;
+    font-size:13px; font-weight:500; box-shadow:0 4px 16px rgba(0,0,0,.18);
+    display:flex; align-items:center; gap:9px; animation:slideUp .22s ease;
+  `;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 2800);
+}
+function createToastWrap() {
+  const wrap = document.createElement('div');
+  wrap.id = 'toast-wrap';
+  wrap.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:900;display:flex;flex-direction:column;gap:8px;align-items:center;';
+  document.body.appendChild(wrap);
+  return wrap;
+}
+
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+/* ===================== SESSION TITLE ===================== */
+function saveSessionTitle() {
+  state.sessionTitle = document.getElementById('session-title').value.trim() || 'Голосування';
+  saveState();
+}
+
+/* ===================== TEAM CRUD ===================== */
+function openTeamModal(teamId) {
+  state.editingTeamId = teamId || null;
+  state.pendingPhotoDataUrl = null;
+
+  const team = teamId ? state.teams.find(t => t.id === teamId) : null;
+  document.getElementById('team-modal-title').textContent = team ? 'Редагувати роботу' : 'Додати роботу';
+  document.getElementById('team-name-input').value = team ? team.name : '';
+  document.getElementById('team-desc-input').value = team ? (team.desc || '') : '';
+  document.getElementById('team-text-input').value = team ? (team.text || '') : '';
+
+  renderPhotoZone(team ? team.photo : null);
+
+  document.getElementById('overlay-team').classList.remove('hidden');
+  setTimeout(() => document.getElementById('team-name-input').focus(), 50);
+}
+
+function closeTeamModal() {
+  document.getElementById('overlay-team').classList.add('hidden');
+  state.editingTeamId = null;
+  state.pendingPhotoDataUrl = null;
+}
+
+function renderPhotoZone(existingPhoto) {
+  const zone = document.getElementById('photo-upload-zone');
+  const photo = state.pendingPhotoDataUrl !== null ? state.pendingPhotoDataUrl : existingPhoto;
+  if (photo) {
+    zone.innerHTML = `
+      <img class="photo-preview" src="${photo}">
+      <div class="photo-remove-btn" onclick="event.stopPropagation(); removePendingPhoto()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </div>
+    `;
+  } else {
+    zone.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <p>Натисніть, щоб обрати фото</p>
+    `;
+  }
+}
+
+function removePendingPhoto() {
+  state.pendingPhotoDataUrl = ''; // empty string = explicitly removed (vs null = unchanged)
+  renderPhotoZone(null);
+}
+
+function triggerPhotoUpload() {
+  document.getElementById('file-photo').value = '';
+  document.getElementById('file-photo').click();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('file-photo').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      showToast('Фото завелике (максимум ~4МБ)', true);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      state.pendingPhotoDataUrl = reader.result;
+      renderPhotoZone(null);
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+function saveTeam() {
+  const name = document.getElementById('team-name-input').value.trim();
+  if (!name) { showToast('Введіть назву команди чи роботи', true); return; }
+
+  const desc = document.getElementById('team-desc-input').value.trim();
+  const text = document.getElementById('team-text-input').value.trim();
+
+  if (state.editingTeamId) {
+    const team = state.teams.find(t => t.id === state.editingTeamId);
+    team.name = name;
+    team.desc = desc;
+    team.text = text;
+    if (state.pendingPhotoDataUrl !== null) team.photo = state.pendingPhotoDataUrl || null;
+  } else {
+    state.teams.push({
+      id: newId(),
+      name, desc, text,
+      photo: state.pendingPhotoDataUrl || null,
+      votes: 0,
+    });
+  }
+
+  saveState();
+  closeTeamModal();
+  renderEditor();
+  showToast(state.editingTeamId ? 'Зміни збережено' : 'Роботу додано');
+}
+
+function deleteTeam(teamId) {
+  state.teams = state.teams.filter(t => t.id !== teamId);
+  saveState();
+  renderEditor();
+  showToast('Роботу видалено');
+}
+
+/* ===================== EDITOR RENDER ===================== */
+function renderEditor() {
+  document.getElementById('session-title').value = state.sessionTitle;
+
+  const hasTeams = state.teams.length > 0;
+  document.getElementById('empty-state').style.display = hasTeams ? 'none' : 'flex';
+  document.getElementById('stats-row').style.display = hasTeams ? 'flex' : 'none';
+  document.getElementById('btn-start-presentation').disabled = !hasTeams;
+
+  document.getElementById('stat-teams').textContent = state.teams.length;
+  document.getElementById('stat-votes').textContent = state.teams.reduce((s, t) => s + t.votes, 0);
+
+  const grid = document.getElementById('team-grid');
+  grid.innerHTML = '';
+  for (const team of state.teams) {
+    const card = document.createElement('div');
+    card.className = 'team-card';
+    card.innerHTML = `
+      ${team.photo
+        ? `<img class="team-card-photo" src="${team.photo}">`
+        : `<div class="team-card-photo-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`
+      }
+      <div class="team-card-body">
+        <div class="team-card-name">${escapeHtml(team.name)}</div>
+        ${team.desc ? `<div class="team-card-desc">${escapeHtml(team.desc)}</div>` : ''}
+        ${team.text ? `<div class="team-card-text">${escapeHtml(team.text)}</div>` : ''}
+      </div>
+      <div class="team-card-footer">
+        <div class="team-card-votes">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>
+          ${team.votes}
+        </div>
+        <div class="team-card-actions">
+          <button class="icon-btn" title="Редагувати" onclick="openTeamModal('${team.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="icon-btn" title="Видалити" onclick="confirmDeleteTeam('${team.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+/* ===================== CONFIRM DIALOGS ===================== */
+function showConfirm(title, desc, onConfirm, theme) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-desc').textContent = desc;
+  const btn = document.getElementById('confirm-action-btn');
+  const newBtn = btn.cloneNode(true); // strip old listeners
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener('click', () => { closeConfirm(); onConfirm(); });
+  const overlay = document.getElementById('overlay-confirm');
+  overlay.classList.toggle('stage-overlay', theme === 'stage');
+  overlay.classList.remove('hidden');
+}
+function closeConfirm() { document.getElementById('overlay-confirm').classList.add('hidden'); }
+
+document.addEventListener('keydown', (e) => {
+  const overlay = document.getElementById('overlay-confirm');
+  if (overlay.classList.contains('hidden')) return;
+  if (e.key === 'Escape') closeConfirm();
+  if (e.key === 'Enter') document.getElementById('confirm-action-btn').click();
+});
+
+function confirmDeleteTeam(teamId) {
+  const team = state.teams.find(t => t.id === teamId);
+  showConfirm('Видалити роботу?', `«${team.name}» буде видалено разом з усіма її голосами.`, () => deleteTeam(teamId));
+}
+
+function confirmResetVotes() {
+  if (!state.teams.length) return;
+  showConfirm('Скинути всі голоси?', 'Кількість голосів кожної роботи стане 0. Самі роботи залишаться.', () => {
+    state.teams.forEach(t => t.votes = 0);
+    saveState();
+    renderEditor();
+    showToast('Голоси скинуто');
+  });
+}
+
+function confirmClearAll() {
+  if (!state.teams.length) return;
+  showConfirm('Очистити все?', 'Усі роботи, фото та голоси буде видалено без можливості відновлення.', () => {
+    state.teams = [];
+    saveState();
+    renderEditor();
+    showToast('Всі дані очищено');
+  });
+}
+
+/* ===================== INIT ===================== */
+loadState();
+document.addEventListener('DOMContentLoaded', () => {
+  renderEditor();
+});
+
+/* ===================== PRESENTATION: LAUNCH ===================== */
+function startPresentation() {
+  if (!state.teams.length) return;
+  state.phase = 'voting';
+  state.tiebreakIds = null;
+  document.getElementById('stage-session-title').textContent = state.sessionTitle;
+  document.getElementById('stage-root').classList.add('active');
+  document.getElementById('stage-voting-screen').style.display = 'block';
+  document.getElementById('stage-results-screen').style.display = 'none';
+  renderVotingGrid();
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+}
+
+function spawnRipple(ev) {
+  if (!ev || !ev.currentTarget) return;
+  const btn = ev.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const r = document.createElement('span');
+  r.className = 'ripple';
+  const size = Math.max(rect.width, rect.height) * 1.4;
+  r.style.width = r.style.height = size + 'px';
+  r.style.left = (ev.clientX - rect.left - size / 2) + 'px';
+  r.style.top = (ev.clientY - rect.top - size / 2) + 'px';
+  btn.appendChild(r);
+  setTimeout(() => r.remove(), 600);
+}
+
+function exitPresentation(ev) {
+  spawnRipple(ev);
+  showConfirm('Вийти з презентації?', 'Поточні голоси збережуться. Ви зможете повернутись до них пізніше.', () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    document.getElementById('stage-root').classList.remove('active');
+    state.phase = 'editing';
+    renderEditor();
+  }, 'stage');
+}
+
+/* ===================== VOTING GRID ===================== */
+function activeVotingTeams() {
+  // during a tiebreak round, only the tied teams are shown/votable
+  if (state.tiebreakIds) return state.teams.filter(t => state.tiebreakIds.includes(t.id));
+  return state.teams;
+}
+
+function renderVotingGrid() {
+  const grid = document.getElementById('stage-grid');
+  const teams = activeVotingTeams();
+  const maxVotes = Math.max(0, ...teams.map(t => t.votes));
+  const leaders = maxVotes > 0 ? teams.filter(t => t.votes === maxVotes) : [];
+  const singleLeader = leaders.length === 1 ? leaders[0] : null;
+
+  grid.innerHTML = '';
+  for (const team of teams) {
+    const card = document.createElement('div');
+    card.className = 'vote-card' + (singleLeader && team.id === singleLeader.id ? ' leading' : '');
+    card.dataset.teamId = team.id;
+    card.innerHTML = `
+      ${singleLeader && team.id === singleLeader.id ? `
+        <div class="leading-badge">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>
+          Лідирує
+        </div>` : ''
+      }
+      ${team.photo
+        ? `<img class="vote-card-photo" src="${team.photo}">`
+        : `<div class="vote-card-photo-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`
+      }
+      <div class="vote-card-body">
+        <div class="vote-card-name">${escapeHtml(team.name)}</div>
+        <div class="vote-card-desc">${escapeHtml(team.desc || '')}</div>
+        <div class="vote-card-footer">
+          <div class="vote-count-wrap">
+            <div>
+              <div class="vote-count" id="count-${team.id}">${team.votes}</div>
+              <div class="vote-count-label">голосів</div>
+            </div>
+          </div>
+          <div class="vote-card-buttons">
+            <button class="vote-minus-btn" onclick="event.stopPropagation(); castVote('${team.id}', -1, event)" title="Скасувати голос">−</button>
+            <button class="vote-plus-btn" onclick="castVote('${team.id}', 1, event)" title="Додати голос">+</button>
+          </div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+/* ===================== CASTING VOTES ===================== */
+function castVote(teamId, delta, ev) {
+  const team = state.teams.find(t => t.id === teamId);
+  if (!team) return;
+  if (delta < 0 && team.votes <= 0) return; // can't go below zero
+
+  team.votes = Math.max(0, team.votes + delta);
+  saveState();
+
+  // update just the count + card visuals without a full re-render, so animation isn't interrupted
+  const countEl = document.getElementById(`count-${teamId}`);
+  if (countEl) {
+    countEl.textContent = team.votes;
+    if (delta > 0) {
+      countEl.classList.remove('pop'); void countEl.offsetWidth; countEl.classList.add('pop');
+    }
+  }
+  const card = document.querySelector(`.vote-card[data-team-id="${teamId}"]`);
+  if (card && delta > 0) {
+    card.classList.remove('bumped'); void card.offsetWidth; card.classList.add('bumped');
+    spawnVoteBurst(ev, '+1');
+  }
+
+  refreshLeaderBadges();
+}
+
+function spawnVoteBurst(ev, text) {
+  if (!ev) return;
+  const burst = document.createElement('div');
+  burst.className = 'vote-burst';
+  burst.textContent = text;
+  burst.style.left = (ev.clientX - 12) + 'px';
+  burst.style.top = (ev.clientY - 30) + 'px';
+  document.body.appendChild(burst);
+  setTimeout(() => burst.remove(), 750);
+}
+
+/* Re-evaluates which card (if any) should show the "leading" badge, without rebuilding the whole grid */
+function refreshLeaderBadges() {
+  const teams = activeVotingTeams();
+  const maxVotes = Math.max(0, ...teams.map(t => t.votes));
+  const leaders = maxVotes > 0 ? teams.filter(t => t.votes === maxVotes) : [];
+  const singleLeaderId = leaders.length === 1 ? leaders[0].id : null;
+
+  document.querySelectorAll('.vote-card').forEach(card => {
+    const id = card.dataset.teamId;
+    const shouldLead = id === singleLeaderId;
+    const isLeading = card.classList.contains('leading');
+    if (shouldLead && !isLeading) {
+      card.classList.add('leading');
+      const badge = document.createElement('div');
+      badge.className = 'leading-badge';
+      badge.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>Лідирує`;
+      card.prepend(badge);
+    } else if (!shouldLead && isLeading) {
+      card.classList.remove('leading');
+      const badge = card.querySelector('.leading-badge');
+      if (badge) badge.remove();
+    }
+  });
+}
+
+/* ===================== FINISH VOTING / TIEBREAK ===================== */
+function confirmFinishVoting(ev) {
+  spawnRipple(ev);
+  const btnEl = ev && ev.currentTarget;
+  if (btnEl) {
+    btnEl.classList.add('drumroll');
+    setTimeout(() => btnEl.classList.remove('drumroll'), 700);
+  }
+  const teams = activeVotingTeams();
+  const totalVotes = teams.reduce((s, t) => s + t.votes, 0);
+  if (totalVotes === 0) {
+    showConfirm('Завершити без жодного голосу?', 'Поки що ніхто не отримав жодного голосу. Все одно завершити?', () => finishVoting(), 'stage');
+    return;
+  }
+  showConfirm('Завершити голосування?', 'Результати буде підраховано і показано на екрані.', () => finishVoting(), 'stage');
+}
+
+function finishVoting() {
+  const teams = activeVotingTeams();
+  const maxVotes = Math.max(0, ...teams.map(t => t.votes));
+  const winners = teams.filter(t => t.votes === maxVotes);
+
+  if (winners.length > 1 && maxVotes > 0) {
+    // tie at the top — start (or continue) a tiebreak round among just the tied teams
+    state.tiebreakIds = winners.map(t => t.id);
+    state.round += 1;
+    winners.forEach(t => t.votes = 0); // reset only the tied teams' votes for the runoff
+    saveState();
+    renderVotingGrid();
+    showTiebreakToast(winners);
+    return;
+  }
+
+  // clear winner (or only one team total) — show final results
+  state.tiebreakIds = null;
+  const flash = document.createElement('div');
+  flash.className = 'suspense-flash';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 550);
+  setTimeout(() => showResults(), 220);
+}
+
+function showTiebreakToast(winners) {
+  const names = winners.map(w => w.name).join(', ');
+  showToast(`Нічия між: ${names} — додатковий раунд голосування!`);
+}
+
+/* ===================== RESULTS SCREEN ===================== */
+function showResults() {
+  document.getElementById('stage-voting-screen').style.display = 'none';
+  const screen = document.getElementById('stage-results-screen');
+  screen.style.display = 'flex';
+
+  const ranked = [...state.teams].sort((a, b) => b.votes - a.votes);
+  const top3 = ranked.slice(0, 3);
+  const rest = ranked.slice(3);
+  const wasTiebreak = state.round > 1;
+
+  const medalSvg = (rank) => rank === 1
+    ? `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M9 14.5L7 22l5-3 5 3-2-7.5"/></svg>`;
+
+  const podiumHtml = top3.map((team, i) => {
+    const rank = i + 1;
+    return `
+      <div class="podium-spot rank-${rank}">
+        ${team.photo
+          ? `<img class="podium-photo" src="${team.photo}">`
+          : `<div class="podium-photo-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`
+        }
+        <div class="podium-medal">${medalSvg(rank)} ${rank} місце</div>
+        <div class="podium-name">${escapeHtml(team.name)}</div>
+        <div class="podium-votes"><b>${team.votes}</b> голос${pluralVotes(team.votes)}</div>
+      </div>
+    `;
+  }).join('');
+
+  const restHtml = rest.length ? `
+    <div class="results-rest">
+      ${rest.map((team, i) => `
+        <div class="results-rest-row">
+          <div class="results-rest-rank">${i + 4}</div>
+          <div class="results-rest-name">${escapeHtml(team.name)}</div>
+          <div class="results-rest-votes">${team.votes} голос${pluralVotes(team.votes)}</div>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+
+  const tiebreakHtml = wasTiebreak ? `
+    <div class="tiebreak-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="tiebreak-banner-text">
+        <h4>Знадобився додатковий раунд</h4>
+        <p>Через однакову кількість голосів було проведено перегол${state.round > 2 ? 'осування' : 'осування'} серед лідерів.</p>
+      </div>
+    </div>
+  ` : '';
+
+  screen.innerHTML = `
+    <div class="results-title">Результати голосування</div>
+    <div class="results-heading">${escapeHtml(state.sessionTitle)}</div>
+    ${tiebreakHtml}
+    <div class="podium">${podiumHtml}</div>
+    ${restHtml}
+    <div class="results-actions">
+      <button class="stage-btn" onclick="exitPresentation(event)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        До редактора
+      </button>
+      <button class="stage-btn primary" onclick="restartVotingFromResults()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+        Нове голосування
+      </button>
+    </div>
+  `;
+
+  launchConfetti();
+  state.round = 1; // reset for next session
+}
+
+function pluralVotes(n) {
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return '';
+  if ([2,3,4].includes(mod10) && ![12,13,14].includes(mod100)) return 'и';
+  return 'ів';
+}
+
+function restartVotingFromResults() {
+  showConfirm('Почати нове голосування?', 'Всі голоси буде скинуто до нуля, і голосування почнеться заново.', () => {
+    state.teams.forEach(t => t.votes = 0);
+    state.tiebreakIds = null;
+    saveState();
+    document.getElementById('stage-results-screen').style.display = 'none';
+    document.getElementById('stage-voting-screen').style.display = 'block';
+    renderVotingGrid();
+  });
+}
+
+/* ===================== CONFETTI ===================== */
+function launchConfetti() {
+  const colors = ['#ffc93c', '#6c7fff', '#ff5fa8', '#4ade9a', '#ffffff'];
+  const count = 90;
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      const size = 6 + Math.random() * 8;
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.width = size + 'px';
+      piece.style.height = (size * 0.4) + 'px';
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
+      piece.style.opacity = String(0.8 + Math.random() * 0.2);
+      document.body.appendChild(piece);
+      setTimeout(() => piece.remove(), 4200);
+    }, i * 18);
+  }
+}
+</script>
+
+</body>
+</html>
