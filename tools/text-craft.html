@@ -197,7 +197,7 @@ body {
   gap:3px;
   height:var(--toolbar);
   overflow-x:auto;
-  overflow-y:visible;
+  overflow-y:clip;
   scrollbar-width:none;
   -ms-overflow-style:none;
   scroll-behavior:smooth;
@@ -1575,6 +1575,323 @@ body{animation:fadeUp .3s ease}
   cursor:pointer;transition:all .1s;
 }
 .crop-preset-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+
+/* ════════════════════════════════════════════════════════════════
+   LIQUID GLASS THEME — iOS 26 style overlay
+   Pure visual layer. No structural/functional rules touched above.
+   ════════════════════════════════════════════════════════════════ */
+
+:root{
+  --glass-fill:      rgba(255,255,255,.46);
+  --glass-fill-2:    rgba(255,255,255,.32);
+  --glass-fill-deep: rgba(255,255,255,.62);
+  --glass-edge:      rgba(255,255,255,.85);
+  --glass-edge-dim:  rgba(255,255,255,.35);
+  --glass-shadow:    0 8px 32px rgba(31,38,80,.16), 0 1px 1px rgba(255,255,255,.6) inset, 0 -1px 1px rgba(31,38,80,.05) inset;
+  --glass-shadow-lg: 0 22px 60px rgba(31,38,80,.22), 0 1px 1px rgba(255,255,255,.7) inset;
+  --glass-blur:      blur(22px) saturate(190%);
+  --glass-blur-sm:   blur(14px) saturate(170%);
+  --accent-glow:     0 4px 18px rgba(79,107,244,.45), 0 1px 0 rgba(255,255,255,.5) inset;
+}
+
+/* Plain white backdrop (gradient mesh removed per request) */
+html, body{ background:#ffffff; }
+body{ position:relative; }
+
+/* ── Top bar: frosted glass plate ── */
+.topbar{
+  background:linear-gradient(180deg, #ffffff, #f5f6fa);
+  border-bottom:1px solid rgba(31,38,80,.1);
+  box-shadow:0 1px 0 #fff inset, 0 4px 16px rgba(31,38,80,.06);
+}
+.brand-mark{
+  background:linear-gradient(155deg,#6f86ff, #4F6BF4 55%, #3552d9);
+  box-shadow:0 3px 10px rgba(79,107,244,.45), 0 1px 0 rgba(255,255,255,.55) inset;
+}
+.topbar-div{background:rgba(31,38,80,.12)}
+
+/* ── Buttons: glassy pills with specular sheen ── */
+.btn, .topbar-menu-btn, .tb-select, .size-ctrl, .col-btn, .toc-toggle{
+  position:relative; overflow:hidden;
+}
+.btn-ghost{
+  background:rgba(255,255,255,.18);
+  border:1px solid transparent;
+}
+.btn-ghost:hover{
+  background:linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.4));
+  border-color:var(--glass-edge-dim);
+  box-shadow:var(--glass-shadow);
+}
+.btn-outline{
+  background:linear-gradient(180deg, rgba(255,255,255,.55), rgba(199,208,252,.45));
+  backdrop-filter:var(--glass-blur-sm); -webkit-backdrop-filter:var(--glass-blur-sm);
+  border:1px solid rgba(79,107,244,.28);
+  box-shadow:0 4px 14px rgba(79,107,244,.14), 0 1px 0 rgba(255,255,255,.7) inset;
+}
+.btn-outline:hover{ background:linear-gradient(180deg, rgba(255,255,255,.7), rgba(199,208,252,.55)); box-shadow:0 6px 18px rgba(79,107,244,.2), 0 1px 0 rgba(255,255,255,.8) inset; }
+.btn-solid{
+  background:linear-gradient(160deg, #7a8eff 0%, #4F6BF4 55%, #3a52e0 100%);
+  border:1px solid rgba(255,255,255,.25);
+  box-shadow:var(--accent-glow);
+}
+.btn-solid::before{
+  content:'';
+  position:absolute; inset:0 0 50% 0;
+  background:linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0));
+  border-radius:inherit; pointer-events:none;
+}
+.btn-solid:hover{ background:linear-gradient(160deg, #8b9dff 0%, #5d76f5 55%, #4259e6 100%); box-shadow:0 6px 22px rgba(79,107,244,.55), 0 1px 0 rgba(255,255,255,.5) inset; }
+.btn-danger{
+  background:linear-gradient(160deg,#ff7a7a,#ef4444 60%,#d23636);
+  box-shadow:0 4px 18px rgba(239,68,68,.45), 0 1px 0 rgba(255,255,255,.5) inset;
+}
+
+.topbar-menu-btn{
+  background:rgba(255,255,255,.35); border:1px solid var(--glass-edge-dim);
+  backdrop-filter:var(--glass-blur-sm); -webkit-backdrop-filter:var(--glass-blur-sm);
+}
+.topbar-menu-btn:hover{ background:rgba(255,255,255,.6); }
+
+.doc-name:hover, .doc-name:focus{ background:rgba(255,255,255,.4); }
+
+/* ── Dropdown / popovers: deep frosted cards ── */
+.topbar-dropdown, .table-picker, .tbl-palette, .img-picker, .align-picker, .callout-picker{
+  background:linear-gradient(165deg, var(--glass-fill-deep), var(--glass-fill));
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-edge-dim);
+  box-shadow:var(--glass-shadow-lg);
+}
+.topbar-dropdown .btn:hover{ background:rgba(255,255,255,.55); }
+.topbar-dd-sep, .img-pick-sep{ background:rgba(31,38,80,.1); }
+
+/* ── Toolbar: floating glass strip ── */
+.toolbar-wrap{
+  background:linear-gradient(180deg, #f7f8fc, #eef0f7);
+  border-bottom:1px solid rgba(31,38,80,.1);
+  box-shadow:0 1px 0 rgba(255,255,255,.8) inset;
+}
+.tb-scroll-btn.left{ background:linear-gradient(to right, rgba(255,255,255,.55) 55%, transparent); }
+.tb-scroll-btn.right{ background:linear-gradient(to left, rgba(255,255,255,.55) 55%, transparent); }
+.tb-sep{ background:rgba(31,38,80,.16); }
+.tb-group{
+  background:rgba(241,243,250,.9);
+  border:1px solid rgba(31,38,80,.12);
+  box-shadow:0 1px 2px rgba(31,38,80,.06), 0 1px 0 rgba(255,255,255,.8) inset;
+}
+.tb{ color:var(--muted); }
+.tb:hover{ background:#fff; box-shadow:0 2px 6px rgba(31,38,80,.16), 0 0 0 1px rgba(31,38,80,.08) inset; }
+.tb.on{ background:linear-gradient(160deg,#fff,#dfe6ff); color:var(--accent); box-shadow:0 2px 8px rgba(79,107,244,.3), 0 0 0 1px rgba(79,107,244,.25) inset; }
+.toolbar > .tb{ background:rgba(241,243,250,.9); border:1px solid rgba(31,38,80,.14); }
+.toolbar > .tb:hover{ background:#fff; border-color:rgba(31,38,80,.22); }
+.toolbar > .tb.on{ background:linear-gradient(160deg,#eef0fe,#cdd6fd); border-color:rgba(79,107,244,.4); }
+.tb-select, .size-ctrl, .col-btn{
+  background:rgba(241,243,250,.9);
+  border:1px solid rgba(31,38,80,.14);
+}
+.tb-select:hover, .tb-select:focus, .size-ctrl:focus-within{ background:#fff; border-color:rgba(31,38,80,.25); }
+.size-inp{ background:#fff; }
+.col-btn:hover{ background:#fff; box-shadow:0 1px 3px rgba(31,38,80,.12); }
+.col-btn svg{ color:var(--muted); }
+
+/* ── TOC sidebar: glass panel ── */
+.toc-sidebar{
+  background:linear-gradient(180deg, var(--glass-fill), var(--glass-fill-2));
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
+  border-right:1px solid var(--glass-edge-dim);
+}
+.toc-header{ border-bottom:1px solid rgba(31,38,80,.08); }
+.toc-item:hover{ background:rgba(255,255,255,.5); }
+.toc-item.active{ background:linear-gradient(90deg, rgba(79,107,244,.18), rgba(79,107,244,.06)); }
+.toc-open-btn{
+  background:rgba(255,255,255,.5); backdrop-filter:var(--glass-blur-sm); -webkit-backdrop-filter:var(--glass-blur-sm);
+  border:1px solid var(--glass-edge-dim); border-left:none;
+}
+
+/* ── Scroll area + page: keep paper crisp, float it like glass over mesh ── */
+.scroll-area{
+  background:transparent;
+  background-image:radial-gradient(circle, rgba(120,130,180,.16) 1px, transparent 1px);
+  background-size:22px 22px;
+}
+.page{
+  background:linear-gradient(180deg, rgba(255,255,255,.97), rgba(255,255,255,.92));
+  box-shadow:0 30px 70px rgba(31,38,80,.18), 0 0 0 1px rgba(255,255,255,.6) inset, 0 1px 0 rgba(255,255,255,.9) inset;
+}
+
+/* ── Status bar ── */
+.statusbar{
+  background:linear-gradient(180deg, var(--glass-fill), var(--glass-fill-2));
+  backdrop-filter:var(--glass-blur-sm); -webkit-backdrop-filter:var(--glass-blur-sm);
+  border-top:1px solid var(--glass-edge-dim);
+}
+
+/* ── Floating contextual toolbars (image/table/beside) ── */
+.img-toolbar, .table-ctx-bar, .beside-ctx-bar, .code-lang-bar, .crop-actions{
+  background:linear-gradient(165deg, var(--glass-fill-deep), var(--glass-fill));
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-edge-dim);
+  box-shadow:var(--glass-shadow-lg);
+}
+.img-tb-btn:hover, .tbl-btn:hover, .cbar-btn:hover, .code-copy-btn:hover{ background:rgba(255,255,255,.6); }
+.img-tb-btn.active{ background:linear-gradient(160deg,#eef0fe,#d7defc); }
+
+/* ── Selection bubble toolbar (dark glass, like iOS context menu) ── */
+.sel-toolbar{
+  background:linear-gradient(165deg, rgba(28,30,42,.78), rgba(28,30,42,.62));
+  backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 14px 40px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.18) inset;
+}
+
+/* ── Find bar ── */
+.find-bar{
+  background:linear-gradient(165deg, var(--glass-fill-deep), var(--glass-fill));
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-edge-dim);
+  box-shadow:var(--glass-shadow-lg);
+}
+.find-inp{ background:rgba(255,255,255,.55); }
+.find-nav-btn:hover, .find-close:hover{ background:rgba(255,255,255,.6); }
+.find-replace-btn{ background:rgba(255,255,255,.4); }
+.find-replace-btn.primary{ background:linear-gradient(160deg,#eef0fe,#d7defc); }
+
+/* ── Modals / overlays: glass dialogs over blurred backdrop ── */
+.overlay, .modal-overlay{
+  background:rgba(20,22,38,.28);
+  backdrop-filter:blur(10px) saturate(140%); -webkit-backdrop-filter:blur(10px) saturate(140%);
+}
+.ov-card, .modal-card{
+  background:linear-gradient(165deg, rgba(255,255,255,.88), rgba(255,255,255,.7));
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-edge);
+  box-shadow:0 30px 80px rgba(20,22,38,.35), 0 1px 0 rgba(255,255,255,.8) inset;
+}
+.modal-inp, .pw-ctrl{ background:rgba(255,255,255,.55); }
+
+/* ── Image placeholder slots ── */
+.img-slot-ph{
+  background:rgba(255,255,255,.3);
+  backdrop-filter:var(--glass-blur-sm); -webkit-backdrop-filter:var(--glass-blur-sm);
+}
+.img-slot-ph:hover{ background:rgba(79,107,244,.12); }
+
+/* ── Crop modal canvas wrap ── */
+.crop-canvas-wrap{ background:rgba(20,22,38,.85); }
+
+/* ── Scrollbars: subtle glassy thumb ── */
+*::-webkit-scrollbar{width:9px;height:9px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg, rgba(120,130,180,.45), rgba(120,130,180,.3));
+  border-radius:10px;
+  border:2px solid transparent;
+  background-clip:content-box;
+}
+*::-webkit-scrollbar-thumb:hover{background:rgba(79,107,244,.5);background-clip:content-box}
+
+/* ── Reduce the dotted-grid harshness on mesh bg, soften focus mode ── */
+body.focus-mode .scroll-area{ background-image:none; }
+
+/* ════════════════════════════════════════════════════════════════
+   WOW PASS — document page, topbar typography, selection, motion
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Документ-сторінка: глибша тінь, м'якший верх, акцентні заголовки ── */
+.page{
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.9) inset,
+    0 40px 90px -20px rgba(31,38,80,.22),
+    0 14px 36px -10px rgba(31,38,80,.14),
+    0 0 0 1px rgba(31,38,80,.045);
+  transition:box-shadow .3s ease, transform .3s ease;
+}
+.page::before{
+  height:4px;
+  background:linear-gradient(90deg,#7a8eff,var(--accent) 35%,#60a5fa 70%,#67e8f9);
+  box-shadow:0 1px 6px rgba(79,107,244,.35);
+}
+.editor h1{
+  position:relative;
+  background:linear-gradient(95deg,#0f172a 0%, #1f2a4d 60%, #3a4d8f 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.editor h2{
+  color:#16213d; letter-spacing:-.2px;
+}
+.editor h3{ color:#222c4a; }
+.editor blockquote{
+  border-left:3px solid var(--accent);
+  background:linear-gradient(95deg, var(--accent-bg), rgba(238,240,254,.35));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
+  position:relative;
+}
+.editor blockquote::before{
+  content:'"';
+  position:absolute; left:10px; top:-6px;
+  font-family:'Lora',serif; font-size:2.2em; font-weight:700;
+  color:rgba(79,107,244,.25);
+  line-height:1;
+}
+.editor blockquote{ padding-left:30px; }
+.editor hr{
+  height:1px; border:none;
+  background:linear-gradient(90deg, transparent, var(--border2) 20%, var(--border2) 80%, transparent);
+  margin:1.8em 0;
+}
+.editor a{
+  text-decoration-color:rgba(79,107,244,.4);
+  text-decoration-thickness:1.5px;
+  text-underline-offset:2px;
+  transition:text-decoration-color .15s, color .15s;
+}
+.editor a:hover{ text-decoration-color:var(--accent); color:var(--accent-h); }
+
+/* ── 2. Топбар: іконки і типографіка ── */
+.brand-name{
+  letter-spacing:-.4px;
+  background:linear-gradient(95deg,#1a1d23,#3a4d8f);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.doc-name{ letter-spacing:-.1px; }
+.brand-mark svg{ filter:drop-shadow(0 1px 1px rgba(0,0,0,.15)); }
+.topbar .btn svg, .toolbar-wrap .tb svg, .toolbar-wrap .col-btn svg{
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1);
+}
+.topbar .btn:hover svg, .tb:hover svg{ transform:scale(1.1); }
+.btn-solid svg{ filter:drop-shadow(0 1px 1px rgba(0,0,0,.18)); }
+
+/* ── 3. Курсор / виділення тексту ── */
+.editor{ caret-color:var(--accent); }
+.editor::selection, .editor *::selection{
+  background:rgba(79,107,244,.28);
+  color:inherit;
+}
+.editor::-moz-selection, .editor *::-moz-selection{
+  background:rgba(79,107,244,.28);
+}
+.doc-name::selection{ background:rgba(79,107,244,.3); }
+@keyframes caretPulse{ 0%,100%{ opacity:1 } 50%{ opacity:.35 } }
+
+/* ── 4. Плавні переходи / поява елементів ── */
+.topbar, .toolbar-wrap, .toc-sidebar{
+  animation:glassFadeIn .35s ease both;
+}
+@keyframes glassFadeIn{
+  from{ opacity:0; }
+  to{ opacity:1; }
+}
+.scroll-area .page{
+  animation:pageFadeIn .4s .05s ease both;
+}
+@keyframes pageFadeIn{
+  from{ opacity:0; }
+  to{ opacity:1; }
+}
+.btn, .tb, .toolbar > .tb, .tb-group, .tb-select, .size-ctrl, .col-btn, .toc-item{
+  transition:background .18s ease, color .18s ease, box-shadow .2s ease, border-color .18s ease, transform .12s ease;
+}
+.btn-solid:active, .tb:active, .toolbar > .tb:active{ transform:scale(.96); }
 </style>
 </head>
 <body>
