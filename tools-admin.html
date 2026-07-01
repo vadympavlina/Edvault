@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M8 10h16M8 16h10M8 22h13' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Адмінка інструментів · Edvault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #f7f8fa;
+    --border: #e2e5ea;
+    --border2: #d0d5dd;
+    --accent: #4F6BF4;
+    --accent-light: #eef0fe;
+    --accent-hover: #3d57e0;
+    --danger: #ef4444;
+    --danger-light: #fef2f2;
+    --success: #10b981;
+    --warn: #f59e0b;
+    --text: #1a1d23;
+    --text2: #4b5563;
+    --muted: #9ca3af;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+
+  button { font-family: inherit; }
+
+  /* =========== GATE SCREENS (login / denied / loading) =========== */
+  .gate {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .gate-card {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 20px;
+    box-shadow: var(--shadow-lg); padding: 40px 36px; max-width: 380px; width: 100%;
+    text-align: center;
+  }
+  .gate-logo {
+    width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 20px;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(79,107,244,.32);
+  }
+  .gate-logo svg { width: 26px; height: 26px; }
+  .gate-card h1 { font-size: 19px; font-weight: 800; letter-spacing: -.3px; margin-bottom: 6px; }
+  .gate-card p { font-size: 13.5px; color: var(--text2); line-height: 1.6; margin-bottom: 26px; }
+
+  .google-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 12px 18px; border-radius: 12px;
+    border: 1.5px solid var(--border2); background: var(--surface);
+    font-size: 14px; font-weight: 700; color: var(--text); cursor: pointer;
+    transition: all .13s ease; box-shadow: var(--shadow-sm);
+  }
+  .google-btn:hover { border-color: var(--border2); background: var(--surface2); box-shadow: var(--shadow-md); }
+  .google-btn:active { transform: scale(.98); }
+  .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+  .gate-denied-icon {
+    width: 48px; height: 48px; margin: 0 auto 16px; color: var(--danger);
+  }
+  .gate-email-chip {
+    display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    font-weight: 600; color: var(--danger); background: var(--danger-light);
+    border: 1px solid #fecaca; padding: 5px 11px; border-radius: 8px; margin-bottom: 22px;
+  }
+  .gate-spinner {
+    width: 30px; height: 30px; margin: 0 auto 16px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .secondary-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 16px; border-radius: 10px; border: 1.5px solid var(--border2);
+    background: var(--surface); color: var(--text2); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .13s ease;
+  }
+  .secondary-btn:hover { background: var(--surface2); color: var(--text); }
+
+  /* =========== TOPBAR =========== */
+  .topbar {
+    height: 64px; flex-shrink: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px;
+    position: sticky; top: 0; z-index: 30;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-logo {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(79,107,244,.3); flex-shrink: 0;
+  }
+  .topbar-logo svg { width: 18px; height: 18px; }
+  .topbar-text h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); line-height: 1.2; }
+  .topbar-text p { font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 1px; }
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
+  .user-chip { display: flex; align-items: center; gap: 8px; }
+  .user-avatar {
+    width: 30px; height: 30px; border-radius: 50%; object-fit: cover;
+    border: 1.5px solid var(--border);
+  }
+  .user-email { font-size: 12.5px; font-weight: 600; color: var(--text2); }
+  .signout-btn {
+    width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all .13s ease;
+  }
+  .signout-btn:hover { background: var(--danger-light); border-color: #fecaca; color: var(--danger); }
+  .signout-btn svg { width: 15px; height: 15px; }
+
+  /* =========== MAIN =========== */
+  .main { max-width: 1200px; width: 100%; margin: 0 auto; padding: 36px 28px 100px; }
+
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    gap: 14px; margin-bottom: 26px;
+  }
+  .page-header h2 { font-size: 24px; font-weight: 800; letter-spacing: -.4px; }
+  .page-header p { font-size: 13px; color: var(--muted); margin-top: 3px; font-weight: 500; }
+  .add-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 18px; border-radius: 12px; border: none;
+    background: var(--accent); color: #fff; font-size: 13.5px; font-weight: 700;
+    cursor: pointer; transition: background .13s ease; box-shadow: 0 2px 10px rgba(79,107,244,.28);
+  }
+  .add-btn:hover { background: var(--accent-hover); }
+  .add-btn svg { width: 16px; height: 16px; }
+
+  /* =========== RULES NOTICE =========== */
+  .rules-notice {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 14px;
+    padding: 14px 16px; margin-bottom: 26px; font-size: 12.5px; color: #92400e; line-height: 1.6;
+  }
+  .rules-notice svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+  .rules-notice b { font-weight: 700; }
+  .rules-notice.hidden { display: none; }
+  .rules-notice-close {
+    margin-left: auto; background: none; border: none; color: #92400e; cursor: pointer;
+    font-size: 15px; line-height: 1; flex-shrink: 0; opacity: .6;
+  }
+  .rules-notice-close:hover { opacity: 1; }
+
+  /* =========== ADMIN GRID =========== */
+  .admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 16px;
+  }
+  .admin-card {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px;
+    padding: 20px; display: flex; flex-direction: column; gap: 14px;
+    box-shadow: var(--shadow-sm); position: relative;
+  }
+  .admin-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .admin-icon {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--card-accent-light, var(--accent-light));
+    border: 1.5px solid var(--card-accent-border, #d6dcfd);
+  }
+  .admin-icon svg { width: 20px; height: 20px; color: var(--card-accent, var(--accent)); }
+  .admin-order-badge {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700;
+    color: var(--muted); background: var(--surface2); border: 1px solid var(--border);
+    padding: 3px 8px; border-radius: 6px;
+  }
+  .admin-card-name { font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
+  .admin-card-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .admin-meta-tag {
+    font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+    background: var(--card-accent-light, var(--accent-light)); color: var(--card-accent, var(--accent));
+  }
+  .admin-meta-file {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600;
+    color: var(--muted); background: var(--surface2); border: 1px solid var(--border);
+    padding: 3px 8px; border-radius: 6px;
+  }
+  .admin-card-desc { font-size: 12.5px; color: var(--text2); line-height: 1.55; flex: 1; }
+  .admin-card-actions {
+    display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .icon-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px; border-radius: 9px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text2); font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all .13s ease;
+  }
+  .icon-btn svg { width: 14px; height: 14px; }
+  .icon-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--text); }
+  .icon-btn.danger:hover { background: var(--danger-light); border-color: #fecaca; color: var(--danger); }
+  .icon-btn.move { flex: 0 0 auto; width: 36px; padding: 8px 0; }
+  .icon-btn.move:disabled { opacity: .35; cursor: not-allowed; }
+  .icon-btn.move:disabled:hover { background: var(--surface); border-color: var(--border); color: var(--text2); }
+
+  /* =========== EMPTY / LOADING =========== */
+  .state-block { text-align: center; padding: 90px 20px; display: none; }
+  .state-block.visible { display: block; }
+  .state-block .icon-lg { font-size: 44px; margin-bottom: 14px; }
+  .state-block h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .state-block p { font-size: 13px; color: var(--text2); }
+  .spinner-lg {
+    width: 32px; height: 32px; margin: 0 auto 16px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+
+  /* =========== MODAL =========== */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(20,22,28,.5);
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 40px 20px; z-index: 100; overflow-y: auto;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-lg);
+    max-width: 620px; width: 100%; overflow: hidden;
+  }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+  }
+  .modal-head h3 { font-size: 16px; font-weight: 800; }
+  .modal-close {
+    width: 30px; height: 30px; border-radius: 8px; border: none; background: var(--surface2);
+    color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .modal-close:hover { background: var(--border); color: var(--text); }
+  .modal-close svg { width: 14px; height: 14px; }
+  .modal-body { padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+  .modal-foot {
+    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+    padding: 16px 24px; border-top: 1px solid var(--border); background: var(--surface2);
+  }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; font-weight: 700; color: var(--text2); }
+  .field .hint { font-size: 11px; font-weight: 500; color: var(--muted); margin-top: -2px; }
+  .field input, .field textarea, .field select {
+    font-family: inherit; font-size: 13.5px; color: var(--text);
+    border: 1.5px solid var(--border2); border-radius: 10px; padding: 9px 12px;
+    outline: none; transition: border-color .13s ease; background: var(--surface);
+    width: 100%;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.1); }
+  .field textarea { resize: vertical; min-height: 64px; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .field input:disabled { background: var(--surface2); color: var(--muted); cursor: not-allowed; }
+
+  .color-field { display: flex; align-items: center; gap: 10px; }
+  .color-field input[type="color"] {
+    width: 42px; height: 38px; padding: 3px; border-radius: 9px; cursor: pointer; flex-shrink: 0;
+  }
+  .color-field input[type="text"] { flex: 1; font-family: 'JetBrains Mono', monospace; }
+
+  .category-row { display: flex; gap: 8px; }
+  .category-row select { flex: 1; }
+  .cat-new-toggle {
+    flex-shrink: 0; padding: 9px 12px; border-radius: 10px; border: 1.5px solid var(--border2);
+    background: var(--surface); color: var(--text2); font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .cat-new-toggle:hover { background: var(--surface2); }
+  .cat-new-input { display: none; margin-top: 6px; }
+  .cat-new-input.visible { display: block; }
+
+  .preview-label { font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 8px; }
+  .preview-wrap {
+    background: var(--surface2); border: 1.5px dashed var(--border2); border-radius: 14px;
+    padding: 20px; display: flex; justify-content: center;
+  }
+  .preview-card {
+    width: 220px; background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  .preview-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .preview-icon {
+    width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    background: var(--pv-light, var(--accent-light)); border: 1.5px solid var(--pv-border, #d6dcfd);
+  }
+  .preview-icon svg { width: 18px; height: 18px; color: var(--pv-accent, var(--accent)); }
+  .preview-tag {
+    font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+    background: var(--pv-light, var(--accent-light)); color: var(--pv-accent, var(--accent));
+    text-transform: uppercase; letter-spacing: .03em; white-space: nowrap;
+  }
+  .preview-name { font-size: 14px; font-weight: 800; }
+  .preview-desc { font-size: 11.5px; color: var(--text2); line-height: 1.5; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px; padding: 10px 18px;
+    border-radius: 10px; border: none; font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: all .13s ease;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border2); }
+  .btn-ghost:hover { background: var(--border); color: var(--text); }
+  .form-error {
+    font-size: 12px; font-weight: 600; color: var(--danger); background: var(--danger-light);
+    border: 1px solid #fecaca; border-radius: 9px; padding: 8px 12px; display: none;
+  }
+  .form-error.visible { display: block; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--text); color: #fff; padding: 12px 20px; border-radius: 12px;
+    font-size: 13px; font-weight: 600; box-shadow: var(--shadow-lg);
+    opacity: 0; pointer-events: none; transition: all .22s cubic-bezier(.16,1,.3,1); z-index: 200;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .toast.error { background: var(--danger); }
+
+  @media (max-width: 560px) {
+    .field-row { grid-template-columns: 1fr; }
+    .main { padding: 24px 16px 80px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ LOADING GATE (перевірка стану авторизації) ═══ -->
+<div class="gate" id="gate-loading">
+  <div class="gate-card">
+    <div class="gate-spinner"></div>
+    <p style="margin-bottom:0;">Перевіряємо доступ…</p>
+  </div>
+</div>
+
+<!-- ═══ LOGIN GATE ═══ -->
+<div class="gate" id="gate-login" style="display:none;">
+  <div class="gate-card">
+    <div class="gate-logo">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 10h16M8 16h10M8 22h13" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1>Адмінка інструментів</h1>
+    <p>Доступ лише для вчителів Edvault. Увійди через Google-акаунт, який має право редагування.</p>
+    <button class="google-btn" onclick="handleSignIn()">
+      <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.6 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.1 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.1 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.4 0 10.2-2 13.8-5.4l-6.4-5.4C29.3 34.8 26.8 36 24 36c-5.3 0-9.6-3.4-11.2-8l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.4 5.4C40.9 36.6 44 30.9 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+      Увійти через Google
+    </button>
+    <div id="login-error" class="form-error" style="margin-top:14px; text-align:left;"></div>
+  </div>
+</div>
+
+<!-- ═══ ACCESS DENIED GATE ═══ -->
+<div class="gate" id="gate-denied" style="display:none;">
+  <div class="gate-card">
+    <svg class="gate-denied-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+    <h1>Доступу немає</h1>
+    <p>Цей акаунт не має прав на редагування інструментів.</p>
+    <div class="gate-email-chip" id="denied-email"></div>
+    <button class="secondary-btn" style="width:100%;" onclick="handleSignOut()">Спробувати інший акаунт</button>
+  </div>
+</div>
+
+<!-- ═══ ADMIN APP ═══ -->
+<div id="admin-app" style="display:none;">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 10h16M8 16h10M8 22h13" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="topbar-text">
+        <h1>Edvault</h1>
+        <p>Адмінка інструментів</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <img class="user-avatar" id="user-avatar" src="" alt="">
+        <span class="user-email" id="user-email"></span>
+      </div>
+      <button class="signout-btn" onclick="handleSignOut()" title="Вийти">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="rules-notice" id="rules-notice">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div><b>Не забудь Firebase Rules.</b> Захист поштою тут — лише на рівні інтерфейсу. Щоб база теж блокувала чужі записи, онови правила для вузла <code>tools</code> — приклад під сторінкою в чаті.</div>
+      <button class="rules-notice-close" onclick="document.getElementById('rules-notice').classList.add('hidden')">✕</button>
+    </div>
+
+    <div class="page-header">
+      <div>
+        <h2>Інструменти</h2>
+        <p id="tools-count">0 інструментів у базі</p>
+      </div>
+      <button class="add-btn" onclick="openModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Додати інструмент
+      </button>
+    </div>
+
+    <div class="state-block visible" id="loading-block">
+      <div class="spinner-lg"></div>
+      <p>Завантажуємо інструменти…</p>
+    </div>
+
+    <div class="state-block" id="error-block">
+      <div class="icon-lg">⚠️</div>
+      <h3>Не вдалося завантажити дані</h3>
+      <p>Перевір з'єднання і спробуй ще раз</p>
+      <div style="margin-top:16px;"><button class="secondary-btn" onclick="loadTools()">Спробувати знову</button></div>
+    </div>
+
+    <div class="state-block" id="empty-block">
+      <div class="icon-lg">🧰</div>
+      <h3>Інструментів ще немає</h3>
+      <p>Натисни «Додати інструмент», щоб створити перший запис</p>
+    </div>
+
+    <div class="admin-grid" id="admin-grid"></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: ADD / EDIT TOOL ═══ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Новий інструмент</h3>
+      <button class="modal-close" onclick="closeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-error" id="form-error"></div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="f-id">ID (ключ у базі)</label>
+          <input type="text" id="f-id" placeholder="my-tool" oninput="onIdInput(this.value)">
+          <span class="hint">Латиниця, без пробілів. Після створення не змінюється.</span>
+        </div>
+        <div class="field">
+          <label for="f-order">Порядок</label>
+          <input type="number" id="f-order" placeholder="1">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f-name">Назва</label>
+        <input type="text" id="f-name" placeholder="Голосування" oninput="onNameInput(this.value); updatePreview();">
+      </div>
+
+      <div class="field">
+        <label for="f-desc">Опис</label>
+        <textarea id="f-desc" placeholder="Короткий опис інструменту для картки" oninput="updatePreview()"></textarea>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="f-file">Файл</label>
+          <input type="text" id="f-file" placeholder="vote.html">
+          <span class="hint">Відкривається як tools/&lt;файл&gt;</span>
+        </div>
+        <div class="field">
+          <label for="f-tag">Тег на картці</label>
+          <input type="text" id="f-tag" placeholder="Клас" oninput="updatePreview()">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f-category">Категорія (для фільтрів)</label>
+        <div class="category-row">
+          <select id="f-category" onchange="updatePreview()"></select>
+          <button type="button" class="cat-new-toggle" onclick="toggleNewCategory()">+ нова</button>
+        </div>
+        <input type="text" id="f-category-new" class="cat-new-input" placeholder="наприклад: games">
+      </div>
+
+      <div class="field">
+        <label for="f-accent">Колір інструменту</label>
+        <div class="color-field">
+          <input type="color" id="f-accent-picker" value="#4F6BF4" oninput="onColorPick(this.value)">
+          <input type="text" id="f-accent" value="#4F6BF4" oninput="onColorType(this.value)">
+        </div>
+        <span class="hint">Світлий фон і рамка іконки розраховуються автоматично від цього кольору.</span>
+      </div>
+
+      <div class="field">
+        <label for="f-icon">SVG-іконка</label>
+        <textarea id="f-icon" placeholder='<svg viewBox="0 0 24 24" ...>...</svg>' oninput="updatePreview()"></textarea>
+        <span class="hint">Встав вміст тегу &lt;svg&gt;…&lt;/svg&gt; — так само, як в інших іконках сайту.</span>
+      </div>
+
+      <div>
+        <div class="preview-label">Перегляд картки</div>
+        <div class="preview-wrap">
+          <div class="preview-card">
+            <div class="preview-card-head">
+              <div class="preview-icon" id="preview-icon"></div>
+              <span class="preview-tag" id="preview-tag">Тег</span>
+            </div>
+            <div class="preview-name" id="preview-name">Назва інструменту</div>
+            <div class="preview-desc" id="preview-desc">Опис з'явиться тут у міру заповнення форми.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Скасувати</button>
+      <button class="btn btn-primary" onclick="saveTool()">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, get, set, remove, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// ── Firebase (той самий проєкт edvault-d4a7f) ──
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyASpQTZaka3P-YUJ4tfHNmG-LCI-hQPhAI",
+  authDomain: "edvault-d4a7f.firebaseapp.com",
+  projectId: "edvault-d4a7f",
+  databaseURL: "https://edvault-d4a7f-default-rtdb.firebaseio.com/",
+  storageBucket: "edvault-d4a7f.firebasestorage.app",
+  messagingSenderId: "181496726566",
+  appId: "1:181496726566:web:5a86e78588c9440a0b52e7"
+};
+const app = initializeApp(FIREBASE_CONFIG);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// ── Білий список пошт, яким дозволено редагування ──
+const ALLOWED_EMAILS = [
+  'pavlina_vs@itstep.org',
+  'vadim.table.pc@gmail.com',
+  'vadym.pavlina@gmail.com'
+];
+
+const CATEGORY_LABELS = { media: 'Медіа', class: 'Клас', creative: 'Творчість' };
+
+let TOOLS = [];
+let editingId = null; // null = створення нового
+
+// ── Екрани (loading / login / denied / app) ──
+function showGate(name) {
+  document.getElementById('gate-loading').style.display = name === 'loading' ? 'flex' : 'none';
+  document.getElementById('gate-login').style.display = name === 'login' ? 'flex' : 'none';
+  document.getElementById('gate-denied').style.display = name === 'denied' ? 'flex' : 'none';
+  document.getElementById('admin-app').style.display = name === 'app' ? 'block' : 'none';
+}
+
+window.handleSignIn = async function () {
+  document.getElementById('login-error').classList.remove('visible');
+  try {
+    await signInWithPopup(auth, googleProvider);
+  } catch (err) {
+    console.error(err);
+    const el = document.getElementById('login-error');
+    el.textContent = 'Не вдалося увійти. Спробуй ще раз.';
+    el.classList.add('visible');
+  }
+};
+
+window.handleSignOut = async function () {
+  await signOut(auth);
+  showGate('login');
+};
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) { showGate('login'); return; }
+  const email = (user.email || '').toLowerCase();
+  const allowed = ALLOWED_EMAILS.some(e => e.toLowerCase() === email);
+  if (!allowed) {
+    document.getElementById('denied-email').textContent = user.email || '';
+    showGate('denied');
+    // одразу розлогінюємо, щоб не тримати чужу сесію активною
+    signOut(auth);
+    return;
+  }
+  document.getElementById('user-email').textContent = user.email;
+  document.getElementById('user-avatar').src = user.photoURL || '';
+  showGate('app');
+  loadTools();
+});
+
+// ── Дані ──
+window.loadTools = async function () {
+  setListState('loading');
+  try {
+    const snap = await get(ref(db, 'tools'));
+    const data = snap.exists() ? snap.val() : {};
+    TOOLS = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+    TOOLS.sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name, 'uk'));
+    renderGrid();
+  } catch (err) {
+    console.error('Помилка завантаження tools/:', err);
+    setListState('error');
+  }
+};
+
+function setListState(state) {
+  document.getElementById('loading-block').classList.toggle('visible', state === 'loading');
+  document.getElementById('error-block').classList.toggle('visible', state === 'error');
+  document.getElementById('empty-block').classList.toggle('visible', state === 'empty');
+  document.getElementById('admin-grid').style.display = state === 'ready' ? 'grid' : 'none';
+}
+
+function renderGrid() {
+  document.getElementById('tools-count').textContent = `${TOOLS.length} інструмент${plural(TOOLS.length)} у базі`;
+
+  if (TOOLS.length === 0) { setListState('empty'); return; }
+  setListState('ready');
+
+  const grid = document.getElementById('admin-grid');
+  grid.innerHTML = TOOLS.map((t, i) => `
+    <div class="admin-card" style="--card-accent:${t.accent}; --card-accent-light:${t.accentLight}; --card-accent-border:${t.accentBorder};">
+      <div class="admin-card-top">
+        <div class="admin-icon">${t.icon || ''}</div>
+        <span class="admin-order-badge">#${t.order ?? '—'}</span>
+      </div>
+      <div>
+        <div class="admin-card-name">${escapeHtml(t.name)}</div>
+        <div class="admin-card-meta" style="margin-top:6px;">
+          <span class="admin-meta-tag">${escapeHtml(t.tag || '')}</span>
+          <span class="admin-meta-file">${escapeHtml(t.file || '')}</span>
+        </div>
+      </div>
+      <div class="admin-card-desc">${escapeHtml(t.desc || '')}</div>
+      <div class="admin-card-actions">
+        <button class="icon-btn move" title="Вище" onclick="moveTool('${t.id}', -1)" ${i === 0 ? 'disabled' : ''}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+        <button class="icon-btn move" title="Нижче" onclick="moveTool('${t.id}', 1)" ${i === TOOLS.length - 1 ? 'disabled' : ''}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button class="icon-btn" onclick="openModal('${t.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Змінити
+        </button>
+        <button class="icon-btn danger" onclick="deleteTool('${t.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.moveTool = async function (id, dir) {
+  const idx = TOOLS.findIndex(t => t.id === id);
+  const swapIdx = idx + dir;
+  if (idx < 0 || swapIdx < 0 || swapIdx >= TOOLS.length) return;
+
+  const a = TOOLS[idx], b = TOOLS[swapIdx];
+  const aOrder = a.order ?? idx, bOrder = b.order ?? swapIdx;
+  try {
+    await update(ref(db, 'tools'), {
+      [`${a.id}/order`]: bOrder,
+      [`${b.id}/order`]: aOrder
+    });
+    showToast('Порядок оновлено');
+    loadTools();
+  } catch (err) {
+    console.error(err);
+    showToast('Не вдалося змінити порядок — перевір права доступу в Firebase Rules', true);
+  }
+};
+
+window.deleteTool = async function (id) {
+  const tool = TOOLS.find(t => t.id === id);
+  if (!confirm(`Видалити інструмент «${tool ? tool.name : id}»? Цю дію не можна скасувати.`)) return;
+  try {
+    await remove(ref(db, `tools/${id}`));
+    showToast('Інструмент видалено');
+    loadTools();
+  } catch (err) {
+    console.error(err);
+    showToast('Не вдалося видалити — перевір права доступу в Firebase Rules', true);
+  }
+};
+
+// ── Модалка додавання/редагування ──
+let idManuallyEdited = false;
+
+window.openModal = function (id) {
+  editingId = id || null;
+  idManuallyEdited = false;
+  document.getElementById('form-error').classList.remove('visible');
+  populateCategorySelect();
+
+  if (editingId) {
+    const t = TOOLS.find(x => x.id === editingId);
+    document.getElementById('modal-title').textContent = 'Редагування інструменту';
+    document.getElementById('f-id').value = t.id;
+    document.getElementById('f-id').disabled = true;
+    document.getElementById('f-order').value = t.order ?? '';
+    document.getElementById('f-name').value = t.name || '';
+    document.getElementById('f-desc').value = t.desc || '';
+    document.getElementById('f-file').value = t.file || '';
+    document.getElementById('f-tag').value = t.tag || '';
+    document.getElementById('f-icon').value = t.icon || '';
+    setSelectValue('f-category', t.category || '');
+    setAccentColor(t.accent || '#4F6BF4');
+  } else {
+    document.getElementById('modal-title').textContent = 'Новий інструмент';
+    document.getElementById('f-id').value = '';
+    document.getElementById('f-id').disabled = false;
+    document.getElementById('f-order').value = (Math.max(0, ...TOOLS.map(t => t.order ?? 0)) + 1);
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-desc').value = '';
+    document.getElementById('f-file').value = '';
+    document.getElementById('f-tag').value = '';
+    document.getElementById('f-icon').value = '';
+    setSelectValue('f-category', TOOLS[0]?.category || '');
+    setAccentColor('#4F6BF4');
+  }
+  document.getElementById('f-category-new').classList.remove('visible');
+  document.getElementById('f-category-new').value = '';
+  updatePreview();
+  document.getElementById('modal-overlay').classList.add('visible');
+};
+
+window.closeModal = function () {
+  document.getElementById('modal-overlay').classList.remove('visible');
+  editingId = null;
+};
+
+window.onIdInput = function () { idManuallyEdited = true; };
+
+window.onNameInput = function (val) {
+  if (editingId || idManuallyEdited) return;
+  document.getElementById('f-id').value = slugify(val);
+};
+
+function slugify(str) {
+  const map = { а:'a',б:'b',в:'v',г:'h',ґ:'g',д:'d',е:'e',є:'ie',ж:'zh',з:'z',и:'y',і:'i',ї:'i',й:'i',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'shch',ь:'',ю:'iu',я:'ia' };
+  return str.toLowerCase().split('').map(c => map[c] ?? c).join('')
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+window.toggleNewCategory = function () {
+  document.getElementById('f-category-new').classList.toggle('visible');
+};
+
+function populateCategorySelect() {
+  const cats = [];
+  TOOLS.forEach(t => { if (t.category && !cats.includes(t.category)) cats.push(t.category); });
+  const sel = document.getElementById('f-category');
+  sel.innerHTML = cats.map(c => `<option value="${c}">${CATEGORY_LABELS[c] || c}</option>`).join('');
+}
+
+function setSelectValue(id, val) {
+  const sel = document.getElementById(id);
+  if ([...sel.options].some(o => o.value === val)) sel.value = val;
+}
+
+// ── Кольори: рахуємо світлий фон і рамку від основного кольору ──
+window.onColorPick = function (hex) {
+  document.getElementById('f-accent').value = hex;
+  setAccentColor(hex);
+};
+window.onColorType = function (val) {
+  if (/^#([0-9a-f]{6})$/i.test(val)) {
+    document.getElementById('f-accent-picker').value = val;
+    setAccentColor(val);
+  } else {
+    updatePreview();
+  }
+};
+function setAccentColor(hex) {
+  document.getElementById('f-accent-picker').value = hex;
+  document.getElementById('f-accent').value = hex;
+  updatePreview();
+}
+function hexToRgb(hex) {
+  const m = hex.replace('#', '').match(/.{2}/g);
+  return m ? m.map(x => parseInt(x, 16)) : [79, 107, 244];
+}
+function mixWithWhite(rgb, amount) {
+  return rgb.map(c => Math.round(c + (255 - c) * amount));
+}
+function rgbToHex(rgb) {
+  return '#' + rgb.map(c => c.toString(16).padStart(2, '0')).join('');
+}
+function deriveAccentShades(hex) {
+  const rgb = hexToRgb(hex);
+  const accentLight = `rgba(${rgb.join(',')},.1)`;
+  const accentBorder = rgbToHex(mixWithWhite(rgb, 0.72));
+  return { accentLight, accentBorder };
+}
+
+function updatePreview() {
+  const hex = document.getElementById('f-accent').value || '#4F6BF4';
+  const { accentLight, accentBorder } = deriveAccentShades(/^#([0-9a-f]{6})$/i.test(hex) ? hex : '#4F6BF4');
+  const card = document.querySelector('.preview-card');
+  card.style.setProperty('--pv-accent', hex);
+  card.style.setProperty('--pv-light', accentLight);
+  card.style.setProperty('--pv-border', accentBorder);
+  document.getElementById('preview-icon').innerHTML = document.getElementById('f-icon').value || '';
+  document.getElementById('preview-tag').textContent = document.getElementById('f-tag').value || 'Тег';
+  document.getElementById('preview-name').textContent = document.getElementById('f-name').value || 'Назва інструменту';
+  document.getElementById('preview-desc').textContent = document.getElementById('f-desc').value || "Опис з'явиться тут у міру заповнення форми.";
+}
+
+window.saveTool = async function () {
+  const id = document.getElementById('f-id').value.trim();
+  const name = document.getElementById('f-name').value.trim();
+  const desc = document.getElementById('f-desc').value.trim();
+  const file = document.getElementById('f-file').value.trim();
+  const tag = document.getElementById('f-tag').value.trim();
+  const order = Number(document.getElementById('f-order').value) || 0;
+  const icon = document.getElementById('f-icon').value.trim();
+  const newCat = document.getElementById('f-category-new').value.trim();
+  const category = newCat || document.getElementById('f-category').value;
+  const accent = document.getElementById('f-accent').value.trim();
+
+  const errEl = document.getElementById('form-error');
+  errEl.classList.remove('visible');
+
+  if (!id || !/^[a-z0-9-]+$/.test(id)) return formError('ID може містити лише латинські літери, цифри та дефіси.');
+  if (!name) return formError('Вкажи назву інструменту.');
+  if (!file) return formError('Вкажи файл (наприклад: vote.html).');
+  if (!category) return formError('Вибери або створи категорію.');
+  if (!/^#([0-9a-f]{6})$/i.test(accent)) return formError('Колір має бути у форматі #RRGGBB.');
+  if (!editingId && TOOLS.some(t => t.id === id)) return formError('Інструмент з таким ID вже існує.');
+
+  const { accentLight, accentBorder } = deriveAccentShades(accent);
+  const payload = { name, desc, file, tag, category, order, accent, accentLight, accentBorder, icon };
+
+  try {
+    await set(ref(db, `tools/${id}`), payload);
+    showToast(editingId ? 'Зміни збережено' : 'Інструмент додано');
+    closeModal();
+    loadTools();
+  } catch (err) {
+    console.error(err);
+    formError('Не вдалося зберегти — перевір права доступу в Firebase Rules.');
+  }
+
+  function formError(msg) { errEl.textContent = msg; errEl.classList.add('visible'); }
+};
+
+// ── Дрібні хелпери ──
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function plural(n) {
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return '';
+  if ([2,3,4].includes(mod10) && ![12,13,14].includes(mod100)) return 'и';
+  return 'ів';
+}
+let toastTimer = null;
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', !!isError);
+  t.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('visible'), 2600);
+}
+
+showGate('loading');
+</script>
+</body>
+</html>
