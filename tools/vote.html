@@ -407,6 +407,56 @@
   .leading-badge svg { width: 11px; height: 11px; }
   @keyframes badge-in { from { opacity: 0; transform: translateY(-6px) scale(.8); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
+  /* bouncing crown that appears above a card the instant it becomes the sole leader */
+  .crown-pop {
+    position: absolute; top: -26px; left: 50%; z-index: 4; font-size: 26px;
+    transform: translateX(-50%);
+    animation: crown-pop-anim 1.1s cubic-bezier(.34,1.56,.64,1) forwards;
+    filter: drop-shadow(0 4px 10px rgba(255,201,60,.5));
+  }
+  @keyframes crown-pop-anim {
+    0% { opacity: 0; transform: translateX(-50%) translateY(10px) scale(.3) rotate(-25deg); }
+    55% { opacity: 1; transform: translateX(-50%) translateY(-8px) scale(1.25) rotate(8deg); }
+    75% { transform: translateX(-50%) translateY(0) scale(1) rotate(-4deg); }
+    100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1) rotate(0deg); }
+  }
+
+  /* mini confetti burst spawned right at the click point on each vote */
+  .mini-confetti {
+    position: fixed; width: 7px; height: 7px; border-radius: 1px; pointer-events: none; z-index: 601;
+    animation: mini-confetti-burst .65s cubic-bezier(.2,.8,.4,1) forwards;
+  }
+  @keyframes mini-confetti-burst { to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
+
+  /* big radial firework particles for the results reveal */
+  .firework-particle {
+    position: fixed; width: 5px; height: 5px; border-radius: 50%; pointer-events: none; z-index: 601;
+    box-shadow: 0 0 8px 1px currentColor;
+    animation: firework-burst .9s cubic-bezier(.15,.7,.3,1) forwards;
+  }
+  @keyframes firework-burst { 0% { opacity: 1; } to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+
+  /* victory glow pulsing around the whole stage during results */
+  .stage-root.victory::before {
+    content: ''; position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    box-shadow: inset 0 0 140px rgba(255,201,60,.25);
+    animation: victory-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes victory-pulse { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
+
+  /* sound toggle */
+  .sound-toggle {
+    width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--stage-card-border);
+    background: var(--stage-card); color: var(--stage-muted); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .13s ease; flex-shrink: 0;
+  }
+  .sound-toggle:hover { color: var(--stage-text); border-color: #444963; }
+  .sound-toggle svg { width: 16px; height: 16px; }
+  .sound-toggle.muted .icon-on, .sound-toggle:not(.muted) .icon-off { display: none; }
+
+  /* floating odometer-style number roll used on the podium */
+  .vote-count.counting { color: var(--stage-gold); }
+
   /* floating +1 burst */
   .vote-burst {
     position: absolute; pointer-events: none; z-index: 10;
@@ -514,6 +564,74 @@
     0% { transform: translateY(0) rotate(0deg); opacity: 1; }
     100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
   }
+
+  /* ===== VOTE PROGRESS BAR ===== */
+  .vote-bar-wrap { height: 4px; background: rgba(255,255,255,.08); border-radius: 0 0 20px 20px; overflow: hidden; position: relative; }
+  .vote-bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--stage-accent), var(--stage-accent2));
+    transition: width .5s cubic-bezier(.16,1,.3,1); }
+  .vote-card.leading .vote-bar { background: linear-gradient(90deg, var(--stage-gold), #ff9f00); }
+
+  /* ===== LEADER ANNOUNCE BANNER ===== */
+  .leader-announce {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 800; pointer-events: none;
+    background: linear-gradient(135deg, #1c1f2e, #252840);
+    border: 1.5px solid var(--stage-gold);
+    border-radius: 16px; padding: 14px 28px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 8px 40px rgba(255,201,60,.35), 0 0 0 1px rgba(255,201,60,.15);
+    animation: announce-in .45s cubic-bezier(.34,1.56,.64,1) forwards;
+    white-space: nowrap;
+  }
+  .leader-announce.out { animation: announce-out .3s ease forwards; }
+  @keyframes announce-in { from { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(.88); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
+  @keyframes announce-out { to { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(.94); } }
+  .leader-announce-icon { font-size: 22px; }
+  .leader-announce-text { font-size: 14px; font-weight: 800; color: var(--stage-text); letter-spacing: -.2px; }
+  .leader-announce-name { color: var(--stage-gold); }
+
+  /* ===== HOT STREAK ===== */
+  .streak-badge {
+    position: absolute; top: 10px; right: 10px; z-index: 4;
+    background: linear-gradient(135deg, #ff4500, #ff8c00);
+    color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .04em;
+    padding: 4px 8px; border-radius: 7px;
+    display: flex; align-items: center; gap: 3px;
+    box-shadow: 0 3px 12px rgba(255,69,0,.5);
+    animation: badge-in .3s cubic-bezier(.34,1.56,.64,1);
+  }
+
+  /* ===== AMBIENT PARTICLES ===== */
+  .ambient-particle {
+    position: fixed; border-radius: 50%; pointer-events: none; z-index: 1;
+    animation: ambient-float linear infinite;
+    opacity: 0;
+  }
+  @keyframes ambient-float {
+    0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+    10%  { opacity: .35; }
+    90%  { opacity: .18; }
+    100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+  }
+
+  /* ===== COUNTDOWN OVERLAY ===== */
+  .countdown-overlay {
+    position: fixed; inset: 0; z-index: 700; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(8,9,14,.92); backdrop-filter: blur(12px);
+    animation: countdown-bg-in .3s ease forwards;
+  }
+  @keyframes countdown-bg-in { from { opacity: 0; } to { opacity: 1; } }
+  .countdown-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 160px; font-weight: 900; line-height: 1;
+    letter-spacing: -8px;
+    background: linear-gradient(135deg, var(--stage-gold), var(--stage-accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    animation: countdown-num-pop .8s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  @keyframes countdown-num-pop { from { opacity: 0; transform: scale(2.5); } 60% { opacity: 1; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+  .countdown-label { font-size: 14px; font-weight: 700; color: var(--stage-muted); letter-spacing: .15em; text-transform: uppercase; margin-top: 14px; opacity: .8; }
 
   /* dark "stage" themed confirm modal — used while in presentation mode */
   .overlay.stage-overlay { background: rgba(5,6,10,.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
@@ -710,6 +828,10 @@
     <div class="stage-topbar">
       <div class="stage-title"><span class="dot"></span><span id="stage-session-title">Голосування</span></div>
       <div class="stage-topbar-right">
+        <button class="sound-toggle" id="sound-toggle-btn" onclick="toggleSound()" title="Звук">
+          <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+        </button>
         <button class="stage-btn" onclick="exitPresentation(event)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           Вийти
@@ -1008,11 +1130,14 @@ function startPresentation() {
   if (!state.teams.length) return;
   state.phase = 'voting';
   state.tiebreakIds = null;
+  _prevLeaderId = null; streakTeamId = null; streakCount = 0;
   document.getElementById('stage-session-title').textContent = state.sessionTitle;
-  document.getElementById('stage-root').classList.add('active');
+  const root = document.getElementById('stage-root');
+  root.classList.add('active'); root.classList.remove('victory');
   document.getElementById('stage-voting-screen').style.display = 'block';
   document.getElementById('stage-results-screen').style.display = 'none';
   renderVotingGrid();
+  startAmbientParticles();
   if (document.documentElement.requestFullscreen) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
@@ -1036,7 +1161,8 @@ function exitPresentation(ev) {
   spawnRipple(ev);
   showConfirm('Вийти з презентації?', 'Поточні голоси збережуться. Ви зможете повернутись до них пізніше.', () => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    document.getElementById('stage-root').classList.remove('active');
+    stopAmbientParticles();
+    document.getElementById('stage-root').classList.remove('active', 'victory');
     state.phase = 'editing';
     renderEditor();
   }, 'stage');
@@ -1088,35 +1214,122 @@ function renderVotingGrid() {
           </div>
         </div>
       </div>
+      <div class="vote-bar-wrap"><div class="vote-bar" id="bar-${team.id}" style="width:${maxVotes > 0 ? Math.round(team.votes/maxVotes*100) : 0}%"></div></div>
     `;
     grid.appendChild(card);
   }
 }
 
+/* ===================== SOUND ENGINE ===================== */
+let audioCtx = null;
+let soundEnabled = true;
+function getAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  return audioCtx;
+}
+function playTone(freq, type, dur, vol, attack, decay) {
+  if (!soundEnabled) return;
+  const ac = getAudio(); if (!ac) return;
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  osc.connect(gain); gain.connect(ac.destination);
+  osc.type = type || 'sine'; osc.frequency.value = freq;
+  const t = ac.currentTime;
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(vol || 0.18, t + (attack || 0.01));
+  gain.gain.exponentialRampToValueAtTime(0.001, t + (dur || 0.18));
+  osc.start(t); osc.stop(t + (dur || 0.18));
+}
+function playVoteSound() {
+  playTone(660, 'sine', 0.12, 0.15, 0.005);
+  setTimeout(() => playTone(880, 'sine', 0.1, 0.12, 0.005), 60);
+}
+function playLeaderSound() {
+  [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.18, 0.2, 0.01), i * 70));
+}
+function playCountdownSound(n) {
+  playTone(n > 0 ? 440 : 880, 'sine', n > 0 ? 0.2 : 0.45, 0.3, 0.01);
+}
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  document.getElementById('sound-toggle-btn').classList.toggle('muted', !soundEnabled);
+}
+
+/* ===================== AMBIENT PARTICLES ===================== */
+let ambientInterval = null;
+const AMBIENT_COLORS = ['#6c7fff', '#ff5fa8', '#ffc93c', '#4ade9a', '#a78bfa'];
+function startAmbientParticles() {
+  stopAmbientParticles();
+  ambientInterval = setInterval(() => {
+    const p = document.createElement('div');
+    p.className = 'ambient-particle';
+    const size = 3 + Math.random() * 6;
+    p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}vw;background:${AMBIENT_COLORS[Math.floor(Math.random()*AMBIENT_COLORS.length)]};animation-duration:${7 + Math.random()*10}s;animation-delay:0s;`;
+    document.getElementById('stage-root').appendChild(p);
+    setTimeout(() => p.remove(), 18000);
+  }, 600);
+}
+function stopAmbientParticles() {
+  if (ambientInterval) { clearInterval(ambientInterval); ambientInterval = null; }
+  document.querySelectorAll('.ambient-particle').forEach(p => p.remove());
+}
+
 /* ===================== CASTING VOTES ===================== */
+let streakTeamId = null, streakCount = 0;
+
 function castVote(teamId, delta, ev) {
   const team = state.teams.find(t => t.id === teamId);
   if (!team) return;
-  if (delta < 0 && team.votes <= 0) return; // can't go below zero
+  if (delta < 0 && team.votes <= 0) return;
 
   team.votes = Math.max(0, team.votes + delta);
   saveState();
 
-  // update just the count + card visuals without a full re-render, so animation isn't interrupted
+  // count — animated update
   const countEl = document.getElementById(`count-${teamId}`);
   if (countEl) {
     countEl.textContent = team.votes;
-    if (delta > 0) {
-      countEl.classList.remove('pop'); void countEl.offsetWidth; countEl.classList.add('pop');
-    }
+    if (delta > 0) { countEl.classList.remove('pop'); void countEl.offsetWidth; countEl.classList.add('pop'); }
   }
+
+  // card bump + burst
   const card = document.querySelector(`.vote-card[data-team-id="${teamId}"]`);
   if (card && delta > 0) {
     card.classList.remove('bumped'); void card.offsetWidth; card.classList.add('bumped');
     spawnVoteBurst(ev, '+1');
+    spawnMiniConfetti(ev);
+    playVoteSound();
+
+    // hot streak tracking
+    if (streakTeamId === teamId) {
+      streakCount++;
+    } else {
+      streakTeamId = teamId; streakCount = 1;
+    }
+    updateStreakBadge(card, streakCount);
+  } else if (delta < 0) {
+    if (streakTeamId === teamId) streakCount = Math.max(0, streakCount - 1);
+    if (card) updateStreakBadge(card, streakTeamId === teamId ? streakCount : 0);
   }
 
   refreshLeaderBadges();
+}
+
+function updateStreakBadge(card, count) {
+  let badge = card.querySelector('.streak-badge');
+  if (count >= 3) {
+    const flames = count >= 6 ? '🔥🔥🔥' : count >= 5 ? '🔥🔥' : '🔥';
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'streak-badge';
+      card.appendChild(badge);
+    }
+    badge.textContent = `${flames} ×${count}`;
+  } else if (badge) {
+    badge.remove();
+  }
 }
 
 function spawnVoteBurst(ev, text) {
@@ -1130,29 +1343,79 @@ function spawnVoteBurst(ev, text) {
   setTimeout(() => burst.remove(), 750);
 }
 
-/* Re-evaluates which card (if any) should show the "leading" badge, without rebuilding the whole grid */
+function spawnMiniConfetti(ev) {
+  if (!ev) return;
+  const colors = ['#ffc93c','#6c7fff','#ff5fa8','#4ade9a','#fff'];
+  const shapes = ['circle','square'];
+  for (let i = 0; i < 14; i++) {
+    const p = document.createElement('div');
+    p.className = 'mini-confetti';
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 40 + Math.random() * 70;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist - 30;
+    const rot = (Math.random() - 0.5) * 540;
+    const size = 5 + Math.random() * 5;
+    p.style.cssText = `left:${ev.clientX}px;top:${ev.clientY}px;width:${size}px;height:${size * (shapes[i%2]==='circle'?1:.6)}px;border-radius:${shapes[i%2]==='circle'?'50%':'2px'};background:${colors[i % colors.length]};--dx:${dx}px;--dy:${dy}px;--rot:${rot}deg;`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 700);
+  }
+}
+
+/* Re-evaluates leaders, progress bars, leader-announce banner */
+let _prevLeaderId = null;
 function refreshLeaderBadges() {
   const teams = activeVotingTeams();
   const maxVotes = Math.max(0, ...teams.map(t => t.votes));
   const leaders = maxVotes > 0 ? teams.filter(t => t.votes === maxVotes) : [];
   const singleLeaderId = leaders.length === 1 ? leaders[0].id : null;
 
+  // update progress bars
   document.querySelectorAll('.vote-card').forEach(card => {
     const id = card.dataset.teamId;
+    const t = teams.find(t => t.id === id);
+    const bar = document.getElementById(`bar-${id}`);
+    if (bar && t) bar.style.width = (maxVotes > 0 ? Math.round(t.votes / maxVotes * 100) : 0) + '%';
+
     const shouldLead = id === singleLeaderId;
     const isLeading = card.classList.contains('leading');
+
     if (shouldLead && !isLeading) {
       card.classList.add('leading');
       const badge = document.createElement('div');
       badge.className = 'leading-badge';
       badge.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>Лідирує`;
       card.prepend(badge);
+      // crown pop
+      let crown = card.querySelector('.crown-pop');
+      if (crown) crown.remove();
+      crown = document.createElement('div');
+      crown.className = 'crown-pop'; crown.textContent = '👑';
+      card.appendChild(crown);
+      setTimeout(() => crown.remove(), 1200);
     } else if (!shouldLead && isLeading) {
       card.classList.remove('leading');
       const badge = card.querySelector('.leading-badge');
       if (badge) badge.remove();
     }
   });
+
+  // leader change announce
+  if (singleLeaderId && singleLeaderId !== _prevLeaderId && _prevLeaderId !== null) {
+    const team = teams.find(t => t.id === singleLeaderId);
+    if (team) showLeaderAnnounce(team.name);
+    playLeaderSound();
+  }
+  _prevLeaderId = singleLeaderId;
+}
+
+function showLeaderAnnounce(name) {
+  document.querySelectorAll('.leader-announce').forEach(el => el.remove());
+  const el = document.createElement('div');
+  el.className = 'leader-announce';
+  el.innerHTML = `<span class="leader-announce-icon">👑</span><span class="leader-announce-text">Новий лідер: <span class="leader-announce-name">${escapeHtml(name)}</span></span>`;
+  document.body.appendChild(el);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 350); }, 2200);
 }
 
 /* ===================== FINISH VOTING / TIEBREAK ===================== */
@@ -1188,13 +1451,46 @@ function finishVoting() {
     return;
   }
 
-  // clear winner (or only one team total) — show final results
+  // clear winner — dramatic 3-2-1 countdown before results
   state.tiebreakIds = null;
-  const flash = document.createElement('div');
-  flash.className = 'suspense-flash';
-  document.body.appendChild(flash);
-  setTimeout(() => flash.remove(), 550);
-  setTimeout(() => showResults(), 220);
+  showCountdown(() => showResults());
+}
+
+function showCountdown(onDone) {
+  const overlay = document.createElement('div');
+  overlay.className = 'countdown-overlay';
+  document.body.appendChild(overlay);
+
+  const steps = [
+    { num: '3', label: 'Підраховуємо голоси...' },
+    { num: '2', label: 'Визначаємо переможця...' },
+    { num: '1', label: 'Готуємося до оголошення...' },
+    { num: '🏆', label: '' }
+  ];
+
+  let idx = 0;
+  function tick() {
+    overlay.innerHTML = '';
+    const s = steps[idx];
+    const numEl = document.createElement('div');
+    numEl.className = 'countdown-num'; numEl.textContent = s.num;
+    const lblEl = document.createElement('div');
+    lblEl.className = 'countdown-label'; lblEl.textContent = s.label;
+    overlay.appendChild(numEl); overlay.appendChild(lblEl);
+
+    playCountdownSound(steps.length - 1 - idx);
+
+    idx++;
+    if (idx < steps.length) {
+      setTimeout(tick, 900);
+    } else {
+      setTimeout(() => {
+        overlay.style.animation = 'countdown-bg-in .3s ease reverse forwards';
+        setTimeout(() => { overlay.remove(); onDone(); }, 300);
+      }, 700);
+    }
+  }
+  tick();
 }
 
 function showTiebreakToast(winners) {
@@ -1294,24 +1590,71 @@ function restartVotingFromResults() {
   });
 }
 
-/* ===================== CONFETTI ===================== */
+/* ===================== FIREWORKS + CONFETTI ===================== */
 function launchConfetti() {
-  const colors = ['#ffc93c', '#6c7fff', '#ff5fa8', '#4ade9a', '#ffffff'];
-  const count = 90;
-  for (let i = 0; i < count; i++) {
+  // add victory glow
+  document.getElementById('stage-root').classList.add('victory');
+  // play fanfare
+  [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.3, 0.22, 0.02), i * 90));
+
+  // confetti rain
+  const colors = ['#ffc93c', '#6c7fff', '#ff5fa8', '#4ade9a', '#ffffff', '#f97316'];
+  for (let i = 0; i < 120; i++) {
     setTimeout(() => {
       const piece = document.createElement('div');
       piece.className = 'confetti-piece';
-      const size = 6 + Math.random() * 8;
+      const size = 6 + Math.random() * 9;
       piece.style.left = Math.random() * 100 + 'vw';
       piece.style.width = size + 'px';
-      piece.style.height = (size * 0.4) + 'px';
+      piece.style.height = (size * 0.45) + 'px';
       piece.style.background = colors[Math.floor(Math.random() * colors.length)];
-      piece.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
-      piece.style.opacity = String(0.8 + Math.random() * 0.2);
+      piece.style.animationDuration = (2.4 + Math.random() * 1.8) + 's';
+      piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
       document.body.appendChild(piece);
-      setTimeout(() => piece.remove(), 4200);
-    }, i * 18);
+      setTimeout(() => piece.remove(), 4500);
+    }, i * 22);
+  }
+
+  // firework bursts
+  const fwColors = ['#ffc93c','#ff5fa8','#6c7fff','#4ade9a','#fff','#f97316'];
+  const launchPoints = [
+    { x: 20, y: 75 }, { x: 50, y: 65 }, { x: 80, y: 75 },
+    { x: 35, y: 55 }, { x: 65, y: 60 }, { x: 15, y: 50 }, { x: 85, y: 55 },
+  ];
+  launchPoints.forEach(({ x, y }, li) => {
+    setTimeout(() => spawnFirework(x, y, fwColors[li % fwColors.length]), li * 280 + 100);
+  });
+  // second wave
+  launchPoints.slice(0,4).forEach(({ x, y }, li) => {
+    setTimeout(() => spawnFirework(x + 5, y - 10, fwColors[(li+3) % fwColors.length]), li * 200 + 2200);
+  });
+}
+
+function spawnFirework(xPct, yPct, color) {
+  playTone(300 + Math.random() * 200, 'sawtooth', 0.25, 0.12, 0.005);
+  const cx = xPct / 100 * window.innerWidth;
+  const cy = yPct / 100 * window.innerHeight;
+  const count = 28 + Math.floor(Math.random() * 16);
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'firework-particle';
+    const angle = (i / count) * Math.PI * 2;
+    const dist = 60 + Math.random() * 130;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
+    p.style.cssText = `left:${cx}px;top:${cy}px;color:${color};background:${color};--dx:${dx}px;--dy:${dy}px;animation-duration:${0.7 + Math.random()*0.5}s;`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1300);
+  }
+  // trailing sparks
+  for (let i = 0; i < 8; i++) {
+    setTimeout(() => {
+      const spark = document.createElement('div');
+      spark.className = 'confetti-piece';
+      spark.style.cssText = `left:${cx + (Math.random()-0.5)*60}px;top:${cy}px;width:3px;height:3px;border-radius:50%;background:${color};animation-duration:${1+Math.random()*0.8}s;position:fixed;z-index:602;`;
+      document.body.appendChild(spark);
+      setTimeout(() => spark.remove(), 2000);
+    }, i * 60);
   }
 }
 </script>
