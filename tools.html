@@ -128,7 +128,7 @@
   /* =========== FILTER TABS =========== */
   .filter-tabs {
     display: flex; align-items: center; gap: 6px;
-    margin-bottom: 30px; flex-wrap: wrap;
+    margin-top: 8px; margin-bottom: 30px; flex-wrap: wrap;
   }
   .filter-tab {
     padding: 7px 16px; border-radius: 10px; border: 1.5px solid var(--border);
@@ -225,6 +225,43 @@
   .empty-state h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
   .empty-state p { font-size: 13.5px; color: var(--text2); }
 
+  /* =========== LOADING / ERROR STATE =========== */
+  .loading-state, .error-state {
+    display: none; text-align: center; padding: 90px 20px;
+  }
+  .loading-state.visible, .error-state.visible { display: block; }
+  .spinner {
+    width: 34px; height: 34px; margin: 0 auto 18px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-state p { font-size: 13.5px; color: var(--text2); font-weight: 500; }
+  .error-state .error-icon {
+    width: 48px; height: 48px; margin: 0 auto 16px; color: var(--danger);
+  }
+  .error-state h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .error-state p { font-size: 13.5px; color: var(--text2); margin-bottom: 18px; }
+  .retry-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: 10px; border: none;
+    background: var(--accent); color: #fff; font-family: inherit;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: background .13s;
+  }
+  .retry-btn:hover { background: var(--accent-hover); }
+
+  /* =========== SKELETON CARDS =========== */
+  .skeleton-card {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 18px;
+    padding: 24px; display: flex; flex-direction: column; gap: 16px; height: 178px;
+  }
+  .skeleton-line {
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+    background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite;
+    border-radius: 8px;
+  }
+  @keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
   /* =========== STATS BAR =========== */
   .stats-bar {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
@@ -288,39 +325,12 @@
 
 <div class="main">
 
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-eyebrow"><span></span>Всі інструменти</div>
-    <h2>Твій цифровий<br><em>навчальний арсенал</em></h2>
-    <p>Набір інтерактивних інструментів для вчителів та учнів — все в одному місці, без зайвого.</p>
-  </div>
-
-  <!-- SEARCH -->
-  <div class="search-wrap">
-    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input class="search-input" id="search-input" placeholder="Пошук інструменту..." oninput="handleSearch(this.value)">
-    <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
-  </div>
-
-  <!-- FILTER TABS -->
-  <div class="filter-tabs" id="filter-tabs">
-    <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">
-      Всі <span class="count" id="count-all">7</span>
-    </button>
-    <button class="filter-tab" data-filter="media" onclick="setFilter('media', this)">
-      Медіа <span class="count" id="count-media">3</span>
-    </button>
-    <button class="filter-tab" data-filter="class" onclick="setFilter('class', this)">
-      Клас <span class="count" id="count-class">2</span>
-    </button>
-    <button class="filter-tab" data-filter="creative" onclick="setFilter('creative', this)">
-      Творчість <span class="count" id="count-creative">2</span>
-    </button>
-  </div>
+  <!-- FILTER TABS (рендеряться динамічно з категорій у БД) -->
+  <div class="filter-tabs" id="filter-tabs"></div>
 
   <!-- STATS BAR -->
   <div class="stats-bar">
-    <div class="stats-bar-left"><b id="visible-count">7</b> інструментів</div>
+    <div class="stats-bar-left"><b id="visible-count">0</b> інструментів</div>
     <div class="stats-bar-right">
       <button class="view-btn active" id="grid-btn" onclick="setView('grid')" title="Сітка">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -329,6 +339,37 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       </button>
     </div>
+  </div>
+
+  <!-- LOADING STATE -->
+  <div class="loading-state visible" id="loading-state">
+    <div class="tools-grid" style="margin-bottom: 24px;">
+      <div class="skeleton-card">
+        <div class="skeleton-line" style="width:48px;height:48px;border-radius:14px;"></div>
+        <div class="skeleton-line" style="width:70%;height:14px;"></div>
+        <div class="skeleton-line" style="width:100%;height:34px;"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-line" style="width:48px;height:48px;border-radius:14px;"></div>
+        <div class="skeleton-line" style="width:60%;height:14px;"></div>
+        <div class="skeleton-line" style="width:100%;height:34px;"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-line" style="width:48px;height:48px;border-radius:14px;"></div>
+        <div class="skeleton-line" style="width:80%;height:14px;"></div>
+        <div class="skeleton-line" style="width:100%;height:34px;"></div>
+      </div>
+    </div>
+    <div class="spinner"></div>
+    <p>Завантажуємо інструменти…</p>
+  </div>
+
+  <!-- ERROR STATE -->
+  <div class="error-state" id="error-state">
+    <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <h3>Не вдалося завантажити інструменти</h3>
+    <p>Перевір з'єднання з інтернетом і спробуй ще раз</p>
+    <button class="retry-btn" onclick="loadTools()">Спробувати знову</button>
   </div>
 
   <!-- TOOLS GRID -->
@@ -343,85 +384,129 @@
 
 </div>
 
-<script>
-const TOOLS = [
-  {
-    id: 'vote',
-    name: 'Голосування',
-    desc: 'Інтерактивне голосування за кращу роботу. Картки команд, підрахунок голосів у реальному часі, феєрверки на фіналі.',
-    file: 'vote.html',
-    tag: 'Клас',
-    category: 'class',
-    accent: '#4F6BF4',
-    accentLight: 'rgba(79,107,244,.1)',
-    accentBorder: '#d6dcfd',
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>`
-  },
-  {
-    id: 'class-manager',
-    name: 'Менеджер класу',
-    desc: 'Управління учнями, розклад, відвідуваність і оцінки. Все що потрібно вчителю в одному місці.',
-    file: 'class-manager.html',
-    tag: 'Клас',
-    category: 'class',
-    accent: '#10b981',
-    accentLight: 'rgba(16,185,129,.1)',
-    accentBorder: '#a7f3d0',
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`
-  },
-  {
-    id: 'screen-recorder',
-    name: 'Запис екрану',
-    desc: 'Записуй екран прямо з браузера. Підтримка мікрофону, камери та вибір ділянки. Без встановлення програм.',
-    file: 'screen-recorder.html',
-    tag: 'Медіа',
-    category: 'media',
-    accent: '#ef4444',
-    accentLight: 'rgba(239,68,68,.1)',
-    accentBorder: '#fecaca',
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>`
-  },
-  {
-    id: 'snap-editor',
-    name: 'Редактор фото',
-    desc: 'Швидке редагування зображень: кадрування, фільтри, текст, анотації. Ідеально для підготовки навчальних матеріалів.',
-    file: 'snap-editor.html',
-    tag: 'Медіа',
-    category: 'media',
-    accent: '#f59e0b',
-    accentLight: 'rgba(245,158,11,.1)',
-    accentBorder: '#fde68a',
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`
-  },
-  {
-    id: 'text-craft',
-    name: 'Текстовий редактор',
-    desc: 'Форматований текстовий редактор з темами та стилями. Для написання, редагування й оформлення учнівських робіт.',
-    file: 'text-craft.html',
-    tag: 'Творчість',
-    category: 'creative',
-    accent: '#8b5cf6',
-    accentLight: 'rgba(139,92,246,.1)',
-    accentBorder: '#ddd6fe',
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`
-  },
-  {
-    id: 'videocut',
-    name: 'Відеоредактор',
-    desc: 'Нарізка та монтаж відео прямо в браузері. Обрізай, об\u02BCєднуй кліпи і додавай субтитри без зайвих програм.',
-    file: 'videocut.html',
-    tag: 'Медіа',
-    category: 'media',
-    accent: '#ec4899',
-    accentLight: 'rgba(236,72,153,.1)',
-    accentBorder: '#fbcfe8',
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>`
-  },
-];
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+// ── Firebase (той самий проєкт edvault-d4a7f, вузол "tools") ──
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyASpQTZaka3P-YUJ4tfHNmG-LCI-hQPhAI",
+  authDomain: "edvault-d4a7f.firebaseapp.com",
+  projectId: "edvault-d4a7f",
+  databaseURL: "https://edvault-d4a7f-default-rtdb.firebaseio.com/",
+  storageBucket: "edvault-d4a7f.firebasestorage.app",
+  messagingSenderId: "181496726566",
+  appId: "1:181496726566:web:5a86e78588c9440a0b52e7"
+};
+const app = initializeApp(FIREBASE_CONFIG);
+const db = getDatabase(app);
+
+// ── Дефолтний набір — використовується лише для one-time seed,
+//    якщо вузол tools/ у базі ще порожній ──
+const DEFAULT_TOOLS = {
+  'vote': {
+    order: 1, name: 'Голосування',
+    desc: 'Інтерактивне голосування за кращу роботу. Картки команд, підрахунок голосів у реальному часі, феєрверки на фіналі.',
+    file: 'vote.html', tag: 'Клас', category: 'class',
+    accent: '#4F6BF4', accentLight: 'rgba(79,107,244,.1)', accentBorder: '#d6dcfd',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>'
+  },
+  'class-manager': {
+    order: 2, name: 'Менеджер класу',
+    desc: 'Управління учнями, розклад, відвідуваність і оцінки. Все що потрібно вчителю в одному місці.',
+    file: 'class-manager.html', tag: 'Клас', category: 'class',
+    accent: '#10b981', accentLight: 'rgba(16,185,129,.1)', accentBorder: '#a7f3d0',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+  },
+  'screen-recorder': {
+    order: 3, name: 'Запис екрану',
+    desc: 'Записуй екран прямо з браузера. Підтримка мікрофону, камери та вибір ділянки. Без встановлення програм.',
+    file: 'screen-recorder.html', tag: 'Медіа', category: 'media',
+    accent: '#ef4444', accentLight: 'rgba(239,68,68,.1)', accentBorder: '#fecaca',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>'
+  },
+  'snap-editor': {
+    order: 4, name: 'Редактор фото',
+    desc: 'Швидке редагування зображень: кадрування, фільтри, текст, анотації. Ідеально для підготовки навчальних матеріалів.',
+    file: 'snap-editor.html', tag: 'Медіа', category: 'media',
+    accent: '#f59e0b', accentLight: 'rgba(245,158,11,.1)', accentBorder: '#fde68a',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
+  },
+  'text-craft': {
+    order: 5, name: 'Текстовий редактор',
+    desc: 'Форматований текстовий редактор з темами та стилями. Для написання, редагування й оформлення учнівських робіт.',
+    file: 'text-craft.html', tag: 'Творчість', category: 'creative',
+    accent: '#8b5cf6', accentLight: 'rgba(139,92,246,.1)', accentBorder: '#ddd6fe',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>'
+  },
+  'videocut': {
+    order: 6, name: 'Відеоредактор',
+    desc: 'Нарізка та монтаж відео прямо в браузері. Обрізай, об\u02BCєднуй кліпи і додавай субтитри без зайвих програм.',
+    file: 'videocut.html', tag: 'Медіа', category: 'media',
+    accent: '#ec4899', accentLight: 'rgba(236,72,153,.1)', accentBorder: '#fbcfe8',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'
+  }
+};
+
+// Людські підписи для відомих категорій; невідомі категорії
+// (додані пізніше через базу) підписуються самі собою.
+const CATEGORY_LABELS = { media: 'Медіа', class: 'Клас', creative: 'Творчість' };
+
+let TOOLS = [];
 let currentFilter = 'all';
 let currentSearch = '';
 let currentView = 'grid';
+
+async function loadTools() {
+  setState('loading');
+  try {
+    const snap = await get(ref(db, 'tools'));
+    let data = snap.exists() ? snap.val() : null;
+
+    // Якщо вузол tools/ ще порожній — засіваємо його дефолтним набором один раз,
+    // щоб сторінка не була пустою одразу після підключення до бази.
+    if (!data) {
+      await set(ref(db, 'tools'), DEFAULT_TOOLS);
+      data = DEFAULT_TOOLS;
+    }
+
+    TOOLS = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+    TOOLS.sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name, 'uk'));
+
+    buildFilterTabs();
+    setState('ready');
+    render();
+  } catch (err) {
+    console.error('Не вдалось завантажити tools/ з Firebase:', err);
+    setState('error');
+  }
+}
+
+function setState(state) {
+  document.getElementById('loading-state').classList.toggle('visible', state === 'loading');
+  document.getElementById('error-state').classList.toggle('visible', state === 'error');
+  document.getElementById('tools-grid').style.display = state === 'ready' ? '' : 'none';
+}
+
+function buildFilterTabs() {
+  const cats = [];
+  TOOLS.forEach(t => { if (t.category && !cats.includes(t.category)) cats.push(t.category); });
+
+  const tabsHtml = [`
+    <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">
+      Всі <span class="count" id="count-all">${TOOLS.length}</span>
+    </button>`
+  ].concat(cats.map(cat => {
+    const count = TOOLS.filter(t => t.category === cat).length;
+    const label = CATEGORY_LABELS[cat] || (cat.charAt(0).toUpperCase() + cat.slice(1));
+    return `
+    <button class="filter-tab" data-filter="${cat}" onclick="setFilter('${cat}', this)">
+      ${label} <span class="count" id="count-${cat}">${count}</span>
+    </button>`;
+  }));
+
+  document.getElementById('filter-tabs').innerHTML = tabsHtml.join('');
+}
 
 function render() {
   const grid = document.getElementById('tools-grid');
@@ -430,7 +515,7 @@ function render() {
   let filtered = TOOLS.filter(t => {
     const matchFilter = currentFilter === 'all' || t.category === currentFilter;
     const q = currentSearch.toLowerCase();
-    const matchSearch = !q || t.name.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q) || t.tag.toLowerCase().includes(q);
+    const matchSearch = !q || t.name.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q) || (t.tag || '').toLowerCase().includes(q);
     return matchFilter && matchSearch;
   });
 
@@ -475,19 +560,6 @@ function setFilter(filter, btn) {
   render();
 }
 
-function handleSearch(val) {
-  currentSearch = val;
-  document.getElementById('search-clear').classList.toggle('visible', val.length > 0);
-  render();
-}
-
-function clearSearch() {
-  currentSearch = '';
-  document.getElementById('search-input').value = '';
-  document.getElementById('search-clear').classList.remove('visible');
-  render();
-}
-
 function setView(view) {
   currentView = view;
   const grid = document.getElementById('tools-grid');
@@ -496,18 +568,13 @@ function setView(view) {
   document.getElementById('list-btn').classList.toggle('active', view === 'list');
 }
 
-// update filter counts dynamically
-function updateCounts() {
-  const categories = { all: TOOLS.length, media: 0, class: 0, creative: 0 };
-  TOOLS.forEach(t => { if (categories[t.category] !== undefined) categories[t.category]++; });
-  document.getElementById('count-all').textContent = categories.all;
-  document.getElementById('count-media').textContent = categories.media;
-  document.getElementById('count-class').textContent = categories.class;
-  document.getElementById('count-creative').textContent = categories.creative;
-}
+// Функції потрібні в inline onclick/oninput-атрибутах —
+// у модулях вони не глобальні за замовчуванням, тож виносимо явно.
+window.setFilter = setFilter;
+window.setView = setView;
+window.loadTools = loadTools;
 
-updateCounts();
-render();
+loadTools();
 </script>
 </body>
 </html>
