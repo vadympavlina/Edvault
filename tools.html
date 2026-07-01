@@ -408,7 +408,7 @@ const TOOLS = [
   {
     id: 'videocut',
     name: 'Відеоредактор',
-    desc: 'Нарізка та монтаж відео прямо в браузері. Обрізай, об'єднуй кліпи і додавай субтитри без зайвих програм.',
+    desc: 'Нарізка та монтаж відео прямо в браузері. Обрізай, об\u02BCєднуй кліпи і додавай субтитри без зайвих програм.',
     file: 'videocut.html',
     tag: 'Медіа',
     category: 'media',
@@ -416,18 +416,6 @@ const TOOLS = [
     accentLight: 'rgba(236,72,153,.1)',
     accentBorder: '#fbcfe8',
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>`
-  },
-  {
-    id: 'coi-serviceworker',
-    name: 'Service Worker',
-    desc: 'Системний сервіс-воркер для ізоляції та офлайн-режиму. Забезпечує коректну роботу медіа-інструментів.',
-    file: 'coi-serviceworker.js',
-    tag: 'Система',
-    category: 'system',
-    accent: '#64748b',
-    accentLight: 'rgba(100,116,139,.08)',
-    accentBorder: '#cbd5e1',
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`
   },
 ];
 
@@ -475,7 +463,6 @@ function render() {
           Відкрити
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </div>
-        <span class="tool-file">${t.file}</span>
       </div>
     </a>
   `).join('');
