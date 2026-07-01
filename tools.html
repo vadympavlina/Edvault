@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M8 10h16M8 16h10M8 22h13' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Інструменти · Edvault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #f7f8fa;
+    --border: #e2e5ea;
+    --border2: #d0d5dd;
+    --accent: #4F6BF4;
+    --accent-light: #eef0fe;
+    --accent-hover: #3d57e0;
+    --danger: #ef4444;
+    --success: #10b981;
+    --warn: #f59e0b;
+    --text: #1a1d23;
+    --text2: #4b5563;
+    --muted: #9ca3af;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+
+  /* =========== TOPBAR =========== */
+  .topbar {
+    height: 64px; flex-shrink: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px;
+    position: sticky; top: 0; z-index: 30;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-logo {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(79,107,244,.3); flex-shrink: 0;
+  }
+  .topbar-logo svg { width: 18px; height: 18px; }
+  .topbar-text h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); line-height: 1.2; }
+  .topbar-text p { font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 1px; }
+  .topbar-badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+    background: var(--accent-light); color: var(--accent); letter-spacing: .03em;
+  }
+
+  /* =========== MAIN =========== */
+  .main {
+    max-width: 1200px; width: 100%;
+    margin: 0 auto;
+    padding: 48px 28px 100px;
+  }
+
+  /* =========== HERO =========== */
+  .hero {
+    text-align: center; margin-bottom: 52px;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-light); border: 1px solid #d6dcfd;
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 18px;
+  }
+  .hero-eyebrow span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; animation: dot-blink 1.8s ease-in-out infinite; }
+  @keyframes dot-blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  .hero h2 {
+    font-size: 42px; font-weight: 900; letter-spacing: -1.5px; color: var(--text);
+    line-height: 1.1; margin-bottom: 14px;
+  }
+  .hero h2 em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .hero p {
+    font-size: 16px; color: var(--text2); max-width: 520px; margin: 0 auto;
+    line-height: 1.65; font-weight: 450;
+  }
+
+  /* =========== SEARCH =========== */
+  .search-wrap {
+    max-width: 420px; margin: 0 auto 44px; position: relative;
+  }
+  .search-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px; color: var(--muted); pointer-events: none;
+  }
+  .search-input {
+    width: 100%; padding: 12px 14px 12px 40px;
+    border: 1.5px solid var(--border2); border-radius: 12px;
+    background: var(--surface); font-family: inherit; font-size: 14px; color: var(--text);
+    outline: none; transition: all .15s ease;
+    box-shadow: var(--shadow-sm);
+  }
+  .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.1); }
+  .search-input::placeholder { color: var(--muted); }
+  .search-clear {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    width: 22px; height: 22px; border-radius: 6px; border: none;
+    background: var(--border); color: var(--text2); display: none;
+    align-items: center; justify-content: center; cursor: pointer; font-size: 13px;
+    transition: background .12s;
+  }
+  .search-clear:hover { background: var(--border2); }
+  .search-clear.visible { display: flex; }
+
+  /* =========== FILTER TABS =========== */
+  .filter-tabs {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 30px; flex-wrap: wrap;
+  }
+  .filter-tab {
+    padding: 7px 16px; border-radius: 10px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text2);
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    transition: all .13s ease; display: flex; align-items: center; gap: 6px;
+  }
+  .filter-tab:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
+  .filter-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .filter-tab .count {
+    font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 5px;
+    background: rgba(255,255,255,.25); color: inherit;
+  }
+  .filter-tab:not(.active) .count { background: var(--border); color: var(--muted); }
+
+  /* =========== TOOLS GRID =========== */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 18px;
+  }
+
+  /* =========== TOOL CARD =========== */
+  .tool-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    padding: 24px;
+    cursor: pointer;
+    text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: 16px;
+    transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s ease, border-color .15s ease;
+    position: relative; overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .tool-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 0%, var(--card-accent-light, rgba(79,107,244,.06)), transparent 65%);
+    opacity: 0; transition: opacity .2s ease;
+    pointer-events: none;
+  }
+  .tool-card:hover { transform: translateY(-4px) scale(1.012); box-shadow: var(--shadow-md); border-color: var(--card-accent, var(--accent)); }
+  .tool-card:hover::before { opacity: 1; }
+  .tool-card:active { transform: translateY(-1px) scale(1.005); }
+
+  .tool-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .tool-icon {
+    width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--card-accent-light, var(--accent-light));
+    border: 1.5px solid var(--card-accent-border, #d6dcfd);
+  }
+  .tool-icon svg { width: 22px; height: 22px; color: var(--card-accent, var(--accent)); }
+
+  .tool-tag {
+    font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 7px;
+    background: var(--card-accent-light, var(--accent-light));
+    color: var(--card-accent, var(--accent)); letter-spacing: .04em; text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .tool-card-body { flex: 1; }
+  .tool-name { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); margin-bottom: 6px; }
+  .tool-desc { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  .tool-card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 14px; border-top: 1px solid var(--border);
+  }
+  .tool-open-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12.5px; font-weight: 700; color: var(--card-accent, var(--accent));
+    background: var(--card-accent-light, var(--accent-light));
+    border: 1.5px solid var(--card-accent-border, #d6dcfd);
+    padding: 7px 14px; border-radius: 9px;
+    transition: all .13s ease;
+  }
+  .tool-card:hover .tool-open-btn {
+    background: var(--card-accent, var(--accent)); color: #fff; border-color: var(--card-accent, var(--accent));
+  }
+  .tool-open-btn svg { width: 12px; height: 12px; }
+  .tool-file {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600;
+    color: var(--muted); background: var(--surface2); border: 1px solid var(--border);
+    padding: 4px 9px; border-radius: 7px; letter-spacing: .02em;
+  }
+
+  /* =========== EMPTY STATE =========== */
+  .empty-state {
+    text-align: center; padding: 80px 20px; display: none;
+  }
+  .empty-state.visible { display: block; }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .empty-state p { font-size: 13.5px; color: var(--text2); }
+
+  /* =========== STATS BAR =========== */
+  .stats-bar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    gap: 12px; margin-bottom: 22px;
+  }
+  .stats-bar-left { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .stats-bar-left b { color: var(--text); font-weight: 700; }
+  .stats-bar-right { display: flex; gap: 8px; }
+  .view-btn {
+    width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .13s ease;
+  }
+  .view-btn:hover, .view-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .view-btn svg { width: 15px; height: 15px; }
+
+  /* =========== LIST VIEW =========== */
+  .tools-grid.list-view { grid-template-columns: 1fr; gap: 10px; }
+  .list-view .tool-card {
+    flex-direction: row; align-items: center; gap: 16px; padding: 16px 20px;
+  }
+  .list-view .tool-card-header { flex-direction: row; align-items: center; flex: 0 0 auto; gap: 14px; }
+  .list-view .tool-card-body { flex: 1; }
+  .list-view .tool-card-footer { border-top: none; padding-top: 0; flex: 0 0 auto; }
+  .list-view .tool-icon { width: 42px; height: 42px; }
+  .list-view .tool-tag { display: none; }
+  .list-view .tool-card::before { display: none; }
+
+  /* =========== RESPONSIVE =========== */
+  @media (max-width: 640px) {
+    .main { padding: 32px 16px 80px; }
+    .hero h2 { font-size: 30px; }
+    .tools-grid { grid-template-columns: 1fr; }
+    .list-view .tool-card { flex-wrap: wrap; }
+  }
+
+  @keyframes card-appear {
+    from { opacity: 0; transform: translateY(16px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .tool-card { animation: card-appear .35s cubic-bezier(.16,1,.3,1) both; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 10h16M8 16h10M8 22h13" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="topbar-text">
+      <h1>Edvault</h1>
+      <p>Інструменти для класу</p>
+    </div>
+  </div>
+  <div class="topbar-badge">Beta</div>
+</div>
+
+<div class="main">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow"><span></span>Всі інструменти</div>
+    <h2>Твій цифровий<br><em>навчальний арсенал</em></h2>
+    <p>Набір інтерактивних інструментів для вчителів та учнів — все в одному місці, без зайвого.</p>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" id="search-input" placeholder="Пошук інструменту..." oninput="handleSearch(this.value)">
+    <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+  </div>
+
+  <!-- FILTER TABS -->
+  <div class="filter-tabs" id="filter-tabs">
+    <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">
+      Всі <span class="count" id="count-all">7</span>
+    </button>
+    <button class="filter-tab" data-filter="media" onclick="setFilter('media', this)">
+      Медіа <span class="count" id="count-media">3</span>
+    </button>
+    <button class="filter-tab" data-filter="class" onclick="setFilter('class', this)">
+      Клас <span class="count" id="count-class">2</span>
+    </button>
+    <button class="filter-tab" data-filter="creative" onclick="setFilter('creative', this)">
+      Творчість <span class="count" id="count-creative">2</span>
+    </button>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stats-bar-left"><b id="visible-count">7</b> інструментів</div>
+    <div class="stats-bar-right">
+      <button class="view-btn active" id="grid-btn" onclick="setView('grid')" title="Сітка">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </button>
+      <button class="view-btn" id="list-btn" onclick="setView('list')" title="Список">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOOLS GRID -->
+  <div class="tools-grid" id="tools-grid"></div>
+
+  <!-- EMPTY STATE -->
+  <div class="empty-state" id="empty-state">
+    <div class="empty-icon">🔍</div>
+    <h3>Нічого не знайдено</h3>
+    <p>Спробуйте інший запит або скиньте фільтр</p>
+  </div>
+
+</div>
+
+<script>
+const TOOLS = [
+  {
+    id: 'vote',
+    name: 'Голосування',
+    desc: 'Інтерактивне голосування за кращу роботу. Картки команд, підрахунок голосів у реальному часі, феєрверки на фіналі.',
+    file: 'vote.html',
+    tag: 'Клас',
+    category: 'class',
+    accent: '#4F6BF4',
+    accentLight: 'rgba(79,107,244,.1)',
+    accentBorder: '#d6dcfd',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>`
+  },
+  {
+    id: 'class-manager',
+    name: 'Менеджер класу',
+    desc: 'Управління учнями, розклад, відвідуваність і оцінки. Все що потрібно вчителю в одному місці.',
+    file: 'class-manager.html',
+    tag: 'Клас',
+    category: 'class',
+    accent: '#10b981',
+    accentLight: 'rgba(16,185,129,.1)',
+    accentBorder: '#a7f3d0',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`
+  },
+  {
+    id: 'screen-recorder',
+    name: 'Запис екрану',
+    desc: 'Записуй екран прямо з браузера. Підтримка мікрофону, камери та вибір ділянки. Без встановлення програм.',
+    file: 'screen-recorder.html',
+    tag: 'Медіа',
+    category: 'media',
+    accent: '#ef4444',
+    accentLight: 'rgba(239,68,68,.1)',
+    accentBorder: '#fecaca',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>`
+  },
+  {
+    id: 'snap-editor',
+    name: 'Редактор фото',
+    desc: 'Швидке редагування зображень: кадрування, фільтри, текст, анотації. Ідеально для підготовки навчальних матеріалів.',
+    file: 'snap-editor.html',
+    tag: 'Медіа',
+    category: 'media',
+    accent: '#f59e0b',
+    accentLight: 'rgba(245,158,11,.1)',
+    accentBorder: '#fde68a',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`
+  },
+  {
+    id: 'text-craft',
+    name: 'Текстовий редактор',
+    desc: 'Форматований текстовий редактор з темами та стилями. Для написання, редагування й оформлення учнівських робіт.',
+    file: 'text-craft.html',
+    tag: 'Творчість',
+    category: 'creative',
+    accent: '#8b5cf6',
+    accentLight: 'rgba(139,92,246,.1)',
+    accentBorder: '#ddd6fe',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`
+  },
+  {
+    id: 'videocut',
+    name: 'Відеоредактор',
+    desc: 'Нарізка та монтаж відео прямо в браузері. Обрізай, об'єднуй кліпи і додавай субтитри без зайвих програм.',
+    file: 'videocut.html',
+    tag: 'Медіа',
+    category: 'media',
+    accent: '#ec4899',
+    accentLight: 'rgba(236,72,153,.1)',
+    accentBorder: '#fbcfe8',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>`
+  },
+  {
+    id: 'coi-serviceworker',
+    name: 'Service Worker',
+    desc: 'Системний сервіс-воркер для ізоляції та офлайн-режиму. Забезпечує коректну роботу медіа-інструментів.',
+    file: 'coi-serviceworker.js',
+    tag: 'Система',
+    category: 'system',
+    accent: '#64748b',
+    accentLight: 'rgba(100,116,139,.08)',
+    accentBorder: '#cbd5e1',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`
+  },
+];
+
+let currentFilter = 'all';
+let currentSearch = '';
+let currentView = 'grid';
+
+function render() {
+  const grid = document.getElementById('tools-grid');
+  const emptyState = document.getElementById('empty-state');
+
+  let filtered = TOOLS.filter(t => {
+    const matchFilter = currentFilter === 'all' || t.category === currentFilter;
+    const q = currentSearch.toLowerCase();
+    const matchSearch = !q || t.name.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q) || t.tag.toLowerCase().includes(q);
+    return matchFilter && matchSearch;
+  });
+
+  document.getElementById('visible-count').textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '';
+    emptyState.classList.add('visible');
+    return;
+  }
+  emptyState.classList.remove('visible');
+
+  grid.innerHTML = filtered.map((t, i) => `
+    <a class="tool-card" href="${t.file}" style="
+      --card-accent: ${t.accent};
+      --card-accent-light: ${t.accentLight};
+      --card-accent-border: ${t.accentBorder};
+      animation-delay: ${i * 55}ms;
+    ">
+      <div class="tool-card-header">
+        <div class="tool-icon">${t.icon}</div>
+        <span class="tool-tag">${t.tag}</span>
+      </div>
+      <div class="tool-card-body">
+        <div class="tool-name">${t.name}</div>
+        <div class="tool-desc">${t.desc}</div>
+      </div>
+      <div class="tool-card-footer">
+        <div class="tool-open-btn">
+          Відкрити
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+        <span class="tool-file">${t.file}</span>
+      </div>
+    </a>
+  `).join('');
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function handleSearch(val) {
+  currentSearch = val;
+  document.getElementById('search-clear').classList.toggle('visible', val.length > 0);
+  render();
+}
+
+function clearSearch() {
+  currentSearch = '';
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-clear').classList.remove('visible');
+  render();
+}
+
+function setView(view) {
+  currentView = view;
+  const grid = document.getElementById('tools-grid');
+  grid.classList.toggle('list-view', view === 'list');
+  document.getElementById('grid-btn').classList.toggle('active', view === 'grid');
+  document.getElementById('list-btn').classList.toggle('active', view === 'list');
+}
+
+// update filter counts dynamically
+function updateCounts() {
+  const categories = { all: TOOLS.length, media: 0, class: 0, creative: 0 };
+  TOOLS.forEach(t => { if (categories[t.category] !== undefined) categories[t.category]++; });
+  document.getElementById('count-all').textContent = categories.all;
+  document.getElementById('count-media').textContent = categories.media;
+  document.getElementById('count-class').textContent = categories.class;
+  document.getElementById('count-creative').textContent = categories.creative;
+}
+
+updateCounts();
+render();
+</script>
+</body>
+</html>
