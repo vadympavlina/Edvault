@@ -444,7 +444,7 @@ function render() {
   emptyState.classList.remove('visible');
 
   grid.innerHTML = filtered.map((t, i) => `
-    <a class="tool-card" href="${t.file}" style="
+    <a class="tool-card" href="tools/${t.file}" style="
       --card-accent: ${t.accent};
       --card-accent-light: ${t.accentLight};
       --card-accent-border: ${t.accentBorder};
