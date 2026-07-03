@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234F6BF4'/><path d='M8 24.5A2.5 2.5 0 0 1 10.5 22H24M10.5 7H24v18H10.5A2.5 2.5 0 0 1 8 22.5v-13A2.5 2.5 0 0 1 10.5 7z' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
     body { overflow: auto; height: auto; min-height: 100vh; }
@@ -556,6 +557,7 @@
       <svg viewBox="0 0 24 24" width="16" height="16"><path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.63h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.58-5.17 3.58-8.81z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.92l-3.87-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.27v3.11A11.99 11.99 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.27 14.27a7.2 7.2 0 0 1 0-4.54V6.62H1.27a12 12 0 0 0 0 10.76l4-3.11z"/><path fill="#EA4335" d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.69 1.27 6.62l4 3.11C6.22 6.88 8.87 4.77 12 4.77z"/></svg>
       Увійти через Google
     </button>
+    <div id="gsiButtonContainer" style="position:absolute; left:-9999px; top:-9999px;"></div>
   </div>
 </div>
 
@@ -1059,11 +1061,11 @@
   import { dbGet, dbSet, dbUpdate, dbPush, dbRemove, generateId, objToArray }
     from './firebase-config.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
-    GoogleAuthProvider, signInWithRedirect, getRedirectResult }
+    GoogleAuthProvider, signInWithCredential }
     from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const auth = getAuth();
-  const googleProvider = new GoogleAuthProvider();
+  const GOOGLE_CLIENT_ID = '181496726566-09dl834sj984ceg4ciqk6p3tlrc39dn0.apps.googleusercontent.com';
   const ALLOWED_GOOGLE_EMAILS = [
     'pavlina_vs@itstep.org',
     'vadym.pavlina@gmail.com',
@@ -1123,23 +1125,38 @@
   document.getElementById('authPass').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
 
   document.getElementById('googleAuthBtn').addEventListener('click', () => {
-    signInWithRedirect(auth, googleProvider);
+    const realBtn = document.querySelector('#gsiButtonContainer div[role="button"]');
+    if (realBtn) {
+      realBtn.click();
+    } else {
+      showAuthError('Google-вхід ще завантажується, спробуй ще раз через секунду');
+    }
   });
 
-  // Обробка результату після повернення з Google (важливо: getRedirectResult
-  // ловить помилки, які onAuthStateChanged не показує напряму)
-  getRedirectResult(auth)
-    .then(result => {
-      console.log('[Google Auth] redirect result:', result);
-      if (!result) console.warn('[Google Auth] getRedirectResult повернув null — редірект не завершився сесією (перевір Authorized domains у Firebase Console).');
-    })
-    .catch(e => {
-      console.error('[Google Auth] redirect error:', e.code, e.message);
-      const code = e.code || '';
-      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
-        showAuthError('Не вдалося увійти через Google: ' + code);
-      }
+  // Ініціалізація Google Identity Services (чекаємо, поки підвантажиться скрипт)
+  function initGSI() {
+    if (!window.google?.accounts?.id) { setTimeout(initGSI, 150); return; }
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleCredential,
+      auto_select: false
     });
+    // Рендеримо справжню кнопку Google в прихований контейнер —
+    // наша кастомна кнопка симулює клік по ній
+    google.accounts.id.renderButton(document.getElementById('gsiButtonContainer'), { type: 'standard' });
+  }
+  initGSI();
+
+  async function handleGoogleCredential(response) {
+    try {
+      const credential = GoogleAuthProvider.credential(response.credential);
+      await signInWithCredential(auth, credential);
+      // onAuthStateChanged перевірить білий список і викличе showAdmin
+    } catch (e) {
+      console.error('[Google Auth] sign-in error:', e.code, e.message);
+      showAuthError('Не вдалося увійти через Google: ' + (e.code || ''));
+    }
+  }
 
   async function doLogin() {
     const email = document.getElementById('authUser').value.trim();
