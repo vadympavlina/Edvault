@@ -1059,7 +1059,7 @@
   import { dbGet, dbSet, dbUpdate, dbPush, dbRemove, generateId, objToArray }
     from './firebase-config.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
-    GoogleAuthProvider, signInWithPopup }
+    GoogleAuthProvider, signInWithRedirect, getRedirectResult }
     from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const auth = getAuth();
@@ -1122,19 +1122,16 @@
   document.getElementById('authUser').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
   document.getElementById('authPass').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
 
-  document.getElementById('googleAuthBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('googleAuthBtn');
-    btn.disabled = true;
-    try {
-      await signInWithPopup(auth, googleProvider);
-      // onAuthStateChanged перевірить email і викличе showAdmin або поверне помилку
-    } catch (e) {
-      const code = e.code || '';
-      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
-        showAuthError('Не вдалося увійти через Google');
-      }
-    } finally {
-      btn.disabled = false;
+  document.getElementById('googleAuthBtn').addEventListener('click', () => {
+    signInWithRedirect(auth, googleProvider);
+  });
+
+  // Обробка результату після повернення з Google (важливо: getRedirectResult
+  // ловить помилки, які onAuthStateChanged не показує напряму)
+  getRedirectResult(auth).catch(e => {
+    const code = e.code || '';
+    if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
+      showAuthError('Не вдалося увійти через Google');
     }
   });
 
