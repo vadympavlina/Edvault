@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Адмінка інструментів · Edvault</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -70,6 +71,7 @@
     border: 1.5px solid var(--border2); background: var(--surface);
     font-size: 14px; font-weight: 700; color: var(--text); cursor: pointer;
     transition: all .13s ease; box-shadow: var(--shadow-sm);
+    pointer-events: none;
   }
   .google-btn:hover { border-color: var(--border2); background: var(--surface2); box-shadow: var(--shadow-md); }
   .google-btn:active { transform: scale(.98); }
@@ -406,10 +408,13 @@
     </div>
     <h1>Адмінка інструментів</h1>
     <p>Доступ лише для вчителів Edvault. Увійди через Google-акаунт, який має право редагування.</p>
-    <button class="google-btn" onclick="handleSignIn()">
-      <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.6 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.1 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.1 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.4 0 10.2-2 13.8-5.4l-6.4-5.4C29.3 34.8 26.8 36 24 36c-5.3 0-9.6-3.4-11.2-8l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.4 5.4C40.9 36.6 44 30.9 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
-      Увійти через Google
-    </button>
+    <div style="position:relative; width:100%;">
+      <button class="google-btn" id="googleAuthBtn" tabindex="-1">
+        <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.6 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.1 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.1 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.4 0 10.2-2 13.8-5.4l-6.4-5.4C29.3 34.8 26.8 36 24 36c-5.3 0-9.6-3.4-11.2-8l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.4 5.4C40.9 36.6 44 30.9 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+        Увійти через Google
+      </button>
+      <div id="gsiButtonContainer" style="position:absolute; inset:0; opacity:0.01; overflow:hidden;"></div>
+    </div>
     <div id="login-error" class="form-error" style="margin-top:14px; text-align:left;"></div>
   </div>
 </div>
@@ -601,7 +606,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, set, remove, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { getAuth, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signInWithCredential, signOut, onAuthStateChanged, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // ── Firebase (той самий проєкт edvault-d4a7f) ──
 const FIREBASE_CONFIG = {
@@ -616,8 +621,7 @@ const FIREBASE_CONFIG = {
 const app = initializeApp(FIREBASE_CONFIG);
 const db = getDatabase(app);
 const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
+const GOOGLE_CLIENT_ID = '181496726566-09dl834sj984ceg4ciqk6p3tlrc39dn0.apps.googleusercontent.com';
 
 // ── Білий список пошт, яким дозволено редагування ──
 const ALLOWED_EMAILS = [
@@ -725,34 +729,41 @@ function showGate(name) {
   document.getElementById('admin-app').style.display = name === 'app' ? 'block' : 'none';
 }
 
-window.handleSignIn = async function () {
+// Ініціалізація Google Identity Services (чекаємо, поки підвантажиться скрипт)
+function initGSI() {
+  if (!window.google?.accounts?.id) { setTimeout(initGSI, 150); return; }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleGoogleCredential,
+    auto_select: false
+  });
+  // Рендеримо справжню кнопку Google прозорою поверх нашої кастомної —
+  // реальний клік користувача потрапляє напряму в iframe Google
+  const container = document.getElementById('gsiButtonContainer');
+  if (container) {
+    google.accounts.id.renderButton(container, { type: 'standard', theme: 'outline', size: 'large', width: 308 });
+  }
+}
+initGSI();
+
+async function handleGoogleCredential(response) {
   document.getElementById('login-error').classList.remove('visible');
   try {
-    await signInWithRedirect(auth, googleProvider);
-    // після цього браузер перейде на google.com і повернеться назад на цю сторінку —
-    // подальша обробка йде в getRedirectResult() / onAuthStateChanged() нижче
+    const credential = GoogleAuthProvider.credential(response.credential);
+    await signInWithCredential(auth, credential);
+    // onAuthStateChanged перевірить білий список і покаже потрібний екран
   } catch (err) {
     console.error(err);
     const el = document.getElementById('login-error');
-    el.textContent = 'Не вдалося увійти. Спробуй ще раз.';
+    el.textContent = 'Не вдалося увійти: ' + (err.code || err.message || 'невідома помилка');
     el.classList.add('visible');
   }
-};
+}
 
 window.handleSignOut = async function () {
   await signOut(auth);
   showGate('login');
 };
-
-// Обробляємо результат після повернення з Google (signInWithRedirect)
-getRedirectResult(auth).catch((err) => {
-  console.error('Помилка redirect-входу:', err);
-  const el = document.getElementById('login-error');
-  if (el) {
-    el.textContent = 'Вхід не вдався: ' + (err.code || err.message || 'невідома помилка');
-    el.classList.add('visible');
-  }
-});
 
 onAuthStateChanged(auth, (user) => {
   if (!user) { showGate('login'); return; }
