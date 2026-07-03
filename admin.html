@@ -55,7 +55,7 @@
     .auth-error { font-size: 12px; color: #ef4444; margin-bottom: 12px; display: none; }
     .auth-error.show { display: block; }
     .btn-auth { width: 100%; height: 38px; margin-top: 4px; justify-content: center; }
-    .btn-google { width: 100%; height: 38px; margin-top: 10px; justify-content: center; gap: 8px; background: #fff; }
+    .btn-google { width: 100%; height: 38px; margin-top: 10px; justify-content: center; gap: 8px; background: #fff; pointer-events: none; }
     .auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
     .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border, #e5e7eb); }
     .auth-divider span { font-size: 11px; color: var(--muted); }
@@ -553,11 +553,13 @@
       Увійти
     </button>
     <div class="auth-divider"><span>або</span></div>
-    <button class="btn btn-outline btn-google" id="googleAuthBtn">
-      <svg viewBox="0 0 24 24" width="16" height="16"><path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.63h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.58-5.17 3.58-8.81z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.92l-3.87-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.27v3.11A11.99 11.99 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.27 14.27a7.2 7.2 0 0 1 0-4.54V6.62H1.27a12 12 0 0 0 0 10.76l4-3.11z"/><path fill="#EA4335" d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.69 1.27 6.62l4 3.11C6.22 6.88 8.87 4.77 12 4.77z"/></svg>
-      Увійти через Google
-    </button>
-    <div id="gsiButtonContainer" style="position:absolute; left:-9999px; top:-9999px;"></div>
+    <div style="position:relative; width:100%;">
+      <button class="btn btn-outline btn-google" id="googleAuthBtn" tabindex="-1">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.63h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.58-5.17 3.58-8.81z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.92l-3.87-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.27v3.11A11.99 11.99 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.27 14.27a7.2 7.2 0 0 1 0-4.54V6.62H1.27a12 12 0 0 0 0 10.76l4-3.11z"/><path fill="#EA4335" d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.69 1.27 6.62l4 3.11C6.22 6.88 8.87 4.77 12 4.77z"/></svg>
+        Увійти через Google
+      </button>
+      <div id="gsiButtonContainer" style="position:absolute; inset:0; opacity:0.01; overflow:hidden;"></div>
+    </div>
   </div>
 </div>
 
@@ -1124,15 +1126,6 @@
   document.getElementById('authUser').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
   document.getElementById('authPass').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
 
-  document.getElementById('googleAuthBtn').addEventListener('click', () => {
-    const realBtn = document.querySelector('#gsiButtonContainer div[role="button"]');
-    if (realBtn) {
-      realBtn.click();
-    } else {
-      showAuthError('Google-вхід ще завантажується, спробуй ще раз через секунду');
-    }
-  });
-
   // Ініціалізація Google Identity Services (чекаємо, поки підвантажиться скрипт)
   function initGSI() {
     if (!window.google?.accounts?.id) { setTimeout(initGSI, 150); return; }
@@ -1141,9 +1134,11 @@
       callback: handleGoogleCredential,
       auto_select: false
     });
-    // Рендеримо справжню кнопку Google в прихований контейнер —
-    // наша кастомна кнопка симулює клік по ній
-    google.accounts.id.renderButton(document.getElementById('gsiButtonContainer'), { type: 'standard' });
+    // Рендеримо справжню кнопку Google прозорою поверх нашої кастомної —
+    // реальний клік користувача потрапляє напряму в iframe Google
+    google.accounts.id.renderButton(document.getElementById('gsiButtonContainer'), {
+      type: 'standard', theme: 'outline', size: 'large', width: 272
+    });
   }
   initGSI();
 
