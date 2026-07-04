@@ -210,6 +210,28 @@
     background: var(--card-accent, var(--accent)); color: #fff; border-color: var(--card-accent, var(--accent));
   }
   .tool-open-btn svg { width: 12px; height: 12px; }
+
+  /* Зовнішні інструменти — візуально відокремлені від наших */
+  .tool-card-external { border-style: dashed; }
+  .tool-card-external-badge {
+    position: absolute; top: 14px; right: 14px;
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+    background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe;
+    padding: 3px 8px; border-radius: 20px;
+  }
+  .tool-card-external-badge svg { width: 9px; height: 9px; }
+  .tools-section-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 36px 0 20px;
+  }
+  .tools-section-divider span {
+    font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--muted); white-space: nowrap;
+  }
+  .tools-section-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
   .tool-file {
     font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600;
     color: var(--muted); background: var(--surface2); border: 1px solid var(--border);
@@ -407,42 +429,42 @@ const DEFAULT_TOOLS = {
   'vote': {
     order: 1, name: 'Голосування',
     desc: 'Інтерактивне голосування за кращу роботу. Картки команд, підрахунок голосів у реальному часі, феєрверки на фіналі.',
-    file: 'vote.html', tag: 'Клас', category: 'class',
+    type: 'internal', file: 'vote.html', tag: 'Клас', category: 'class',
     accent: '#4F6BF4', accentLight: 'rgba(79,107,244,.1)', accentBorder: '#d6dcfd',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>'
   },
   'class-manager': {
     order: 2, name: 'Менеджер класу',
     desc: 'Управління учнями, розклад, відвідуваність і оцінки. Все що потрібно вчителю в одному місці.',
-    file: 'class-manager.html', tag: 'Клас', category: 'class',
+    type: 'internal', file: 'class-manager.html', tag: 'Клас', category: 'class',
     accent: '#10b981', accentLight: 'rgba(16,185,129,.1)', accentBorder: '#a7f3d0',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
   },
   'screen-recorder': {
     order: 3, name: 'Запис екрану',
     desc: 'Записуй екран прямо з браузера. Підтримка мікрофону, камери та вибір ділянки. Без встановлення програм.',
-    file: 'screen-recorder.html', tag: 'Медіа', category: 'media',
+    type: 'internal', file: 'screen-recorder.html', tag: 'Медіа', category: 'media',
     accent: '#ef4444', accentLight: 'rgba(239,68,68,.1)', accentBorder: '#fecaca',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>'
   },
   'snap-editor': {
     order: 4, name: 'Редактор фото',
     desc: 'Швидке редагування зображень: кадрування, фільтри, текст, анотації. Ідеально для підготовки навчальних матеріалів.',
-    file: 'snap-editor.html', tag: 'Медіа', category: 'media',
+    type: 'internal', file: 'snap-editor.html', tag: 'Медіа', category: 'media',
     accent: '#f59e0b', accentLight: 'rgba(245,158,11,.1)', accentBorder: '#fde68a',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
   },
   'text-craft': {
     order: 5, name: 'Текстовий редактор',
     desc: 'Форматований текстовий редактор з темами та стилями. Для написання, редагування й оформлення учнівських робіт.',
-    file: 'text-craft.html', tag: 'Творчість', category: 'creative',
+    type: 'internal', file: 'text-craft.html', tag: 'Творчість', category: 'creative',
     accent: '#8b5cf6', accentLight: 'rgba(139,92,246,.1)', accentBorder: '#ddd6fe',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>'
   },
   'videocut': {
     order: 6, name: 'Відеоредактор',
     desc: 'Нарізка та монтаж відео прямо в браузері. Обрізай, об\u02BCєднуй кліпи і додавай субтитри без зайвих програм.',
-    file: 'videocut.html', tag: 'Медіа', category: 'media',
+    type: 'internal', file: 'videocut.html', tag: 'Медіа', category: 'media',
     accent: '#ec4899', accentLight: 'rgba(236,72,153,.1)', accentBorder: '#fbcfe8',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'
   }
@@ -450,7 +472,7 @@ const DEFAULT_TOOLS = {
 
 // Людські підписи для відомих категорій; невідомі категорії
 // (додані пізніше через базу) підписуються самі собою.
-const CATEGORY_LABELS = { media: 'Медіа', class: 'Клас', creative: 'Творчість' };
+const CATEGORY_LABELS = { media: 'Медіа', class: 'Клас', creative: 'Творчість', external: 'Зовнішні' };
 
 let TOOLS = [];
 let currentFilter = 'all';
@@ -508,6 +530,37 @@ function buildFilterTabs() {
   document.getElementById('filter-tabs').innerHTML = tabsHtml.join('');
 }
 
+function cardHtml(t, i) {
+  const isExternal = t.type === 'external';
+  const href = isExternal ? t.url : `tools/${t.file}`;
+  const linkAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
+  const externalIconPath = '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>';
+  return `
+    <a class="tool-card${isExternal ? ' tool-card-external' : ''}" href="${href}"${linkAttrs} style="
+      --card-accent: ${t.accent};
+      --card-accent-light: ${t.accentLight};
+      --card-accent-border: ${t.accentBorder};
+      animation-delay: ${i * 55}ms;
+    ">
+      ${isExternal ? `<span class="tool-card-external-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${externalIconPath}</svg>Зовнішній</span>` : ''}
+      <div class="tool-card-header">
+        <div class="tool-icon">${t.icon}</div>
+        <span class="tool-tag">${t.tag}</span>
+      </div>
+      <div class="tool-card-body">
+        <div class="tool-name">${t.name}</div>
+        <div class="tool-desc">${t.desc}</div>
+      </div>
+      <div class="tool-card-footer">
+        <div class="tool-open-btn">
+          ${isExternal ? 'Перейти' : 'Відкрити'}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${isExternal ? externalIconPath : '<path d="M5 12h14M12 5l7 7-7 7"/>'}</svg>
+        </div>
+      </div>
+    </a>
+  `;
+}
+
 function render() {
   const grid = document.getElementById('tools-grid');
   const emptyState = document.getElementById('empty-state');
@@ -528,29 +581,21 @@ function render() {
   }
   emptyState.classList.remove('visible');
 
-  grid.innerHTML = filtered.map((t, i) => `
-    <a class="tool-card" href="tools/${t.file}" style="
-      --card-accent: ${t.accent};
-      --card-accent-light: ${t.accentLight};
-      --card-accent-border: ${t.accentBorder};
-      animation-delay: ${i * 55}ms;
-    ">
-      <div class="tool-card-header">
-        <div class="tool-icon">${t.icon}</div>
-        <span class="tool-tag">${t.tag}</span>
-      </div>
-      <div class="tool-card-body">
-        <div class="tool-name">${t.name}</div>
-        <div class="tool-desc">${t.desc}</div>
-      </div>
-      <div class="tool-card-footer">
-        <div class="tool-open-btn">
-          Відкрити
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </div>
-      </div>
-    </a>
-  `).join('');
+  if (currentFilter === 'all') {
+    // На вкладці "Всі" розділяємо наші та зовнішні інструменти окремою секцією,
+    // щоб вони візуально не змішувались.
+    const internal = filtered.filter(t => t.type !== 'external');
+    const external = filtered.filter(t => t.type === 'external');
+
+    let html = internal.map((t, i) => cardHtml(t, i)).join('');
+    if (external.length > 0) {
+      html += `<div class="tools-section-divider" style="grid-column: 1 / -1;"><span>Зовнішні інструменти</span></div>`;
+      html += external.map((t, i) => cardHtml(t, i)).join('');
+    }
+    grid.innerHTML = html;
+  } else {
+    grid.innerHTML = filtered.map((t, i) => cardHtml(t, i)).join('');
+  }
 }
 
 function setFilter(filter, btn) {

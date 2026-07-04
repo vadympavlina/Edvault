@@ -150,6 +150,21 @@
   }
   .add-btn:hover { background: var(--accent-hover); }
   .add-btn svg { width: 16px; height: 16px; }
+  .add-btn.external { background: #0f172a; box-shadow: 0 2px 10px rgba(15,23,42,.24); }
+  .add-btn.external:hover { background: #1e293b; }
+
+  .admin-meta-external {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600;
+    color: #4338ca; background: #eef2ff; border: 1px solid #c7d2fe;
+    padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .admin-meta-external svg { width: 10px; height: 10px; }
+  .external-mode-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: #eef2ff; border: 1px solid #c7d2fe; color: #4338ca;
+    padding: 9px 12px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
+  }
+  .external-mode-badge svg { width: 15px; height: 15px; flex-shrink: 0; }
 
   /* =========== RULES NOTICE =========== */
   .rules-notice {
@@ -473,9 +488,13 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Додати базові інструменти
         </button>
-        <button class="add-btn" onclick="openModal()">
+        <button class="add-btn" onclick="openModal(null, 'internal')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Додати інструмент
+        </button>
+        <button class="add-btn external" onclick="openModal(null, 'external')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Додати зовнішній інструмент
         </button>
       </div>
     </div>
@@ -514,6 +533,11 @@
     <div class="modal-body">
       <div class="form-error" id="form-error"></div>
 
+      <div class="external-mode-badge" id="external-mode-badge" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Зовнішній інструмент — відкриється за посиланням у новій вкладці
+      </div>
+
       <div class="field-row">
         <div class="field">
           <label for="f-id">ID (ключ у базі)</label>
@@ -537,10 +561,17 @@
       </div>
 
       <div class="field-row">
-        <div class="field">
-          <label for="f-file">Файл</label>
-          <input type="text" id="f-file" placeholder="vote.html">
-          <span class="hint">Відкривається як tools/&lt;файл&gt;</span>
+        <div>
+          <div class="field" id="field-file-wrap">
+            <label for="f-file">Файл</label>
+            <input type="text" id="f-file" placeholder="vote.html">
+            <span class="hint">Відкривається як tools/&lt;файл&gt;</span>
+          </div>
+          <div class="field" id="field-url-wrap" style="display:none;">
+            <label for="f-url">Посилання (URL)</label>
+            <input type="url" id="f-url" placeholder="https://example.com" oninput="updatePreview()">
+            <span class="hint">Відкриється напряму за цим посиланням у новій вкладці</span>
+          </div>
         </div>
         <div class="field">
           <label for="f-tag">Тег на картці</label>
@@ -548,7 +579,7 @@
         </div>
       </div>
 
-      <div class="field">
+      <div class="field" id="field-category-wrap">
         <label for="f-category">Категорія (для фільтрів)</label>
         <div class="category-row">
           <select id="f-category" onchange="updatePreview()"></select>
@@ -630,7 +661,7 @@ const ALLOWED_EMAILS = [
   'vadym.pavlina@gmail.com'
 ];
 
-const CATEGORY_LABELS = { media: 'Медіа', class: 'Клас', creative: 'Творчість' };
+const CATEGORY_LABELS = { media: 'Медіа', class: 'Клас', creative: 'Творчість', external: 'Зовнішні' };
 
 // ── Готові іконки для вибору (замість вставки SVG-коду вручну) ──
 const ICON_LIBRARY = [
@@ -677,42 +708,42 @@ const DEFAULT_TOOLS = {
   'vote': {
     order: 1, name: 'Голосування',
     desc: 'Інтерактивне голосування за кращу роботу. Картки команд, підрахунок голосів у реальному часі, феєрверки на фіналі.',
-    file: 'vote.html', tag: 'Клас', category: 'class',
+    type: 'internal', file: 'vote.html', tag: 'Клас', category: 'class',
     accent: '#4F6BF4', accentLight: 'rgba(79,107,244,.1)', accentBorder: '#d6dcfd',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>'
   },
   'class-manager': {
     order: 2, name: 'Менеджер класу',
     desc: 'Управління учнями, розклад, відвідуваність і оцінки. Все що потрібно вчителю в одному місці.',
-    file: 'class-manager.html', tag: 'Клас', category: 'class',
+    type: 'internal', file: 'class-manager.html', tag: 'Клас', category: 'class',
     accent: '#10b981', accentLight: 'rgba(16,185,129,.1)', accentBorder: '#a7f3d0',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
   },
   'screen-recorder': {
     order: 3, name: 'Запис екрану',
     desc: 'Записуй екран прямо з браузера. Підтримка мікрофону, камери та вибір ділянки. Без встановлення програм.',
-    file: 'screen-recorder.html', tag: 'Медіа', category: 'media',
+    type: 'internal', file: 'screen-recorder.html', tag: 'Медіа', category: 'media',
     accent: '#ef4444', accentLight: 'rgba(239,68,68,.1)', accentBorder: '#fecaca',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>'
   },
   'snap-editor': {
     order: 4, name: 'Редактор фото',
     desc: 'Швидке редагування зображень: кадрування, фільтри, текст, анотації. Ідеально для підготовки навчальних матеріалів.',
-    file: 'snap-editor.html', tag: 'Медіа', category: 'media',
+    type: 'internal', file: 'snap-editor.html', tag: 'Медіа', category: 'media',
     accent: '#f59e0b', accentLight: 'rgba(245,158,11,.1)', accentBorder: '#fde68a',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
   },
   'text-craft': {
     order: 5, name: 'Текстовий редактор',
     desc: 'Форматований текстовий редактор з темами та стилями. Для написання, редагування й оформлення учнівських робіт.',
-    file: 'text-craft.html', tag: 'Творчість', category: 'creative',
+    type: 'internal', file: 'text-craft.html', tag: 'Творчість', category: 'creative',
     accent: '#8b5cf6', accentLight: 'rgba(139,92,246,.1)', accentBorder: '#ddd6fe',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>'
   },
   'videocut': {
     order: 6, name: 'Відеоредактор',
     desc: 'Нарізка та монтаж відео прямо в браузері. Обрізай, об\u02BCєднуй кліпи і додавай субтитри без зайвих програм.',
-    file: 'videocut.html', tag: 'Медіа', category: 'media',
+    type: 'internal', file: 'videocut.html', tag: 'Медіа', category: 'media',
     accent: '#ec4899', accentLight: 'rgba(236,72,153,.1)', accentBorder: '#fbcfe8',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'
   }
@@ -720,6 +751,8 @@ const DEFAULT_TOOLS = {
 
 let TOOLS = [];
 let editingId = null; // null = створення нового
+let currentToolType = 'internal'; // 'internal' | 'external' — режим поточної модалки
+const EXTERNAL_CATEGORY = 'external';
 
 // ── Екрани (loading / login / denied / app) ──
 function showGate(name) {
@@ -821,7 +854,9 @@ function renderGrid() {
         <div class="admin-card-name">${escapeHtml(t.name)}</div>
         <div class="admin-card-meta" style="margin-top:6px;">
           <span class="admin-meta-tag">${escapeHtml(t.tag || '')}</span>
-          <span class="admin-meta-file">${escapeHtml(t.file || '')}</span>
+          ${t.type === 'external'
+            ? `<span class="admin-meta-external"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Зовнішній</span>`
+            : `<span class="admin-meta-file">${escapeHtml(t.file || '')}</span>`}
         </div>
       </div>
       <div class="admin-card-desc">${escapeHtml(t.desc || '')}</div>
@@ -946,7 +981,7 @@ function syncIconSelectionHighlight(svg) {
 
 let idManuallyEdited = false;
 
-window.openModal = function (id) {
+window.openModal = function (id, forcedType) {
   editingId = id || null;
   idManuallyEdited = false;
   document.getElementById('form-error').classList.remove('visible');
@@ -954,30 +989,42 @@ window.openModal = function (id) {
 
   if (editingId) {
     const t = TOOLS.find(x => x.id === editingId);
-    document.getElementById('modal-title').textContent = 'Редагування інструменту';
+    currentToolType = t.type === 'external' ? 'external' : 'internal';
+    document.getElementById('modal-title').textContent = currentToolType === 'external' ? 'Редагування зовнішнього інструменту' : 'Редагування інструменту';
     document.getElementById('f-id').value = t.id;
     document.getElementById('f-id').disabled = true;
     document.getElementById('f-order').value = t.order ?? '';
     document.getElementById('f-name').value = t.name || '';
     document.getElementById('f-desc').value = t.desc || '';
     document.getElementById('f-file').value = t.file || '';
-    document.getElementById('f-tag').value = t.tag || '';
+    document.getElementById('f-url').value = t.url || '';
+    document.getElementById('f-tag').value = t.tag || (currentToolType === 'external' ? 'Зовнішній' : '');
     document.getElementById('f-icon').value = t.icon || '';
     setSelectValue('f-category', t.category || '');
     setAccentColor(t.accent || '#4F6BF4');
   } else {
-    document.getElementById('modal-title').textContent = 'Новий інструмент';
+    currentToolType = forcedType === 'external' ? 'external' : 'internal';
+    document.getElementById('modal-title').textContent = currentToolType === 'external' ? 'Новий зовнішній інструмент' : 'Новий інструмент';
     document.getElementById('f-id').value = '';
     document.getElementById('f-id').disabled = false;
     document.getElementById('f-order').value = (Math.max(0, ...TOOLS.map(t => t.order ?? 0)) + 1);
     document.getElementById('f-name').value = '';
     document.getElementById('f-desc').value = '';
     document.getElementById('f-file').value = '';
-    document.getElementById('f-tag').value = '';
+    document.getElementById('f-url').value = '';
+    document.getElementById('f-tag').value = currentToolType === 'external' ? 'Зовнішній' : '';
     document.getElementById('f-icon').value = ICON_LIBRARY[0].svg;
-    setSelectValue('f-category', TOOLS[0]?.category || '');
-    setAccentColor('#4F6BF4');
+    setSelectValue('f-category', currentToolType === 'external' ? EXTERNAL_CATEGORY : (TOOLS.find(t => t.category !== EXTERNAL_CATEGORY)?.category || ''));
+    setAccentColor(currentToolType === 'external' ? '#0f172a' : '#4F6BF4');
   }
+
+  // Перемикаємо видимість полів залежно від типу
+  const isExternal = currentToolType === 'external';
+  document.getElementById('external-mode-badge').style.display = isExternal ? 'flex' : 'none';
+  document.getElementById('field-file-wrap').style.display = isExternal ? 'none' : 'flex';
+  document.getElementById('field-url-wrap').style.display = isExternal ? 'flex' : 'none';
+  document.getElementById('field-category-wrap').style.display = isExternal ? 'none' : 'flex';
+
   document.getElementById('f-category-new').classList.remove('visible');
   document.getElementById('f-category-new').value = '';
   document.getElementById('icon-picker-panel').classList.remove('visible');
@@ -1013,7 +1060,7 @@ window.toggleNewCategory = function () {
 
 function populateCategorySelect() {
   const cats = [];
-  TOOLS.forEach(t => { if (t.category && !cats.includes(t.category)) cats.push(t.category); });
+  TOOLS.forEach(t => { if (t.category && t.category !== EXTERNAL_CATEGORY && !cats.includes(t.category)) cats.push(t.category); });
   const sel = document.getElementById('f-category');
   sel.innerHTML = cats.map(c => `<option value="${c}">${CATEGORY_LABELS[c] || c}</option>`).join('');
 }
@@ -1076,11 +1123,13 @@ window.saveTool = async function () {
   const name = document.getElementById('f-name').value.trim();
   const desc = document.getElementById('f-desc').value.trim();
   const file = document.getElementById('f-file').value.trim();
+  const url = document.getElementById('f-url').value.trim();
   const tag = document.getElementById('f-tag').value.trim();
   const order = Number(document.getElementById('f-order').value) || 0;
   const icon = document.getElementById('f-icon').value.trim();
-  const newCat = document.getElementById('f-category-new').value.trim();
-  const category = newCat || document.getElementById('f-category').value;
+  const isExternal = currentToolType === 'external';
+  const newCat = isExternal ? '' : document.getElementById('f-category-new').value.trim();
+  const category = isExternal ? EXTERNAL_CATEGORY : (newCat || document.getElementById('f-category').value);
   const accent = document.getElementById('f-accent').value.trim();
 
   const errEl = document.getElementById('form-error');
@@ -1088,13 +1137,19 @@ window.saveTool = async function () {
 
   if (!id || !/^[a-z0-9-]+$/.test(id)) return formError('ID може містити лише латинські літери, цифри та дефіси.');
   if (!name) return formError('Вкажи назву інструменту.');
-  if (!file) return formError('Вкажи файл (наприклад: vote.html).');
-  if (!category) return formError('Вибери або створи категорію.');
+  if (isExternal) {
+    if (!/^https?:\/\/.+/i.test(url)) return formError('Вкажи коректне посилання (має починатись з http:// або https://).');
+  } else {
+    if (!file) return formError('Вкажи файл (наприклад: vote.html).');
+    if (!category) return formError('Вибери або створи категорію.');
+  }
   if (!/^#([0-9a-f]{6})$/i.test(accent)) return formError('Колір має бути у форматі #RRGGBB.');
   if (!editingId && TOOLS.some(t => t.id === id)) return formError('Інструмент з таким ID вже існує.');
 
   const { accentLight, accentBorder } = deriveAccentShades(accent);
-  const payload = { name, desc, file, tag, category, order, accent, accentLight, accentBorder, icon };
+  const payload = isExternal
+    ? { name, desc, url, type: 'external', tag: tag || 'Зовнішній', category: EXTERNAL_CATEGORY, order, accent, accentLight, accentBorder, icon }
+    : { name, desc, file, type: 'internal', tag, category, order, accent, accentLight, accentBorder, icon };
 
   try {
     await set(ref(db, `tools/${id}`), payload);
