@@ -125,6 +125,35 @@
   .search-clear:hover { background: var(--border2); }
   .search-clear.visible { display: flex; }
 
+  /* =========== ОСТАННІ ВІДКРИТІ =========== */
+  .recent-section { margin-bottom: 22px; }
+  .recent-title {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+  }
+  .recent-title svg { width: 14px; height: 14px; }
+  .recent-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .recent-card {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 9px 14px 9px 10px; border-radius: 12px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: all .13s ease; box-shadow: var(--shadow-sm);
+  }
+  .recent-card:hover { border-color: var(--card-accent, var(--accent)); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .recent-card-icon {
+    width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--card-accent-light, var(--accent-light));
+    border: 1.5px solid var(--card-accent-border, #d6dcfd);
+  }
+  .recent-card-icon svg { width: 15px; height: 15px; color: var(--card-accent, var(--accent)); }
+  .recent-card-icon img { width: 16px; height: 16px; border-radius: 4px; object-fit: contain; }
+  .recent-card-name { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; }
+  .recent-card-ext { color: var(--muted); flex-shrink: 0; }
+  .recent-card-ext svg { width: 11px; height: 11px; }
+
   /* =========== FILTER TABS =========== */
   .filter-tabs {
     display: flex; align-items: center; gap: 6px;
@@ -348,6 +377,15 @@
 
 <div class="main">
 
+  <!-- ОСТАННІ ВІДКРИТІ (з localStorage, тільки на вкладці "Всі" без пошуку) -->
+  <div class="recent-section" id="recent-section" style="display:none;">
+    <div class="recent-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Останні відкриті
+    </div>
+    <div class="recent-row" id="recent-row"></div>
+  </div>
+
   <!-- FILTER TABS (рендеряться динамічно з категорій у БД) -->
   <div class="filter-tabs" id="filter-tabs"></div>
 
@@ -480,6 +518,25 @@ let currentFilter = 'all';
 let currentSearch = '';
 let currentView = 'grid';
 
+// ── "Останні відкриті" — зберігаємо id інструментів у localStorage ──
+const RECENT_KEY = 'ev_recent_tools';
+
+function getRecentIds() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; }
+  catch (e) { return []; }
+}
+
+function pushRecent(id) {
+  try {
+    let ids = getRecentIds().filter(x => x !== id);
+    ids.unshift(id);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(ids.slice(0, 6)));
+  } catch (e) { /* localStorage недоступний (приватний режим тощо) — просто ігноруємо */ }
+}
+
+// Викликається з onclick на картці — не заважає навігації за href
+window.trackRecent = function (id) { pushRecent(id); };
+
 async function loadTools() {
   setState('loading');
   try {
@@ -538,7 +595,7 @@ function cardHtml(t, i) {
   const linkAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
   const externalIconPath = '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>';
   return `
-    <a class="tool-card${isExternal ? ' tool-card-external' : ''}" href="${href}"${linkAttrs} style="
+    <a class="tool-card${isExternal ? ' tool-card-external' : ''}" href="${href}"${linkAttrs} onclick="trackRecent('${t.id}')" style="
       --card-accent: ${t.accent};
       --card-accent-light: ${t.accentLight};
       --card-accent-border: ${t.accentBorder};
@@ -563,7 +620,43 @@ function cardHtml(t, i) {
   `;
 }
 
+function recentCardHtml(t) {
+  const isExternal = t.type === 'external';
+  const href = isExternal ? t.url : `tools/${t.file}`;
+  const linkAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
+  return `
+    <a class="recent-card" href="${href}"${linkAttrs} onclick="trackRecent('${t.id}')" style="
+      --card-accent: ${t.accent};
+      --card-accent-light: ${t.accentLight};
+      --card-accent-border: ${t.accentBorder};
+    ">
+      <div class="recent-card-icon">${t.icon}</div>
+      <span class="recent-card-name">${t.name}</span>
+      ${isExternal ? `<span class="recent-card-ext"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>` : ''}
+    </a>
+  `;
+}
+
+function renderRecentSection() {
+  const section = document.getElementById('recent-section');
+  // Показуємо тільки на вкладці "Всі" без активного пошуку — це швидкий доступ,
+  // а не ще один список для гортання під час фільтрації.
+  if (currentFilter !== 'all' || currentSearch) { section.style.display = 'none'; return; }
+
+  const recentTools = getRecentIds()
+    .map(id => TOOLS.find(t => t.id === id))
+    .filter(Boolean)
+    .slice(0, 3);
+
+  if (recentTools.length === 0) { section.style.display = 'none'; return; }
+
+  document.getElementById('recent-row').innerHTML = recentTools.map(t => recentCardHtml(t)).join('');
+  section.style.display = 'block';
+}
+
 function render() {
+  renderRecentSection();
+
   const grid = document.getElementById('tools-grid');
   const emptyState = document.getElementById('empty-state');
 
