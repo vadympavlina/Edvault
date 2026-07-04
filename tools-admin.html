@@ -200,6 +200,7 @@
     border: 1.5px solid var(--card-accent-border, #d6dcfd);
   }
   .admin-icon svg { width: 20px; height: 20px; color: var(--card-accent, var(--accent)); }
+  .admin-icon img { width: 22px; height: 22px; border-radius: 5px; object-fit: contain; }
   .admin-order-badge {
     font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700;
     color: var(--muted); background: var(--surface2); border: 1px solid var(--border);
@@ -307,6 +308,7 @@
     background: var(--accent-light); border: 1.5px solid #d6dcfd; color: var(--accent);
   }
   .icon-picker-preview svg { width: 17px; height: 17px; }
+  .icon-picker-preview img { width: 18px; height: 18px; border-radius: 4px; object-fit: contain; }
   .icon-picker-trigger span { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); }
   .icon-picker-trigger .chevron { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform .15s ease; }
   .icon-picker-trigger.open .chevron { transform: rotate(180deg); }
@@ -363,6 +365,7 @@
     background: var(--pv-light, var(--accent-light)); border: 1.5px solid var(--pv-border, #d6dcfd);
   }
   .preview-icon svg { width: 18px; height: 18px; color: var(--pv-accent, var(--accent)); }
+  .preview-icon img { width: 20px; height: 20px; border-radius: 5px; object-fit: contain; }
   .preview-tag {
     font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
     background: var(--pv-light, var(--accent-light)); color: var(--pv-accent, var(--accent));
@@ -569,7 +572,8 @@
           </div>
           <div class="field" id="field-url-wrap" style="display:none;">
             <label for="f-url">Посилання (URL)</label>
-            <input type="url" id="f-url" placeholder="https://example.com" oninput="updatePreview()">
+            <input type="url" id="f-url" placeholder="https://example.com" oninput="onExternalUrlInput()">
+            <span class="hint" id="favicon-hint" style="display:none;">Іконку підхопили автоматично з сайту — можеш змінити нижче.</span>
             <span class="hint">Відкриється напряму за цим посиланням у новій вкладці</span>
           </div>
         </div>
@@ -933,6 +937,9 @@ window.seedMissingDefaults = async function () {
 };
 
 // ── Іконки: вибір з галереї + опційний ручний SVG ──
+let externalIconManuallyEdited = false; // true, якщо юзер сам обрав/вписав іконку для зовнішнього інструмента —
+                                          // тоді автопідвантаження фавіконки по URL більше не перезаписує її
+
 function renderIconGrid() {
   const grid = document.getElementById('icon-picker-grid');
   grid.innerHTML = ICON_LIBRARY.map(ic => `
@@ -948,6 +955,7 @@ window.toggleIconPicker = function () {
 window.selectIcon = function (key) {
   const found = ICON_LIBRARY.find(ic => ic.key === key);
   if (!found) return;
+  externalIconManuallyEdited = true;
   document.getElementById('f-icon').value = found.svg;
   document.getElementById('icon-picker-label').textContent = found.label;
   syncIconSelectionHighlight(found.svg);
@@ -961,7 +969,29 @@ window.toggleAdvancedIcon = function () {
 };
 
 window.onIconTextareaInput = function () {
+  externalIconManuallyEdited = true;
   syncIconSelectionHighlight(document.getElementById('f-icon').value.trim());
+  updatePreview();
+};
+
+// Автопідвантаження фавіконки сайту, щойно введено (валідний) URL —
+// поки юзер сам не втрутився у вибір іконки. Сервіс Google Favicons сам
+// віддає дефолтну іконку-глобус, якщо в сайту своєї немає — окремий
+// fallback тут не потрібен.
+window.onExternalUrlInput = function () {
+  updatePreview();
+  const hintEl = document.getElementById('favicon-hint');
+  if (currentToolType !== 'external' || externalIconManuallyEdited) return;
+
+  const raw = document.getElementById('f-url').value.trim();
+  let domain = null;
+  try { domain = new URL(raw).hostname; } catch (e) { /* URL ще не повний — чекаємо */ }
+  if (!domain) { hintEl.style.display = 'none'; return; }
+
+  const faviconHtml = `<img src="https://www.google.com/s2/favicons?sz=128&domain=${domain}" alt="">`;
+  document.getElementById('f-icon').value = faviconHtml;
+  syncIconSelectionHighlight(faviconHtml);
+  hintEl.style.display = 'block';
   updatePreview();
 };
 
@@ -990,6 +1020,9 @@ window.openModal = function (id, forcedType) {
   if (editingId) {
     const t = TOOLS.find(x => x.id === editingId);
     currentToolType = t.type === 'external' ? 'external' : 'internal';
+    // Якщо іконка виглядає як автопідвантажена фавіконка — дозволяємо оновлювати
+    // її далі при зміні URL. Якщо іконка кастомна — не перезаписуємо без питання.
+    externalIconManuallyEdited = !(t.icon || '').includes('s2/favicons');
     document.getElementById('modal-title').textContent = currentToolType === 'external' ? 'Редагування зовнішнього інструменту' : 'Редагування інструменту';
     document.getElementById('f-id').value = t.id;
     document.getElementById('f-id').disabled = true;
@@ -1004,6 +1037,7 @@ window.openModal = function (id, forcedType) {
     setAccentColor(t.accent || '#4F6BF4');
   } else {
     currentToolType = forcedType === 'external' ? 'external' : 'internal';
+    externalIconManuallyEdited = false;
     document.getElementById('modal-title').textContent = currentToolType === 'external' ? 'Новий зовнішній інструмент' : 'Новий інструмент';
     document.getElementById('f-id').value = '';
     document.getElementById('f-id').disabled = false;
@@ -1030,6 +1064,7 @@ window.openModal = function (id, forcedType) {
   document.getElementById('icon-picker-panel').classList.remove('visible');
   document.getElementById('icon-picker-trigger').classList.remove('open');
   document.getElementById('f-icon').classList.remove('visible');
+  document.getElementById('favicon-hint').style.display = (isExternal && document.getElementById('f-icon').value.includes('s2/favicons')) ? 'block' : 'none';
   syncIconSelectionHighlight(document.getElementById('f-icon').value.trim());
   updatePreview();
   document.getElementById('modal-overlay').classList.add('visible');
