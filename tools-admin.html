@@ -1117,6 +1117,7 @@ function updatePreview() {
   document.getElementById('preview-name').textContent = document.getElementById('f-name').value || 'Назва інструменту';
   document.getElementById('preview-desc').textContent = document.getElementById('f-desc').value || "Опис з'явиться тут у міру заповнення форми.";
 }
+window.updatePreview = updatePreview;
 
 window.saveTool = async function () {
   const id = document.getElementById('f-id').value.trim();

@@ -513,10 +513,11 @@ function setState(state) {
 function buildFilterTabs() {
   const cats = [];
   TOOLS.forEach(t => { if (t.category && !cats.includes(t.category)) cats.push(t.category); });
+  const internalCount = TOOLS.filter(t => t.category !== 'external').length;
 
   const tabsHtml = [`
     <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">
-      Всі <span class="count" id="count-all">${TOOLS.length}</span>
+      Всі <span class="count" id="count-all">${internalCount}</span>
     </button>`
   ].concat(cats.map(cat => {
     const count = TOOLS.filter(t => t.category === cat).length;
@@ -545,7 +546,7 @@ function cardHtml(t, i) {
       ${isExternal ? `<span class="tool-card-external-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${externalIconPath}</svg>Зовнішній</span>` : ''}
       <div class="tool-card-header">
         <div class="tool-icon">${t.icon}</div>
-        <span class="tool-tag">${t.tag}</span>
+        ${isExternal ? '' : `<span class="tool-tag">${t.tag}</span>`}
       </div>
       <div class="tool-card-body">
         <div class="tool-name">${t.name}</div>
@@ -566,7 +567,11 @@ function render() {
   const emptyState = document.getElementById('empty-state');
 
   let filtered = TOOLS.filter(t => {
-    const matchFilter = currentFilter === 'all' || t.category === currentFilter;
+    // На вкладці "Всі" зовнішні інструменти не показуємо —
+    // їх видно лише на окремій вкладці "Зовнішні".
+    const matchFilter = currentFilter === 'all'
+      ? t.category !== 'external'
+      : t.category === currentFilter;
     const q = currentSearch.toLowerCase();
     const matchSearch = !q || t.name.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q) || (t.tag || '').toLowerCase().includes(q);
     return matchFilter && matchSearch;
@@ -581,21 +586,7 @@ function render() {
   }
   emptyState.classList.remove('visible');
 
-  if (currentFilter === 'all') {
-    // На вкладці "Всі" розділяємо наші та зовнішні інструменти окремою секцією,
-    // щоб вони візуально не змішувались.
-    const internal = filtered.filter(t => t.type !== 'external');
-    const external = filtered.filter(t => t.type === 'external');
-
-    let html = internal.map((t, i) => cardHtml(t, i)).join('');
-    if (external.length > 0) {
-      html += `<div class="tools-section-divider" style="grid-column: 1 / -1;"><span>Зовнішні інструменти</span></div>`;
-      html += external.map((t, i) => cardHtml(t, i)).join('');
-    }
-    grid.innerHTML = html;
-  } else {
-    grid.innerHTML = filtered.map((t, i) => cardHtml(t, i)).join('');
-  }
+  grid.innerHTML = filtered.map((t, i) => cardHtml(t, i)).join('');
 }
 
 function setFilter(filter, btn) {
