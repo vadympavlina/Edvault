@@ -220,6 +220,50 @@
       .lesson-panels { padding: 16px; gap: 20px; }
       .lesson-nav { padding: 12px 16px; }
     }
+
+    /* ── Icon-only topbar buttons (focus / fullscreen) ── */
+    .btn-icon {
+      display: flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; padding: 0; flex-shrink: 0;
+      border-radius: var(--r); border: 1px solid transparent;
+      background: transparent; color: var(--muted);
+      cursor: pointer; transition: background .12s, color .12s, border-color .12s;
+    }
+    .btn-icon:hover { background: var(--accent-bg); color: var(--accent); }
+    .btn-icon svg { width: 17px; height: 17px; }
+    .btn-icon.active { color: var(--accent); background: var(--accent-bg); border-color: var(--accent-lt); }
+
+    /* ── Focus / fullscreen modes: hide top & bottom navigation ── */
+    body.mode-focus .topbar,
+    body.mode-focus .statusbar,
+    body.mode-focus .lesson-nav,
+    body.mode-focus .page-tabs-bar,
+    body.mode-fullscreen .topbar,
+    body.mode-fullscreen .statusbar,
+    body.mode-fullscreen .lesson-nav,
+    body.mode-fullscreen .page-tabs-bar {
+      display: none !important;
+    }
+    body.mode-focus .lesson-layout,
+    body.mode-fullscreen .lesson-layout {
+      height: 100vh !important;
+    }
+
+    /* ── Floating exit button (shown only while nav is hidden) ── */
+    .focus-exit-btn {
+      display: none;
+      position: fixed; top: 14px; right: 14px; z-index: 999;
+      width: 36px; height: 36px; border-radius: 50%;
+      align-items: center; justify-content: center;
+      background: var(--surface); border: 1px solid var(--border2);
+      color: var(--muted); cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,.1);
+      transition: color .12s, border-color .12s;
+    }
+    .focus-exit-btn svg { width: 16px; height: 16px; }
+    .focus-exit-btn:hover { color: var(--accent); border-color: var(--accent-lt); }
+    body.mode-focus .focus-exit-btn,
+    body.mode-fullscreen .focus-exit-btn { display: flex; }
   </style>
 </head>
 <body>
@@ -242,6 +286,12 @@
     <span class="breadcrumb-cur" id="bcTitle">Завантаження...</span>
   </nav>
   <div class="topbar-actions">
+    <button class="btn-icon" id="btnFocus" title="Режим фокусу (сховати навігацію)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <button class="btn-icon" id="btnFullscreen" title="На весь екран">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+    </button>
     <button class="btn btn-ghost" id="btnDownload" style="display:none" title="Завантажити урок">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <span class="btn-label">Завантажити</span>
@@ -283,6 +333,11 @@
   </main>
 </div>
 
+<!-- ══ FOCUS/FULLSCREEN EXIT (floating, visible only when nav hidden) ══ -->
+<button class="focus-exit-btn" id="btnExitFocus" title="Показати навігацію (Esc)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+</button>
+
 <!-- ══ STATUS BAR ════════════════════════════════════════════ -->
 <div class="statusbar">
   <span id="subjBadge" style="color:var(--muted)"></span>
@@ -297,6 +352,54 @@
   const sbTimeEl = document.getElementById('sbTime');
   const tick = () => sbTimeEl.textContent = new Date().toLocaleTimeString('uk-UA');
   tick(); setInterval(tick, 1000);
+
+  // ── Focus mode (eye button) — hides top/bottom navigation ──
+  const ICON_EYE     = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  const ICON_EYE_OFF = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+  const ICON_MAXIMIZE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>`;
+  const ICON_MINIMIZE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>`;
+
+  const btnFocus      = document.getElementById('btnFocus');
+  const btnFullscreen = document.getElementById('btnFullscreen');
+  const btnExitFocus  = document.getElementById('btnExitFocus');
+
+  btnFocus?.addEventListener('click', () => {
+    const active = document.body.classList.toggle('mode-focus');
+    btnFocus.classList.toggle('active', active);
+    btnFocus.innerHTML = active ? ICON_EYE_OFF : ICON_EYE;
+    btnFocus.title = active ? 'Показати навігацію' : 'Режим фокусу (сховати навігацію)';
+  });
+
+  btnFullscreen?.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.();
+    }
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    const active = !!document.fullscreenElement;
+    document.body.classList.toggle('mode-fullscreen', active);
+    btnFullscreen.classList.toggle('active', active);
+    btnFullscreen.innerHTML = active ? ICON_MINIMIZE : ICON_MAXIMIZE;
+    btnFullscreen.title = active ? 'Вийти з повноекранного режиму' : 'На весь екран';
+  });
+
+  btnExitFocus?.addEventListener('click', () => {
+    document.body.classList.remove('mode-focus');
+    btnFocus?.classList.remove('active');
+    if (btnFocus) { btnFocus.innerHTML = ICON_EYE; btnFocus.title = 'Режим фокусу (сховати навігацію)'; }
+    if (document.fullscreenElement) document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.body.classList.contains('mode-focus')) {
+      document.body.classList.remove('mode-focus');
+      btnFocus?.classList.remove('active');
+      if (btnFocus) { btnFocus.innerHTML = ICON_EYE; btnFocus.title = 'Режим фокусу (сховати навігацію)'; }
+    }
+  });
 
   // ── Parse URL params ───────────────────────────────────────
   const params    = new URLSearchParams(location.search);
