@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
 <script>
   // Apply saved theme before first paint to avoid a light-mode flash
   try{
@@ -54,6 +55,23 @@
   }
   .CodeMirror-hint{ padding: 5px 10px !important; border-radius: 6px !important; color: var(--text) !important; }
   li.CodeMirror-hint-active{ background: var(--accent) !important; color: #fff !important; }
+
+  .CodeMirror-matchingtag{
+    background: var(--accent-light) !important;
+    border-bottom: 1.5px solid var(--accent) !important;
+  }
+
+  .CodeMirror-dialog{
+    background: var(--surface2) !important; color: var(--text) !important;
+    border-bottom: 1px solid var(--border) !important;
+    font-family: 'JetBrains Mono', monospace !important; font-size: 12.5px !important;
+    padding: 8px 10px !important;
+  }
+  .CodeMirror-dialog input{
+    background: var(--surface) !important; color: var(--text) !important;
+    border: 1.5px solid var(--border2) !important; border-radius: 6px !important;
+    padding: 3px 8px !important; font-family: inherit !important;
+  }
 
   html[data-theme="dark"] {
     --bg: #14171c;
@@ -136,6 +154,12 @@
   }
   .name-input:focus{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,107,244,.1); }
 
+  .unsaved-dot{
+    width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex-shrink: 0;
+    animation: pulse-dot 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse-dot{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+
   .retry-btn {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 9px 18px; border-radius: 10px; border: none;
@@ -145,6 +169,7 @@
   }
   .retry-btn:hover { background: var(--accent-hover); }
   .retry-btn svg{ width:14px; height:14px; }
+  .retry-btn.saved-flash{ background: var(--success) !important; }
 
   .view-btn {
     width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--border);
@@ -442,6 +467,7 @@
         Каталог
       </button>
       <input type="text" id="project-name" class="name-input" placeholder="Назва проєкту">
+      <span class="unsaved-dot hidden" id="unsaved-dot" title="Є незбережені зміни"></span>
     </div>
     <div class="topbar-actions">
       <div class="settings-wrap" id="settings-wrap">
@@ -507,6 +533,14 @@
           </div>
 
           <div class="settings-section">
+            <button class="settings-opt-btn settings-opt-full" id="import-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Імпортувати файли
+            </button>
+            <input type="file" id="import-input" class="hidden" accept=".html,.htm,.css,.js" multiple>
+          </div>
+
+          <div class="settings-section">
             <button class="settings-opt-btn settings-opt-full" id="download-zip-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
               Завантажити .zip
@@ -518,7 +552,7 @@
 
       <button class="retry-btn" id="save-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Зберегти
+        <span class="save-label">Зберегти</span>
       </button>
     </div>
   </div>
@@ -578,6 +612,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/xml-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchtags.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/xml-hint.min.js"></script>
@@ -585,6 +622,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/css-hint.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/javascript-hint.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/anyword-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script>
@@ -612,6 +652,7 @@
   // ---------- Editor elements ----------
   const backBtn = document.getElementById('back-btn');
   const nameInput = document.getElementById('project-name');
+  const unsavedDot = document.getElementById('unsaved-dot');
   const saveBtn = document.getElementById('save-btn');
   const editorBody = document.getElementById('editor-body');
   const resizer = document.getElementById('resizer');
@@ -642,6 +683,7 @@
   let paneEls;
   let paneFlexBasis = { html:null, css:null, js:null };
   let fontSize = 13;
+  let isDirty = false;
 
   // ---------- Storage ----------
   function loadProjects(){
@@ -716,12 +758,17 @@
       indentUnit:2,
       viewportMargin:Infinity
     };
-    cmHtml = CodeMirror.fromTextArea(document.getElementById('cm-html'), {...cmOptions, mode:'htmlmixed',
-      extraKeys:{ 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.html, { completeSingle:false }) }});
+    const searchKeys = {
+      'Ctrl-F': 'findPersistent', 'Cmd-F': 'findPersistent',
+      'Ctrl-H': 'replace', 'Cmd-Alt-F': 'replace',
+      'Shift-Ctrl-F': 'replaceAll', 'Shift-Cmd-Alt-F': 'replaceAll'
+    };
+    cmHtml = CodeMirror.fromTextArea(document.getElementById('cm-html'), {...cmOptions, mode:'htmlmixed', autoCloseTags:true, matchTags:{bothTags:true},
+      extraKeys:{ ...searchKeys, 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.html, { completeSingle:false }) }});
     cmCss  = CodeMirror.fromTextArea(document.getElementById('cm-css'),  {...cmOptions, mode:'css',
-      extraKeys:{ 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.css, { completeSingle:false }) }});
+      extraKeys:{ ...searchKeys, 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.css, { completeSingle:false }) }});
     cmJs   = CodeMirror.fromTextArea(document.getElementById('cm-js'),   {...cmOptions, mode:'javascript',
-      extraKeys:{ 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.javascript, { completeSingle:false }) }});
+      extraKeys:{ ...searchKeys, 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.javascript, { completeSingle:false }) }});
     cmByLang = { html: cmHtml, css: cmCss, js: cmJs };
 
     paneEls = {
@@ -732,6 +779,8 @@
 
     [cmHtml, cmCss, cmJs].forEach(cm => {
       cm.on('change', () => {
+        isDirty = true;
+        updateDirtyIndicator();
         clearTimeout(previewTimer);
         previewTimer = setTimeout(updatePreview, 350);
       });
@@ -1025,6 +1074,10 @@
   window.addEventListener('touchend', dragEnd);
 
   // ---------- Editor open/close ----------
+  function updateDirtyIndicator(){
+    unsavedDot.classList.toggle('hidden', !isDirty);
+  }
+
   function openEditor(project){
     if(!cmHtml) initEditors();
 
@@ -1055,6 +1108,10 @@
     viewCatalog.classList.add('hidden');
     viewEditor.classList.remove('hidden');
 
+    // setValue() above triggers 'change' (marks dirty) — clear it now that loading is done
+    isDirty = false;
+    updateDirtyIndicator();
+
     requestAnimationFrame(() => {
       refreshAll();
       updatePreview();
@@ -1067,11 +1124,14 @@
     viewCatalog.classList.remove('hidden');
     renderCatalog();
   }
-  backBtn.addEventListener('click', closeEditor);
+  backBtn.addEventListener('click', () => {
+    if(isDirty && !confirm('Є незбережені зміни. Вийти без збереження?')) return;
+    closeEditor();
+  });
 
-  saveBtn.addEventListener('click', () => {
+  function saveProject(){
     const name = nameInput.value.trim();
-    if(!name){ alert('Введи назву проєкту'); nameInput.focus(); return; }
+    if(!name){ alert('Введи назву проєкту'); nameInput.focus(); return false; }
 
     const projects = loadProjects();
     const data = { name, html: cmHtml.getValue(), css: cmCss.getValue(), js: cmJs.getValue(), updated: Date.now() };
@@ -1083,10 +1143,67 @@
         delete projects[idx].code;
       }
     } else {
-      projects.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,7), created: Date.now(), ...data });
+      const newId = Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+      projects.push({ id: newId, created: Date.now(), ...data });
+      currentEditId = newId;
     }
     saveProjects(projects);
-    closeEditor();
+    isDirty = false;
+    updateDirtyIndicator();
+    flashSaved();
+    return true;
+  }
+
+  function flashSaved(){
+    const label = saveBtn.querySelector('.save-label');
+    const original = label.textContent;
+    label.textContent = 'Збережено';
+    saveBtn.classList.add('saved-flash');
+    clearTimeout(flashSaved._t);
+    flashSaved._t = setTimeout(() => {
+      label.textContent = original;
+      saveBtn.classList.remove('saved-flash');
+    }, 1300);
+  }
+
+  saveBtn.addEventListener('click', saveProject);
+
+  nameInput.addEventListener('input', () => { isDirty = true; updateDirtyIndicator(); });
+
+  window.addEventListener('beforeunload', (e) => {
+    if(!viewEditor.classList.contains('hidden') && isDirty){
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !viewEditor.classList.contains('hidden')){
+      e.preventDefault();
+      saveProject();
+    }
+  });
+
+  // ---------- Import files ----------
+  const importBtn = document.getElementById('import-btn');
+  const importInput = document.getElementById('import-input');
+  importBtn.addEventListener('click', () => importInput.click());
+  importInput.addEventListener('change', async () => {
+    const files = Array.from(importInput.files || []);
+    if(!files.length) return;
+    const imported = [];
+    for(const file of files){
+      const ext = file.name.split('.').pop().toLowerCase();
+      const text = await file.text();
+      if(ext === 'html' || ext === 'htm'){ cmHtml.setValue(text); imported.push('HTML'); }
+      else if(ext === 'css'){ cmCss.setValue(text); imported.push('CSS'); }
+      else if(ext === 'js'){ cmJs.setValue(text); imported.push('JS'); }
+    }
+    importInput.value = '';
+    settingsPanel.classList.add('hidden');
+    settingsBtn.classList.remove('active');
+    updatePreview();
+    if(!imported.length) alert('Підтримуються тільки файли .html, .css, .js');
   });
 
   document.addEventListener('keydown', (e) => {
@@ -1097,6 +1214,7 @@
     } else if(viewEditor.classList.contains('preview-fullscreen')){
       fullscreenBtn.click();
     } else {
+      if(isDirty && !confirm('Є незбережені зміни. Вийти без збереження?')) return;
       closeEditor();
     }
   });
