@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
 <script>
   // Apply saved theme before first paint to avoid a light-mode flash
   try{
@@ -60,6 +61,18 @@
     background: var(--accent-light) !important;
     border-bottom: 1.5px solid var(--accent) !important;
   }
+
+  .CodeMirror-dialog{
+    background: var(--surface2) !important; border-bottom: 1.5px solid var(--border) !important;
+    color: var(--text) !important; font-family: 'JetBrains Mono', monospace !important; font-size: 12.5px !important;
+    padding: 8px 12px !important;
+  }
+  .CodeMirror-dialog input{
+    background: var(--surface) !important; border: 1.5px solid var(--border2) !important;
+    border-radius: 6px !important; color: var(--text) !important; padding: 4px 8px !important;
+    font-family: inherit !important;
+  }
+  .CodeMirror-search-hint{ display: none; }
 
   .CodeMirror-dialog{
     background: var(--surface2) !important; color: var(--text) !important;
@@ -410,6 +423,35 @@
 
   #preview-frame{ flex: 1; width: 100%; border: none; background: #fff; }
 
+  .icon-btn{ position: relative; }
+  .console-badge{
+    position: absolute; top: 1px; right: 1px; min-width: 14px; height: 14px; padding: 0 3px;
+    border-radius: 7px; background: var(--danger); color: #fff; font-size: 9px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; line-height: 1; font-family: 'JetBrains Mono', monospace;
+  }
+  #console-toggle-btn.active{ color: var(--accent); background: var(--accent-light); }
+
+  .console-panel{
+    flex-shrink: 0; height: 160px; display: flex; flex-direction: column;
+    border-top: 1.5px solid var(--border); background: var(--surface2);
+  }
+  .console-toolbar{
+    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 12px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); border-bottom: 1px solid var(--border);
+  }
+  .console-clear-btn{ background: none; border: none; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; text-transform: none; letter-spacing: 0; }
+  .console-clear-btn:hover{ color: var(--text); }
+  .console-body{ flex: 1; overflow-y: auto; padding: 4px 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .console-line{
+    padding: 4px 12px; border-bottom: 1px solid var(--border); white-space: pre-wrap; word-break: break-word;
+    color: var(--text2); line-height: 1.5;
+  }
+  .console-line.console-error{ color: var(--danger); background: rgba(239,68,68,.06); }
+  .console-line.console-warn{ color: var(--warn); background: rgba(245,158,11,.06); }
+  .console-line.console-info{ color: var(--accent); }
+  .console-empty{ padding: 14px 12px; color: var(--muted); font-size: 12px; text-align: center; }
+
   @media (max-width: 900px){
     #editor-body[data-layout="split"],
     #editor-body[data-layout="split-rev"]{ flex-direction: column; }
@@ -596,11 +638,22 @@
     <div class="preview-zone pane-preview">
       <div class="pane-head">
         <span class="dot"></span>Перегляд<span class="spacer"></span>
+        <button class="icon-btn" id="console-toggle-btn" title="Консоль">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span class="console-badge hidden" id="console-badge">0</span>
+        </button>
         <button class="icon-btn" id="fullscreen-btn" title="На весь екран">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
         </button>
       </div>
       <iframe id="preview-frame" sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals allow-popups allow-downloads"></iframe>
+      <div class="console-panel hidden" id="console-panel">
+        <div class="console-toolbar">
+          <span>Консоль</span>
+          <button class="console-clear-btn" id="console-clear-btn">Очистити</button>
+        </div>
+        <div class="console-body" id="console-body"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -615,6 +668,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/xml-fold.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchtags.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/xml-hint.min.js"></script>
@@ -638,6 +694,137 @@
     { accent:'#ef4444', accentLight:'rgba(239,68,68,.1)',   accentBorder:'#fecaca' }
   ];
   const CODE_ICON = '<path d="m10 8-4 4 4 4M14 8l4 4-4 4"/>';
+
+  // ---------- Context-aware CSS autocomplete ----------
+  // The stock CodeMirror css-hint addon mixes every property AND every value
+  // into one flat list regardless of context (e.g. typing "color:" also
+  // suggests "center"). This replaces it with a hinter that knows whether
+  // the cursor is in property position or value position, and — for values —
+  // only offers what's valid for that specific property.
+  const CSS_PROPERTIES = ['align-items','align-content','align-self','background','background-color','background-image',
+    'background-position','background-repeat','background-size','border','border-radius','border-color','border-width',
+    'border-style','border-top','border-right','border-bottom','border-left','box-shadow','box-sizing','color','cursor',
+    'display','flex','flex-direction','flex-wrap','flex-grow','flex-shrink','flex-basis','font-family','font-size',
+    'font-weight','font-style','gap','row-gap','column-gap','grid-template-columns','grid-template-rows','grid-gap',
+    'height','width','max-width','max-height','min-width','min-height','justify-content','justify-items','left','top',
+    'right','bottom','line-height','letter-spacing','margin','margin-top','margin-right','margin-bottom','margin-left',
+    'opacity','outline','overflow','overflow-x','overflow-y','padding','padding-top','padding-right','padding-bottom',
+    'padding-left','position','text-align','text-decoration','text-transform','text-shadow','transform','transition',
+    'animation','white-space','visibility','z-index','pointer-events','user-select','content','object-fit'];
+
+  const CSS_VALUES = {
+    display: ['block','inline','inline-block','flex','inline-flex','grid','inline-grid','none','contents'],
+    position: ['static','relative','absolute','fixed','sticky'],
+    'text-align': ['left','right','center','justify'],
+    'text-transform': ['none','uppercase','lowercase','capitalize'],
+    'text-decoration': ['none','underline','overline','line-through'],
+    'flex-direction': ['row','row-reverse','column','column-reverse'],
+    'flex-wrap': ['nowrap','wrap','wrap-reverse'],
+    'justify-content': ['flex-start','flex-end','center','space-between','space-around','space-evenly'],
+    'justify-items': ['start','end','center','stretch'],
+    'align-items': ['flex-start','flex-end','center','stretch','baseline'],
+    'align-content': ['flex-start','flex-end','center','stretch','space-between','space-around'],
+    'align-self': ['auto','flex-start','flex-end','center','stretch','baseline'],
+    'font-weight': ['normal','bold','bolder','lighter','100','200','300','400','500','600','700','800','900'],
+    'font-style': ['normal','italic','oblique'],
+    cursor: ['pointer','default','move','not-allowed','grab','grabbing','text','crosshair','help','zoom-in','wait'],
+    overflow: ['visible','hidden','scroll','auto'],
+    'overflow-x': ['visible','hidden','scroll','auto'],
+    'overflow-y': ['visible','hidden','scroll','auto'],
+    'box-sizing': ['content-box','border-box'],
+    'white-space': ['normal','nowrap','pre','pre-wrap','pre-line'],
+    visibility: ['visible','hidden','collapse'],
+    'pointer-events': ['auto','none'],
+    'object-fit': ['fill','contain','cover','none','scale-down'],
+    'background-repeat': ['repeat','no-repeat','repeat-x','repeat-y','space','round'],
+    'background-size': ['auto','cover','contain'],
+    'background-position': ['left','center','right','top','bottom'],
+    'border-style': ['none','solid','dashed','dotted','double','groove','ridge'],
+    'user-select': ['none','auto','text','all']
+  };
+
+  const CSS_COLOR_PROPS = ['color','background-color','border-color','outline-color','background','border','text-decoration-color','box-shadow'];
+  const CSS_COLORS = ['transparent','currentColor','black','white','red','orange','yellow','green','blue','indigo',
+    'violet','gray','grey','pink','purple','brown','cyan','magenta','lime','navy','teal','maroon','olive','silver',
+    'gold','coral','salmon','tomato','crimson','hotpink','deeppink','orchid','plum','lavender','turquoise','skyblue',
+    'steelblue','royalblue','dodgerblue','forestgreen','seagreen','mediumseagreen','springgreen','yellowgreen','khaki',
+    'beige','ivory','wheat','tan','chocolate','sienna','peru','firebrick','darkred','darkgreen','darkblue','darkorange',
+    'darkviolet','darkcyan','darkgray','lightgray','lightblue','lightgreen','lightyellow','lightpink'];
+
+  const CSS_GLOBAL_VALUES = ['inherit','initial','unset','revert'];
+
+  // Curated Google Fonts offered directly inside "font-family:" autocomplete.
+  // Picking one both inserts the CSS value AND wires up the @import (see 'pick' handling below).
+  const GOOGLE_FONTS = {
+    'Press Start 2P':'cursive', 'VT323':'monospace', 'Silkscreen':'monospace', 'Pixelify Sans':'sans-serif',
+    'Orbitron':'sans-serif', 'Bangers':'cursive', 'Fredoka':'sans-serif', 'Baloo 2':'sans-serif',
+    'Comic Neue':'cursive', 'Righteous':'sans-serif', 'Permanent Marker':'cursive', 'Caveat':'cursive',
+    'Inter':'sans-serif', 'Roboto':'sans-serif', 'Open Sans':'sans-serif', 'Montserrat':'sans-serif',
+    'Poppins':'sans-serif', 'Nunito':'sans-serif', 'Lato':'sans-serif', 'Bebas Neue':'sans-serif',
+    'Playfair Display':'serif', 'Merriweather':'serif'
+  };
+  const GOOGLE_FONT_HINTS = Object.keys(GOOGLE_FONTS).map(name => ({
+    text: `'${name}', ${GOOGLE_FONTS[name]}`,
+    displayText: name,
+    googleFont: name
+  }));
+  const GENERIC_FONT_FALLBACKS = ['sans-serif','serif','monospace','cursive','system-ui','Arial','Georgia','Verdana'];
+
+  function injectGoogleFont(font){
+    if(usedFonts.has(font)) return;
+    usedFonts.add(font);
+    isDirty = true;
+    updateDirtyIndicator();
+    updatePreview();
+  }
+
+  // Listens for the user picking a font-family suggestion and wires up its
+  // @import — deferred one tick so it runs after CodeMirror has already
+  // inserted the picked text (otherwise inserting a line at the top first
+  // would shift the target position and corrupt the completion).
+  function attachFontPick(widget){
+    if(!widget || !widget.on) return;
+    widget.on('pick', completion => {
+      if(completion && completion.googleFont){
+        setTimeout(() => injectGoogleFont(completion.googleFont), 0);
+      }
+    });
+  }
+
+  function cssSmartHint(cm){
+    const cur = cm.getCursor();
+    const lineText = cm.getLine(cur.line).slice(0, cur.ch);
+    const wordMatch = /[\w-]*$/.exec(lineText);
+    const word = wordMatch[0];
+    const from = CodeMirror.Pos(cur.line, cur.ch - word.length);
+    const to = CodeMirror.Pos(cur.line, cur.ch);
+
+    const lastColon = lineText.lastIndexOf(':');
+    const lastSemi = lineText.lastIndexOf(';');
+    const lastBrace = Math.max(lineText.lastIndexOf('{'), lineText.lastIndexOf('}'));
+    const declStart = Math.max(lastSemi, lastBrace);
+
+    let list;
+    if(lastColon > declStart){
+      // cursor is after ":" within the current declaration => suggest values for THIS property only
+      const propName = lineText.slice(declStart + 1, lastColon).trim().toLowerCase();
+      if(propName === 'font-family'){
+        list = GOOGLE_FONT_HINTS.concat(GENERIC_FONT_FALLBACKS.map(g => ({ text:g, displayText:g })));
+      } else {
+        let values = CSS_VALUES[propName] ? CSS_VALUES[propName].slice() : [];
+        if(CSS_COLOR_PROPS.includes(propName)) values = values.concat(CSS_COLORS);
+        list = values.length ? values.concat(CSS_GLOBAL_VALUES) : CSS_GLOBAL_VALUES.slice();
+      }
+    } else {
+      list = CSS_PROPERTIES;
+    }
+
+    const label = item => (typeof item === 'string' ? item : item.displayText);
+    const lower = word.toLowerCase();
+    const sortedAll = list.slice().sort((a, b) => label(a).localeCompare(label(b)));
+    const filtered = sortedAll.filter(item => label(item).toLowerCase().startsWith(lower));
+    return { list: (filtered.length ? filtered : sortedAll), from, to };
+  }
 
   // ---------- Views ----------
   const viewCatalog = document.getElementById('view-catalog');
@@ -673,6 +860,11 @@
   const codePanesContainer = document.querySelector('.code-panes');
   const downloadZipBtn = document.getElementById('download-zip-btn');
   const fullscreenBtn = document.getElementById('fullscreen-btn');
+  const consoleToggleBtn = document.getElementById('console-toggle-btn');
+  const consoleBadge = document.getElementById('console-badge');
+  const consolePanel = document.getElementById('console-panel');
+  const consoleBody = document.getElementById('console-body');
+  const consoleClearBtn = document.getElementById('console-clear-btn');
 
   let currentEditId = null;
   let cmHtml, cmCss, cmJs;
@@ -680,6 +872,7 @@
   let previewTimer = null;
   let visible = { html:true, css:true, js:true };
   let activeTab = 'html';
+  let usedFonts = new Set();
   let paneEls;
   let paneFlexBasis = { html:null, css:null, js:null };
   let fontSize = 13;
@@ -766,7 +959,7 @@
     cmHtml = CodeMirror.fromTextArea(document.getElementById('cm-html'), {...cmOptions, mode:'htmlmixed', autoCloseTags:true, matchTags:{bothTags:true},
       extraKeys:{ ...searchKeys, 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.html, { completeSingle:false }) }});
     cmCss  = CodeMirror.fromTextArea(document.getElementById('cm-css'),  {...cmOptions, mode:'css',
-      extraKeys:{ ...searchKeys, 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.css, { completeSingle:false }) }});
+      extraKeys:{ ...searchKeys, 'Ctrl-Space': cm => attachFontPick(CodeMirror.showHint(cm, cssSmartHint, { completeSingle:false })) }});
     cmJs   = CodeMirror.fromTextArea(document.getElementById('cm-js'),   {...cmOptions, mode:'javascript',
       extraKeys:{ ...searchKeys, 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.javascript, { completeSingle:false }) }});
     cmByLang = { html: cmHtml, css: cmCss, js: cmJs };
@@ -795,7 +988,7 @@
     cmCss.on('inputRead', (cm, change) => {
       if(cm.state.completionActive || !change.text[0]) return;
       if(/[a-zA-Z:]/.test(change.text[0])){
-        CodeMirror.showHint(cm, CodeMirror.hint.css, { completeSingle:false });
+        attachFontPick(CodeMirror.showHint(cm, cssSmartHint, { completeSingle:false }));
       }
     });
     cmJs.on('inputRead', (cm, change) => {
@@ -812,15 +1005,41 @@
 
   function refreshAll(){ cmHtml.refresh(); cmCss.refresh(); cmJs.refresh(); }
 
+  // Overrides console.log/warn/error/info inside the preview iframe and
+  // forwards them (plus uncaught errors / rejected promises) to the parent
+  // page via postMessage, so they can be shown in our console panel.
+  const CONSOLE_BRIDGE_SCRIPT = '<script>(function(){'
+    + 'function send(level,args){try{window.parent.postMessage({__edvaultConsole:true,level:level,args:args.map(function(a){'
+    + 'try{return typeof a==="object"&&a!==null?JSON.stringify(a):String(a);}catch(e){return String(a);}'
+    + '})},"*");}catch(e){}}'
+    + '["log","info","warn","error"].forEach(function(level){var orig=console[level];console[level]=function(){'
+    + 'send(level,Array.prototype.slice.call(arguments));if(orig)orig.apply(console,arguments);};});'
+    + 'window.onerror=function(msg,src,line){send("error",[msg+" (рядок "+line+")"]);return false;};'
+    + 'window.addEventListener("unhandledrejection",function(e){var r=e.reason;send("error",["Unhandled promise rejection: "+(r&&r.message?r.message:r)]);});'
+    + '})();<\/script>';
+
+  function fontLinkTags(){
+    return Array.from(usedFonts).map(f =>
+      `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${f.replace(/ /g, '+')}:wght@400;700&display=swap">`
+      + `\n<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${f.replace(/ /g, '+')}&display=swap">`
+    ).join('\n');
+  }
+
   function buildDoc(project){
     if(project && project.code) return project.code; // legacy single-field projects
     const html = cmHtml.getValue(), css = cmCss.getValue(), js = cmJs.getValue();
-    return '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<style>\n'
-      + css + '\n</style>\n</head>\n<body>\n'
+    const fonts = fontLinkTags();
+    return '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n'
+      + CONSOLE_BRIDGE_SCRIPT + '\n'
+      + (fonts ? fonts + '\n' : '')
+      + '<style>\n' + css + '\n</style>\n</head>\n<body>\n'
       + html + '\n<script>\n'
       + js + '\n<\/script>\n</body>\n</html>';
   }
-  function updatePreview(){ previewFrame.srcdoc = buildDoc(); }
+  function updatePreview(){
+    clearConsole();
+    previewFrame.srcdoc = buildDoc();
+  }
 
   // ---------- Downloads ----------
   function slugify(str){
@@ -844,8 +1063,10 @@
   async function downloadZip(){
     const slug = slugify(nameInput.value);
     const html = cmHtml.getValue(), css = cmCss.getValue(), js = cmJs.getValue();
+    const fonts = fontLinkTags();
     const indexHtml = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<title>' + escapeHtml(nameInput.value || 'project')
-      + '</title>\n<link rel="stylesheet" href="style.css">\n</head>\n<body>\n'
+      + '</title>\n' + (fonts ? fonts + '\n' : '')
+      + '<link rel="stylesheet" href="style.css">\n</head>\n<body>\n'
       + html + '\n<script src="script.js"><\/script>\n</body>\n</html>';
 
     const zip = new JSZip();
@@ -860,6 +1081,51 @@
     URL.revokeObjectURL(url);
   }
   downloadZipBtn.addEventListener('click', downloadZip);
+
+  // ---------- Console panel ----------
+  let errorCount = 0;
+
+  function renderEmptyConsoleIfNeeded(){
+    if(!consoleBody.children.length){
+      consoleBody.innerHTML = '<div class="console-empty">Тут з\'являться console.log і помилки JS</div>';
+    }
+  }
+  function clearConsole(){
+    consoleBody.innerHTML = '';
+    errorCount = 0;
+    consoleBadge.classList.add('hidden');
+    consoleBadge.textContent = '0';
+    renderEmptyConsoleIfNeeded();
+  }
+  function addConsoleLine(level, args){
+    const empty = consoleBody.querySelector('.console-empty');
+    if(empty) empty.remove();
+    const line = document.createElement('div');
+    line.className = 'console-line console-' + level;
+    const prefix = level === 'error' ? '✕ ' : level === 'warn' ? '⚠ ' : '';
+    line.textContent = prefix + args.join(' ');
+    consoleBody.appendChild(line);
+    consoleBody.scrollTop = consoleBody.scrollHeight;
+    if(level === 'error'){
+      errorCount++;
+      consoleBadge.textContent = errorCount > 99 ? '99+' : String(errorCount);
+      consoleBadge.classList.remove('hidden');
+    }
+  }
+  window.addEventListener('message', (e) => {
+    const data = e.data;
+    if(!data || !data.__edvaultConsole) return;
+    addConsoleLine(data.level, data.args);
+  });
+
+  consoleToggleBtn.addEventListener('click', () => {
+    const showing = consolePanel.classList.toggle('hidden') === false;
+    consoleToggleBtn.classList.toggle('active', showing);
+    if(showing) renderEmptyConsoleIfNeeded();
+    requestAnimationFrame(refreshAll);
+  });
+  consoleClearBtn.addEventListener('click', clearConsole);
+  clearConsole();
 
   // ---------- Fullscreen preview ----------
   fullscreenBtn.addEventListener('click', () => {
@@ -1097,8 +1363,12 @@
     visible = { html:true, css:true, js:true };
     activeTab = 'html';
     paneFlexBasis = { html:null, css:null, js:null };
+    usedFonts = new Set(project && Array.isArray(project.fonts) ? project.fonts : []);
     settingsPanel.classList.add('hidden');
     settingsBtn.classList.remove('active');
+    consolePanel.classList.add('hidden');
+    consoleToggleBtn.classList.remove('active');
+    clearConsole();
     viewEditor.classList.remove('preview-fullscreen');
     fullscreenBtn.title = 'На весь екран';
     fullscreenBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>';
@@ -1134,7 +1404,7 @@
     if(!name){ alert('Введи назву проєкту'); nameInput.focus(); return false; }
 
     const projects = loadProjects();
-    const data = { name, html: cmHtml.getValue(), css: cmCss.getValue(), js: cmJs.getValue(), updated: Date.now() };
+    const data = { name, html: cmHtml.getValue(), css: cmCss.getValue(), js: cmJs.getValue(), fonts: Array.from(usedFonts), updated: Date.now() };
 
     if(currentEditId){
       const idx = projects.findIndex(p => p.id === currentEditId);
