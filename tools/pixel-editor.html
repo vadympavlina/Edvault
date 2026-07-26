@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Crect x='7' y='7' width='6' height='6' fill='white'/%3E%3Crect x='19' y='7' width='6' height='6' fill='white' opacity='.6'/%3E%3Crect x='7' y='19' width='6' height='6' fill='white' opacity='.6'/%3E%3Crect x='19' y='19' width='6' height='6' fill='white'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Піксель-арт · Edvault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #f7f8fa;
+    --border: #e2e5ea;
+    --border2: #d0d5dd;
+    --accent: #4F6BF4;
+    --accent-light: #eef0fe;
+    --accent-hover: #3d57e0;
+    --danger: #ef4444;
+    --success: #10b981;
+    --warn: #f59e0b;
+    --text: #1a1d23;
+    --text2: #4b5563;
+    --muted: #9ca3af;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
+  }
+
+  html[data-theme="dark"] {
+    --bg: #14171c; --surface: #1c212a; --surface2: #232933; --border: #2a313d; --border2: #384152;
+    --accent: #6c85ff; --accent-light: rgba(108,133,255,.16); --accent-hover: #8298ff;
+    --danger: #ff6b6b; --success: #34d399; --warn: #fbbf24;
+    --text: #e8ecf1; --text2: #a8b0bd; --muted: #6b7280;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.25);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.3);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.35);
+  }
+  html[data-theme="dark"] body{ background: var(--bg); }
+
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+  .hidden { display: none !important; }
+
+  /* =========== TOPBAR =========== */
+  .topbar {
+    min-height: 64px; flex-shrink: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+    padding: 10px clamp(16px, 4vw, 28px);
+    position: sticky; top: 0; z-index: 30;
+  }
+  .topbar-left { display: flex; align-items: center; gap: clamp(9px, 2vw, 12px); min-width: 0; }
+  .topbar-logo {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(79,107,244,.3); flex-shrink: 0;
+  }
+  .topbar-logo svg { width: 18px; height: 18px; }
+  .topbar-text h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); line-height: 1.2; white-space: nowrap; }
+  .topbar-text p { font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 1px; white-space: nowrap; }
+  .topbar-badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+    background: var(--accent-light); color: var(--accent); letter-spacing: .03em; flex-shrink: 0;
+  }
+  .topbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .back-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:8px 14px;border-radius:9px;border:1.5px solid var(--border);
+    background:var(--surface); color:var(--text2); font-family:inherit;
+    font-size:13px;font-weight:600;cursor:pointer; transition:all .13s ease; flex-shrink:0;
+  }
+  .back-btn:hover{ border-color:var(--border2); background:var(--surface2); color:var(--text); }
+  .back-btn svg{ width:14px; height:14px; }
+
+  .name-input{
+    padding:8px 12px; border:1.5px solid var(--border2); border-radius:9px;
+    background:var(--surface); font-family:inherit; font-size:14px; font-weight:700; color:var(--text);
+    outline:none; transition:all .15s ease; min-width:120px; max-width:200px;
+  }
+  .name-input:focus{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,107,244,.1); }
+
+  .unsaved-dot{
+    width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(245,158,11,.18);
+  }
+
+  .retry-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: 10px; border: none;
+    background: var(--accent); color: #fff; font-family: inherit;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: background .13s;
+    flex-shrink: 0; position: relative;
+  }
+  .retry-btn:hover { background: var(--accent-hover); }
+  .retry-btn svg{ width:14px; height:14px; }
+  .retry-btn.saved-flash{ background: var(--success) !important; }
+
+  .view-btn {
+    width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .13s ease; flex-shrink: 0;
+  }
+  .view-btn:hover, .view-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .view-btn svg { width: 15px; height: 15px; }
+
+  /* =========== MAIN / CATALOG =========== */
+  .main { max-width: 1200px; width: 100%; margin: 0 auto; padding: clamp(28px, 6vw, 48px) clamp(16px, 4vw, 28px) clamp(56px, 10vw, 100px); }
+  .stats-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+  .stats-bar-left { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .stats-bar-left b { color: var(--text); font-weight: 700; }
+
+  .tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 18px; }
+  .tool-card {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 18px; padding: 16px;
+    cursor: pointer; display: flex; flex-direction: column; gap: 12px;
+    transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s ease, border-color .15s ease;
+    position: relative; box-shadow: var(--shadow-sm);
+  }
+  .tool-card:hover { transform: translateY(-4px) scale(1.012); box-shadow: var(--shadow-md); border-color: var(--accent); }
+  .thumb-wrap{
+    width: 100%; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; background: var(--surface2);
+  }
+  .thumb-wrap canvas{ width: 100%; height: 100%; image-rendering: pixelated; }
+  .tool-name { font-size: 14px; font-weight: 800; letter-spacing: -0.2px; color: var(--text); word-break: break-word; }
+  .tool-desc { font-size: 11.5px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+  .tool-del{
+    position:absolute; top:12px; right:12px;
+    width:24px;height:24px;border-radius:7px;border:none;
+    background:var(--surface); color:var(--muted); box-shadow: var(--shadow-sm);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer; opacity:0; transition:opacity .12s ease, background .12s ease, color .12s ease;
+  }
+  .tool-card:hover .tool-del{ opacity:1; }
+  .tool-del:hover{ background:var(--danger); color:#fff; }
+  .tool-del svg{ width:12px; height:12px; }
+
+  .empty-state { text-align: center; padding: 80px 20px; display: none; }
+  .empty-state.visible { display: block; }
+  .empty-icon { font-size: 40px; margin-bottom: 16px; }
+  .empty-state h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .empty-state p { font-size: 13.5px; color: var(--text2); }
+
+  /* =========== EDITOR VIEW =========== */
+  #view-editor{ height: 100vh; display: flex; flex-direction: column; }
+  #editor-body{
+    flex: 1; display: flex; min-height: 0; overflow: auto;
+    align-items: flex-start; justify-content: center; gap: 22px; padding: 26px; flex-wrap: wrap;
+  }
+
+  .tool-panel{
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px; padding: 16px;
+    width: 230px; flex-shrink: 0; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 16px;
+  }
+  .panel-label{ font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 8px; }
+
+  .tools-row{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .tool-btn{
+    height: 40px; border-radius: 9px; border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all .13s ease;
+  }
+  .tool-btn svg{ width: 17px; height: 17px; }
+  .tool-btn:hover{ border-color: var(--border2); background: var(--surface2); }
+  .tool-btn.active{ background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .current-color-row{ display: flex; align-items: center; gap: 10px; }
+  .current-color-swatch{
+    width: 40px; height: 40px; border-radius: 9px; border: 1.5px solid var(--border2); flex-shrink: 0;
+    background-image: linear-gradient(45deg, #ddd 25%, transparent 25%), linear-gradient(-45deg, #ddd 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #ddd 75%), linear-gradient(-45deg, transparent 75%, #ddd 75%);
+    background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+  }
+  .current-color-swatch .fill{ width: 100%; height: 100%; border-radius: 7px; }
+  #custom-color{
+    flex: 1; height: 36px; border-radius: 8px; border: 1.5px solid var(--border); cursor: pointer; background: none; padding: 2px;
+  }
+
+  .palette-grid{ display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+  .palette-swatch{
+    aspect-ratio: 1; border-radius: 6px; border: 1.5px solid var(--border); cursor: pointer; transition: transform .1s ease;
+  }
+  .palette-swatch:hover{ transform: scale(1.12); }
+  .palette-swatch.active{ outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .action-row{ display: flex; gap: 6px; }
+  .action-btn{
+    flex: 1; height: 36px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;
+    font-size: 12px; font-weight: 700; transition: all .13s ease;
+  }
+  .action-btn:hover{ border-color: var(--border2); background: var(--surface2); }
+  .action-btn svg{ width: 14px; height: 14px; }
+  .action-btn:disabled{ opacity: .4; cursor: default; }
+  .action-btn:disabled:hover{ background: var(--surface); border-color: var(--border); }
+
+  .size-select{ display: flex; align-items: center; gap: 6px; }
+  select.grid-size-select{
+    flex: 1; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text); font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .zoom-row{ display:flex; justify-content: space-between; align-items:center; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 9px; padding: 4px; }
+  .zoom-btn{
+    width: 28px; height: 28px; border: none; border-radius: 7px; background: var(--surface);
+    color: var(--text); font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .zoom-btn:hover{ background: var(--accent); color: #fff; }
+  #zoom-value{ font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: var(--text2); }
+
+  .toggle-row{ display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 600; color: var(--text2); }
+  .switch{ position: relative; width: 36px; height: 21px; flex-shrink: 0; display: inline-block; }
+  .switch input{ opacity: 0; width: 0; height: 0; position: absolute; }
+  .switch .slider{ position: absolute; inset: 0; background: var(--border2); border-radius: 20px; cursor: pointer; transition: background .15s ease; }
+  .switch .slider::before{ content: ''; position: absolute; width: 15px; height: 15px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .15s ease; box-shadow: var(--shadow-sm); }
+  .switch input:checked + .slider{ background: var(--accent); }
+  .switch input:checked + .slider::before{ transform: translateX(15px); }
+
+  /* canvas area */
+  .canvas-column{ display: flex; flex-direction: column; gap: 14px; align-items: center; }
+  .canvas-stage{
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px;
+    box-shadow: var(--shadow-sm); padding: 24px; display: flex; align-items: center; justify-content: center;
+  }
+  #pixel-canvas{
+    image-rendering: pixelated; image-rendering: crisp-edges;
+    cursor: crosshair; border-radius: 4px; box-shadow: 0 0 0 1px var(--border2);
+    touch-action: none;
+  }
+
+  /* frames bar */
+  .frames-bar{
+    display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 10px; box-shadow: var(--shadow-sm); max-width: 100%; overflow-x: auto;
+  }
+  .frame-thumb-wrap{ position: relative; flex-shrink: 0; }
+  .frame-thumb{
+    width: 44px; height: 44px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer;
+    overflow: hidden; background: var(--surface2); display: block;
+  }
+  .frame-thumb.active{ border-color: var(--accent); }
+  .frame-thumb canvas{ width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+  .frame-del{
+    position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--danger); color: #fff; border: 2px solid var(--surface); font-size: 10px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: opacity .12s ease;
+  }
+  .frame-thumb-wrap:hover .frame-del{ opacity: 1; }
+  .frame-add-btn{
+    flex-shrink: 0; width: 44px; height: 44px; border-radius: 8px; border: 1.5px dashed var(--border2);
+    background: none; color: var(--muted); cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;
+  }
+  .frame-add-btn:hover{ color: var(--accent); border-color: var(--accent); }
+  .frames-divider{ width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
+  .play-btn{
+    flex-shrink: 0; width: 36px; height: 36px; border-radius: 9px; border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .play-btn svg{ width: 15px; height: 15px; }
+  .play-btn:hover, .play-btn.active{ background: var(--accent); border-color: var(--accent); color: #fff; }
+  .fps-control{ display: flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); flex-shrink: 0; white-space: nowrap; }
+  .fps-control button{ width: 22px; height: 22px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; color: var(--text); }
+  .fps-control button:hover{ background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* export panel */
+  .export-hint{
+    margin-top: 4px; font-size: 11px; font-weight: 600; color: var(--success);
+    background: rgba(16,185,129,.1); border-radius: 7px; padding: 6px 9px; line-height: 1.4;
+    font-family: 'JetBrains Mono', monospace; word-break: break-all;
+  }
+
+  @media (max-width: 720px){
+    #editor-body{ flex-direction: column; align-items: center; }
+    .tool-panel{ width: 100%; max-width: 340px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ CATALOG VIEW ============ -->
+<div id="view-catalog">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" fill="white"/><rect x="13" y="4" width="7" height="7" fill="white" opacity=".55"/><rect x="4" y="13" width="7" height="7" fill="white" opacity=".55"/><rect x="13" y="13" width="7" height="7" fill="white"/></svg>
+      </div>
+      <div class="topbar-text">
+        <h1>Edvault</h1>
+        <p>Піксель-арт редактор</p>
+      </div>
+    </div>
+    <div class="topbar-badge">Спрайти</div>
+  </div>
+
+  <div class="main">
+    <div class="stats-bar">
+      <div class="stats-bar-left"><b id="sprite-count">0</b> спрайтів</div>
+      <button class="retry-btn" id="add-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Новий спрайт
+      </button>
+    </div>
+
+    <div class="tools-grid" id="grid"></div>
+
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🎨</div>
+      <h3>Поки що порожньо</h3>
+      <p>Створи перший спрайт — персонажа, тайл чи іконку для гри</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EDITOR VIEW ============ -->
+<div id="view-editor" class="hidden">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="back-btn" id="back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Каталог
+      </button>
+      <input type="text" id="sprite-name" class="name-input" placeholder="Назва спрайту">
+      <span class="unsaved-dot hidden" id="unsaved-dot" title="Є незбережені зміни"></span>
+    </div>
+    <div class="topbar-actions">
+      <button class="view-btn" id="theme-toggle-btn" title="Темна тема">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      </button>
+      <button class="view-btn" id="import-btn" title="Імпортувати PNG">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </button>
+      <input type="file" id="import-input" accept="image/*" style="display:none">
+      <button class="view-btn" id="download-png-btn" title="Завантажити PNG">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="view-btn" id="copy-code-btn" title="Скопіювати код">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4M6 8l-4 4 4 4M14.5 4l-5 16"/></svg>
+      </button>
+      <button class="retry-btn" id="save-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        <span class="save-label">Зберегти</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="editor-body">
+    <div class="tool-panel">
+      <div>
+        <div class="panel-label">Інструмент</div>
+        <div class="tools-row">
+          <button class="tool-btn active" data-tool="pencil" title="Олівець">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+          </button>
+          <button class="tool-btn" data-tool="eraser" title="Гумка">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4L16.6 1.4a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4L11.4 19"/><path d="M18 13.4 10.6 6"/></svg>
+          </button>
+          <button class="tool-btn" data-tool="fill" title="Заливка">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2a2 2 0 0 0 2.8 0L19 11Z"/><path d="M5 2 2 5"/><path d="M19 11h.5a2.5 2.5 0 0 1 0 5H19"/></svg>
+          </button>
+          <button class="tool-btn" data-tool="eyedropper" title="Піпетка">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-4 9.5-9.5"/><path d="M14.5 6.5 18 3l3 3-3.5 3.5"/><path d="m14.5 6.5 3 3L7 20l-4 1 1-4Z"/></svg>
+          </button>
+          <button class="tool-btn" data-tool="line" title="Лінія">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="5" cy="19" r="1.5" fill="currentColor"/><circle cx="19" cy="5" r="1.5" fill="currentColor"/></svg>
+          </button>
+          <button class="tool-btn" data-tool="rect" title="Прямокутник">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-label">Колір</div>
+        <div class="current-color-row">
+          <div class="current-color-swatch"><div class="fill" id="current-color-fill"></div></div>
+          <input type="color" id="custom-color" value="#4F6BF4">
+        </div>
+      </div>
+
+      <div><div class="palette-grid" id="palette-grid"></div></div>
+
+      <div>
+        <div class="panel-label">Дії</div>
+        <div class="action-row">
+          <button class="action-btn" id="undo-btn" title="Скасувати (Ctrl+Z)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+            Undo
+          </button>
+          <button class="action-btn" id="redo-btn" title="Повернути (Ctrl+Shift+Z)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+            Redo
+          </button>
+        </div>
+        <div class="action-row" style="margin-top:6px;">
+          <button class="action-btn" id="clear-btn" title="Очистити кадр">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Очистити
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-label">Сітка</div>
+        <div class="size-select">
+          <select class="grid-size-select" id="grid-size-select">
+            <option value="8">8 × 8</option>
+            <option value="16" selected>16 × 16</option>
+            <option value="24">24 × 24</option>
+            <option value="32">32 × 32</option>
+          </select>
+        </div>
+        <label class="toggle-row" style="margin-top:10px;">
+          <span>Показати сітку</span>
+          <span class="switch"><input type="checkbox" id="grid-toggle" checked><span class="slider"></span></span>
+        </label>
+        <label class="toggle-row" style="margin-top:10px;">
+          <span>Дзеркало (X)</span>
+          <span class="switch"><input type="checkbox" id="mirror-toggle"><span class="slider"></span></span>
+        </label>
+        <div class="zoom-row" style="margin-top:10px;">
+          <button class="zoom-btn" id="zoom-out">−</button>
+          <span id="zoom-value">100%</span>
+          <button class="zoom-btn" id="zoom-in">+</button>
+        </div>
+      </div>
+
+      <div id="export-hint" class="export-hint hidden"></div>
+    </div>
+
+    <div class="canvas-column">
+      <div class="canvas-stage"><canvas id="pixel-canvas"></canvas></div>
+      <div class="frames-bar" id="frames-bar">
+        <div class="frame-add-btn" id="frame-add-btn" title="Додати кадр">+</div>
+        <div class="frames-divider"></div>
+        <button class="play-btn" id="play-btn" title="Програти анімацію">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+        </button>
+        <div class="fps-control">
+          <button id="fps-down">−</button>
+          <span id="fps-value">6 fps</span>
+          <button id="fps-up">+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'edvault-sprites';
+  const THEME_KEY = 'edvault-pixel-theme';
+  const PALETTE = [
+    '#000000','#ffffff','#9ca3af','#4b5563',
+    '#ef4444','#f59e0b','#facc15','#22c55e',
+    '#10b981','#06b6d4','#3b82f6','#4F6BF4',
+    '#8b5cf6','#ec4899','#f472b6','#a16207',
+    '#78350f','#7c2d12','#166534','#1e3a8a'
+  ];
+
+  try{ if(localStorage.getItem(THEME_KEY) === 'dark') document.documentElement.setAttribute('data-theme','dark'); }catch(e){}
+
+  // ---------- Views ----------
+  const viewCatalog = document.getElementById('view-catalog');
+  const viewEditor = document.getElementById('view-editor');
+
+  // ---------- Catalog ----------
+  const grid = document.getElementById('grid');
+  const addTile = document.getElementById('add-tile');
+  const emptyState = document.getElementById('empty-state');
+  const spriteCount = document.getElementById('sprite-count');
+
+  // ---------- Editor elements ----------
+  const backBtn = document.getElementById('back-btn');
+  const nameInput = document.getElementById('sprite-name');
+  const unsavedDot = document.getElementById('unsaved-dot');
+  const saveBtn = document.getElementById('save-btn');
+  const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  const importBtn = document.getElementById('import-btn');
+  const importInput = document.getElementById('import-input');
+  const downloadPngBtn = document.getElementById('download-png-btn');
+  const copyCodeBtn = document.getElementById('copy-code-btn');
+  const exportHint = document.getElementById('export-hint');
+  const canvas = document.getElementById('pixel-canvas');
+  const ctx = canvas.getContext('2d');
+  const gridSizeSelect = document.getElementById('grid-size-select');
+  const gridToggle = document.getElementById('grid-toggle');
+  const mirrorToggle = document.getElementById('mirror-toggle');
+  const zoomInBtn = document.getElementById('zoom-in');
+  const zoomOutBtn = document.getElementById('zoom-out');
+  const zoomValue = document.getElementById('zoom-value');
+  const paletteGrid = document.getElementById('palette-grid');
+  const currentColorFill = document.getElementById('current-color-fill');
+  const customColorInput = document.getElementById('custom-color');
+  const undoBtn = document.getElementById('undo-btn');
+  const redoBtn = document.getElementById('redo-btn');
+  const clearBtn = document.getElementById('clear-btn');
+  const framesBar = document.getElementById('frames-bar');
+  const frameAddBtn = document.getElementById('frame-add-btn');
+  const playBtn = document.getElementById('play-btn');
+  const fpsValue = document.getElementById('fps-value');
+  const fpsUpBtn = document.getElementById('fps-up');
+  const fpsDownBtn = document.getElementById('fps-down');
+
+  let currentEditId = null;
+  let gridSize = 16;
+  let pixelSize = 20;
+  let frames = [ new Array(256).fill(null) ];
+  let currentFrameIndex = 0;
+  let pixels = frames[0];
+  let fps = 6;
+  let currentColor = '#4F6BF4';
+  let currentTool = 'pencil';
+  let showGrid = true;
+  let mirrorX = false;
+  let isDirty = false;
+  let undoStack = [], redoStack = [];
+  let strokeSnapshot = null;
+  let isPainting = false;
+  let shapeStart = null;
+  let lastCell = { x:0, y:0 };
+  let playTimer = null;
+  let playFrameIndex = 0;
+
+  function setPixels(newArr){ pixels = newArr; frames[currentFrameIndex] = newArr; }
+
+  // ---------- Storage ----------
+  function loadSprites(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e){ return []; } }
+  function saveSprites(list){ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+  function formatDate(ts){ return new Date(ts).toLocaleDateString('uk-UA', { day:'2-digit', month:'2-digit', year:'numeric' }); }
+  function escapeHtml(str){ const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+  function slugify(str){ return (str||'sprite').trim().toLowerCase().replace(/[^a-z0-9а-яіїєґ]+/gi,'-').replace(/^-+|-+$/g,'') || 'sprite'; }
+
+  // ---------- Theme ----------
+  function applyTheme(dark){
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    try{ localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); }catch(e){}
+    themeToggleBtn.classList.toggle('active', dark);
+  }
+  themeToggleBtn.addEventListener('click', () => applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark'));
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark');
+
+  // ---------- Drawing helpers ----------
+  function drawCheckerboard(context, sizeN, cell){
+    for(let y=0; y<sizeN; y++){
+      for(let x=0; x<sizeN; x++){
+        context.fillStyle = ((x+y)%2===0) ? '#e9ebef' : '#f7f8fa';
+        context.fillRect(x*cell, y*cell, cell, cell);
+      }
+    }
+  }
+  function renderCanvasTo(context, cell, gridLines, gridArr, sizeN){
+    context.canvas.width = sizeN*cell;
+    context.canvas.height = sizeN*cell;
+    drawCheckerboard(context, sizeN, cell);
+    for(let y=0; y<sizeN; y++){
+      for(let x=0; x<sizeN; x++){
+        const c = gridArr[y*sizeN+x];
+        if(c){ context.fillStyle = c; context.fillRect(x*cell, y*cell, cell, cell); }
+      }
+    }
+    if(gridLines && cell >= 6){
+      context.strokeStyle = 'rgba(0,0,0,.08)';
+      context.lineWidth = 1;
+      for(let i=0; i<=sizeN; i++){
+        context.beginPath(); context.moveTo(i*cell+0.5, 0); context.lineTo(i*cell+0.5, sizeN*cell); context.stroke();
+        context.beginPath(); context.moveTo(0, i*cell+0.5); context.lineTo(sizeN*cell, i*cell+0.5); context.stroke();
+      }
+    }
+  }
+  function redraw(){
+    canvas.style.width = (gridSize*pixelSize) + 'px';
+    canvas.style.height = (gridSize*pixelSize) + 'px';
+    renderCanvasTo(ctx, pixelSize, showGrid, pixels, gridSize);
+  }
+
+  // ---------- Undo/redo ----------
+  function markDirty(){ isDirty = true; unsavedDot.classList.remove('hidden'); updateUndoRedoButtons(); }
+  function updateUndoRedoButtons(){
+    undoBtn.disabled = undoStack.length === 0;
+    redoBtn.disabled = redoStack.length === 0;
+  }
+  function startStroke(){ strokeSnapshot = pixels.slice(); }
+  function endStroke(){
+    if(!strokeSnapshot) return;
+    let changed = false;
+    for(let i=0;i<pixels.length;i++){ if(pixels[i]!==strokeSnapshot[i]){ changed = true; break; } }
+    if(changed){
+      undoStack.push(strokeSnapshot);
+      if(undoStack.length>60) undoStack.shift();
+      redoStack = [];
+      markDirty();
+    }
+    strokeSnapshot = null;
+  }
+  function undo(){
+    if(!undoStack.length) return;
+    redoStack.push(pixels.slice());
+    setPixels(undoStack.pop());
+    markDirty();
+    redraw();
+  }
+  function redo(){
+    if(!redoStack.length) return;
+    undoStack.push(pixels.slice());
+    setPixels(redoStack.pop());
+    markDirty();
+    redraw();
+  }
+  undoBtn.addEventListener('click', undo);
+  redoBtn.addEventListener('click', redo);
+  clearBtn.addEventListener('click', () => {
+    if(pixels.every(p => !p)) return;
+    startStroke();
+    setPixels(new Array(gridSize*gridSize).fill(null));
+    endStroke();
+    redraw();
+  });
+
+  // ---------- Palette / color ----------
+  function renderPalette(){
+    paletteGrid.innerHTML = '';
+    PALETTE.forEach(color => {
+      const sw = document.createElement('button');
+      sw.className = 'palette-swatch' + (color.toLowerCase()===currentColor.toLowerCase() ? ' active' : '');
+      sw.style.background = color;
+      sw.addEventListener('click', () => setColor(color));
+      paletteGrid.appendChild(sw);
+    });
+  }
+  function setColor(color){
+    currentColor = color;
+    currentColorFill.style.background = color;
+    customColorInput.value = color;
+    renderPalette();
+  }
+  customColorInput.addEventListener('input', () => setColor(customColorInput.value));
+
+  // ---------- Tools ----------
+  const toolButtons = document.querySelectorAll('.tool-btn');
+  toolButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentTool = btn.dataset.tool;
+      toolButtons.forEach(b => b.classList.toggle('active', b === btn));
+    });
+  });
+  mirrorToggle.addEventListener('change', () => { mirrorX = mirrorToggle.checked; });
+
+  function setPixel(x, y, color){
+    if(x<0||y<0||x>=gridSize||y>=gridSize) return;
+    pixels[y*gridSize+x] = color;
+  }
+  function floodFill(startX, startY, fillColor){
+    const target = pixels[startY*gridSize+startX];
+    if(target === fillColor) return;
+    const stack = [[startX,startY]];
+    while(stack.length){
+      const [x,y] = stack.pop();
+      if(x<0||y<0||x>=gridSize||y>=gridSize) continue;
+      if(pixels[y*gridSize+x] !== target) continue;
+      pixels[y*gridSize+x] = fillColor;
+      stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+    }
+  }
+
+  function paintAt(x, y){
+    if(x<0||y<0||x>=gridSize||y>=gridSize) return;
+    if(currentTool === 'pencil'){
+      setPixel(x,y,currentColor);
+      if(mirrorX) setPixel(gridSize-1-x, y, currentColor);
+    } else if(currentTool === 'eraser'){
+      setPixel(x,y,null);
+      if(mirrorX) setPixel(gridSize-1-x, y, null);
+    } else if(currentTool === 'fill'){
+      floodFill(x, y, currentColor);
+      if(mirrorX) floodFill(gridSize-1-x, y, currentColor);
+    } else if(currentTool === 'eyedropper'){
+      const c = pixels[y*gridSize+x];
+      if(c) setColor(c);
+      return;
+    }
+    redraw();
+  }
+
+  // ---------- Line / rectangle shapes ----------
+  function linePoints(x0,y0,x1,y1){
+    const pts = [];
+    let dx = Math.abs(x1-x0), dy = Math.abs(y1-y0);
+    let sx = x0<x1?1:-1, sy = y0<y1?1:-1;
+    let err = dx-dy;
+    let x=x0, y=y0;
+    while(true){
+      pts.push([x,y]);
+      if(x===x1 && y===y1) break;
+      const e2 = 2*err;
+      if(e2>-dy){ err-=dy; x+=sx; }
+      if(e2<dx){ err+=dx; y+=sy; }
+    }
+    return pts;
+  }
+  function rectPoints(x0,y0,x1,y1){
+    const pts = [];
+    const minX=Math.min(x0,x1), maxX=Math.max(x0,x1), minY=Math.min(y0,y1), maxY=Math.max(y0,y1);
+    for(let y=minY;y<=maxY;y++) for(let x=minX;x<=maxX;x++) pts.push([x,y]);
+    return pts;
+  }
+  function shapePoints(tool, start, end){
+    return tool === 'line' ? linePoints(start.x,start.y,end.x,end.y) : rectPoints(start.x,start.y,end.x,end.y);
+  }
+  function drawShapePreview(start, end){
+    const pts = shapePoints(currentTool, start, end);
+    ctx.fillStyle = currentColor;
+    ctx.globalAlpha = .55;
+    pts.forEach(([x,y]) => {
+      if(x<0||y<0||x>=gridSize||y>=gridSize) return;
+      ctx.fillRect(x*pixelSize, y*pixelSize, pixelSize, pixelSize);
+      if(mirrorX){
+        const mx = gridSize-1-x;
+        ctx.fillRect(mx*pixelSize, y*pixelSize, pixelSize, pixelSize);
+      }
+    });
+    ctx.globalAlpha = 1;
+  }
+  function commitShape(start, end){
+    const pts = shapePoints(currentTool, start, end);
+    pts.forEach(([x,y]) => {
+      setPixel(x,y,currentColor);
+      if(mirrorX) setPixel(gridSize-1-x, y, currentColor);
+    });
+    redraw();
+  }
+
+  function cellFromEvent(e){
+    const rect = canvas.getBoundingClientRect();
+    const p = e.touches ? e.touches[0] : e;
+    const x = Math.floor((p.clientX - rect.left) / pixelSize);
+    const y = Math.floor((p.clientY - rect.top) / pixelSize);
+    return { x, y };
+  }
+  function pointerDown(e){
+    e.preventDefault();
+    isPainting = true;
+    startStroke();
+    const cell = cellFromEvent(e);
+    lastCell = cell;
+    if(currentTool === 'line' || currentTool === 'rect'){
+      shapeStart = cell;
+      drawShapePreview(shapeStart, cell);
+      return;
+    }
+    paintAt(cell.x, cell.y);
+    if(currentTool === 'eyedropper' || currentTool === 'fill'){ endStroke(); isPainting = false; }
+  }
+  function pointerMove(e){
+    if(!isPainting) return;
+    const cell = cellFromEvent(e);
+    lastCell = cell;
+    if(currentTool === 'line' || currentTool === 'rect'){
+      redraw();
+      drawShapePreview(shapeStart, cell);
+      return;
+    }
+    if(currentTool !== 'pencil' && currentTool !== 'eraser') return;
+    paintAt(cell.x, cell.y);
+  }
+  function pointerUp(){
+    if(!isPainting) return;
+    isPainting = false;
+    if((currentTool === 'line' || currentTool === 'rect') && shapeStart){
+      commitShape(shapeStart, lastCell);
+      shapeStart = null;
+    }
+    endStroke();
+  }
+  canvas.addEventListener('mousedown', pointerDown);
+  window.addEventListener('mousemove', pointerMove);
+  window.addEventListener('mouseup', pointerUp);
+  canvas.addEventListener('touchstart', pointerDown, { passive:false });
+  window.addEventListener('touchmove', pointerMove, { passive:true });
+  window.addEventListener('touchend', pointerUp);
+
+  // ---------- Grid size / zoom / grid toggle ----------
+  gridSizeSelect.addEventListener('change', () => {
+    const newSize = parseInt(gridSizeSelect.value, 10);
+    if(newSize === gridSize) return;
+    const oldSize = gridSize;
+    const minSize = Math.min(oldSize, newSize);
+    frames = frames.map(oldArr => {
+      const newArr = new Array(newSize*newSize).fill(null);
+      for(let y=0; y<minSize; y++){
+        for(let x=0; x<minSize; x++){
+          newArr[y*newSize+x] = oldArr[y*oldSize+x];
+        }
+      }
+      return newArr;
+    });
+    gridSize = newSize;
+    currentFrameIndex = Math.min(currentFrameIndex, frames.length-1);
+    pixels = frames[currentFrameIndex];
+    undoStack = []; redoStack = [];
+    pixelSize = Math.max(6, Math.floor(400/gridSize));
+    updateZoomLabel();
+    markDirty();
+    renderFramesBar();
+    redraw();
+    updateUndoRedoButtons();
+  });
+  gridToggle.addEventListener('change', () => { showGrid = gridToggle.checked; redraw(); });
+  zoomInBtn.addEventListener('click', () => { pixelSize = Math.min(48, pixelSize+2); updateZoomLabel(); redraw(); });
+  zoomOutBtn.addEventListener('click', () => { pixelSize = Math.max(4, pixelSize-2); updateZoomLabel(); redraw(); });
+  function updateZoomLabel(){
+    const base = Math.max(6, Math.floor(400/gridSize));
+    zoomValue.textContent = Math.round((pixelSize/base)*100) + '%';
+  }
+
+  // ---------- Frames ----------
+  function switchFrame(index){
+    if(index<0 || index>=frames.length) return;
+    currentFrameIndex = index;
+    pixels = frames[index];
+    undoStack = []; redoStack = [];
+    updateUndoRedoButtons();
+    renderFramesBar();
+    redraw();
+  }
+  function addFrame(){
+    const copy = pixels.slice();
+    frames.splice(currentFrameIndex+1, 0, copy);
+    markDirty();
+    switchFrame(currentFrameIndex+1);
+  }
+  function deleteFrame(index){
+    if(frames.length <= 1) return;
+    frames.splice(index, 1);
+    markDirty();
+    switchFrame(Math.max(0, Math.min(index, frames.length-1)));
+  }
+  function renderFramesBar(){
+    framesBar.querySelectorAll('.frame-thumb-wrap').forEach(el => el.remove());
+    frames.forEach((frameArr, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'frame-thumb-wrap';
+      const thumbBtn = document.createElement('button');
+      thumbBtn.className = 'frame-thumb' + (i===currentFrameIndex ? ' active' : '');
+      const c = document.createElement('canvas');
+      thumbBtn.appendChild(c);
+      const tctx = c.getContext('2d');
+      const cell = Math.max(1, Math.floor(80/gridSize));
+      c.width = gridSize*cell; c.height = gridSize*cell;
+      renderCanvasTo(tctx, cell, false, frameArr, gridSize);
+      thumbBtn.addEventListener('click', () => switchFrame(i));
+      wrap.appendChild(thumbBtn);
+      if(frames.length > 1){
+        const del = document.createElement('button');
+        del.className = 'frame-del';
+        del.textContent = '×';
+        del.title = 'Видалити кадр';
+        del.addEventListener('click', (e) => { e.stopPropagation(); deleteFrame(i); });
+        wrap.appendChild(del);
+      }
+      framesBar.insertBefore(wrap, frameAddBtn);
+    });
+  }
+  frameAddBtn.addEventListener('click', addFrame);
+
+  // ---------- Playback ----------
+  function stopPlayback(){
+    if(playTimer){ clearInterval(playTimer); playTimer = null; }
+    playBtn.classList.remove('active');
+    redraw();
+  }
+  function startPlayback(){
+    if(frames.length < 2) return;
+    playBtn.classList.add('active');
+    playFrameIndex = currentFrameIndex;
+    playTimer = setInterval(() => {
+      playFrameIndex = (playFrameIndex+1) % frames.length;
+      renderCanvasTo(ctx, pixelSize, false, frames[playFrameIndex], gridSize);
+    }, 1000/fps);
+  }
+  playBtn.addEventListener('click', () => { playTimer ? stopPlayback() : startPlayback(); });
+  fpsUpBtn.addEventListener('click', () => { fps = Math.min(24, fps+1); fpsValue.textContent = fps+' fps'; if(playTimer){ stopPlayback(); startPlayback(); } });
+  fpsDownBtn.addEventListener('click', () => { fps = Math.max(1, fps-1); fpsValue.textContent = fps+' fps'; if(playTimer){ stopPlayback(); startPlayback(); } });
+
+  // ---------- Keyboard shortcuts ----------
+  document.addEventListener('keydown', (e) => {
+    if(viewEditor.classList.contains('hidden')) return;
+    const meta = e.ctrlKey || e.metaKey;
+    if(meta && e.key.toLowerCase()==='z' && !e.shiftKey){ e.preventDefault(); undo(); }
+    else if(meta && ((e.key.toLowerCase()==='z' && e.shiftKey) || e.key.toLowerCase()==='y')){ e.preventDefault(); redo(); }
+    else if(meta && e.key.toLowerCase()==='s'){ e.preventDefault(); saveBtn.click(); }
+    else if(e.key === 'Escape'){
+      if(playTimer){ stopPlayback(); return; }
+      if(isDirty && !confirm('Є незбережені зміни. Вийти без збереження?')) return;
+      closeEditor();
+    }
+  });
+
+  // ---------- Import PNG ----------
+  importBtn.addEventListener('click', () => importInput.click());
+  importInput.addEventListener('change', () => {
+    const file = importInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const presets = [8,16,24,32];
+        let targetSize = gridSize;
+        if(img.naturalWidth === img.naturalHeight && presets.includes(img.naturalWidth)){
+          targetSize = img.naturalWidth;
+        }
+        if(pixels.some(p=>p) && !confirm('Імпорт замінить вміст поточного кадру. Продовжити?')){
+          importInput.value = '';
+          return;
+        }
+        if(targetSize !== gridSize){
+          gridSize = targetSize;
+          gridSizeSelect.value = String(gridSize);
+          frames = frames.map(() => new Array(gridSize*gridSize).fill(null));
+          pixelSize = Math.max(6, Math.floor(400/gridSize));
+          updateZoomLabel();
+        }
+        const off = document.createElement('canvas');
+        off.width = gridSize; off.height = gridSize;
+        const octx = off.getContext('2d');
+        octx.imageSmoothingEnabled = false;
+        octx.clearRect(0,0,gridSize,gridSize);
+        octx.drawImage(img, 0, 0, gridSize, gridSize);
+        const data = octx.getImageData(0,0,gridSize,gridSize).data;
+        startStroke();
+        const newPixels = new Array(gridSize*gridSize).fill(null);
+        for(let i=0;i<gridSize*gridSize;i++){
+          const r=data[i*4], g=data[i*4+1], b=data[i*4+2], a=data[i*4+3];
+          newPixels[i] = a < 128 ? null : ('#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''));
+        }
+        setPixels(newPixels);
+        endStroke();
+        renderFramesBar();
+        redraw();
+        importInput.value = '';
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ---------- Export ----------
+  function frameToCanvas(frameArr){
+    const off = document.createElement('canvas');
+    off.width = gridSize; off.height = gridSize;
+    const octx = off.getContext('2d');
+    for(let y=0;y<gridSize;y++){
+      for(let x=0;x<gridSize;x++){
+        const c = frameArr[y*gridSize+x];
+        if(c){ octx.fillStyle = c; octx.fillRect(x,y,1,1); }
+      }
+    }
+    return off;
+  }
+  function spriteSheetCanvas(){
+    const off = document.createElement('canvas');
+    off.width = gridSize*frames.length; off.height = gridSize;
+    const octx = off.getContext('2d');
+    frames.forEach((frameArr, i) => {
+      const single = frameToCanvas(frameArr);
+      octx.drawImage(single, i*gridSize, 0);
+    });
+    return off;
+  }
+  downloadPngBtn.addEventListener('click', () => {
+    const off = frames.length > 1 ? spriteSheetCanvas() : frameToCanvas(frames[0]);
+    const url = off.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url; a.download = slugify(nameInput.value) + (frames.length>1 ? '-sheet.png' : '.png');
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+  copyCodeBtn.addEventListener('click', async () => {
+    let snippet;
+    if(frames.length > 1){
+      const off = spriteSheetCanvas();
+      const dataUrl = off.toDataURL('image/png');
+      snippet = `const spriteSheet = new Image();\nspriteSheet.src = "${dataUrl}";\nconst frameW = ${gridSize}, frameH = ${gridSize}, frameCount = ${frames.length};\nlet frame = 0;\nfunction drawSprite(ctx, x, y, w, h){\n  ctx.drawImage(spriteSheet, frame*frameW, 0, frameW, frameH, x, y, w, h);\n}\nsetInterval(() => { frame = (frame + 1) % frameCount; }, ${Math.round(1000/fps)});`;
+    } else {
+      const off = frameToCanvas(frames[0]);
+      const dataUrl = off.toDataURL('image/png');
+      snippet = `const sprite = new Image();\nsprite.src = "${dataUrl}";\n// намалюй у грі: ctx.drawImage(sprite, x, y, w, h);`;
+    }
+    try{
+      await navigator.clipboard.writeText(snippet);
+      exportHint.textContent = 'Код скопійовано в буфер обміну — встав його в JS-панель редактора коду.';
+    }catch(e){
+      exportHint.textContent = 'Не вдалось скопіювати автоматично.';
+    }
+    exportHint.classList.remove('hidden');
+    clearTimeout(copyCodeBtn._t);
+    copyCodeBtn._t = setTimeout(() => exportHint.classList.add('hidden'), 6000);
+  });
+
+  // ---------- Catalog rendering ----------
+  function spriteFrames(sprite){
+    if(Array.isArray(sprite.frames) && sprite.frames.length) return sprite.frames.map(f => f.pixels);
+    if(sprite.pixels) return [sprite.pixels];
+    return [new Array(sprite.gridSize*sprite.gridSize).fill(null)];
+  }
+  function renderCatalog(){
+    const sprites = loadSprites();
+    grid.innerHTML = '';
+    spriteCount.textContent = sprites.length;
+    emptyState.classList.toggle('visible', sprites.length === 0);
+
+    sprites.forEach(s => {
+      const fr = spriteFrames(s);
+      const card = document.createElement('div');
+      card.className = 'tool-card';
+      const desc = fr.length > 1 ? `${s.gridSize}×${s.gridSize} · ${fr.length} кадрів` : `${s.gridSize}×${s.gridSize}`;
+      card.innerHTML = `
+        <button class="tool-del" title="Видалити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        <div class="thumb-wrap"></div>
+        <div class="tool-name">${escapeHtml(s.name)}</div>
+        <div class="tool-desc">${desc} · ${formatDate(s.updated || s.created)}</div>
+      `;
+      const thumbCanvas = document.createElement('canvas');
+      card.querySelector('.thumb-wrap').appendChild(thumbCanvas);
+      const cell = Math.max(1, Math.floor(160/s.gridSize));
+      const tctx = thumbCanvas.getContext('2d');
+      thumbCanvas.width = s.gridSize*cell; thumbCanvas.height = s.gridSize*cell;
+      renderCanvasTo(tctx, cell, false, fr[0], s.gridSize);
+
+      card.addEventListener('click', (e) => { if(e.target.closest('.tool-del')) return; openEditor(s); });
+      card.querySelector('.tool-del').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if(confirm(`Видалити спрайт «${s.name}»?`)){
+          saveSprites(loadSprites().filter(x => x.id !== s.id));
+          renderCatalog();
+        }
+      });
+      grid.appendChild(card);
+    });
+  }
+  addTile.addEventListener('click', () => openEditor(null));
+
+  // ---------- Editor open/close/save ----------
+  function openEditor(sprite){
+    stopPlayback();
+    currentEditId = sprite ? sprite.id : null;
+    nameInput.value = sprite ? sprite.name : '';
+    gridSize = sprite ? sprite.gridSize : 16;
+    frames = sprite ? spriteFrames(sprite).map(f => f.slice()) : [ new Array(gridSize*gridSize).fill(null) ];
+    currentFrameIndex = 0;
+    pixels = frames[0];
+    gridSizeSelect.value = String(gridSize);
+    pixelSize = Math.max(6, Math.floor(400/gridSize));
+    updateZoomLabel();
+    undoStack = []; redoStack = [];
+    isDirty = false;
+    unsavedDot.classList.add('hidden');
+    exportHint.classList.add('hidden');
+    mirrorX = false; mirrorToggle.checked = false;
+    currentTool = 'pencil';
+    toolButtons.forEach(b => b.classList.toggle('active', b.dataset.tool === 'pencil'));
+    setColor('#4F6BF4');
+    updateUndoRedoButtons();
+    renderFramesBar();
+
+    viewCatalog.classList.add('hidden');
+    viewEditor.classList.remove('hidden');
+    redraw();
+    nameInput.focus();
+  }
+  function closeEditor(){
+    stopPlayback();
+    viewEditor.classList.add('hidden');
+    viewCatalog.classList.remove('hidden');
+    renderCatalog();
+  }
+  backBtn.addEventListener('click', () => {
+    if(isDirty && !confirm('Є незбережені зміни. Вийти без збереження?')) return;
+    closeEditor();
+  });
+  window.addEventListener('beforeunload', (e) => {
+    if(!viewEditor.classList.contains('hidden') && isDirty){ e.preventDefault(); e.returnValue = ''; }
+  });
+
+  saveBtn.addEventListener('click', () => {
+    const name = nameInput.value.trim();
+    if(!name){ alert('Введи назву спрайту'); nameInput.focus(); return; }
+    const sprites = loadSprites();
+    const data = { name, gridSize, frames: frames.map(f => ({ pixels: f.slice() })), updated: Date.now() };
+    if(currentEditId){
+      const idx = sprites.findIndex(s => s.id === currentEditId);
+      if(idx !== -1){ sprites[idx] = { ...sprites[idx], ...data }; delete sprites[idx].pixels; }
+    } else {
+      currentEditId = Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+      sprites.push({ id: currentEditId, created: Date.now(), ...data });
+    }
+    saveSprites(sprites);
+    isDirty = false;
+    unsavedDot.classList.add('hidden');
+
+    const label = saveBtn.querySelector('.save-label');
+    const original = label.textContent;
+    label.textContent = 'Збережено ✓';
+    saveBtn.classList.add('saved-flash');
+    setTimeout(() => { label.textContent = original; saveBtn.classList.remove('saved-flash'); }, 1200);
+  });
+
+  renderPalette();
+  setColor(currentColor);
+  renderCatalog();
+</script>
+
+</body>
+</html>

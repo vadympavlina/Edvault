@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Ccircle cx='16' cy='16' r='9' fill='white'/%3E%3Cpath d='M16 7a9 9 0 0 0 0 18 4.5 4.5 0 0 1 0-9 4.5 4.5 0 0 0 0-9Z' fill='%234F6BF4'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Кольори та контраст · Edvault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f2f5; --surface: #ffffff; --surface2: #f7f8fa;
+    --border: #e2e5ea; --border2: #d0d5dd;
+    --accent: #4F6BF4; --accent-light: #eef0fe; --accent-hover: #3d57e0;
+    --danger: #ef4444; --success: #10b981; --warn: #f59e0b;
+    --text: #1a1d23; --text2: #4b5563; --muted: #9ca3af;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
+  }
+  html[data-theme="dark"] {
+    --bg: #14171c; --surface: #1c212a; --surface2: #232933; --border: #2a313d; --border2: #384152;
+    --accent: #6c85ff; --accent-light: rgba(108,133,255,.16); --accent-hover: #8298ff;
+    --danger: #ff6b6b; --success: #34d399; --warn: #fbbf24;
+    --text: #e8ecf1; --text2: #a8b0bd; --muted: #6b7280;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.25);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.3);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.35);
+  }
+  html[data-theme="dark"] body{ background: var(--bg); }
+
+  html, body { height: 100%; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+  .hidden{ display:none !important; }
+
+  /* topbar */
+  .topbar {
+    min-height: 64px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    padding: 10px clamp(16px, 4vw, 28px); position: sticky; top: 0; z-index: 30;
+  }
+  .topbar-left { display: flex; align-items: center; gap: clamp(9px, 2vw, 12px); min-width: 0; }
+  .topbar-logo { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(79,107,244,.3); flex-shrink: 0; }
+  .topbar-logo svg { width: 18px; height: 18px; }
+  .topbar-text h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; line-height: 1.2; white-space: nowrap; }
+  .topbar-text p { font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 1px; white-space: nowrap; }
+  .topbar-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; background: var(--accent-light); color: var(--accent); letter-spacing: .03em; flex-shrink: 0; }
+
+  .view-btn {
+    width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all .13s ease; flex-shrink: 0;
+  }
+  .view-btn:hover, .view-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .view-btn svg { width: 15px; height: 15px; }
+
+  .retry-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 10px; border: none;
+    background: var(--accent); color: #fff; font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: background .13s; flex-shrink: 0;
+  }
+  .retry-btn:hover { background: var(--accent-hover); }
+  .retry-btn svg{ width:14px; height:14px; }
+  .retry-btn.flash{ background: var(--success) !important; }
+
+  /* main layout */
+  .main { max-width: 1180px; width: 100%; margin: 0 auto; padding: clamp(24px, 5vw, 40px) clamp(16px, 4vw, 28px) clamp(56px, 10vw, 100px); }
+  .grid-2col { display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 900px){ .grid-2col{ grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 18px; padding: 22px;
+    box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 18px;
+  }
+  .card-title { font-size: 15px; font-weight: 800; letter-spacing: -0.2px; display: flex; align-items: center; gap: 8px; }
+  .card-title svg{ width:17px; height:17px; color: var(--accent); }
+
+  /* base color row */
+  .base-color-row{ display:flex; align-items:center; gap:10px; }
+  .big-swatch{
+    width:52px; height:52px; border-radius:12px; border:1.5px solid var(--border2); flex-shrink:0; cursor:pointer; padding:0;
+  }
+  .hex-input{
+    flex:1; padding:10px 12px; border-radius:9px; border:1.5px solid var(--border2); background:var(--surface);
+    font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; color:var(--text); outline:none;
+  }
+  .hex-input:focus{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,107,244,.1); }
+
+  /* swatches */
+  .swatch-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .swatch{ flex:1; min-width:52px; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; background:none; border:none; }
+  .swatch-color{ width:100%; height:52px; border-radius:9px; border:1.5px solid var(--border); transition:transform .12s ease; }
+  .swatch:hover .swatch-color{ transform: scale(1.06); box-shadow: var(--shadow-sm); }
+  .swatch-label{ font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--muted); font-weight:700; text-align:center; line-height:1.3; }
+
+  .tab-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tab-btn{
+    padding:7px 13px; border-radius:9px; border:1.5px solid var(--border); background:var(--surface);
+    color:var(--text2); font-size:12px; font-weight:700; cursor:pointer; transition: all .13s ease;
+  }
+  .tab-btn:hover{ border-color:var(--border2); background:var(--surface2); }
+  .tab-btn.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  .panel-label{ font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+
+  .action-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .ghost-btn{
+    display:inline-flex; align-items:center; gap:6px; padding:8px 13px; border-radius:9px; border:1.5px solid var(--border);
+    background:var(--surface); color:var(--text2); font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+    transition: all .13s ease;
+  }
+  .ghost-btn:hover{ border-color:var(--border2); background:var(--surface2); color:var(--text); }
+  .ghost-btn svg{ width:13px; height:13px; }
+
+  /* contrast card */
+  .contrast-pickers{ display:flex; gap:10px; align-items:center; }
+  .color-field{ flex:1; display:flex; align-items:center; gap:8px; }
+  .color-field label{ font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; width:38px; flex-shrink:0; }
+  .color-field input[type=color]{ width:34px; height:34px; border-radius:8px; border:1.5px solid var(--border2); cursor:pointer; padding:0; flex-shrink:0; }
+  .color-field input[type=text]{
+    flex:1; min-width:0; padding:8px 10px; border-radius:8px; border:1.5px solid var(--border2); background:var(--surface);
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:700; color:var(--text); outline:none;
+  }
+  .swap-btn{
+    width:32px; height:32px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface); color:var(--text2);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: all .13s ease;
+  }
+  .swap-btn:hover{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .swap-btn svg{ width:14px; height:14px; }
+
+  .contrast-preview{
+    border-radius:14px; padding:26px; display:flex; flex-direction:column; gap:8px; align-items:flex-start;
+    border:1.5px solid var(--border); transition: background .15s ease, color .15s ease;
+  }
+  .contrast-preview .big{ font-size:26px; font-weight:800; letter-spacing:-0.3px; }
+  .contrast-preview .normal{ font-size:14.5px; font-weight:500; }
+
+  .ratio-row{ display:flex; align-items:baseline; gap:10px; }
+  .ratio-number{ font-size:36px; font-weight:900; font-family:'JetBrains Mono',monospace; letter-spacing:-1px; }
+  .ratio-sub{ font-size:12px; color:var(--muted); font-weight:600; }
+
+  .badge-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .wcag-badge{
+    display:flex; align-items:center; gap:6px; padding:6px 11px; border-radius:8px; font-size:11.5px; font-weight:700;
+    border:1.5px solid var(--border);
+  }
+  .wcag-badge svg{ width:13px; height:13px; flex-shrink:0; }
+  .wcag-badge.pass{ background:rgba(16,185,129,.1); color:var(--success); border-color:rgba(16,185,129,.35); }
+  .wcag-badge.fail{ background:rgba(239,68,68,.1); color:var(--danger); border-color:rgba(239,68,68,.35); }
+
+  /* saved palettes */
+  .saved-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .saved-chip{
+    position:relative; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;
+    padding:8px; border-radius:12px; border:1.5px solid var(--border); background:var(--surface2); transition: all .13s ease;
+  }
+  .saved-chip:hover{ border-color:var(--accent); }
+  .saved-chip .dots{ display:flex; gap:2px; }
+  .saved-chip .dot{ width:14px; height:14px; border-radius:4px; }
+  .saved-chip .name{ font-size:10px; font-weight:700; color:var(--text2); max-width:74px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .saved-del{
+    position:absolute; top:-6px; right:-6px; width:16px; height:16px; border-radius:50%; background:var(--danger); color:#fff;
+    border:2px solid var(--bg); font-size:10px; line-height:1; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; opacity:0; transition:opacity .12s ease;
+  }
+  .saved-chip:hover .saved-del{ opacity:1; }
+  .empty-hint{ font-size:12.5px; color:var(--muted); }
+
+  .copy-toast{
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(10px);
+    background: var(--text); color: var(--bg); padding: 9px 18px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
+    font-family: 'JetBrains Mono', monospace; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none;
+    transition: all .18s ease; z-index: 50;
+  }
+  .copy-toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" fill="white"/><path d="M12 5a7 7 0 0 0 0 14 3.5 3.5 0 0 1 0-7 3.5 3.5 0 0 0 0-7Z" fill="#4F6BF4"/></svg>
+    </div>
+    <div class="topbar-text">
+      <h1>Edvault</h1>
+      <p>Кольори та контраст</p>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <button class="view-btn" id="theme-toggle-btn" title="Темна тема">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+    </button>
+    <div class="topbar-badge">Дизайн</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="grid-2col">
+
+    <!-- ===== Palette generator ===== -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C22 6.012 17.461 2 12 2Z"/></svg>
+        Генератор палітри
+      </div>
+
+      <div class="base-color-row">
+        <input type="color" class="big-swatch" id="base-color" value="#4F6BF4">
+        <input type="text" class="hex-input" id="base-hex" value="#4F6BF4" maxlength="7">
+      </div>
+
+      <div>
+        <div class="panel-label" style="margin-bottom:8px;">Шкала відтінків</div>
+        <div class="swatch-row" id="shade-row"></div>
+      </div>
+
+      <div>
+        <div class="panel-label" style="margin-bottom:8px;">Гармонія</div>
+        <div class="tab-row" id="harmony-tabs">
+          <button class="tab-btn active" data-h="mono">Монохромна</button>
+          <button class="tab-btn" data-h="analogous">Аналогова</button>
+          <button class="tab-btn" data-h="complementary">Компліментарна</button>
+          <button class="tab-btn" data-h="triadic">Тріада</button>
+        </div>
+        <div class="swatch-row" id="harmony-row" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="action-row">
+        <button class="ghost-btn" id="copy-css-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4M6 8l-4 4 4 4M14.5 4l-5 16"/></svg>
+          Скопіювати CSS-змінні
+        </button>
+        <button class="ghost-btn" id="save-palette-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+          Зберегти палітру
+        </button>
+      </div>
+
+      <div>
+        <div class="panel-label" style="margin-bottom:8px;">Збережені палітри</div>
+        <div class="saved-row" id="saved-row"></div>
+      </div>
+    </div>
+
+    <!-- ===== Contrast checker ===== -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20Z" fill="currentColor" stroke="none"/></svg>
+        Перевірка контрасту
+      </div>
+
+      <div class="contrast-pickers">
+        <div class="color-field">
+          <label>Текст</label>
+          <input type="color" id="fg-color" value="#1a1d23">
+          <input type="text" id="fg-hex" value="#1a1d23">
+        </div>
+        <button class="swap-btn" id="swap-btn" title="Поміняти місцями">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
+        </button>
+        <div class="color-field">
+          <label>Фон</label>
+          <input type="color" id="bg-color" value="#ffffff">
+          <input type="text" id="bg-hex" value="#ffffff">
+        </div>
+      </div>
+
+      <div class="contrast-preview" id="contrast-preview">
+        <div class="big">Приклад тексту Aa</div>
+        <div class="normal">Так виглядатиме звичайний текст цього розміру та кольору на цьому фоні.</div>
+      </div>
+
+      <div class="ratio-row">
+        <div class="ratio-number" id="ratio-number">1.00</div>
+        <div class="ratio-sub">коефіцієнт контрастності (WCAG)</div>
+      </div>
+
+      <div class="badge-row" id="badge-row"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="copy-toast" id="copy-toast"></div>
+
+<script>
+  const THEME_KEY = 'edvault-color-theme';
+  const STORAGE_KEY = 'edvault-saved-palettes';
+
+  try{ if(localStorage.getItem(THEME_KEY) === 'dark') document.documentElement.setAttribute('data-theme','dark'); }catch(e){}
+
+  const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  function applyTheme(dark){
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    try{ localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); }catch(e){}
+    themeToggleBtn.classList.toggle('active', dark);
+  }
+  themeToggleBtn.addEventListener('click', () => applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark'));
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark');
+
+  // ---------- Color math ----------
+  function hexToRgb(hex){
+    hex = hex.replace('#','').trim();
+    if(hex.length === 3) hex = hex.split('').map(c => c+c).join('');
+    const num = parseInt(hex, 16);
+    return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+  }
+  function rgbToHex(r,g,b){
+    return '#' + [r,g,b].map(v => Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+  }
+  function rgbToHsl(r,g,b){
+    r/=255; g/=255; b/=255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b);
+    let h, s, l=(max+min)/2;
+    if(max===min){ h=s=0; }
+    else{
+      const d = max-min;
+      s = l>0.5 ? d/(2-max-min) : d/(max+min);
+      switch(max){
+        case r: h=(g-b)/d + (g<b?6:0); break;
+        case g: h=(b-r)/d + 2; break;
+        default: h=(r-g)/d + 4;
+      }
+      h/=6;
+    }
+    return { h:h*360, s:s*100, l:l*100 };
+  }
+  function hslToRgb(h,s,l){
+    h=((h%360)+360)%360/360; s/=100; l/=100;
+    let r,g,b;
+    if(s===0){ r=g=b=l; }
+    else{
+      const hue2rgb=(p,q,t)=>{
+        if(t<0)t+=1; if(t>1)t-=1;
+        if(t<1/6) return p+(q-p)*6*t;
+        if(t<1/2) return q;
+        if(t<2/3) return p+(q-p)*(2/3-t)*6;
+        return p;
+      };
+      const q = l<0.5 ? l*(1+s) : l+s-l*s;
+      const p = 2*l-q;
+      r=hue2rgb(p,q,h+1/3); g=hue2rgb(p,q,h); b=hue2rgb(p,q,h-1/3);
+    }
+    return { r:r*255, g:g*255, b:b*255 };
+  }
+  function hexToHsl(hex){ const {r,g,b}=hexToRgb(hex); return rgbToHsl(r,g,b); }
+  function hslToHex(h,s,l){ const {r,g,b}=hslToRgb(h,s,l); return rgbToHex(r,g,b); }
+  function isValidHex(hex){ return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex.trim()); }
+
+  // ---------- Shade scale ----------
+  const SHADE_STEPS = [50,100,200,300,400,500,600,700,800,900];
+  const SHADE_LIGHTNESS = [97,93,85,74,62,50,42,33,25,15];
+  function generateShades(hex){
+    const { h, s } = hexToHsl(hex);
+    return SHADE_STEPS.map((step, i) => {
+      const targetL = SHADE_LIGHTNESS[i];
+      const satFactor = 1 - Math.abs(targetL-50)/50*0.22;
+      return { label: String(step), hex: hslToHex(h, Math.max(0, Math.min(100, s*satFactor)), targetL) };
+    });
+  }
+
+  // ---------- Harmony schemes ----------
+  function harmonyMono(hex){
+    const { h, s } = hexToHsl(hex);
+    return [20,35,50,65,80].map(l => ({ label: l+'%', hex: hslToHex(h, s, l) }));
+  }
+  function harmonyAnalogous(hex){
+    const { h, s, l } = hexToHsl(hex);
+    return [-30,-15,0,15,30].map(d => ({ label: (d>0?'+':'')+d+'°', hex: hslToHex(h+d, s, l) }));
+  }
+  function harmonyComplementary(hex){
+    const { h, s, l } = hexToHsl(hex);
+    return [
+      { label:'база темна', hex: hslToHex(h, s, Math.max(10,l-20)) },
+      { label:'база', hex: hslToHex(h, s, l) },
+      { label:'база світла', hex: hslToHex(h, s, Math.min(95,l+20)) },
+      { label:'компл.', hex: hslToHex(h+180, s, l) },
+      { label:'компл. темна', hex: hslToHex(h+180, s, Math.max(10,l-20)) }
+    ];
+  }
+  function harmonyTriadic(hex){
+    const { h, s, l } = hexToHsl(hex);
+    return [
+      { label:'база', hex: hslToHex(h, s, l) },
+      { label:'база світла', hex: hslToHex(h, s, Math.min(95,l+18)) },
+      { label:'+120°', hex: hslToHex(h+120, s, l) },
+      { label:'+120° світла', hex: hslToHex(h+120, s, Math.min(95,l+18)) },
+      { label:'+240°', hex: hslToHex(h+240, s, l) }
+    ];
+  }
+  const HARMONY_FN = { mono: harmonyMono, analogous: harmonyAnalogous, complementary: harmonyComplementary, triadic: harmonyTriadic };
+  let currentHarmony = 'mono';
+
+  // ---------- Copy toast ----------
+  const copyToast = document.getElementById('copy-toast');
+  function showToast(text){
+    copyToast.textContent = text;
+    copyToast.classList.add('show');
+    clearTimeout(copyToast._t);
+    copyToast._t = setTimeout(() => copyToast.classList.remove('show'), 1400);
+  }
+  async function copyText(text, toastMsg){
+    try{ await navigator.clipboard.writeText(text); showToast(toastMsg || ('Скопійовано ' + text)); }
+    catch(e){ showToast('Не вдалось скопіювати'); }
+  }
+  function makeSwatch(item){
+    const btn = document.createElement('button');
+    btn.className = 'swatch';
+    btn.innerHTML = `<span class="swatch-color" style="background:${item.hex}"></span><span class="swatch-label">${item.label}<br>${item.hex}</span>`;
+    btn.addEventListener('click', () => copyText(item.hex));
+    return btn;
+  }
+
+  // ---------- Palette generator wiring ----------
+  const baseColorInput = document.getElementById('base-color');
+  const baseHexInput = document.getElementById('base-hex');
+  const shadeRow = document.getElementById('shade-row');
+  const harmonyRow = document.getElementById('harmony-row');
+  const harmonyTabs = document.querySelectorAll('#harmony-tabs .tab-btn');
+  const copyCssBtn = document.getElementById('copy-css-btn');
+  const savePaletteBtn = document.getElementById('save-palette-btn');
+  const savedRow = document.getElementById('saved-row');
+
+  function renderPaletteSection(){
+    const hex = baseHexInput.value;
+    shadeRow.innerHTML = '';
+    generateShades(hex).forEach(item => shadeRow.appendChild(makeSwatch(item)));
+    harmonyRow.innerHTML = '';
+    HARMONY_FN[currentHarmony](hex).forEach(item => harmonyRow.appendChild(makeSwatch(item)));
+  }
+  function setBaseColor(hex){
+    if(!isValidHex(hex)) return;
+    baseColorInput.value = hex;
+    baseHexInput.value = hex;
+    renderPaletteSection();
+  }
+  baseColorInput.addEventListener('input', () => setBaseColor(baseColorInput.value));
+  baseHexInput.addEventListener('input', () => { if(isValidHex(baseHexInput.value)) setBaseColor(baseHexInput.value); });
+  harmonyTabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentHarmony = btn.dataset.h;
+      harmonyTabs.forEach(b => b.classList.toggle('active', b === btn));
+      renderPaletteSection();
+    });
+  });
+
+  copyCssBtn.addEventListener('click', () => {
+    const shades = generateShades(baseHexInput.value);
+    const css = ':root {\n' + shades.map(s => `  --color-${s.label}: ${s.hex};`).join('\n') + '\n}';
+    copyText(css, 'CSS-змінні скопійовано');
+  });
+
+  function loadPalettes(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }catch(e){ return []; } }
+  function savePalettes(list){ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+  function renderSaved(){
+    const palettes = loadPalettes();
+    savedRow.innerHTML = '';
+    if(!palettes.length){
+      savedRow.innerHTML = '<div class="empty-hint">Поки що нічого не збережено</div>';
+      return;
+    }
+    palettes.forEach(p => {
+      const chip = document.createElement('div');
+      chip.className = 'saved-chip';
+      const dots = generateShades(p.hex).filter((_,i)=>[1,3,5,7,9].includes(i)).map(s => `<span class="dot" style="background:${s.hex}"></span>`).join('');
+      chip.innerHTML = `<div class="dots">${dots}</div><div class="name">${p.name}</div><button class="saved-del">×</button>`;
+      chip.addEventListener('click', (e) => { if(e.target.closest('.saved-del')) return; setBaseColor(p.hex); });
+      chip.querySelector('.saved-del').addEventListener('click', (e) => {
+        e.stopPropagation();
+        savePalettes(loadPalettes().filter(x => x.id !== p.id));
+        renderSaved();
+      });
+      savedRow.appendChild(chip);
+    });
+  }
+  savePaletteBtn.addEventListener('click', () => {
+    const hex = baseHexInput.value;
+    const palettes = loadPalettes();
+    palettes.unshift({ id: Date.now().toString(36), name: hex, hex, created: Date.now() });
+    if(palettes.length > 20) palettes.pop();
+    savePalettes(palettes);
+    renderSaved();
+    savePaletteBtn.classList.add('flash');
+    setTimeout(() => savePaletteBtn.classList.remove('flash'), 800);
+  });
+
+  // ---------- Contrast checker wiring ----------
+  const fgColorInput = document.getElementById('fg-color');
+  const fgHexInput = document.getElementById('fg-hex');
+  const bgColorInput = document.getElementById('bg-color');
+  const bgHexInput = document.getElementById('bg-hex');
+  const swapBtn = document.getElementById('swap-btn');
+  const contrastPreview = document.getElementById('contrast-preview');
+  const ratioNumber = document.getElementById('ratio-number');
+  const badgeRow = document.getElementById('badge-row');
+
+  function relLuminance(hex){
+    const { r, g, b } = hexToRgb(hex);
+    const [rs, gs, bs] = [r,g,b].map(c => {
+      c /= 255;
+      return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4);
+    });
+    return 0.2126*rs + 0.7152*gs + 0.0722*bs;
+  }
+  function contrastRatio(hex1, hex2){
+    const l1 = relLuminance(hex1), l2 = relLuminance(hex2);
+    const lighter = Math.max(l1,l2), darker = Math.min(l1,l2);
+    return (lighter+0.05)/(darker+0.05);
+  }
+  const CHECK_ICON = '<polyline points="20 6 9 17 4 12"/>';
+  const CROSS_ICON = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+  function badge(label, pass){
+    return `<div class="wcag-badge ${pass?'pass':'fail'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${pass?CHECK_ICON:CROSS_ICON}</svg>${label}</div>`;
+  }
+  function updateContrast(){
+    const fg = fgHexInput.value, bg = bgHexInput.value;
+    if(!isValidHex(fg) || !isValidHex(bg)) return;
+    contrastPreview.style.color = fg;
+    contrastPreview.style.background = bg;
+    const ratio = contrastRatio(fg, bg);
+    ratioNumber.textContent = ratio.toFixed(2) + ':1';
+    badgeRow.innerHTML =
+      badge('AA звичайний текст (4.5)', ratio>=4.5) +
+      badge('AA великий текст (3.0)', ratio>=3.0) +
+      badge('AAA звичайний текст (7.0)', ratio>=7.0) +
+      badge('AAA великий текст (4.5)', ratio>=4.5);
+  }
+  function setFg(hex){ if(!isValidHex(hex)) return; fgColorInput.value=hex; fgHexInput.value=hex; updateContrast(); }
+  function setBg(hex){ if(!isValidHex(hex)) return; bgColorInput.value=hex; bgHexInput.value=hex; updateContrast(); }
+  fgColorInput.addEventListener('input', () => setFg(fgColorInput.value));
+  fgHexInput.addEventListener('input', () => { if(isValidHex(fgHexInput.value)) setFg(fgHexInput.value); });
+  bgColorInput.addEventListener('input', () => setBg(bgColorInput.value));
+  bgHexInput.addEventListener('input', () => { if(isValidHex(bgHexInput.value)) setBg(bgHexInput.value); });
+  swapBtn.addEventListener('click', () => {
+    const fg = fgHexInput.value, bg = bgHexInput.value;
+    setFg(bg); setBg(fg);
+  });
+
+  // ---------- Init ----------
+  renderPaletteSection();
+  renderSaved();
+  updateContrast();
+</script>
+
+</body>
+</html>
