@@ -1,0 +1,3023 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M8 11h16v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V11z' fill='white'/%3E%3Cpath d='M8 11l8 6 8-6' stroke='%234F6BF4' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MailCraft · Edvault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* ── EdVault design tokens (перенесено з vote.html) ── */
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #f7f8fa;
+    --border: #e2e5ea;
+    --border2: #d0d5dd;
+    --accent: #4F6BF4;
+    --accent-light: #eef0fe;
+    --accent-hover: #3d57e0;
+    --danger: #ef4444;
+    --danger-light: #fef2f2;
+    --gold: #f5b942;
+    --text: #1a1d23;
+    --text2: #4b5563;
+    --muted: #9ca3af;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
+
+    /* ── нові токени специфічні для MailCraft-шелу ── */
+    --topbar-h: 64px;
+    --rail-w: 56px;
+    --left-panel-w: 240px;
+    --right-w: 300px;
+    --canvas-bg: #e4e7ed;
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  button { font-family: inherit; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+
+  /* =========== BUTTONS (з vote.html) =========== */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 9px 15px;
+    border-radius: 10px; border: none; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .13s ease; white-space: nowrap;
+  }
+  .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(79,107,244,.28); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary.copied { background: #16a34a; box-shadow: 0 2px 10px rgba(22,163,74,.3); }
+  .btn-primary.copy-error { background: var(--danger); box-shadow: 0 2px 10px rgba(239,68,68,.3); }
+  .btn-ghost { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border2); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-icon {
+    width: 34px; height: 34px; padding: 0; border-radius: 9px; border: 1.5px solid var(--border2);
+    background: var(--surface); color: var(--text2); display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .13s ease;
+  }
+  .btn-icon:hover:not(:disabled) { background: var(--surface2); color: var(--text); border-color: var(--muted); }
+  .btn-icon:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-icon svg { width: 16px; height: 16px; }
+
+  /* =========== TOPBAR =========== */
+  .topbar {
+    height: var(--topbar-h); background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 18px;
+    gap: 16px; flex-shrink: 0;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .topbar-logo {
+    width: 36px; height: 36px; border-radius: 10px; background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(79,107,244,.3); flex-shrink: 0;
+  }
+  .topbar-logo svg { width: 19px; height: 19px; }
+  .topbar-text h1 { font-size: 15.5px; font-weight: 800; letter-spacing: -.3px; }
+  .topbar-text p { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 1px; }
+
+  .topbar-center { display: flex; align-items: center; gap: 6px; }
+  .undo-redo { display: flex; align-items: center; gap: 4px; padding-right: 10px; margin-right: 4px; border-right: 1.5px solid var(--border); }
+
+  .preview-switch {
+    display: flex; align-items: center; gap: 2px; background: var(--surface2);
+    border: 1.5px solid var(--border); border-radius: 10px; padding: 3px;
+  }
+  .preview-switch button {
+    width: 30px; height: 27px; border: none; background: transparent; border-radius: 7px;
+    color: var(--muted); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .13s ease;
+  }
+  .preview-switch button svg { width: 15px; height: 15px; }
+  .preview-switch button:hover { color: var(--text); }
+  .preview-switch button.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
+
+  .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .topbar-divider { width: 1.5px; height: 22px; background: var(--border); margin: 0 2px; }
+
+  /* =========== APP SHELL =========== */
+  .app-shell { display: flex; height: calc(100vh - var(--topbar-h)); }
+
+  /* =========== LEFT: ICON RAIL + PANEL =========== */
+  .left-rail {
+    width: var(--rail-w); flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 4px;
+  }
+  .rail-btn {
+    width: 40px; height: 40px; border: none; background: transparent; border-radius: 10px;
+    color: var(--muted); display: flex; align-items: center; justify-content: center; flex-direction: column;
+    cursor: pointer; transition: all .13s ease; position: relative;
+  }
+  .rail-btn svg { width: 19px; height: 19px; }
+  .rail-btn:hover { background: var(--surface2); color: var(--text); }
+  .rail-btn.active { background: var(--accent-light); color: var(--accent); }
+  .rail-btn.active::before {
+    content: ''; position: absolute; left: -10px; top: 8px; bottom: 8px; width: 3px;
+    background: var(--accent); border-radius: 0 3px 3px 0;
+  }
+
+  .left-panel {
+    width: var(--left-panel-w); flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .panel-head { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .panel-head h3 { font-size: 14px; font-weight: 800; letter-spacing: -.2px; }
+  .panel-head p { font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+  .panel-body { flex: 1; overflow-y: auto; padding: 14px 16px 24px; }
+
+  .block-group { margin-bottom: 18px; }
+  .block-group:last-child { margin-bottom: 0; }
+  .block-group-title {
+    font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px; padding-left: 2px;
+  }
+  .block-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .block-card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    padding: 12px 6px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--surface2);
+    cursor: grab; transition: all .13s ease; text-align: center; touch-action: none;
+  }
+  .block-card:hover { border-color: var(--accent); background: var(--accent-light); }
+  .block-card:active { cursor: grabbing; transform: scale(.97); }
+  .block-card .bc-icon {
+    width: 30px; height: 30px; border-radius: 8px; background: var(--surface); border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center; color: var(--text2);
+  }
+  .block-card .bc-icon svg { width: 15px; height: 15px; }
+  .block-card span { font-size: 10.5px; font-weight: 700; color: var(--text2); line-height: 1.2; }
+  .block-card.disabled { opacity: .4; cursor: not-allowed; }
+  .block-card.disabled:hover { border-color: var(--border); background: var(--surface2); }
+
+  .panel-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 50px 16px; color: var(--muted); gap: 10px; height: 100%;
+  }
+  .panel-empty svg { width: 32px; height: 32px; opacity: .5; }
+  .panel-empty p { font-size: 12.5px; font-weight: 600; max-width: 160px; line-height: 1.5; }
+
+  /* =========== CANVAS =========== */
+  .canvas-wrap { flex: 1; display: flex; flex-direction: column; background: var(--canvas-bg); min-width: 0; }
+  .canvas-toolbar {
+    height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    gap: 10px; border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .canvas-toolbar .zoom-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: var(--muted);
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 4px 10px;
+  }
+  .canvas-scroll { flex: 1; overflow-y: auto; padding: 36px 24px 80px; display: flex; justify-content: center; }
+  .canvas-paper {
+    width: 600px; max-width: 100%; background: var(--surface); border-radius: 4px;
+    box-shadow: var(--shadow-lg); min-height: 420px; transition: width .2s ease, box-shadow .15s ease;
+    position: relative;
+  }
+  .canvas-paper.mode-tablet { width: 480px; }
+  .canvas-paper.mode-mobile { width: 360px; }
+  .canvas-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 90px 30px; gap: 14px; min-height: 420px;
+  }
+  .canvas-empty .ce-icon {
+    width: 56px; height: 56px; border-radius: 16px; background: var(--accent-light);
+    display: flex; align-items: center; justify-content: center; color: var(--accent);
+  }
+  .canvas-empty .ce-icon svg { width: 26px; height: 26px; }
+  .canvas-empty h3 { font-size: 16px; font-weight: 800; }
+  .canvas-empty p { font-size: 12.5px; color: var(--text2); max-width: 260px; line-height: 1.5; }
+
+  /* =========== RIGHT: INSPECTOR =========== */
+  .right-panel {
+    width: var(--right-w); flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .right-panel .panel-head { display: flex; align-items: center; justify-content: space-between; }
+  .selected-tag {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+    background: var(--accent-light); color: var(--accent); padding: 3px 9px; border-radius: 7px;
+  }
+
+  /* =========== EDITOR BLOCKS (канвас) =========== */
+  .eb-block {
+    position: relative; cursor: pointer; transition: background .1s ease;
+  }
+  .eb-block:hover { background: rgba(79,107,244,.04); }
+  .eb-block.selected { background: rgba(79,107,244,.06); }
+  .eb-block.selected::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    border: 1.5px solid var(--accent); border-radius: 2px;
+  }
+  .eb-toolbar {
+    position: absolute; top: -13px; left: 10px; z-index: 5; display: none;
+    align-items: center; gap: 6px; background: var(--accent); color: #fff;
+    font-size: 10.5px; font-weight: 700; padding: 3px 6px 3px 9px; border-radius: 7px;
+    box-shadow: 0 2px 8px rgba(79,107,244,.35); white-space: nowrap;
+  }
+  .eb-block:hover .eb-toolbar, .eb-block.selected .eb-toolbar { display: inline-flex; }
+  .eb-toolbar button {
+    width: 17px; height: 17px; border: none; background: rgba(255,255,255,.2); color: #fff;
+    border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .eb-toolbar button:hover { background: rgba(255,255,255,.35); }
+  .eb-toolbar button svg { width: 10px; height: 10px; }
+  .eb-handle { cursor: grab; touch-action: none; }
+  .eb-handle:active { cursor: grabbing; }
+
+  .eb-block.dragging { opacity: .35; }
+  .eb-container.drop-active {
+    outline: 2px dashed var(--accent); outline-offset: -2px; background: var(--accent-light) !important;
+  }
+  .eb-drop-indicator {
+    height: 3px; margin: 3px 14px; border-radius: 2px; background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,107,244,.18);
+  }
+  .eb-drag-ghost {
+    position: fixed; z-index: 9999; pointer-events: none; transform: translate(-4px, -50%);
+    background: var(--text); color: #fff; font-size: 11.5px; font-weight: 700;
+    padding: 7px 13px; border-radius: 8px; box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 6px;
+  }
+  .eb-drag-ghost::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0;
+  }
+
+
+  .eb-section { padding: 20px; border: 1.5px dashed transparent; }
+  .eb-section.empty-inner, .eb-column.empty-inner {
+    border-color: var(--border2); border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    min-height: 64px; color: var(--muted); font-size: 12px; font-weight: 600; text-align: center; padding: 20px;
+  }
+  .eb-columns { display: flex; min-width: 0; }
+  .eb-column { flex: 1; min-width: 0; border: 1.5px dashed transparent; border-radius: 8px; }
+  .eb-heading { padding: 14px 24px; }
+  .eb-paragraph { padding: 8px 24px; }
+  .eb-button-wrap { padding: 14px 24px; display: flex; }
+  .eb-button-wrap a {
+    display: inline-block; padding: 12px 26px; border-radius: 8px; font-size: 13.5px; font-weight: 700;
+    text-decoration: none; pointer-events: none;
+  }
+  .eb-image { padding: 8px 24px; }
+  .eb-image-box {
+    width: 100%; aspect-ratio: 16/7; background: var(--surface2); border: 1.5px dashed var(--border2);
+    border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; color: var(--muted); overflow: hidden;
+  }
+  .eb-image-box svg { width: 22px; height: 22px; }
+  .eb-image-box span { font-size: 11px; font-weight: 700; }
+  .eb-image-box img { width: 100%; height: 100%; object-fit: cover; }
+
+  .eb-spacer { position: relative; }
+  .eb-spacer::after {
+    content: ''; position: absolute; left: 24px; right: 24px; top: 50%;
+    border-top: 1px dashed var(--border2);
+  }
+  .eb-quote blockquote { -webkit-font-smoothing: antialiased; }
+  .eb-social-icon {
+    display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+    border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 800;
+    margin: 0 4px;
+  }
+  .eb-hero { min-width: 0; }
+  .eb-hero-inner {
+    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 24px; overflow: hidden;
+  }
+  .eb-hero-overlay { position: absolute; inset: 0; z-index: 1; }
+  .eb-hero-content { position: relative; z-index: 2; }
+
+  .eb-faq-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .eb-faq-item:last-child { border-bottom: none; }
+  .eb-faq-q { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+  .eb-faq-a { font-size: 12.5px; color: var(--text2); line-height: 1.55; }
+
+  .eb-product { border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+  .eb-product-img { aspect-ratio: 16/10; background: var(--surface2); display: flex; align-items: center; justify-content: center; color: var(--muted); }
+  .eb-product-img svg { width: 26px; height: 26px; }
+  .eb-product-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .eb-product-body { padding: 14px; }
+  .eb-product-title { font-size: 13.5px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .eb-product-desc { font-size: 12px; color: var(--text2); line-height: 1.5; margin-bottom: 10px; }
+  .eb-product-footer { display: flex; align-items: center; justify-content: space-between; }
+  .eb-product-price { font-size: 14px; font-weight: 800; color: var(--accent); }
+  .eb-product-btn { font-size: 11.5px; font-weight: 700; color: #fff; background: var(--accent); padding: 7px 14px; border-radius: 7px; }
+
+  .eb-team { text-align: center; }
+  .eb-team-photo { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; margin: 0 auto 10px; display: block; }
+  .eb-team-photo-placeholder { display: flex; align-items: center; justify-content: center; background: var(--surface2); color: var(--muted); }
+  .eb-team-photo-placeholder svg { width: 24px; height: 24px; }
+  .eb-team-name { font-size: 13.5px; font-weight: 800; color: var(--text); }
+  .eb-team-role { font-size: 11.5px; font-weight: 700; color: var(--accent); margin: 2px 0 6px; }
+  .eb-team-bio { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+  .eb-table-wrap { overflow-x: auto; }
+  .eb-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .eb-table th { background: var(--surface2); text-align: left; padding: 7px 9px; border: 1px solid var(--border); font-weight: 800; color: var(--text); font-size: 11px; }
+  .eb-table td { padding: 7px 9px; border: 1px solid var(--border); color: var(--text2); }
+
+  .rail-btn.shake { animation: rail-shake .35s ease; }
+  @keyframes rail-shake { 0%,100%{ transform: translateX(0);} 25%{ transform: translateX(-3px);} 75%{ transform: translateX(3px);} }
+
+  .selected-info { padding: 4px 2px 14px; }
+  .selected-info .si-type {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+    background: var(--accent-light); color: var(--accent); padding: 4px 10px; border-radius: 7px; margin-bottom: 10px;
+  }
+  .selected-info .si-id { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--muted); margin-bottom: 14px; }
+  .selected-info .si-note {
+    font-size: 12px; color: var(--text2); line-height: 1.6; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+  }
+  .selected-info .si-delete {
+    margin-top: 12px; width: 100%; justify-content: center;
+  }
+
+  /* =========== INSPECTOR: property fields =========== */
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .field > label {
+    display: block; font-size: 10.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 7px;
+  }
+  .field input[type="text"], .field input[type="number"], .field textarea, .field select {
+    width: 100%; padding: 9px 11px; border: 1.5px solid var(--border2); border-radius: 9px;
+    font-size: 12.5px; font-family: inherit; color: var(--text); background: var(--surface);
+    transition: box-shadow .12s ease, border-color .12s ease;
+  }
+  .field textarea { resize: vertical; min-height: 64px; line-height: 1.55; }
+  .field select { cursor: pointer; }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.12);
+  }
+  .field-color { display: flex; align-items: center; gap: 8px; }
+  .field-color input[type="color"] {
+    width: 38px; height: 38px; padding: 0; border: 1.5px solid var(--border2); border-radius: 9px;
+    cursor: pointer; background: none; flex-shrink: 0;
+  }
+  .field-color .fc-hex {
+    flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text2);
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0 10px;
+    height: 38px; display: flex; align-items: center; text-transform: uppercase;
+  }
+  .align-group { display: flex; gap: 4px; }
+  .align-group button {
+    flex: 1; height: 34px; border: 1.5px solid var(--border2); background: var(--surface); border-radius: 9px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted);
+    transition: all .12s ease;
+  }
+  .align-group button svg { width: 15px; height: 15px; }
+  .align-group button:hover { color: var(--text); background: var(--surface2); }
+  .align-group button.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+  .inspector-divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  /* =========== TEMPLATES / THEMES panels =========== */
+  .tpl-list, .theme-list { display: flex; flex-direction: column; gap: 8px; }
+  .tpl-card {
+    display: block; width: 100%; text-align: left; padding: 12px 13px; border: 1.5px solid var(--border);
+    border-radius: 12px; background: var(--surface2); cursor: pointer; transition: all .13s ease;
+  }
+  .tpl-card:hover { border-color: var(--accent); background: var(--accent-light); }
+  .tpl-card-title { font-size: 12.5px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+  .tpl-card-desc { font-size: 11px; color: var(--muted); line-height: 1.4; font-weight: 500; }
+
+  .theme-card {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
+    border-radius: 12px; background: var(--surface2); cursor: pointer; transition: all .13s ease;
+    font-size: 12.5px; font-weight: 700; color: var(--text);
+  }
+  .theme-card:hover { border-color: var(--border2); background: var(--surface); }
+  .theme-card.active { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+  .theme-swatch { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 2px rgba(255,255,255,.6); }
+
+  /* =========== ASSET MANAGER (images panel) =========== */
+  .asset-upload-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    padding: 22px 12px; border: 1.5px dashed var(--border2); border-radius: 12px; background: var(--surface2);
+    cursor: pointer; transition: all .13s ease; text-align: center; margin-bottom: 14px;
+  }
+  .asset-upload-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+  .asset-upload-btn svg { width: 20px; height: 20px; color: var(--muted); }
+  .asset-upload-btn span { font-size: 11.5px; font-weight: 700; color: var(--text2); }
+  .asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .asset-thumb {
+    position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 1.5px solid var(--border);
+    cursor: pointer; background: var(--surface2);
+  }
+  .asset-thumb:hover { border-color: var(--accent); }
+  .asset-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .asset-delete {
+    position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; border: none;
+    background: rgba(26,29,35,.65); color: #fff; font-size: 13px; line-height: 1; display: none;
+    align-items: center; justify-content: center; cursor: pointer;
+  }
+  .asset-thumb:hover .asset-delete { display: flex; }
+  .asset-empty-hint { font-size: 11.5px; color: var(--muted); line-height: 1.5; text-align: center; padding: 8px 4px; }
+
+  /* =========== RESPONSIVE ↓ collapse rail-only on narrow screens =========== */
+  @media (max-width: 980px) {
+    .left-panel, .right-panel { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ TOPBAR ═══ -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+    </div>
+    <div class="topbar-text">
+      <h1>MailCraft</h1>
+      <p>Email-конструктор · Edvault</p>
+    </div>
+  </div>
+
+  <div class="topbar-center">
+    <div class="undo-redo">
+      <button class="btn-icon" id="undo-btn" title="Скасувати" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+      </button>
+      <button class="btn-icon" id="redo-btn" title="Повторити" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+      </button>
+    </div>
+
+    <div class="preview-switch" id="preview-switch">
+      <button class="active" data-mode="desktop" title="Десктоп">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </button>
+      <button data-mode="tablet" title="Планшет">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11 18h2"/></svg>
+      </button>
+      <button data-mode="mobile" title="Мобільний">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <button class="btn btn-ghost" id="save-btn" title="Зберегти проєкт (localStorage)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Зберегти
+    </button>
+    <button class="btn-icon" id="export-btn" title="Експортувати проєкт у .json-файл">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M12 11v6M9.5 14.5L12 17l2.5-2.5"/></svg>
+    </button>
+    <button class="btn-icon" id="import-btn" title="Імпортувати проєкт із .json-файлу">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M12 17v-6M9.5 13.5L12 11l2.5 2.5"/></svg>
+    </button>
+    <input type="file" id="import-file-input" accept="application/json,.json" style="display:none;">
+    <button class="btn btn-ghost" id="download-html-btn" title="Завантажити HTML-файл">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      HTML
+    </button>
+    <div class="topbar-divider"></div>
+    <button class="btn btn-ghost" id="ai-generate-btn" title="Згенерувати лист через підключений AI-провайдер">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.2L21 9l-5 4.4 1.4 6.6L12 16.9 6.6 20l1.4-6.6L3 9l6.6-.8z"/></svg>
+      AI
+    </button>
+    <button class="btn btn-primary" id="copy-gmail-btn" title="Скопіювати email у форматі, придатному для вставки в Gmail">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.2L21 9l-5 4.4 1.4 6.6L12 16.9 6.6 20l1.4-6.6L3 9l6.6-.8z"/></svg>
+      Копіювати для Gmail
+    </button>
+  </div>
+</div>
+
+<!-- ═══ APP SHELL ═══ -->
+<div class="app-shell">
+
+  <!-- LEFT: icon rail -->
+  <div class="left-rail" id="left-rail">
+    <button class="rail-btn active" data-panel="blocks" title="Блоки">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    </button>
+    <button class="rail-btn" data-panel="layouts" title="Макети">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+    </button>
+    <button class="rail-btn" data-panel="templates" title="Шаблони">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>
+    </button>
+    <button class="rail-btn" data-panel="saved" title="Збережені компоненти">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    </button>
+    <button class="rail-btn" data-panel="images" title="Зображення">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    </button>
+    <button class="rail-btn" data-panel="brand" title="Бренд-активи">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    </button>
+    <button class="rail-btn" data-panel="themes" title="Теми">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2a10 10 0 1 0 0 20c1.5 0 2-1 2-2 0-.7-.3-1-.6-1.3-.3-.3-.6-.7-.6-1.2 0-1 .8-1.5 1.7-1.5H16a5 5 0 0 0 5-5c0-5-4.5-9-9-9z"/></svg>
+    </button>
+  </div>
+
+  <!-- LEFT: panel content (перелічені зʼявляться поступово; зараз реалізовано "Блоки") -->
+  <div class="left-panel" id="left-panel">
+    <div class="panel-head">
+      <h3>Блоки</h3>
+      <p>Перетягни блок на канвас</p>
+    </div>
+    <div class="panel-body">
+      <div class="block-group">
+        <div class="block-group-title">Структура</div>
+        <div class="block-grid">
+          <div class="block-card" data-block="section">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/></svg></div>
+            <span>Секція</span>
+          </div>
+          <div class="block-card" data-block="columns2" title="2 колонки">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="16" rx="1.5"/><rect x="13" y="4" width="8" height="16" rx="1.5"/></svg></div>
+            <span>2 колонки</span>
+          </div>
+          <div class="block-card" data-block="columns3" title="3 колонки">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="5.5" height="16" rx="1.3"/><rect x="9.3" y="4" width="5.5" height="16" rx="1.3"/><rect x="16" y="4" width="5.5" height="16" rx="1.3"/></svg></div>
+            <span>3 колонки</span>
+          </div>
+          <div class="block-card" data-block="spacer">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/></svg></div>
+            <span>Проміжок</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block-group">
+        <div class="block-group-title">Контент</div>
+        <div class="block-grid">
+          <div class="block-card" data-block="heading">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M6 12h12"/></svg></div>
+            <span>Заголовок</span>
+          </div>
+          <div class="block-card" data-block="paragraph">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg></div>
+            <span>Параграф</span>
+          </div>
+          <div class="block-card" data-block="button">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="6" rx="3"/></svg></div>
+            <span>Кнопка</span>
+          </div>
+          <div class="block-card" data-block="divider">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"/></svg></div>
+            <span>Розділювач</span>
+          </div>
+          <div class="block-card" data-block="quote">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3M17 8a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3"/></svg></div>
+            <span>Цитата</span>
+          </div>
+          <div class="block-card" data-block="list">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1.3"/><circle cx="4.5" cy="12" r="1.3"/><circle cx="4.5" cy="18" r="1.3"/></svg></div>
+            <span>Список</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block-group">
+        <div class="block-group-title">Медіа</div>
+        <div class="block-grid">
+          <div class="block-card" data-block="image">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+            <span>Зображення</span>
+          </div>
+          <div class="block-card" data-block="logo">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg></div>
+            <span>Лого</span>
+          </div>
+          <div class="block-card" data-block="hero">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M7 20h10"/></svg></div>
+            <span>Hero-банер</span>
+          </div>
+          <div class="block-card" data-block="social">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><line x1="8.2" y1="10.8" x2="15.8" y2="7.2"/><line x1="8.2" y1="13.2" x2="15.8" y2="16.8"/></svg></div>
+            <span>Соц. іконки</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block-group">
+        <div class="block-group-title">Розширені</div>
+        <div class="block-grid">
+          <div class="block-card" data-block="faq">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5"/><path d="M12 17h.01"/></svg></div>
+            <span>FAQ</span>
+          </div>
+          <div class="block-card" data-block="product">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4v10l8 4 8-4V7z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg></div>
+            <span>Товар</span>
+          </div>
+          <div class="block-card" data-block="team">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg></div>
+            <span>Команда</span>
+          </div>
+          <div class="block-card" data-block="table">
+            <div class="bc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="4" x2="9" y2="20"/></svg></div>
+            <span>Таблиця</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: canvas -->
+  <div class="canvas-wrap">
+    <div class="canvas-toolbar">
+      <span class="zoom-label" id="mode-label">Десктоп · 600px</span>
+    </div>
+    <div class="canvas-scroll">
+      <div class="canvas-paper" id="canvas-paper">
+        <div class="canvas-empty">
+          <div class="ce-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+          </div>
+          <h3>Лист поки порожній</h3>
+          <p>Перетягни блок з лівої панелі, щоб почати створювати email</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: inspector -->
+  <div class="right-panel" id="right-panel">
+    <div class="panel-head">
+      <h3>Властивості</h3>
+    </div>
+    <div class="panel-body" id="inspector-body">
+      <div class="panel-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20l9-9-9-9-9 9z"/><path d="M12 8v4M12 15h.01"/></svg>
+        <p>Вибери блок на канвасі, щоб редагувати його властивості</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ═══════════════════════════════════════════════════════════
+  // КРОК 1: лише каркас + перемикання лівих вкладок і превʼю-режиму.
+  // Стан документа, Component Registry, DnD і рендер блоків — наступні кроки.
+  // ═══════════════════════════════════════════════════════════
+
+  // ── перемикач лівої панелі (rail) ──
+  const railButtons = document.querySelectorAll('.rail-btn');
+  const leftPanel = document.getElementById('left-panel');
+  let BLOCKS_PANEL_HTML = leftPanel.querySelector('.panel-body').innerHTML; // кеш палітри блоків (мутабельний — плагіни дописують сюди свої картки)
+  railButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      railButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const panelName = btn.dataset.panel;
+      const head = leftPanel.querySelector('.panel-head h3');
+      const sub = leftPanel.querySelector('.panel-head p');
+      const body = leftPanel.querySelector('.panel-body');
+      const oldEmpty = leftPanel.querySelector('.panel-empty');
+      if (oldEmpty) oldEmpty.remove();
+
+      if (panelName === 'blocks') {
+        head.textContent = 'Блоки';
+        sub.textContent = 'Перетягни блок на канвас';
+        body.style.display = '';
+        body.innerHTML = BLOCKS_PANEL_HTML;
+      } else if (panelName === 'templates') {
+        head.textContent = 'Шаблони';
+        sub.textContent = 'Клік замінить поточний лист';
+        body.style.display = '';
+        body.innerHTML = renderTemplatesPanelBody();
+      } else if (panelName === 'themes') {
+        head.textContent = 'Теми';
+        sub.textContent = 'Застосується до всього листа';
+        body.style.display = '';
+        body.innerHTML = renderThemesPanelBody();
+      } else if (panelName === 'images') {
+        head.textContent = 'Зображення';
+        sub.textContent = 'Клік застосує до вибраного блоку';
+        body.style.display = '';
+        body.innerHTML = renderImagesPanelBody();
+      } else if (panelName === 'layouts') {
+        head.textContent = 'Макети';
+        sub.textContent = 'Клік додасть композицію в кінець листа';
+        body.style.display = '';
+        body.innerHTML = renderLayoutsPanelBody();
+      } else {
+        const labels = {
+          saved: ['Збережені', 'Твої власні блоки'],
+          brand: ['Бренд-активи', 'Лого, кольори, шрифти'],
+        };
+        const [title, subText] = labels[panelName] || ['—', ''];
+        head.textContent = title;
+        sub.textContent = subText;
+        body.style.display = 'none';
+        const empty = document.createElement('div');
+        empty.className = 'panel-empty';
+        empty.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+          <p>Ця вкладка з'явиться на одному з наступних кроків</p>`;
+        leftPanel.appendChild(empty);
+      }
+    });
+  });
+
+  // ── клік по картці шаблону/теми/асета (делеговано, бо ці панелі перемальовуються динамічно) ──
+  leftPanel.addEventListener('click', (e) => {
+    const tplCard = e.target.closest('[data-template]');
+    if (tplCard) { applyTemplate(tplCard.dataset.template); return; }
+    const layoutCard = e.target.closest('[data-layout]');
+    if (layoutCard) { applyLayout(layoutCard.dataset.layout); return; }
+    const themeCard = e.target.closest('[data-theme]');
+    if (themeCard) { applyTheme(themeCard.dataset.theme); return; }
+    const deleteAssetBtn = e.target.closest('[data-action="delete-asset"]');
+    if (deleteAssetBtn) { e.stopPropagation(); deleteAsset(deleteAssetBtn.dataset.assetId); return; }
+    const assetThumb = e.target.closest('[data-asset]');
+    if (assetThumb) { useAsset(assetThumb.dataset.asset); return; }
+  });
+
+  // ── завантаження файлів у бібліотеку зображень (делеговано — інпут перестворюється при кожному рендері панелі) ──
+  leftPanel.addEventListener('change', (e) => {
+    if (e.target.id === 'asset-upload-input' && e.target.files.length) {
+      handleAssetUpload(e.target.files);
+      e.target.value = '';
+    }
+  });
+
+  // ── перемикач режиму превʼю (desktop / tablet / mobile) ──
+  const previewSwitch = document.getElementById('preview-switch');
+  const canvasPaper = document.getElementById('canvas-paper');
+  const modeLabel = document.getElementById('mode-label');
+  const modeMeta = {
+    desktop: { cls: '', label: 'Десктоп · 600px' },
+    tablet:  { cls: 'mode-tablet', label: 'Планшет · 480px' },
+    mobile:  { cls: 'mode-mobile', label: 'Мобільний · 360px' },
+  };
+  previewSwitch.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      previewSwitch.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const mode = btn.dataset.mode;
+      canvasPaper.classList.remove('mode-tablet', 'mode-mobile');
+      const meta = modeMeta[mode];
+      if (meta.cls) canvasPaper.classList.add(meta.cls);
+      modeLabel.textContent = meta.label;
+      // Реальні @media-запити не спрацюють всередині вузького div'а в широкому вікні браузера —
+      // тому режим превʼю зберігаємо в state і перераховуємо responsive-токени в JS (нижче).
+      state.previewMode = mode;
+      renderCanvas();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // КРОК 2: STATE + COMPONENT REGISTRY + РЕНДЕР КАНВАСА
+  // Поки без DnD (крок 4) і без редагування властивостей (крок 5) —
+  // клік по картці блоку додає його в кінець листа, клік по блоку на
+  // канвасі — вибирає його (і дає видалити).
+  // ═══════════════════════════════════════════════════════════
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  let idCounter = 1;
+  function uid(prefix) { return prefix + '_' + (idCounter++); }
+
+  const state = {
+    document: { root: [] },
+    selectedId: null,
+    previewMode: 'desktop', // 'desktop' | 'tablet' | 'mobile' — впливає на JS-обчислювані responsive-токени канваса
+  };
+
+  // history-змінні винесені сюди (а не поряд із функціями кроку 9), бо init() викликається
+  // раніше за текстовим розташуванням у файлі — let/const мають Temporal Dead Zone,
+  // тож мусять бути оголошені ДО першого виконання init().
+  let historyStack = [];
+  let historyIndex = -1;
+  let isRestoring = false;
+  let historyDebounceTimer = null;
+  let assets = []; // бібліотека завантажених зображень (Asset Manager, крок 12) — так само мусить бути оголошена до init()
+
+  // ── Component Registry: єдине джерело правди про типи блоків ──
+  const BLOCK_REGISTRY = {
+    section: {
+      label: 'Секція',
+      defaultProps: { padding: 20, bg: '', bgType: 'solid', bgTo: '#3d57e0', bgAngle: 135, radius: 0 },
+    },
+    heading: {
+      label: 'Заголовок',
+      defaultProps: { text: 'Заголовок листа', align: 'left', color: '#1a1d23', fontSize: 22 },
+    },
+    paragraph: {
+      label: 'Параграф',
+      defaultProps: {
+        text: 'Короткий текст параграфа — розкажіть тут головну думку вашого листа.',
+        align: 'left', color: '#4b5563', fontSize: 14,
+      },
+    },
+    button: {
+      label: 'Кнопка',
+      defaultProps: {
+        text: 'Дізнатися більше', href: '#', align: 'left', bg: '#4F6BF4', color: '#ffffff',
+        fontSize: 14, radius: 6, width: 'auto',
+      },
+    },
+    image: {
+      label: 'Зображення',
+      defaultProps: { src: '', alt: '', align: 'center', width: 100, radius: 0 },
+    },
+    divider: {
+      label: 'Розділювач',
+      defaultProps: { color: '#e2e5ea', thickness: 1, width: 100 },
+    },
+    spacer: {
+      label: 'Проміжок',
+      defaultProps: { height: 24 },
+    },
+    quote: {
+      label: 'Цитата',
+      defaultProps: {
+        text: 'Найкращі листи — ті, які хочеться дочитати до кінця.',
+        author: 'Автор цитати',
+        color: '#1a1d23', borderColor: '#4F6BF4', fontSize: 15,
+      },
+    },
+    list: {
+      label: 'Список',
+      defaultProps: { items: ['Перший пункт', 'Другий пункт', 'Третій пункт'], color: '#4b5563', fontSize: 14 },
+    },
+    logo: {
+      label: 'Лого',
+      defaultProps: { src: '', alt: 'Логотип', width: 140, align: 'center' },
+    },
+    hero: {
+      label: 'Hero-банер',
+      defaultProps: {
+        title: 'Заголовок hero-банера',
+        subtitle: 'Короткий підзаголовок під основним заголовком',
+        bg: '#4F6BF4', bgType: 'solid', bgTo: '#3d57e0', bgAngle: 135,
+        textColor: '#ffffff', height: 200, radius: 8,
+        bgImage: '', overlayOpacity: 40,
+      },
+    },
+    social: {
+      label: 'Соц. іконки',
+      defaultProps: { fb: '', ig: '', tw: '', li: '', color: '', shape: 'circle' },
+    },
+    columns2: {
+      label: '2 колонки',
+      columnCount: 2, // метадані реєстру (не в defaultProps — не властивість інстансу, а фіксована структура типу)
+      defaultProps: { gap: 16, bg: '', bgType: 'solid', bgTo: '#3d57e0', bgAngle: 135 },
+    },
+    columns3: {
+      label: '3 колонки',
+      columnCount: 3,
+      defaultProps: { gap: 16, bg: '', bgType: 'solid', bgTo: '#3d57e0', bgAngle: 135 },
+    },
+    faq: {
+      label: 'FAQ',
+      defaultProps: {
+        items: [
+          { q: 'Як це працює?', a: 'Дуже просто — спробуйте самі, і все стане зрозуміло за хвилину.' },
+          { q: 'Скільки це коштує?', a: 'Перші 14 днів безкоштовно, далі — за тарифом, який ви оберете.' },
+        ],
+        questionColor: '#1a1d23',
+      },
+    },
+    product: {
+      label: 'Товар',
+      defaultProps: {
+        image: '', title: 'Назва товару', description: 'Короткий опис товару у 1-2 реченнях.',
+        price: '$29', buttonText: 'Купити', buttonHref: '#', radius: 8,
+      },
+    },
+    team: {
+      label: 'Команда',
+      defaultProps: { photo: '', name: 'Імʼя Прізвище', role: 'Посада', bio: 'Коротко про людину — 1-2 речення.', photoSize: 72 },
+    },
+    table: {
+      label: 'Таблиця',
+      defaultProps: {
+        headers: ['Колонка 1', 'Колонка 2', 'Колонка 3'],
+        rows: [['A1', 'B1', 'C1'], ['A2', 'B2', 'C2']],
+        headerBg: '#f7f8fa', borderColor: '#e2e5ea',
+      },
+    },
+  };
+
+  const CONTAINER_TYPES = new Set(['section', 'columns2', 'columns3']); // типи, що самі є контейнерами — можуть жити лише на верхньому рівні
+
+  function createNode(type) {
+    const def = BLOCK_REGISTRY[type];
+    if (!def) return null;
+    const node = { id: uid(type), type, props: { ...def.defaultProps } };
+    if (type === 'section') node.children = []; // однослотовий контейнер
+    if (def.columnCount) node.columns = Array.from({ length: def.columnCount }, () => []); // багатослотовий контейнер (columns[i][])
+    return node;
+  }
+
+  // ── КОНТЕЙНЕРИ: 'root' (сам канвас) · id секції (її children[]) · "nodeId:slotIndex" (слот колонки) ──
+  function getContainerArray(containerId) {
+    if (containerId === 'root') return state.document.root;
+    if (containerId.includes(':')) {
+      const [nodeId, slotStr] = containerId.split(':');
+      const node = state.document.root.find(n => n.id === nodeId);
+      return node && node.columns ? (node.columns[Number(slotStr)] || null) : null;
+    }
+    const section = state.document.root.find(n => n.id === containerId && n.type === 'section');
+    return section ? section.children : null;
+  }
+
+  function findNodeAndContainer(id) {
+    const rootIndex = state.document.root.findIndex(n => n.id === id);
+    if (rootIndex !== -1) return { array: state.document.root, index: rootIndex, node: state.document.root[rootIndex] };
+    for (const n of state.document.root) {
+      if (n.children) {
+        const idx = n.children.findIndex(c => c.id === id);
+        if (idx !== -1) return { array: n.children, index: idx, node: n.children[idx] };
+      }
+      if (n.columns) {
+        for (const col of n.columns) {
+          const idx = col.findIndex(c => c.id === id);
+          if (idx !== -1) return { array: col, index: idx, node: col[idx] };
+        }
+      }
+    }
+    return null;
+  }
+
+  const DRAG_HANDLE_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="6" r="1.4"/><circle cx="16" cy="6" r="1.4"/><circle cx="8" cy="12" r="1.4"/><circle cx="16" cy="12" r="1.4"/><circle cx="8" cy="18" r="1.4"/><circle cx="16" cy="18" r="1.4"/></svg>`;
+  const DELETE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+  const ALIGN_ICONS = {
+    left:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="17" y2="18"/></svg>`,
+    center: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="5.5" y1="18" x2="18.5" y2="18"/></svg>`,
+    right:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="10" y1="12" x2="20" y2="12"/><line x1="7" y1="18" x2="20" y2="18"/></svg>`,
+  };
+
+  // ── PROPERTY SCHEMAS: єдине джерело правди для правої панелі (декларативно, без ручного HTML на кожен тип) ──
+  const PROPERTY_SCHEMAS = {
+    section: [
+      { key: 'padding', label: 'Внутрішній відступ (px)', type: 'number', min: 0, max: 80 },
+      { key: 'bgType', label: 'Тип фону', type: 'select', options: [{ value: 'solid', label: 'Суцільний колір' }, { value: 'gradient', label: 'Градієнт' }] },
+      { key: 'bg', label: 'Колір фону (порожнє = прозорий)', type: 'color' },
+      { key: 'bgTo', label: 'Другий колір градієнта', type: 'color', showIf: p => p.bgType === 'gradient' },
+      { key: 'bgAngle', label: 'Кут градієнта (°)', type: 'number', min: 0, max: 360, showIf: p => p.bgType === 'gradient' },
+      { key: 'radius', label: 'Радіус кутів (px)', type: 'number', min: 0, max: 32 },
+    ],
+    heading: [
+      { key: 'text', label: 'Текст заголовка', type: 'textarea' },
+      { key: 'align', label: 'Вирівнювання', type: 'align' },
+      { key: 'color', label: 'Колір тексту', type: 'color' },
+      { key: 'fontSize', label: 'Розмір шрифту (px, десктоп)', type: 'number', min: 14, max: 48 },
+    ],
+    paragraph: [
+      { key: 'text', label: 'Текст параграфа', type: 'textarea' },
+      { key: 'align', label: 'Вирівнювання', type: 'align' },
+      { key: 'color', label: 'Колір тексту', type: 'color' },
+      { key: 'fontSize', label: 'Розмір шрифту (px, десктоп)', type: 'number', min: 11, max: 24 },
+    ],
+    button: [
+      { key: 'text', label: 'Текст кнопки', type: 'text' },
+      { key: 'href', label: 'Посилання (URL)', type: 'text', placeholder: 'https://...' },
+      { key: 'align', label: 'Вирівнювання', type: 'align' },
+      { key: 'bg', label: 'Колір фону', type: 'color' },
+      { key: 'color', label: 'Колір тексту', type: 'color' },
+      { key: 'fontSize', label: 'Розмір шрифту (px)', type: 'number', min: 11, max: 20 },
+      { key: 'radius', label: 'Радіус кутів (px)', type: 'number', min: 0, max: 24 },
+      { key: 'width', label: 'Ширина', type: 'select', options: [{ value: 'auto', label: 'За вмістом' }, { value: 'full', label: 'На всю ширину' }] },
+    ],
+    image: [
+      { key: 'src', label: 'URL зображення', type: 'text', placeholder: 'https://...' },
+      { key: 'alt', label: 'Альтернативний текст (alt)', type: 'text' },
+      { key: 'align', label: 'Вирівнювання', type: 'align' },
+      { key: 'width', label: 'Ширина (% від контенту)', type: 'number', min: 10, max: 100 },
+      { key: 'radius', label: 'Радіус кутів (px)', type: 'number', min: 0, max: 32 },
+    ],
+    divider: [
+      { key: 'color', label: 'Колір лінії', type: 'color' },
+      { key: 'thickness', label: 'Товщина (px)', type: 'number', min: 1, max: 8 },
+      { key: 'width', label: 'Ширина лінії (%)', type: 'number', min: 10, max: 100 },
+    ],
+    spacer: [
+      { key: 'height', label: 'Висота (px)', type: 'number', min: 4, max: 120 },
+    ],
+    quote: [
+      { key: 'text', label: 'Текст цитати', type: 'textarea' },
+      { key: 'author', label: 'Автор (необовʼязково)', type: 'text' },
+      { key: 'color', label: 'Колір тексту', type: 'color' },
+      { key: 'borderColor', label: 'Колір лівої риски', type: 'color' },
+      { key: 'fontSize', label: 'Розмір шрифту (px)', type: 'number', min: 12, max: 24 },
+    ],
+    list: [
+      { key: 'items', label: 'Пункти списку (кожен з нового рядка)', type: 'list-items' },
+      { key: 'color', label: 'Колір тексту', type: 'color' },
+      { key: 'fontSize', label: 'Розмір шрифту (px)', type: 'number', min: 11, max: 20 },
+    ],
+    logo: [
+      { key: 'src', label: 'URL логотипу', type: 'text', placeholder: 'https://...' },
+      { key: 'alt', label: 'Alt-текст', type: 'text' },
+      { key: 'width', label: 'Ширина (px)', type: 'number', min: 40, max: 300 },
+      { key: 'align', label: 'Вирівнювання', type: 'align' },
+    ],
+    hero: [
+      { key: 'title', label: 'Заголовок', type: 'text' },
+      { key: 'subtitle', label: 'Підзаголовок', type: 'textarea' },
+      { key: 'bgImage', label: 'Фонове зображення (URL, необовʼязково)', type: 'text', placeholder: 'https://...' },
+      { key: 'overlayOpacity', label: 'Затемнення поверх фото (%)', type: 'number', min: 0, max: 90 },
+      { key: 'bgType', label: 'Тип фону (якщо без фото)', type: 'select', options: [{ value: 'solid', label: 'Суцільний колір' }, { value: 'gradient', label: 'Градієнт' }] },
+      { key: 'bg', label: 'Колір фону', type: 'color' },
+      { key: 'bgTo', label: 'Другий колір градієнта', type: 'color', showIf: p => p.bgType === 'gradient' },
+      { key: 'bgAngle', label: 'Кут градієнта (°)', type: 'number', min: 0, max: 360, showIf: p => p.bgType === 'gradient' },
+      { key: 'textColor', label: 'Колір тексту', type: 'color' },
+      { key: 'height', label: 'Висота (px)', type: 'number', min: 100, max: 400 },
+      { key: 'radius', label: 'Радіус кутів (px)', type: 'number', min: 0, max: 32 },
+    ],
+    social: [
+      { key: 'fb', label: 'Facebook URL', type: 'text', placeholder: 'https://facebook.com/...' },
+      { key: 'ig', label: 'Instagram URL', type: 'text', placeholder: 'https://instagram.com/...' },
+      { key: 'tw', label: 'X (Twitter) URL', type: 'text', placeholder: 'https://x.com/...' },
+      { key: 'li', label: 'LinkedIn URL', type: 'text', placeholder: 'https://linkedin.com/...' },
+      { key: 'color', label: 'Колір іконок (порожнє = колір теми)', type: 'color' },
+      { key: 'shape', label: 'Форма іконок', type: 'select', options: [{ value: 'circle', label: 'Коло' }, { value: 'square', label: 'Квадрат' }] },
+    ],
+    columns2: [
+      { key: 'gap', label: 'Проміжок між колонками (px)', type: 'number', min: 0, max: 60 },
+      { key: 'bgType', label: 'Тип фону', type: 'select', options: [{ value: 'solid', label: 'Суцільний колір' }, { value: 'gradient', label: 'Градієнт' }] },
+      { key: 'bg', label: 'Колір фону (порожнє = прозорий)', type: 'color' },
+      { key: 'bgTo', label: 'Другий колір градієнта', type: 'color', showIf: p => p.bgType === 'gradient' },
+      { key: 'bgAngle', label: 'Кут градієнта (°)', type: 'number', min: 0, max: 360, showIf: p => p.bgType === 'gradient' },
+    ],
+    columns3: [
+      { key: 'gap', label: 'Проміжок між колонками (px)', type: 'number', min: 0, max: 60 },
+      { key: 'bgType', label: 'Тип фону', type: 'select', options: [{ value: 'solid', label: 'Суцільний колір' }, { value: 'gradient', label: 'Градієнт' }] },
+      { key: 'bg', label: 'Колір фону (порожнє = прозорий)', type: 'color' },
+      { key: 'bgTo', label: 'Другий колір градієнта', type: 'color', showIf: p => p.bgType === 'gradient' },
+      { key: 'bgAngle', label: 'Кут градієнта (°)', type: 'number', min: 0, max: 360, showIf: p => p.bgType === 'gradient' },
+    ],
+    faq: [
+      { key: 'items', label: 'Питання і відповіді (формат: Питання :: Відповідь, кожна пара з нового рядка)', type: 'qa-items' },
+      { key: 'questionColor', label: 'Колір питань', type: 'color' },
+    ],
+    product: [
+      { key: 'image', label: 'URL фото товару', type: 'text', placeholder: 'https://...' },
+      { key: 'title', label: 'Назва товару', type: 'text' },
+      { key: 'description', label: 'Опис', type: 'textarea' },
+      { key: 'price', label: 'Ціна', type: 'text' },
+      { key: 'buttonText', label: 'Текст кнопки', type: 'text' },
+      { key: 'buttonHref', label: 'Посилання кнопки (URL)', type: 'text', placeholder: 'https://...' },
+      { key: 'radius', label: 'Радіус кутів картки (px)', type: 'number', min: 0, max: 24 },
+    ],
+    team: [
+      { key: 'photo', label: 'URL фото', type: 'text', placeholder: 'https://...' },
+      { key: 'name', label: 'Імʼя', type: 'text' },
+      { key: 'role', label: 'Посада', type: 'text' },
+      { key: 'bio', label: 'Короткий опис', type: 'textarea' },
+      { key: 'photoSize', label: 'Розмір фото (px)', type: 'number', min: 40, max: 140 },
+    ],
+    table: [
+      { key: 'headers', label: 'Заголовки колонок (через кому)', type: 'csv-items' },
+      { key: 'rows', label: 'Рядки (кожен рядок листа — рядок таблиці, комірки через "|")', type: 'table-rows' },
+      { key: 'headerBg', label: 'Колір фону заголовків', type: 'color' },
+      { key: 'borderColor', label: 'Колір меж', type: 'color' },
+    ],
+  };
+
+  function renderField(node, field) {
+    const val = node.props[field.key] ?? '';
+    switch (field.type) {
+      case 'text':
+        return `<div class="field"><label>${field.label}</label>
+          <input type="text" data-prop="${field.key}" value="${escapeHtml(val)}" placeholder="${field.placeholder || ''}">
+        </div>`;
+      case 'textarea':
+        return `<div class="field"><label>${field.label}</label>
+          <textarea data-prop="${field.key}" rows="3">${escapeHtml(val)}</textarea>
+        </div>`;
+      case 'list-items':
+        return `<div class="field"><label>${field.label}</label>
+          <textarea data-prop="${field.key}" data-field-type="list-items" rows="4">${escapeHtml((val || []).join('\n'))}</textarea>
+        </div>`;
+      case 'qa-items':
+        return `<div class="field"><label>${field.label}</label>
+          <textarea data-prop="${field.key}" data-field-type="qa-items" rows="5">${escapeHtml((val || []).map(qa => `${qa.q} :: ${qa.a}`).join('\n'))}</textarea>
+        </div>`;
+      case 'csv-items':
+        return `<div class="field"><label>${field.label}</label>
+          <input type="text" data-prop="${field.key}" data-field-type="csv-items" value="${escapeHtml((val || []).join(', '))}">
+        </div>`;
+      case 'table-rows':
+        return `<div class="field"><label>${field.label}</label>
+          <textarea data-prop="${field.key}" data-field-type="table-rows" rows="4">${escapeHtml((val || []).map(r => r.join(' | ')).join('\n'))}</textarea>
+        </div>`;
+      case 'number':
+        return `<div class="field"><label>${field.label}</label>
+          <input type="number" data-prop="${field.key}" value="${val}" min="${field.min ?? ''}" max="${field.max ?? ''}">
+        </div>`;
+      case 'color':
+        return `<div class="field"><label>${field.label}</label>
+          <div class="field-color">
+            <input type="color" data-prop="${field.key}" value="${val}">
+            <span class="fc-hex" data-hex-for="${field.key}">${val}</span>
+          </div>
+        </div>`;
+      case 'align':
+        return `<div class="field"><label>${field.label}</label>
+          <div class="align-group">
+            ${['left', 'center', 'right'].map(v => `
+              <button data-align-prop="${field.key}" data-value="${v}" class="${val === v ? 'active' : ''}" title="${v}">
+                ${ALIGN_ICONS[v]}
+              </button>`).join('')}
+          </div>
+        </div>`;
+      case 'select':
+        return `<div class="field"><label>${field.label}</label>
+          <select data-prop="${field.key}">
+            ${field.options.map(o => `<option value="${o.value}" ${val === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
+          </select>
+        </div>`;
+      default:
+        return '';
+    }
+  }
+
+  // ── RESPONSIVE TOKENS: JS-обчислювані значення для превʼю в редакторі.
+  //    Реальні CSS @media не спрацюють усередині вузького div'а в широкому вікні браузера,
+  //    тож імітуємо звуження екрана вручну — так само, як реальний email виглядав би на телефоні. ──
+  const RESPONSIVE_TOKENS = {
+    desktop: { padX: 24, headingSize: 22, paragraphSize: 14, buttonSize: 13.5, buttonPadX: 26, buttonPadY: 12, sectionScale: 1, fontScale: 1 },
+    tablet:  { padX: 20, headingSize: 20, paragraphSize: 13.5, buttonSize: 13,   buttonPadX: 22, buttonPadY: 11, sectionScale: 0.85, fontScale: 0.92 },
+    mobile:  { padX: 16, headingSize: 19, paragraphSize: 13,   buttonSize: 12.5, buttonPadX: 18, buttonPadY: 10, sectionScale: 0.65, fontScale: 0.86 },
+  };
+
+  // користувацький fontSize (десктопна база) масштабується для tablet/mobile за тим самим співвідношенням,
+  // що й вбудовані заголовки/параграфи — тож власний розмір теж поводиться responsive
+  function scaledFont(baseSize, rt) {
+    return Math.max(9, Math.round(baseSize * rt.fontScale));
+  }
+
+  // суцільний колір або CSS linear-gradient — спільна логіка для section/columns/hero, і в редакторі, і в email-експорті
+  function bgToCss(p) {
+    if (!p.bg) return '';
+    if (p.bgType === 'gradient' && p.bgTo) {
+      return `linear-gradient(${p.bgAngle}deg, ${p.bg}, ${p.bgTo})`;
+    }
+    return p.bg;
+  }
+
+  // ── EDITOR RENDERER: BlockNode → editor-facing HTML (не email-html, той у розділі нижче) ──
+  function renderNodeInner(node) {
+    const p = node.props;
+    const rt = RESPONSIVE_TOKENS[state.previewMode] || RESPONSIVE_TOKENS.desktop;
+    switch (node.type) {
+      case 'section': {
+        const pad = `${Math.round(p.padding * rt.sectionScale)}px`;
+        const bgCss = bgToCss(p);
+        const style = `padding:${pad};${bgCss ? `background:${bgCss};` : ''}${p.radius ? `border-radius:${p.radius}px;` : ''}`;
+        if (!node.children.length) {
+          return `<div class="eb-section eb-container empty-inner" data-container-id="${node.id}" style="${style}">Перетягни сюди блок, щоб додати його в секцію</div>`;
+        }
+        return `<div class="eb-section eb-container" data-container-id="${node.id}" style="${style}">${node.children.map(renderBlockWrapper).join('')}</div>`;
+      }
+      case 'heading':
+        return `<div class="eb-heading" style="padding:14px ${rt.padX}px;"><h2 style="font-size:${scaledFont(p.fontSize, rt)}px;font-weight:800;letter-spacing:-.3px;color:${p.color};text-align:${p.align};">${escapeHtml(p.text)}</h2></div>`;
+      case 'paragraph':
+        return `<div class="eb-paragraph" style="padding:8px ${rt.padX}px;"><p style="font-size:${scaledFont(p.fontSize, rt)}px;line-height:1.65;color:${p.color};text-align:${p.align};">${escapeHtml(p.text)}</p></div>`;
+      case 'button':
+        return `<div class="eb-button-wrap" style="padding:14px ${rt.padX}px;justify-content:${p.align === 'center' ? 'center' : p.align === 'right' ? 'flex-end' : 'flex-start'};">
+          <a href="${p.href}" style="padding:${rt.buttonPadY}px ${rt.buttonPadX}px;font-size:${scaledFont(p.fontSize, rt)}px;background:${p.bg};color:${p.color};border-radius:${p.radius}px;${p.width === 'full' ? 'display:block;text-align:center;width:100%;box-sizing:border-box;' : ''}">${escapeHtml(p.text)}</a>
+        </div>`;
+      case 'image': {
+        const imgMargin = p.align === 'center' ? '0 auto' : p.align === 'right' ? '0 0 0 auto' : '0 auto 0 0';
+        return `<div class="eb-image" style="padding:8px ${rt.padX}px;"><div class="eb-image-box" style="width:${p.width}%;border-radius:${p.radius}px;margin:${imgMargin};">${p.src
+          ? `<img src="${p.src}" alt="${escapeHtml(p.alt)}" style="border-radius:${p.radius}px;">`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>Зображення не додано</span>`
+        }</div></div>`;
+      }
+      case 'divider':
+        return `<div class="eb-divider" style="padding:12px ${rt.padX}px;text-align:center;"><div style="border-top:${p.thickness}px solid ${p.color};width:${p.width}%;display:inline-block;"></div></div>`;
+      case 'spacer':
+        return `<div class="eb-spacer" style="height:${p.height}px;" title="Проміжок ${p.height}px"></div>`;
+      case 'quote':
+        return `<div class="eb-quote" style="padding:16px ${rt.padX}px;">
+          <blockquote style="margin:0;padding-left:16px;border-left:3px solid ${p.borderColor};font-style:italic;font-size:${scaledFont(p.fontSize, rt)}px;line-height:1.6;color:${p.color};">${escapeHtml(p.text)}</blockquote>
+          ${p.author ? `<div style="margin-top:8px;padding-left:19px;font-size:12px;font-weight:700;color:var(--muted);">— ${escapeHtml(p.author)}</div>` : ''}
+        </div>`;
+      case 'list':
+        return `<div class="eb-list" style="padding:8px ${rt.padX}px;"><ul style="margin:0;padding-left:20px;color:${p.color};font-size:${scaledFont(p.fontSize, rt)}px;line-height:1.8;">${p.items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul></div>`;
+      case 'logo': {
+        const logoMargin = p.align === 'center' ? '0 auto' : p.align === 'right' ? '0 0 0 auto' : '0 auto 0 0';
+        return `<div class="eb-logo" style="padding:16px ${rt.padX}px;">${p.src
+          ? `<img src="${p.src}" alt="${escapeHtml(p.alt)}" style="width:${p.width}px;max-width:100%;height:auto;display:block;margin:${logoMargin};">`
+          : `<div class="eb-image-box" style="width:${p.width}px;height:56px;margin:${logoMargin};"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg><span>Лого</span></div>`
+        }</div>`;
+      }
+      case 'hero': {
+        const bgStyle = p.bgImage
+          ? `background-image:url('${p.bgImage.replace(/'/g, "\\'")}');background-size:cover;background-position:center;`
+          : `background:${bgToCss(p)};`;
+        return `<div class="eb-hero" style="padding:8px ${rt.padX}px;">
+          <div class="eb-hero-inner" style="${bgStyle}border-radius:${p.radius}px;min-height:${p.height}px;">
+            ${p.bgImage && p.overlayOpacity > 0 ? `<div class="eb-hero-overlay" style="background:rgba(0,0,0,${p.overlayOpacity / 100});border-radius:${p.radius}px;"></div>` : ''}
+            <div class="eb-hero-content">
+              <h2 style="margin:0 0 8px;font-size:${rt.headingSize + 2}px;font-weight:800;color:${p.textColor};">${escapeHtml(p.title)}</h2>
+              <p style="margin:0;font-size:${rt.paragraphSize}px;color:${p.textColor};opacity:.9;max-width:80%;">${escapeHtml(p.subtitle)}</p>
+            </div>
+          </div>
+        </div>`;
+      }
+      case 'social': {
+        const nets = [['fb', 'F', p.fb], ['ig', 'I', p.ig], ['tw', 'X', p.tw], ['li', 'in', p.li]];
+        const active = nets.filter(n => n[2] && n[2].trim());
+        const show = active.length ? active : nets;
+        const iconStyle = `${p.color ? `background:${p.color};` : ''}${p.shape === 'square' ? 'border-radius:6px;' : ''}`;
+        return `<div class="eb-social" style="padding:12px ${rt.padX}px;text-align:center;">${show.map(([, letter]) => `<span class="eb-social-icon" style="${iconStyle}">${letter}</span>`).join('')}</div>`;
+      }
+      case 'columns2':
+      case 'columns3': {
+        const gap = Math.round(p.gap * rt.sectionScale);
+        const stacked = state.previewMode === 'mobile'; // імітує реальне стекування колонок на телефоні
+        const colsHtml = node.columns.map((col, idx) => {
+          const containerId = `${node.id}:${idx}`;
+          if (!col.length) {
+            return `<div class="eb-column eb-container empty-inner" data-container-id="${containerId}">Колонка ${idx + 1}</div>`;
+          }
+          return `<div class="eb-column eb-container" data-container-id="${containerId}">${col.map(renderBlockWrapper).join('')}</div>`;
+        }).join('');
+        return `<div class="eb-columns" style="padding:${rt.padX}px;gap:${gap}px;flex-direction:${stacked ? 'column' : 'row'};${bgToCss(p) ? `background:${bgToCss(p)};border-radius:8px;` : ''}">${colsHtml}</div>`;
+      }
+      case 'faq':
+        return `<div class="eb-faq" style="padding:12px ${rt.padX}px;">${p.items.map(qa => `
+          <div class="eb-faq-item">
+            <div class="eb-faq-q" style="color:${p.questionColor};">${escapeHtml(qa.q)}</div>
+            <div class="eb-faq-a">${escapeHtml(qa.a)}</div>
+          </div>`).join('')}</div>`;
+      case 'product':
+        return `<div class="eb-product" style="margin:8px ${rt.padX}px;border-radius:${p.radius}px;">
+          <div class="eb-product-img" style="border-radius:${p.radius}px ${p.radius}px 0 0;">${p.image
+            ? `<img src="${p.image}" alt="${escapeHtml(p.title)}">`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`
+          }</div>
+          <div class="eb-product-body">
+            <div class="eb-product-title">${escapeHtml(p.title)}</div>
+            <div class="eb-product-desc">${escapeHtml(p.description)}</div>
+            <div class="eb-product-footer"><span class="eb-product-price">${escapeHtml(p.price)}</span><span class="eb-product-btn">${escapeHtml(p.buttonText)}</span></div>
+          </div>
+        </div>`;
+      case 'team':
+        return `<div class="eb-team" style="padding:16px ${rt.padX}px;">
+          ${p.photo
+            ? `<img class="eb-team-photo" src="${p.photo}" alt="${escapeHtml(p.name)}" style="width:${p.photoSize}px;height:${p.photoSize}px;">`
+            : `<div class="eb-team-photo eb-team-photo-placeholder" style="width:${p.photoSize}px;height:${p.photoSize}px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>`
+          }
+          <div class="eb-team-name">${escapeHtml(p.name)}</div>
+          <div class="eb-team-role">${escapeHtml(p.role)}</div>
+          <div class="eb-team-bio">${escapeHtml(p.bio)}</div>
+        </div>`;
+      case 'table':
+        return `<div class="eb-table-wrap" style="padding:12px ${rt.padX}px;"><table class="eb-table" style="border-color:${p.borderColor};">
+          <thead><tr>${p.headers.map(h => `<th style="background:${p.headerBg};border-color:${p.borderColor};">${escapeHtml(h)}</th>`).join('')}</tr></thead>
+          <tbody>${p.rows.map(r => `<tr>${r.map(c => `<td style="border-color:${p.borderColor};">${escapeHtml(c)}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table></div>`;
+      default:
+        return CUSTOM_RENDERERS[node.type] ? CUSTOM_RENDERERS[node.type].renderEditor(node, rt) : '';
+    }
+  }
+
+  function renderBlockWrapper(node) {
+    const def = BLOCK_REGISTRY[node.type];
+    const selected = node.id === state.selectedId ? ' selected' : '';
+    return `
+      <div class="eb-block${selected}" data-id="${node.id}">
+        <div class="eb-toolbar">
+          <button class="eb-handle" data-action="drag-handle" title="Перетягнути">${DRAG_HANDLE_SVG}</button>
+          <span>${def.label}</span>
+          <button data-action="delete" title="Видалити">${DELETE_SVG}</button>
+        </div>
+        ${renderNodeInner(node)}
+      </div>`;
+  }
+
+  function renderCanvas() {
+    const paper = document.getElementById('canvas-paper');
+    paper.classList.add('eb-container');
+    paper.dataset.containerId = 'root';
+    const root = state.document.root;
+
+    if (root.length === 0) {
+      paper.innerHTML = `
+        <div class="canvas-empty">
+          <div class="ce-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+          </div>
+          <h3>Лист поки порожній</h3>
+          <p>Перетягни блок з лівої панелі, щоб почати створювати email</p>
+        </div>`;
+      return;
+    }
+
+    paper.innerHTML = root.map(renderBlockWrapper).join('');
+  }
+
+  // ── ПРАВА ПАНЕЛЬ: поки лише інформація про вибраний блок (редагування — крок 5) ──
+  function renderInspector() {
+    const body = document.getElementById('inspector-body');
+    const found = state.selectedId ? findNodeAndContainer(state.selectedId) : null;
+    const node = found ? found.node : null;
+
+    if (!node) {
+      body.innerHTML = `
+        <div class="panel-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20l9-9-9-9-9 9z"/><path d="M12 8v4M12 15h.01"/></svg>
+          <p>Вибери блок на канвасі, щоб редагувати його властивості</p>
+        </div>`;
+      return;
+    }
+
+    const def = BLOCK_REGISTRY[node.type];
+    const schema = (PROPERTY_SCHEMAS[node.type] || []).filter(field => !field.showIf || field.showIf(node.props));
+    body.innerHTML = `
+      <div class="selected-info">
+        <div class="si-type">${def.label}</div>
+        <div class="si-id">ID: ${node.id}</div>
+        ${schema.map(field => renderField(node, field)).join('')}
+        ${schema.length ? '<div class="inspector-divider"></div>' : ''}
+        <button class="btn btn-ghost si-delete" data-action="delete-selected">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          Видалити блок
+        </button>
+      </div>`;
+  }
+
+  function selectBlock(id) {
+    state.selectedId = id;
+    renderCanvas();
+    renderInspector();
+  }
+
+  function deleteBlock(id) {
+    const found = findNodeAndContainer(id);
+    if (found) found.array.splice(found.index, 1);
+    if (state.selectedId === id) state.selectedId = null;
+    renderCanvas();
+    renderInspector();
+    commitHistory();
+  }
+
+  function addBlock(type) {
+    const node = createNode(type);
+    if (!node) return false;
+    state.document.root.push(node);
+    selectBlock(node.id);
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`.eb-block[data-id="${node.id}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    commitHistory();
+    return true;
+  }
+
+  // ── клік по картці в лівій панелі: додати блок в кінець листа (fallback для не-drag кліку) ──
+  document.getElementById('left-panel').addEventListener('click', (e) => {
+    if (suppressNextClick) return; // цей клік — хвіст щойно завершеного drag'а
+    const card = e.target.closest('.block-card');
+    if (!card) return;
+    const type = card.dataset.block;
+    if (!BLOCK_REGISTRY[type]) {
+      card.style.borderColor = 'var(--danger)';
+      setTimeout(() => { card.style.borderColor = ''; }, 350);
+      return;
+    }
+    addBlock(type);
+  });
+
+  // ── кліки всередині канваса: вибір блоку / видалення через тулбар / зняття виділення ──
+  document.getElementById('canvas-paper').addEventListener('click', (e) => {
+    if (e.target.id === 'canvas-paper') { selectBlock(null); return; }
+    const delBtn = e.target.closest('[data-action="delete"]');
+    const blockEl = e.target.closest('.eb-block');
+    if (delBtn && blockEl) {
+      e.stopPropagation();
+      deleteBlock(blockEl.dataset.id);
+      return;
+    }
+    if (blockEl) selectBlock(blockEl.dataset.id);
+  });
+
+  // ── видалення з правої панелі ──
+  document.getElementById('inspector-body').addEventListener('click', (e) => {
+    const alignBtn = e.target.closest('[data-align-prop]');
+    if (alignBtn) {
+      const found = state.selectedId ? findNodeAndContainer(state.selectedId) : null;
+      if (!found) return;
+      found.node.props[alignBtn.dataset.alignProp] = alignBtn.dataset.value;
+      renderCanvas();
+      renderInspector(); // клік по кнопці не тримає текстовий фокус — безпечно перемалювати панель
+      commitHistory();
+      return;
+    }
+    if (e.target.closest('[data-action="delete-selected"]') && state.selectedId) {
+      deleteBlock(state.selectedId);
+    }
+  });
+
+  // ── редагування властивостей: text/textarea/number/color/select — оновлюємо тільки канвас,
+  //    щоб НЕ перемальовувати праву панель і не втрачати фокус/курсор у полі під час друку ──
+  function handlePropertyFieldChange(e) {
+    const field = e.target.closest('[data-prop]');
+    if (!field || !state.selectedId) return;
+    const found = findNodeAndContainer(state.selectedId);
+    if (!found) return;
+    const key = field.dataset.prop;
+    let value = field.value;
+    if (field.type === 'number') value = value === '' ? 0 : Number(value);
+    else if (field.dataset.fieldType === 'list-items') value = field.value.split('\n').map(s => s.trim()).filter(Boolean);
+    else if (field.dataset.fieldType === 'qa-items') {
+      value = field.value.split('\n').map(line => {
+        const [q, ...rest] = line.split('::');
+        return { q: (q || '').trim(), a: rest.join('::').trim() };
+      }).filter(qa => qa.q || qa.a);
+    } else if (field.dataset.fieldType === 'csv-items') {
+      value = field.value.split(',').map(s => s.trim()).filter(Boolean);
+    } else if (field.dataset.fieldType === 'table-rows') {
+      value = field.value.split('\n').map(line => line.split('|').map(c => c.trim())).filter(r => r.some(c => c));
+    }
+    found.node.props[key] = value;
+
+    if (field.type === 'color') {
+      const hexEl = document.querySelector(`[data-hex-for="${key}"]`);
+      if (hexEl) hexEl.textContent = value;
+    }
+    renderCanvas();
+    if (field.tagName === 'SELECT') {
+      renderInspector(); // select не тримає фокус/курсор так, як текст — можна безпечно перемалювати (щоб показати/сховати умовні поля)
+      commitHistory();
+    } else {
+      commitHistoryDebounced(); // не після кожної літери — після паузи в друкуванні
+    }
+  }
+  document.getElementById('inspector-body').addEventListener('input', handlePropertyFieldChange);
+  document.getElementById('inspector-body').addEventListener('change', handlePropertyFieldChange); // <select> надійніше ловити через change
+
+  // ═══════════════════════════════════════════════════════════
+  // КРОК 3: DND-РУШІЙ (pointer-based, без бібліотек)
+  // Два сценарії: 1) нова картка з лівої панелі → канвас/секція
+  //               2) reorder існуючого блоку через ручку-«гріп»
+  // Правило моделі: секція не може містити іншу секцію (без вкладеності).
+  // ═══════════════════════════════════════════════════════════
+
+  let dragStartPos = null;   // {x,y} на pointerdown, для порогу активації
+  let dragCandidate = null;  // {kind:'new', blockType} | {kind:'move', nodeId}
+  let dragging = null;       // активний drag: {..candidate, ghost, sourceType}
+  let dropTarget = null;     // {containerId, index}
+  let indicatorEl = null;
+  let suppressNextClick = false;
+
+  function getIndicatorEl() {
+    if (!indicatorEl) {
+      indicatorEl = document.createElement('div');
+      indicatorEl.className = 'eb-drop-indicator';
+    }
+    return indicatorEl;
+  }
+
+  function clearDropVisuals() {
+    if (indicatorEl && indicatorEl.parentNode) indicatorEl.parentNode.removeChild(indicatorEl);
+    document.querySelectorAll('.eb-container.drop-active').forEach(c => c.classList.remove('drop-active'));
+  }
+
+  function positionGhost(ghost, e) {
+    ghost.style.left = e.clientX + 'px';
+    ghost.style.top = e.clientY + 'px';
+  }
+
+  function beginDrag(candidate, e) {
+    let sourceType, label;
+    if (candidate.kind === 'new') {
+      sourceType = candidate.blockType;
+      label = BLOCK_REGISTRY[sourceType].label;
+    } else {
+      const found = findNodeAndContainer(candidate.nodeId);
+      if (!found) return null;
+      sourceType = found.node.type;
+      label = BLOCK_REGISTRY[sourceType].label;
+      const el = document.querySelector(`.eb-block[data-id="${candidate.nodeId}"]`);
+      if (el) el.classList.add('dragging');
+    }
+    const ghost = document.createElement('div');
+    ghost.className = 'eb-drag-ghost';
+    ghost.textContent = label;
+    document.body.appendChild(ghost);
+    positionGhost(ghost, e);
+    return { ...candidate, ghost, sourceType };
+  }
+
+  function updateDrag(e) {
+    positionGhost(dragging.ghost, e);
+    clearDropVisuals();
+    dropTarget = null;
+
+    const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+    const container = elUnder ? elUnder.closest('.eb-container') : null;
+    if (!container) return;
+
+    const containerId = container.dataset.containerId;
+    // заборона: контейнерні типи (секція, колонки) не можна вкладати в інші контейнери — тільки на верхній рівень
+    if (CONTAINER_TYPES.has(dragging.sourceType) && containerId !== 'root') return;
+    // заборона: не можна вкласти секцію саму в себе (теоретично неможливо, але про всяк випадок)
+    if (dragging.kind === 'move' && containerId === dragging.nodeId) return;
+
+    const siblings = Array.from(container.querySelectorAll(':scope > .eb-block:not(.dragging)'));
+
+    if (siblings.length === 0) {
+      container.classList.add('drop-active');
+      dropTarget = { containerId, index: 0 };
+      return;
+    }
+
+    let index = siblings.length;
+    for (let i = 0; i < siblings.length; i++) {
+      const rect = siblings[i].getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) { index = i; break; }
+    }
+    const indicator = getIndicatorEl();
+    container.insertBefore(indicator, siblings[index] || null);
+    dropTarget = { containerId, index };
+  }
+
+  function finishDrag() {
+    if (dragging.ghost && dragging.ghost.parentNode) dragging.ghost.parentNode.removeChild(dragging.ghost);
+    clearDropVisuals();
+    document.querySelectorAll('.eb-block.dragging').forEach(el => el.classList.remove('dragging'));
+
+    if (dropTarget) {
+      const targetArray = getContainerArray(dropTarget.containerId);
+      if (targetArray) {
+        if (dragging.kind === 'new') {
+          const node = createNode(dragging.blockType);
+          targetArray.splice(dropTarget.index, 0, node);
+          state.selectedId = node.id;
+        } else {
+          const found = findNodeAndContainer(dragging.nodeId);
+          if (found) {
+            let insertIndex = dropTarget.index;
+            const sameContainer = found.array === targetArray;
+            found.array.splice(found.index, 1);
+            if (sameContainer && found.index < insertIndex) insertIndex -= 1;
+            targetArray.splice(insertIndex, 0, found.node);
+          }
+        }
+      }
+    }
+    dropTarget = null;
+    renderCanvas();
+    renderInspector();
+    commitHistory();
+  }
+
+  function onGlobalPointerMove(e) {
+    if (!dragCandidate) return;
+    if (!dragging) {
+      const dx = e.clientX - dragStartPos.x, dy = e.clientY - dragStartPos.y;
+      if (Math.hypot(dx, dy) < 4) return; // поріг, щоб звичайний клік не тригерив drag
+      dragging = beginDrag(dragCandidate, e);
+      if (!dragging) { dragCandidate = null; return; }
+      suppressNextClick = true;
+    }
+    updateDrag(e);
+  }
+
+  function onGlobalPointerUp() {
+    window.removeEventListener('pointermove', onGlobalPointerMove);
+    window.removeEventListener('pointerup', onGlobalPointerUp);
+    if (dragging) finishDrag();
+    dragCandidate = null;
+    dragging = null;
+    setTimeout(() => { suppressNextClick = false; }, 0);
+  }
+
+  function startPotentialDrag(candidate, e) {
+    dragStartPos = { x: e.clientX, y: e.clientY };
+    dragCandidate = candidate;
+    window.addEventListener('pointermove', onGlobalPointerMove);
+    window.addEventListener('pointerup', onGlobalPointerUp);
+  }
+
+  // джерело 1: картка блоку в лівій панелі
+  document.getElementById('left-panel').addEventListener('pointerdown', (e) => {
+    const card = e.target.closest('.block-card');
+    if (!card || card.classList.contains('disabled')) return;
+    const type = card.dataset.block;
+    if (!BLOCK_REGISTRY[type]) return; // "скоро"-картки лишаються тільки клікабельними (shake)
+    startPotentialDrag({ kind: 'new', blockType: type }, e);
+  });
+
+  // джерело 2: ручка-«гріп» на вже доданому блоці (reorder)
+  document.getElementById('canvas-paper').addEventListener('pointerdown', (e) => {
+    const handle = e.target.closest('[data-action="drag-handle"]');
+    if (!handle) return;
+    e.preventDefault();
+    const blockEl = handle.closest('.eb-block');
+    if (!blockEl) return;
+    startPotentialDrag({ kind: 'move', nodeId: blockEl.dataset.id }, e);
+  });
+
+  init();
+
+  // ═══════════════════════════════════════════════════════════
+  // КРОК 6: EMAIL HTML GENERATOR
+  // Чиста функція: BlockNode[] → email-safe HTML (table-based, inline CSS).
+  // Той самий рушій живитиме і "Завантажити HTML", і "Копіювати для Gmail" (крок 7) —
+  // різниця буде лише в пресеті (напр. Gmail-версія прибиратиме <style>/DOCTYPE/MSO-коментарі,
+  // бо Gmail composer однаково їх відкидає при вставці).
+  // ═══════════════════════════════════════════════════════════
+
+  const FONT_STACK = "Arial, Helvetica, sans-serif";
+
+  function alignToTdAlign(align) {
+    return align === 'center' ? 'center' : align === 'right' ? 'right' : 'left';
+  }
+
+  // ── кожен тип блоку емітить ОДИН повний <tr>...</tr>, щоб top-level і вкладені (в секції) блоки рендерились однаково ──
+  function emailRowHeading(node) {
+    const p = node.props;
+    return `<tr><td class="mc-pad mc-heading" style="padding:14px 24px;text-align:${p.align};">
+      <h2 style="margin:0;font-family:${FONT_STACK};font-size:${p.fontSize}px;line-height:1.3;font-weight:800;color:${p.color};">${escapeHtml(p.text)}</h2>
+    </td></tr>`;
+  }
+
+  function emailRowParagraph(node) {
+    const p = node.props;
+    return `<tr><td class="mc-pad mc-paragraph" style="padding:8px 24px;text-align:${p.align};">
+      <p style="margin:0;font-family:${FONT_STACK};font-size:${p.fontSize}px;line-height:1.6;color:${p.color};">${escapeHtml(p.text)}</p>
+    </td></tr>`;
+  }
+
+  function emailRowButton(node) {
+    const p = node.props;
+    const href = p.href && p.href.trim() ? p.href : '#';
+    const full = p.width === 'full';
+    // "bulletproof button" — таблиця замість стилізованого <a>, бо Outlook ігнорує padding/border-radius на <a>
+    return `<tr><td class="mc-pad" style="padding:14px 24px;" align="${alignToTdAlign(p.align)}">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" ${full ? 'width="100%"' : ''}><tr>
+        <td style="background-color:${p.bg};border-radius:${p.radius}px;${full ? 'text-align:center;' : ''}" align="center">
+          <a href="${href}" target="_blank" class="mc-btn-link" style="display:${full ? 'block' : 'inline-block'};padding:12px 26px;font-family:${FONT_STACK};font-size:${p.fontSize}px;font-weight:700;color:${p.color};text-decoration:none;border-radius:${p.radius}px;">${escapeHtml(p.text)}</a>
+        </td>
+      </tr></table>
+    </td></tr>`;
+  }
+
+  function emailRowImage(node) {
+    const p = node.props;
+    if (!p.src || !p.src.trim()) {
+      // без src не вставляємо <img> (зламана іконка у Gmail) — показуємо нейтральний плейсхолдер-плашку
+      return `<tr><td class="mc-pad" style="padding:8px 24px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+          <td style="background-color:#f7f8fa;border:1px dashed #d0d5dd;border-radius:6px;padding:28px;text-align:center;font-family:${FONT_STACK};font-size:12px;color:#9ca3af;">Зображення не додано</td>
+        </tr></table>
+      </td></tr>`;
+    }
+    const width552 = Math.round(552 * (p.width / 100));
+    return `<tr><td class="mc-pad" style="padding:8px 24px;text-align:${p.align};">
+      <img src="${p.src}" alt="${escapeHtml(p.alt)}" width="${width552}" style="display:inline-block;width:${p.width}%;max-width:${width552}px;height:auto;border:0;outline:none;text-decoration:none;border-radius:${p.radius}px;">
+    </td></tr>`;
+  }
+
+  function emailRowSection(node) {
+    if (!node.children.length) return ''; // порожня секція нічого не додає до експорту
+    const p = node.props;
+    const childRows = node.children.map(emailRowForNode).join('');
+    // background-color першим — fallback для клієнтів без підтримки gradient (невідоме значення просто ігнорується,
+    // а попередній background-color лишається); сам gradient — прогресивне покращення для решти
+    const bgCss = p.bg
+      ? `background-color:${p.bg};${p.bgType === 'gradient' && p.bgTo ? `background:linear-gradient(${p.bgAngle}deg,${p.bg},${p.bgTo});` : ''}`
+      : '';
+    return `<tr><td class="mc-section-pad" style="padding:${p.padding}px;${bgCss}${p.radius ? `border-radius:${p.radius}px;` : ''}" ${p.bg ? `bgcolor="${p.bg}"` : ''}>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">${childRows}</table>
+    </td></tr>`;
+  }
+
+  function emailRowDivider(node) {
+    const p = node.props;
+    return `<tr><td class="mc-pad" style="padding:12px 24px;text-align:center;">
+      <table role="presentation" width="${p.width}%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="border-top:${p.thickness}px solid ${p.color};font-size:1px;line-height:1px;">&nbsp;</td>
+      </tr></table>
+    </td></tr>`;
+  }
+
+  function emailRowSpacer(node) {
+    const p = node.props;
+    return `<tr><td style="height:${p.height}px;line-height:${p.height}px;font-size:1px;" height="${p.height}">&nbsp;</td></tr>`;
+  }
+
+  function emailRowQuote(node) {
+    const p = node.props;
+    return `<tr><td class="mc-pad" style="padding:16px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td style="border-left:3px solid ${p.borderColor};padding-left:16px;font-family:${FONT_STACK};font-style:italic;font-size:${p.fontSize}px;line-height:1.6;color:${p.color};">${escapeHtml(p.text)}</td></tr>
+        ${p.author ? `<tr><td style="padding-left:19px;padding-top:8px;font-family:${FONT_STACK};font-size:12px;font-weight:700;color:#9ca3af;">— ${escapeHtml(p.author)}</td></tr>` : ''}
+      </table>
+    </td></tr>`;
+  }
+
+  function emailRowList(node) {
+    const p = node.props;
+    const items = p.items.map(i => `<li style="margin-bottom:4px;">${escapeHtml(i)}</li>`).join('');
+    return `<tr><td class="mc-pad mc-paragraph" style="padding:8px 24px;">
+      <ul style="margin:0;padding-left:20px;font-family:${FONT_STACK};font-size:${p.fontSize}px;line-height:1.6;color:${p.color};">${items}</ul>
+    </td></tr>`;
+  }
+
+  function emailRowLogo(node) {
+    const p = node.props;
+    if (!p.src || !p.src.trim()) {
+      return `<tr><td style="padding:16px 24px;text-align:${p.align};">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="${alignToTdAlign(p.align)}"><tr>
+          <td style="width:${p.width}px;height:52px;background-color:#f7f8fa;border:1px dashed #d0d5dd;border-radius:6px;text-align:center;font-family:${FONT_STACK};font-size:11px;color:#9ca3af;">Лого</td>
+        </tr></table>
+      </td></tr>`;
+    }
+    return `<tr><td style="padding:16px 24px;text-align:${p.align};">
+      <img src="${p.src}" alt="${escapeHtml(p.alt)}" width="${p.width}" style="display:inline-block;width:${p.width}px;max-width:100%;height:auto;border:0;">
+    </td></tr>`;
+  }
+
+  function emailRowHero(node) {
+    const p = node.props;
+    const hasImage = p.bgImage && p.bgImage.trim();
+
+    if (!hasImage) {
+      const gradCss = p.bgType === 'gradient' && p.bgTo ? `background:linear-gradient(${p.bgAngle}deg,${p.bg},${p.bgTo});` : '';
+      return `<tr><td class="mc-pad" style="padding:8px 24px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${p.bg}" style="background-color:${p.bg};${gradCss}border-radius:${p.radius}px;">
+          <tr><td style="padding:36px 24px;text-align:center;">
+            <h2 style="margin:0 0 8px;font-family:${FONT_STACK};font-size:24px;font-weight:800;color:${p.textColor};">${escapeHtml(p.title)}</h2>
+            <p style="margin:0;font-family:${FONT_STACK};font-size:14px;color:${p.textColor};">${escapeHtml(p.subtitle)}</p>
+          </td></tr>
+        </table>
+      </td></tr>`;
+    }
+
+    // з фото: CSS background-image для клієнтів, що його підтримують (Apple Mail, мобільний Gmail, Outlook.com, Yahoo) +
+    // VML-fallback для Outlook desktop (там CSS background-image на td просто ігнорується без VML)
+    const overlay = p.overlayOpacity > 0 ? `rgba(0,0,0,${p.overlayOpacity / 100})` : null;
+    const content = `
+      <h2 style="margin:0 0 8px;font-family:${FONT_STACK};font-size:24px;font-weight:800;color:${p.textColor};">${escapeHtml(p.title)}</h2>
+      <p style="margin:0;font-family:${FONT_STACK};font-size:14px;color:${p.textColor};">${escapeHtml(p.subtitle)}</p>`;
+    return `<tr><td class="mc-pad" style="padding:8px 24px;">
+      <!--[if mso]>
+      <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:552px;height:${p.height}px;">
+        <v:fill type="frame" src="${p.bgImage}" color="${p.bg}" />
+        <v:textbox inset="0,0,0,0">
+      <![endif]-->
+      <div style="background-image:url('${p.bgImage.replace(/'/g, "\\'")}');background-size:cover;background-position:center;border-radius:${p.radius}px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="min-height:${p.height}px;">
+          <tr><td style="padding:36px 24px;text-align:center;${overlay ? `background-color:${overlay};` : ''}border-radius:${p.radius}px;">
+            ${content}
+          </td></tr>
+        </table>
+      </div>
+      <!--[if mso]>
+        </v:textbox>
+      </v:rect>
+      <![endif]-->
+    </td></tr>`;
+  }
+
+  function emailRowSocial(node) {
+    const p = node.props;
+    const nets = [['fb', 'F', p.fb], ['ig', 'I', p.ig], ['tw', 'X', p.tw], ['li', 'in', p.li]];
+    const active = nets.filter(n => n[2] && n[2].trim());
+    const show = active.length ? active : nets;
+    const color = p.color || (state.theme && state.theme.accent) || '#4F6BF4';
+    const radius = p.shape === 'square' ? '6' : '16';
+    const cells = show.map(([, letter, url]) => `
+      <td style="padding:0 4px;">
+        <a href="${url && url.trim() ? url : '#'}" target="_blank" style="display:inline-block;width:32px;height:32px;line-height:32px;border-radius:${radius}px;background-color:${color};color:#ffffff;font-family:${FONT_STACK};font-size:12px;font-weight:700;text-align:center;text-decoration:none;">${letter}</a>
+      </td>`).join('');
+    return `<tr><td class="mc-pad" style="padding:12px 24px;text-align:center;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>${cells}</tr></table>
+    </td></tr>`;
+  }
+
+  function emailRowColumns(node) {
+    const cols = node.columns;
+    if (!cols.some(c => c.length)) return ''; // всі колонки порожні — нічого не експортуємо
+    const p = node.props;
+    const pct = Math.floor(100 / cols.length);
+    const half = Math.round(p.gap / 2);
+    const cells = cols.map((col) => {
+      const rows = col.map(emailRowForNode).join('');
+      const inner = rows ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">${rows}</table>` : '';
+      return `<td class="mc-col" valign="top" width="${pct}%" style="width:${pct}%;padding:0 ${half}px;">${inner}</td>`;
+    }).join('');
+    const bgCss = p.bg
+      ? `background-color:${p.bg};border-radius:8px;${p.bgType === 'gradient' && p.bgTo ? `background:linear-gradient(${p.bgAngle}deg,${p.bg},${p.bgTo});` : ''}`
+      : '';
+    return `<tr><td class="mc-pad" style="padding:${p.gap}px 24px;${bgCss}" ${p.bg ? `bgcolor="${p.bg}"` : ''}>
+      <!--[if mso]><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><![endif]-->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="mc-columns-table"><tr>${cells}</tr></table>
+      <!--[if mso]></tr></table><![endif]-->
+    </td></tr>`;
+  }
+
+  function emailRowFaq(node) {
+    const p = node.props;
+    const rows = p.items.map((qa, i) => `<tr><td style="padding:10px 0;${i < p.items.length - 1 ? 'border-bottom:1px solid #e2e5ea;' : ''}">
+      <div style="font-family:${FONT_STACK};font-size:14px;font-weight:700;color:${p.questionColor};margin-bottom:4px;">${escapeHtml(qa.q)}</div>
+      <div style="font-family:${FONT_STACK};font-size:13px;color:#4b5563;line-height:1.5;">${escapeHtml(qa.a)}</div>
+    </td></tr>`).join('');
+    return `<tr><td class="mc-pad" style="padding:12px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table>
+    </td></tr>`;
+  }
+
+  function emailRowProduct(node) {
+    const p = node.props;
+    const accent = (state.theme && state.theme.accent) || '#4F6BF4';
+    const img = p.image
+      ? `<img src="${p.image}" alt="${escapeHtml(p.title)}" width="552" style="display:block;width:100%;max-width:552px;height:auto;border:0;">`
+      : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color:#f7f8fa;padding:60px 0;text-align:center;font-family:${FONT_STACK};font-size:11px;color:#9ca3af;">Фото товару</td></tr></table>`;
+    return `<tr><td class="mc-pad" style="padding:12px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e5ea;border-radius:${p.radius}px;">
+        <tr><td>${img}</td></tr>
+        <tr><td style="padding:16px;">
+          <div style="font-family:${FONT_STACK};font-size:15px;font-weight:800;color:#1a1d23;margin-bottom:6px;">${escapeHtml(p.title)}</div>
+          <div style="font-family:${FONT_STACK};font-size:13px;color:#4b5563;line-height:1.5;margin-bottom:14px;">${escapeHtml(p.description)}</div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td style="font-family:${FONT_STACK};font-size:16px;font-weight:800;color:${accent};">${escapeHtml(p.price)}</td>
+            <td align="right">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td style="background-color:${accent};border-radius:6px;"><a href="${p.buttonHref && p.buttonHref.trim() ? p.buttonHref : '#'}" target="_blank" class="mc-btn-link" style="display:inline-block;padding:9px 18px;font-family:${FONT_STACK};font-size:12.5px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:6px;">${escapeHtml(p.buttonText)}</a></td>
+              </tr></table>
+            </td>
+          </tr></table>
+        </td></tr>
+      </table>
+    </td></tr>`;
+  }
+
+  function emailRowTeam(node) {
+    const p = node.props;
+    const accent = (state.theme && state.theme.accent) || '#4F6BF4';
+    const sz = p.photoSize;
+    const photo = p.photo
+      ? `<img src="${p.photo}" width="${sz}" height="${sz}" alt="${escapeHtml(p.name)}" style="display:block;width:${sz}px;height:${sz}px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:0;">`
+      : `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 12px;"><tr><td style="width:${sz}px;height:${sz}px;border-radius:50%;background-color:#f7f8fa;"></td></tr></table>`;
+    return `<tr><td class="mc-pad" style="padding:16px 24px;text-align:center;">
+      ${photo}
+      <div style="font-family:${FONT_STACK};font-size:15px;font-weight:800;color:#1a1d23;">${escapeHtml(p.name)}</div>
+      <div style="font-family:${FONT_STACK};font-size:12px;font-weight:700;color:${accent};margin:2px 0 8px;">${escapeHtml(p.role)}</div>
+      <div style="font-family:${FONT_STACK};font-size:13px;color:#4b5563;line-height:1.5;">${escapeHtml(p.bio)}</div>
+    </td></tr>`;
+  }
+
+  function emailRowTable(node) {
+    const p = node.props;
+    const head = p.headers.map(h => `<th style="padding:8px 10px;background-color:${p.headerBg};border:1px solid ${p.borderColor};font-family:${FONT_STACK};font-size:12px;font-weight:800;color:#1a1d23;text-align:left;">${escapeHtml(h)}</th>`).join('');
+    const body = p.rows.map(r => `<tr>${r.map(c => `<td style="padding:8px 10px;border:1px solid ${p.borderColor};font-family:${FONT_STACK};font-size:12.5px;color:#4b5563;">${escapeHtml(c)}</td>`).join('')}</tr>`).join('');
+    return `<tr><td class="mc-pad" style="padding:12px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr>${head}</tr>${body}</table>
+    </td></tr>`;
+  }
+
+  function emailRowForNode(node) {
+    switch (node.type) {
+      case 'heading': return emailRowHeading(node);
+      case 'paragraph': return emailRowParagraph(node);
+      case 'button': return emailRowButton(node);
+      case 'image': return emailRowImage(node);
+      case 'section': return emailRowSection(node);
+      case 'divider': return emailRowDivider(node);
+      case 'spacer': return emailRowSpacer(node);
+      case 'quote': return emailRowQuote(node);
+      case 'list': return emailRowList(node);
+      case 'logo': return emailRowLogo(node);
+      case 'hero': return emailRowHero(node);
+      case 'social': return emailRowSocial(node);
+      case 'columns2': case 'columns3': return emailRowColumns(node);
+      case 'faq': return emailRowFaq(node);
+      case 'product': return emailRowProduct(node);
+      case 'team': return emailRowTeam(node);
+      case 'table': return emailRowTable(node);
+      default: return CUSTOM_RENDERERS[node.type] ? CUSTOM_RENDERERS[node.type].renderEmail(node) : '';
+    }
+  }
+
+  /**
+   * BlockNode[] → повний email-safe HTML-документ.
+   * target: 'download' (повний документ з DOCTYPE/MSO-фіксом) | 'gmail' (тільки внутрішня таблиця, крок 7).
+   */
+  function renderEmailHtml(nodes, target = 'download') {
+    const rows = nodes.map(emailRowForNode).join('');
+    const innerTable = `<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" class="mc-container" style="width:600px;max-width:600px;background-color:#ffffff;">${rows}</table>`;
+
+    if (target === 'gmail') return innerTable; // повний пресет для Gmail — крок 7 (класи тут нічого не важать, бо <style> нема)
+
+    return `<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Email</title>
+<!--[if mso]>
+<noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+<![endif]-->
+<style>
+  /* Реальні @media — спрацюють у поштових клієнтах, що їх підтримують (Apple Mail, мобільний Gmail-застосунок,
+     Outlook.com, Yahoo Mail тощо). Ті, що не підтримують <style> (напр. вставка в Gmail-composer), просто
+     покажуть inline-стилі як є — тому це "hybrid"-підхід, а не заміна inline CSS. */
+  @media only screen and (max-width: 600px) {
+    .mc-container { width: 100% !important; }
+    .mc-pad { padding-left: 16px !important; padding-right: 16px !important; }
+    .mc-heading h2 { font-size: 19px !important; }
+    .mc-paragraph p { font-size: 13px !important; }
+    .mc-btn-link { padding: 10px 20px !important; font-size: 12.5px !important; }
+    .mc-section-pad { padding: 16px !important; }
+    .mc-col { display: block !important; width: 100% !important; padding: 8px 0 !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f0f2f5;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0f2f5;">
+  <tr>
+    <td align="center" style="padding:24px 16px;">
+      <!--[if mso]>
+      <table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td>
+      <![endif]-->
+      ${innerTable}
+      <!--[if mso]>
+      </td></tr></table>
+      <![endif]-->
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
+  }
+
+  function downloadEmailHtml() {
+    const root = state.document.root;
+    if (!root.length) {
+      alert('Спочатку додайте хоча б один блок у лист.');
+      return;
+    }
+    const html = renderEmailHtml(root, 'download');
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'email.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('download-html-btn').addEventListener('click', downloadEmailHtml);
+
+  // ═══════════════════════════════════════════════════════════
+  // КРОК 7: ✨ COPY FOR GMAIL — головна фіча проєкту
+  // Копіює email у буфер обміну одразу у двох форматах (text/html + text/plain),
+  // щоб Ctrl+V у Gmail-composer вставив саме відформатований лист.
+  // Пресет 'gmail' у renderEmailHtml() навмисно віддає ЛИШЕ внутрішню таблицю
+  // (без DOCTYPE/<head>/MSO-коментарів) — Gmail composer однаково відкидає
+  // все, що не є вмістом <body>, тож немає сенсу це копіювати.
+  // ═══════════════════════════════════════════════════════════
+
+  function nodeToPlainText(node) {
+    switch (node.type) {
+      case 'heading': return node.props.text;
+      case 'paragraph': return node.props.text;
+      case 'button': return `${node.props.text}: ${node.props.href}`;
+      case 'image': return node.props.alt ? `[Зображення: ${node.props.alt}]` : '[Зображення]';
+      case 'divider': return '───────────────';
+      case 'spacer': return '';
+      case 'quote': return node.props.author ? `«${node.props.text}» — ${node.props.author}` : `«${node.props.text}»`;
+      case 'list': return node.props.items.map(i => `• ${i}`).join('\n');
+      case 'logo': return node.props.alt ? `[Лого: ${node.props.alt}]` : '[Лого]';
+      case 'hero': return `${node.props.title}\n${node.props.subtitle}`;
+      case 'social': {
+        const nets = [['Facebook', node.props.fb], ['Instagram', node.props.ig], ['X', node.props.tw], ['LinkedIn', node.props.li]];
+        return nets.filter(([, url]) => url && url.trim()).map(([label, url]) => `${label}: ${url}`).join('\n');
+      }
+      case 'section': return node.children.map(nodeToPlainText).filter(Boolean).join('\n\n');
+      case 'columns2': case 'columns3':
+        return node.columns.map(col => col.map(nodeToPlainText).filter(Boolean).join('\n')).filter(Boolean).join('\n\n');
+      case 'faq': return node.props.items.map(qa => `Q: ${qa.q}\nA: ${qa.a}`).join('\n\n');
+      case 'product': return `${node.props.title} — ${node.props.price}\n${node.props.description}`;
+      case 'team': return `${node.props.name} (${node.props.role})\n${node.props.bio}`;
+      case 'table': return [node.props.headers.join(' | '), ...node.props.rows.map(r => r.join(' | '))].join('\n');
+      default: return CUSTOM_RENDERERS[node.type] ? CUSTOM_RENDERERS[node.type].toPlainText(node) : '';
+    }
+  }
+
+  // text/plain-версія — резервний формат буфера обміну для полів, що не приймають HTML
+  function renderPlainText(nodes) {
+    return nodes
+      .filter(n => !(n.type === 'section' && n.children.length === 0))
+      .map(nodeToPlainText)
+      .filter(Boolean)
+      .join('\n\n')
+      .trim();
+  }
+
+  // ── фолбек для браузерів/контекстів без Async Clipboard API (напр. відсутність дозволу на iframe) ──
+  function fallbackCopyHtml(html) {
+    const holder = document.createElement('div');
+    holder.setAttribute('contenteditable', 'true');
+    holder.style.position = 'fixed';
+    holder.style.left = '-9999px';
+    holder.style.top = '0';
+    holder.style.opacity = '0';
+    holder.innerHTML = html;
+    document.body.appendChild(holder);
+
+    const range = document.createRange();
+    range.selectNodeContents(holder);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+
+    selection.removeAllRanges();
+    document.body.removeChild(holder);
+    return ok;
+  }
+
+  const CHECK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+  const WARN_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>`;
+
+  async function copyForGmail() {
+    const root = state.document.root;
+    const btn = document.getElementById('copy-gmail-btn');
+    if (!root.length) {
+      alert('Спочатку додайте хоча б один блок у лист.');
+      return;
+    }
+
+    const html = renderEmailHtml(root, 'gmail');
+    const plain = renderPlainText(root);
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+
+    function flashState(cls, icon, label, restore) {
+      btn.classList.add(cls);
+      btn.innerHTML = `${icon} ${label}`;
+      setTimeout(() => {
+        btn.classList.remove(cls);
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+      }, restore);
+    }
+
+    try {
+      if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+        const item = new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
+        });
+        await navigator.clipboard.write([item]);
+        flashState('copied', CHECK_SVG, 'Скопійовано! Встав у Gmail (Ctrl+V)', 2400);
+        return;
+      }
+    } catch (err) {
+      // Async Clipboard API відмовила (дозволи/контекст) — пробуємо фолбек нижче
+    }
+
+    const ok = fallbackCopyHtml(html);
+    if (ok) {
+      flashState('copied', CHECK_SVG, 'Скопійовано! Встав у Gmail (Ctrl+V)', 2400);
+    } else {
+      flashState('copy-error', WARN_SVG, 'Не вдалося скопіювати', 2800);
+    }
+  }
+
+  document.getElementById('copy-gmail-btn').addEventListener('click', copyForGmail);
+
+  // ═══════════════════════════════════════════════════════════
+  // КРОК 9: HISTORY (UNDO/REDO) + PROJECT SAVING (localStorage)
+  // Патерн: масив повних JSON-снепшотів document + вказівник historyIndex.
+  // Undo/redo = переставити вказівник і повністю перерендерити з обраного снепшота.
+  // Для структурних змін (додати/видалити/перетягнути) коміт відбувається одразу;
+  // для друку в текстових полях — з debounce 500мс, інакше кожна літера була б окремим кроком undo.
+  // ═══════════════════════════════════════════════════════════
+
+  const STORAGE_KEY = 'mailcraft:document';
+  const HISTORY_LIMIT = 60;
+
+  function commitHistory() {
+    if (isRestoring) return;
+    const snap = JSON.stringify(state.document);
+    if (historyStack[historyIndex] === snap) return; // нічого не змінилось — не засмічуємо стек
+    historyStack = historyStack.slice(0, historyIndex + 1);
+    historyStack.push(snap);
+    historyIndex = historyStack.length - 1;
+    if (historyStack.length > HISTORY_LIMIT) {
+      historyStack.shift();
+      historyIndex--;
+    }
+    updateUndoRedoButtons();
+    persistDocument(snap);
+  }
+
+  function commitHistoryDebounced() {
+    clearTimeout(historyDebounceTimer);
+    historyDebounceTimer = setTimeout(commitHistory, 500);
+  }
+
+  function restoreSnapshot(index) {
+    isRestoring = true;
+    state.document = JSON.parse(historyStack[index]);
+    state.selectedId = null;
+    renderCanvas();
+    renderInspector();
+    isRestoring = false;
+    updateUndoRedoButtons();
+    persistDocument(historyStack[index]);
+  }
+
+  function undo() {
+    if (historyIndex <= 0) return;
+    clearTimeout(historyDebounceTimer);
+    historyIndex--;
+    restoreSnapshot(historyIndex);
+  }
+
+  function redo() {
+    if (historyIndex >= historyStack.length - 1) return;
+    clearTimeout(historyDebounceTimer);
+    historyIndex++;
+    restoreSnapshot(historyIndex);
+  }
+
+  function updateUndoRedoButtons() {
+    document.getElementById('undo-btn').disabled = historyIndex <= 0;
+    document.getElementById('redo-btn').disabled = historyIndex >= historyStack.length - 1;
+  }
+
+  document.getElementById('undo-btn').addEventListener('click', undo);
+  document.getElementById('redo-btn').addEventListener('click', redo);
+
+  // клавіатурні скорочення Ctrl/Cmd+Z та Ctrl/Cmd+Shift+Z — але не тоді, коли фокус у текстовому полі
+  // (там мають працювати нативні undo/redo самого input/textarea)
+  window.addEventListener('keydown', (e) => {
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return;
+    e.preventDefault();
+    if (e.shiftKey) redo(); else undo();
+  });
+
+  // ── PROJECT SAVING: без бекенду поки що зберігаємо в localStorage.
+  //    Пишемо після кожного коміту в історію (тихий автозбереж) — це і є весь "бекенд" на цьому кроці. ──
+  function persistDocument(snapJson) {
+    try {
+      localStorage.setItem(STORAGE_KEY, snapJson);
+    } catch (err) {
+      // напр. приватний режим браузера без доступу до localStorage — ігноруємо, це не критично
+    }
+  }
+
+  function loadPersistedDocument() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      state.document = JSON.parse(raw);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  // явна кнопка "Зберегти" — миттєво фіксує будь-які незбережені (debounced) правки й дає видимий фідбек
+  document.getElementById('save-btn').addEventListener('click', () => {
+    clearTimeout(historyDebounceTimer);
+    commitHistory();
+    const btn = document.getElementById('save-btn');
+    const original = btn.innerHTML;
+    btn.innerHTML = `${CHECK_SVG} Збережено`;
+    setTimeout(() => { btn.innerHTML = original; }, 1600);
+  });
+
+  function init() {
+    loadPersistedDocument();
+    loadAssets();
+    idCounter = findMaxIdSuffix(state.document.root) + 1; // інакше свіжий idCounter=1 після F5 міг би зіткнутись із уже існуючими ID
+    historyStack = [JSON.stringify(state.document)];
+    historyIndex = 0;
+    renderCanvas();
+    renderInspector();
+    updateUndoRedoButtons();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // КРОК 10, частина 2: TEMPLATE ENGINE + THEME ENGINE
+  // Шаблон — це просто дерево BlockNode з готовими props (той самий формат,
+  // що й документ, який редагує користувач), тож інструментарій рендеру/DnD/
+  // undo-redo працює з ним ідентично — жодного спецкоду для "режиму шаблону" не треба.
+  // ═══════════════════════════════════════════════════════════
+
+  function instantiate(type, overrides = {}) {
+    const node = createNode(type);
+    if (!node) return null;
+    Object.assign(node.props, overrides);
+    return node;
+  }
+
+  // секція з готовими дочірніми блоками — для композиції шаблонів із кольоровими "стрічками"
+  function instantiateSection(sectionProps, children) {
+    const node = createNode('section');
+    Object.assign(node.props, sectionProps);
+    node.children = children.filter(Boolean);
+    return node;
+  }
+
+  // columns2/columns3 із готовим вмістом у кожному слоті — для шаблонів
+  function instantiateColumns(type, colProps, columnsChildren) {
+    const node = createNode(type);
+    Object.assign(node.props, colProps);
+    node.columns = columnsChildren.map(arr => arr.filter(Boolean));
+    return node;
+  }
+
+  const TEMPLATES = [
+    {
+      id: 'welcome', title: 'Привітання', desc: 'Вітальний лист для нового користувача',
+      build: () => [
+        instantiateSection({ bg: '#f7f8fa', padding: 40, radius: 0 }, [
+          instantiate('logo', { align: 'center' }),
+          instantiate('heading', { text: 'Ласкаво просимо!', align: 'center', fontSize: 28 }),
+          instantiate('paragraph', {
+            text: 'Дякуємо, що приєднались. Ми раді бачити вас у нашій спільноті — нижче кілька кроків, щоб почати.',
+            align: 'center', color: '#4b5563',
+          }),
+        ]),
+        instantiateSection({ bg: '', padding: 24, radius: 0 }, [
+          instantiate('button', { text: 'Розпочати', align: 'center', radius: 10 }),
+        ]),
+        instantiateSection({ bg: '#eef0fe', padding: 28, radius: 14 }, [
+          instantiate('quote', {
+            text: 'Найкращий сервіс, яким я користувався за останній рік — усе просто працює.',
+            author: 'Задоволений користувач', borderColor: '#4F6BF4',
+          }),
+        ]),
+        instantiate('divider', { width: 30 }),
+        instantiate('social', { shape: 'circle' }),
+      ],
+    },
+    {
+      id: 'newsletter', title: 'Розсилка', desc: 'Класичний формат новинної розсилки',
+      build: () => [
+        instantiateSection({ bg: '#1a1d23', padding: 28, radius: 0 }, [
+          instantiate('logo', { align: 'left' }),
+          instantiate('heading', { text: 'Новини цього тижня', align: 'left', color: '#ffffff', fontSize: 24 }),
+        ]),
+        instantiate('paragraph', { text: 'Коротко про головне за останні 7 днів.', color: '#4b5563' }),
+        instantiateSection({ bg: '#f7f8fa', padding: 20, radius: 10 }, [
+          instantiate('heading', { text: 'Заголовок першої новини', align: 'left', fontSize: 18 }),
+          instantiate('paragraph', { text: 'Короткий опис новини і чому вона важлива для читача.', align: 'left' }),
+          instantiate('button', { text: 'Читати більше', align: 'left', radius: 8 }),
+        ]),
+        instantiate('spacer', { height: 8 }),
+        instantiateSection({ bg: '#f7f8fa', padding: 20, radius: 10 }, [
+          instantiate('heading', { text: 'Заголовок другої новини', align: 'left', fontSize: 18 }),
+          instantiate('paragraph', { text: 'Ще один короткий опис — тримайте абзаци стислими.', align: 'left' }),
+          instantiate('button', { text: 'Читати більше', align: 'left', radius: 8 }),
+        ]),
+        instantiate('divider', {}),
+        instantiate('social', {}),
+      ],
+    },
+    {
+      id: 'promo', title: 'Промо-акція', desc: 'Hero-банер із товаром і закликом до дії',
+      build: () => [
+        instantiate('hero', { title: 'Знижка −30%', subtitle: 'Лише до кінця тижня', radius: 14, height: 220 }),
+        instantiateSection({ bg: '', padding: 28, radius: 0 }, [
+          instantiate('paragraph', { text: 'Встигніть скористатись пропозицією, поки вона діє.', align: 'center', color: '#4b5563' }),
+          instantiate('product', { radius: 10 }),
+          instantiate('button', { text: 'Отримати знижку', align: 'center', radius: 10 }),
+        ]),
+        instantiate('divider', { width: 30 }),
+        instantiate('social', {}),
+      ],
+    },
+    {
+      id: 'announcement', title: 'Оголошення', desc: 'Анонс нової функції чи новини — hero + дві картки-переваги',
+      build: () => [
+        instantiate('hero', {
+          title: 'Нова функція вже тут', subtitle: 'Дізнайтесь, що змінилось і як це допоможе саме вам',
+          bgType: 'gradient', bg: '#4F6BF4', bgTo: '#7c3aed', bgAngle: 135, radius: 14, height: 220,
+        }),
+        instantiateSection({ padding: 28, radius: 0 }, [
+          instantiate('paragraph', { text: 'Коротко про те, що ми запустили і чому це важливо.', align: 'center', color: '#4b5563' }),
+        ]),
+        instantiateColumns('columns2', { gap: 20 }, [
+          [
+            instantiate('heading', { text: '⚡ Швидше', align: 'left', fontSize: 16 }),
+            instantiate('paragraph', { text: 'Робимо ключові дії за секунди, а не хвилини.', align: 'left' }),
+          ],
+          [
+            instantiate('heading', { text: '🔒 Безпечніше', align: 'left', fontSize: 16 }),
+            instantiate('paragraph', { text: 'Дані захищені на кожному кроці процесу.', align: 'left' }),
+          ],
+        ]),
+        instantiateSection({ padding: 20 }, [
+          instantiate('button', { text: 'Дізнатися більше', align: 'center', radius: 10 }),
+        ]),
+        instantiate('divider', {}),
+        instantiate('social', {}),
+      ],
+    },
+    {
+      id: 'invitation', title: 'Запрошення', desc: 'Елегантне запрошення на подію з деталями й кнопкою RSVP',
+      build: () => [
+        instantiateSection({ bg: '#1a1d23', padding: 40, radius: 0 }, [
+          instantiate('heading', { text: 'Запрошуємо на подію', align: 'center', color: '#ffffff', fontSize: 26 }),
+          instantiate('paragraph', { text: 'Приєднуйтесь до нас — буде цікаво', align: 'center', color: '#9ca3af' }),
+        ]),
+        instantiateSection({ padding: 28 }, [
+          instantiate('table', {
+            headers: ['Деталь', 'Інформація'],
+            rows: [['Дата', '12 вересня 2026'], ['Час', '18:00'], ['Місце', 'вул. Хрещатик, 1, Київ']],
+            headerBg: '#f7f8fa', borderColor: '#e2e5ea',
+          }),
+        ]),
+        instantiateSection({ padding: 20 }, [
+          instantiate('button', { text: 'Підтвердити участь', align: 'center', radius: 10 }),
+        ]),
+        instantiate('divider', { width: 30 }),
+        instantiate('social', {}),
+      ],
+    },
+    {
+      id: 'minimal', title: 'Мінімалістичний', desc: 'Багато повітря, без кольорових акцентів — для простих сповіщень',
+      build: () => [
+        instantiate('heading', { text: 'Заголовок повідомлення', align: 'left', fontSize: 20 }),
+        instantiate('paragraph', { text: 'Короткий, по суті текст без зайвого оформлення.', align: 'left' }),
+        instantiate('button', { text: 'Дія', align: 'left', radius: 6 }),
+        instantiate('spacer', { height: 32 }),
+        instantiate('divider', { color: '#e2e5ea', thickness: 1 }),
+        instantiate('paragraph', { text: 'Це повідомлення надіслано автоматично.', align: 'left', color: '#9ca3af', fontSize: 12 }),
+      ],
+    },
+    {
+      id: 'business', title: 'Бізнес-звіт', desc: 'Щомісячний дайджест показників — KPI-картки + таблиця',
+      build: () => [
+        instantiateSection({ bg: '#f7f8fa', padding: 28, radius: 0 }, [
+          instantiate('heading', { text: 'Щомісячний звіт', align: 'left', fontSize: 24 }),
+          instantiate('paragraph', { text: 'Головні показники за останній місяць.', align: 'left', color: '#4b5563' }),
+        ]),
+        instantiateColumns('columns3', { gap: 14 }, [
+          [
+            instantiate('heading', { text: '+24%', align: 'center', fontSize: 22 }),
+            instantiate('paragraph', { text: 'Зростання доходу', align: 'center', fontSize: 12, color: '#9ca3af' }),
+          ],
+          [
+            instantiate('heading', { text: '1 284', align: 'center', fontSize: 22 }),
+            instantiate('paragraph', { text: 'Нових користувачів', align: 'center', fontSize: 12, color: '#9ca3af' }),
+          ],
+          [
+            instantiate('heading', { text: '98.2%', align: 'center', fontSize: 22 }),
+            instantiate('paragraph', { text: 'Час безвідмовної роботи', align: 'center', fontSize: 12, color: '#9ca3af' }),
+          ],
+        ]),
+        instantiateSection({ padding: 20 }, [
+          instantiate('table', {
+            headers: ['Показник', 'Цей місяць', 'Минулий місяць'],
+            rows: [['Дохід', '$42 300', '$34 100'], ['Клієнти', '1 284', '1 010'], ['Відтік', '2.1%', '3.4%']],
+            headerBg: '#f7f8fa', borderColor: '#e2e5ea',
+          }),
+        ]),
+        instantiateSection({ padding: 12 }, [
+          instantiate('button', { text: 'Переглянути повний звіт', align: 'center', radius: 8 }),
+        ]),
+        instantiate('divider', {}),
+        instantiate('social', {}),
+      ],
+    },
+    {
+      id: 'certificate', title: 'Сертифікат', desc: 'Підтвердження завершення курсу чи досягнення',
+      build: () => [
+        instantiateSection({ bg: '#faf7f0', padding: 48, radius: 16 }, [
+          instantiate('divider', { color: '#d4af37', thickness: 2, width: 40 }),
+          instantiate('spacer', { height: 16 }),
+          instantiate('heading', { text: 'Сертифікат про завершення', align: 'center', fontSize: 26 }),
+          instantiate('paragraph', { text: 'Цим підтверджується, що', align: 'center', color: '#9ca3af', fontSize: 13 }),
+          instantiate('heading', { text: 'Імʼя Прізвище', align: 'center', fontSize: 22, color: '#4F6BF4' }),
+          instantiate('paragraph', {
+            text: 'успішно завершив(ла) курс «Назва курсу» та продемонстрував(ла) відмінні результати.',
+            align: 'center', color: '#4b5563',
+          }),
+          instantiate('spacer', { height: 8 }),
+          instantiate('divider', { color: '#e2e5ea', width: 60 }),
+          instantiate('quote', { text: 'Вітаємо з досягненням!', author: 'Команда EdVault', borderColor: '#d4af37' }),
+          instantiate('button', { text: 'Переглянути сертифікат', align: 'center', radius: 8 }),
+        ]),
+      ],
+    },
+    {
+      id: 'education', title: 'Курс', desc: 'Анонс освітнього курсу — програма, викладач, FAQ',
+      build: () => [
+        instantiateSection({ padding: 32, radius: 0 }, [
+          instantiate('logo', { align: 'center' }),
+          instantiate('heading', { text: 'Новий курс: Назва курсу', align: 'center', fontSize: 26 }),
+          instantiate('paragraph', { text: 'Опануйте нову навичку за 4 тижні — покроково, з підтримкою куратора.', align: 'center', color: '#4b5563' }),
+        ]),
+        instantiate('list', { items: ['Модуль 1: Основи', 'Модуль 2: Практика', 'Модуль 3: Проєкт', 'Модуль 4: Сертифікація'] }),
+        instantiate('product', {
+          title: 'Повний курс', description: 'Доступ до всіх матеріалів, підтримка куратора, сертифікат після завершення.',
+          price: '$99', buttonText: 'Записатися', radius: 10,
+        }),
+        instantiateSection({ bg: '#f7f8fa', padding: 20, radius: 10 }, [
+          instantiate('team', { name: 'Імʼя Прізвище', role: 'Викладач курсу', bio: '5+ років досвіду в галузі, автор кількох курсів.' }),
+        ]),
+        instantiate('faq', {
+          items: [
+            { q: 'Скільки триває курс?', a: '4 тижні, 2-3 години на тиждень.' },
+            { q: 'Чи буде сертифікат?', a: 'Так, одразу після завершення всіх модулів.' },
+          ],
+        }),
+        instantiateSection({ padding: 16 }, [
+          instantiate('button', { text: 'Записатися на курс', align: 'center', radius: 10 }),
+        ]),
+        instantiate('divider', {}),
+        instantiate('social', {}),
+      ],
+    },
+    {
+      id: 'business-letter', title: 'Ділова пропозиція', desc: 'Формальний лист-пропозиція з таблицею послуг і контактом',
+      build: () => [
+        instantiateSection({ padding: 32, radius: 0 }, [
+          instantiate('logo', { align: 'left' }),
+          instantiate('heading', { text: 'Комерційна пропозиція', align: 'left', fontSize: 22 }),
+          instantiate('paragraph', { text: 'Шановний партнере, раді представити нашу пропозицію співпраці.', align: 'left', color: '#4b5563' }),
+        ]),
+        instantiate('table', {
+          headers: ['Послуга', 'Опис', 'Вартість'],
+          rows: [['Консалтинг', 'Аналіз бізнес-процесів', '$500'], ['Впровадження', 'Інтеграція рішення', '$1200'], ['Підтримка', 'Супровід 3 місяці', '$300']],
+          headerBg: '#f7f8fa', borderColor: '#e2e5ea',
+        }),
+        instantiateSection({ padding: 20, radius: 0 }, [
+          instantiate('paragraph', { text: 'Готові обговорити деталі у зручний для вас час.', align: 'left' }),
+          instantiate('button', { text: 'Призначити дзвінок', align: 'left', radius: 8 }),
+        ]),
+        instantiate('divider', {}),
+        instantiateSection({ padding: 20, radius: 0 }, [
+          instantiate('team', { name: 'Імʼя Прізвище', role: 'Менеджер з продажу', bio: 'email@company.com · +380 XX XXX XX XX' }),
+        ]),
+      ],
+    },
+  ];
+
+  function renderTemplatesPanelBody() {
+    return `<div class="tpl-list">${TEMPLATES.map(t => `
+      <button class="tpl-card" data-template="${t.id}">
+        <div class="tpl-card-title">${t.title}</div>
+        <div class="tpl-card-desc">${t.desc}</div>
+      </button>`).join('')}</div>`;
+  }
+
+  function applyTemplate(id) {
+    const tpl = TEMPLATES.find(t => t.id === id);
+    if (!tpl) return;
+    if (state.document.root.length && !confirm('Замінити поточний лист вмістом шаблону? Цю дію можна скасувати через Undo.')) return;
+    state.document.root = tpl.build();
+    state.selectedId = null;
+    renderCanvas();
+    renderInspector();
+    commitHistory();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // LAYOUTS: на відміну від TEMPLATES (замінюють увесь лист), макет — це готова
+  // композиція ОДНІЄЇ секції/групи блоків, яка ДОДАЄТЬСЯ в кінець поточного листа.
+  // Менша одиниця перевикористання: не цілий email, а один повторюваний "шматок".
+  // ═══════════════════════════════════════════════════════════
+
+  const LAYOUTS = [
+    {
+      id: 'heading-text', title: 'Заголовок і текст', desc: 'Центрований вступний блок',
+      build: () => [instantiateSection({ padding: 32 }, [
+        instantiate('heading', { text: 'Заголовок секції', align: 'center', fontSize: 24 }),
+        instantiate('paragraph', { text: 'Короткий текст під заголовком, що пояснює суть.', align: 'center', color: '#4b5563' }),
+      ])],
+    },
+    {
+      id: 'text-image', title: 'Текст + зображення', desc: '2 колонки: контент і фото поруч',
+      build: () => [instantiateColumns('columns2', { gap: 20 }, [
+        [
+          instantiate('heading', { text: 'Заголовок блоку', align: 'left', fontSize: 18 }),
+          instantiate('paragraph', { text: 'Опис поруч із зображенням — класична композиція для розповіді про продукт чи фічу.', align: 'left' }),
+        ],
+        [instantiate('image', { align: 'center', width: 100 })],
+      ])],
+    },
+    {
+      id: 'three-cards', title: '3 картки в ряд', desc: 'Ряд коротких переваг/фіч',
+      build: () => [instantiateColumns('columns3', { gap: 14 }, [
+        [instantiate('heading', { text: 'Перевага 1', align: 'center', fontSize: 15 }), instantiate('paragraph', { text: 'Короткий опис.', align: 'center', fontSize: 12, color: '#9ca3af' })],
+        [instantiate('heading', { text: 'Перевага 2', align: 'center', fontSize: 15 }), instantiate('paragraph', { text: 'Короткий опис.', align: 'center', fontSize: 12, color: '#9ca3af' })],
+        [instantiate('heading', { text: 'Перевага 3', align: 'center', fontSize: 15 }), instantiate('paragraph', { text: 'Короткий опис.', align: 'center', fontSize: 12, color: '#9ca3af' })],
+      ])],
+    },
+    {
+      id: 'cta-center', title: 'CTA по центру', desc: 'Виділена кольором зона із закликом до дії',
+      build: () => [instantiateSection({ bg: '#eef0fe', padding: 28, radius: 14 }, [
+        instantiate('heading', { text: 'Готові спробувати?', align: 'center', fontSize: 20 }),
+        instantiate('paragraph', { text: 'Почніть просто зараз — це займе менше хвилини.', align: 'center', color: '#4b5563' }),
+        instantiate('button', { text: 'Почати', align: 'center', radius: 10 }),
+      ])],
+    },
+    {
+      id: 'testimonial', title: 'Відгук клієнта', desc: 'Цитата з підписом автора',
+      build: () => [instantiateSection({ bg: '#f7f8fa', padding: 28, radius: 12 }, [
+        instantiate('quote', { text: 'Цей продукт заощадив нам десятки годин щомісяця.', author: 'Імʼя Прізвище, посада' }),
+      ])],
+    },
+    {
+      id: 'footer', title: 'Підвал із соцмережами', desc: 'Розділювач + іконки + копірайт',
+      build: () => [
+        instantiate('divider', {}),
+        instantiate('social', {}),
+        instantiate('paragraph', { text: '© 2026 Ваша компанія. Усі права захищено.', align: 'center', color: '#9ca3af', fontSize: 11 }),
+      ],
+    },
+  ];
+
+  function renderLayoutsPanelBody() {
+    return `<div class="tpl-list">${LAYOUTS.map(l => `
+      <button class="tpl-card" data-layout="${l.id}">
+        <div class="tpl-card-title">${l.title}</div>
+        <div class="tpl-card-desc">${l.desc}</div>
+      </button>`).join('')}</div>`;
+  }
+
+  function applyLayout(id) {
+    const layout = LAYOUTS.find(l => l.id === id);
+    if (!layout) return;
+    const nodes = layout.build();
+    state.document.root.push(...nodes);
+    state.selectedId = nodes[0] ? nodes[0].id : null;
+    renderCanvas();
+    renderInspector();
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`.eb-block[data-id="${state.selectedId}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    commitHistory();
+  }
+
+  const THEMES = [
+    { id: 'edvault', label: 'EdVault', accent: '#4F6BF4', accentLight: '#eef0fe', accentHover: '#3d57e0', text: '#1a1d23', muted: '#4b5563' },
+    { id: 'emerald', label: 'Emerald', accent: '#10b981', accentLight: '#e7f9f2', accentHover: '#0ea371', text: '#0f172a', muted: '#475569' },
+    { id: 'sunset', label: 'Sunset', accent: '#f97316', accentLight: '#fff1e6', accentHover: '#e5670f', text: '#27170b', muted: '#7c5a3a' },
+    { id: 'mono', label: 'Mono', accent: '#111827', accentLight: '#f1f2f4', accentHover: '#000000', text: '#111827', muted: '#6b7280' },
+  ];
+  state.theme = THEMES[0]; // впливає і на UI (--accent), і на дефолтні кольори нових блоків, і на email-експорт
+
+  function renderThemesPanelBody() {
+    return `<div class="theme-list">${THEMES.map(t => `
+      <button class="theme-card ${state.theme.id === t.id ? 'active' : ''}" data-theme="${t.id}">
+        <span class="theme-swatch" style="background:${t.accent};"></span>
+        <span>${t.label}</span>
+      </button>`).join('')}</div>`;
+  }
+
+  function walkNodes(nodes, fn) {
+    nodes.forEach(n => {
+      fn(n);
+      if (n.children) walkNodes(n.children, fn);
+      if (n.columns) n.columns.forEach(col => walkNodes(col, fn));
+    });
+  }
+
+  function applyTheme(themeId) {
+    const theme = THEMES.find(t => t.id === themeId);
+    if (!theme) return;
+    state.theme = theme;
+
+    // 1) UI всього застосунку (кнопки, виділення, лого в топбарі) — через CSS-змінні
+    const rootStyle = document.documentElement.style;
+    rootStyle.setProperty('--accent', theme.accent);
+    rootStyle.setProperty('--accent-light', theme.accentLight);
+    rootStyle.setProperty('--accent-hover', theme.accentHover);
+
+    // 2) кольори вже доданих блоків у поточному листі
+    walkNodes(state.document.root, (n) => {
+      switch (n.type) {
+        case 'heading': n.props.color = theme.text; break;
+        case 'paragraph': n.props.color = theme.muted; break;
+        case 'quote': n.props.color = theme.text; break;
+        case 'list': n.props.color = theme.muted; break;
+        case 'button': n.props.bg = theme.accent; n.props.color = '#ffffff'; break;
+        case 'hero': n.props.bg = theme.accent; n.props.textColor = '#ffffff'; break;
+        case 'divider': n.props.color = theme.muted; break;
+      }
+    });
+
+    // 3) дефолтні кольори для НОВИХ блоків, які додадуть після зміни теми
+    BLOCK_REGISTRY.heading.defaultProps.color = theme.text;
+    BLOCK_REGISTRY.paragraph.defaultProps.color = theme.muted;
+    BLOCK_REGISTRY.quote.defaultProps.color = theme.text;
+    BLOCK_REGISTRY.list.defaultProps.color = theme.muted;
+    BLOCK_REGISTRY.button.defaultProps.bg = theme.accent;
+    BLOCK_REGISTRY.hero.defaultProps.bg = theme.accent;
+    BLOCK_REGISTRY.divider.defaultProps.color = theme.muted;
+
+    renderCanvas();
+    renderInspector();
+    commitHistory();
+
+    // перемалювати панель тем, щоб позначити нову активну картку
+    if (document.getElementById('left-panel').querySelector('.theme-list')) {
+      document.getElementById('left-panel').querySelector('.panel-body').innerHTML = renderThemesPanelBody();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // КРОК 11: EXPORT / IMPORT ПРОЄКТУ (.json)
+  // На відміну від "Завантажити HTML" (готовий email для розсилки), тут експортується
+  // РЕДАГОВАНИЙ формат — те саме дерево BlockNode, яке можна знову завантажити назад у MailCraft.
+  // ═══════════════════════════════════════════════════════════
+
+  function findMaxIdSuffix(nodes) {
+    let max = 0;
+    walkNodes(nodes, (n) => {
+      const m = /_(\d+)$/.exec(n.id);
+      if (m) max = Math.max(max, parseInt(m[1], 10));
+    });
+    return max;
+  }
+
+  function exportProject() {
+    const payload = {
+      format: 'mailcraft-project', version: 1,
+      exportedAt: new Date().toISOString(),
+      themeId: state.theme.id,
+      document: state.document,
+    };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mailcraft-project.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function importProjectFromFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed;
+      try {
+        parsed = JSON.parse(reader.result);
+      } catch (err) {
+        alert('Файл пошкоджений або не є коректним JSON.');
+        return;
+      }
+      if (!parsed || !parsed.document || !Array.isArray(parsed.document.root)) {
+        alert('Це не схоже на файл проєкту MailCraft.');
+        return;
+      }
+      if (state.document.root.length && !confirm('Імпорт замінить поточний лист. Продовжити? (можна скасувати через Undo)')) {
+        return;
+      }
+
+      state.document = parsed.document;
+      state.selectedId = null;
+      idCounter = findMaxIdSuffix(state.document.root) + 1; // щоб нові блоки не отримали ID, що вже є в імпортованому дереві
+
+      const theme = parsed.themeId && THEMES.find(t => t.id === parsed.themeId);
+      if (theme) {
+        state.theme = theme; // лише відновлюємо активну тему для UI, БЕЗ перефарбовування блоків —
+        const rootStyle = document.documentElement.style; // інакше затерли б кастомні кольори, які користувач міг змінити вручну
+        rootStyle.setProperty('--accent', theme.accent);
+        rootStyle.setProperty('--accent-light', theme.accentLight);
+        rootStyle.setProperty('--accent-hover', theme.accentHover);
+      }
+
+      renderCanvas();
+      renderInspector();
+      commitHistory();
+    };
+    reader.readAsText(file);
+  }
+
+  document.getElementById('export-btn').addEventListener('click', exportProject);
+  document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file-input').click());
+  document.getElementById('import-file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) importProjectFromFile(file);
+    e.target.value = ''; // дозволяє імпортувати той самий файл повторно
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // КРОК 12: ASSET MANAGER
+  // Без бекенду — зображення стискаються на клієнті (canvas, максимум 1200px по довшій стороні)
+  // і зберігаються як base64 у localStorage окремо від document/history (це бібліотека файлів,
+  // а не редагований стан листа, тож не бере участі в undo/redo).
+  // ═══════════════════════════════════════════════════════════
+
+  const ASSETS_STORAGE_KEY = 'mailcraft:assets';
+  const ASSET_MAX_DIMENSION = 1200;
+
+  function loadAssets() {
+    try {
+      assets = JSON.parse(localStorage.getItem(ASSETS_STORAGE_KEY)) || [];
+    } catch (err) {
+      assets = [];
+    }
+  }
+
+  function persistAssets() {
+    try {
+      localStorage.setItem(ASSETS_STORAGE_KEY, JSON.stringify(assets));
+    } catch (err) {
+      alert('Не вдалося зберегти зображення — можливо, перевищено ліміт локального сховища браузера (localStorage). Спробуй видалити старі зображення.');
+    }
+  }
+
+  // стискаємо на клієнті — інакше кілька фото з телефону швидко вичерпають ліміт localStorage (~5-10MB)
+  function resizeImageToDataUrl(file, maxDim) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            const scale = maxDim / Math.max(width, height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          resolve(canvas.toDataURL(mime, mime === 'image/jpeg' ? 0.85 : undefined));
+        };
+        img.onerror = () => reject(new Error('Не вдалося прочитати зображення'));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error('Не вдалося прочитати файл'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleAssetUpload(fileList) {
+    const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+    for (const file of files) {
+      try {
+        const dataUrl = await resizeImageToDataUrl(file, ASSET_MAX_DIMENSION);
+        assets.unshift({
+          id: 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+          name: file.name,
+          dataUrl,
+          addedAt: Date.now(),
+        });
+      } catch (err) {
+        alert(`Не вдалося обробити файл «${file.name}».`);
+      }
+    }
+    persistAssets();
+    refreshImagesPanelIfOpen();
+  }
+
+  function deleteAsset(id) {
+    assets = assets.filter(a => a.id !== id);
+    persistAssets();
+    refreshImagesPanelIfOpen();
+  }
+
+  // клік по мініатюрі: якщо вибраний блок має prop "src" (Зображення/Лого) — підставляємо в нього;
+  // інакше створюємо новий блок "Зображення" з цим фото
+  function useAsset(id) {
+    const asset = assets.find(a => a.id === id);
+    if (!asset) return;
+    const niceName = asset.name.replace(/\.[^.]+$/, '');
+    const found = state.selectedId ? findNodeAndContainer(state.selectedId) : null;
+
+    if (found && Object.prototype.hasOwnProperty.call(found.node.props, 'src')) {
+      found.node.props.src = asset.dataUrl;
+      if (!found.node.props.alt) found.node.props.alt = niceName;
+    } else {
+      const node = createNode('image');
+      node.props.src = asset.dataUrl;
+      node.props.alt = niceName;
+      state.document.root.push(node);
+      state.selectedId = node.id;
+    }
+    renderCanvas();
+    renderInspector();
+    commitHistory();
+  }
+
+  function renderImagesPanelBody() {
+    const grid = assets.length
+      ? `<div class="asset-grid">${assets.map(a => `
+          <div class="asset-thumb" data-asset="${a.id}" title="${escapeHtml(a.name)}">
+            <img src="${a.dataUrl}" alt="${escapeHtml(a.name)}">
+            <button class="asset-delete" data-action="delete-asset" data-asset-id="${a.id}" title="Видалити">×</button>
+          </div>`).join('')}</div>`
+      : `<p class="asset-empty-hint">Завантаж зображення, щоб використати як фото, лого чи в hero-банері</p>`;
+
+    return `
+      <label class="asset-upload-btn">
+        <input type="file" id="asset-upload-input" accept="image/*" multiple style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>Завантажити зображення</span>
+      </label>
+      ${grid}`;
+  }
+
+  function refreshImagesPanelIfOpen() {
+    if (leftPanel.querySelector('.asset-grid, .asset-empty-hint')) {
+      leftPanel.querySelector('.panel-body').innerHTML = renderImagesPanelBody();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // КРОК 13: PLUGIN ARCHITECTURE + AI-READINESS
+  //
+  // window.MailCraft — публічний розширюваний API. Плагін може зареєструвати НОВИЙ ТИП БЛОКУ
+  // (registerBlockType) — картка одразу зʼявляється в палітрі, а DnD/click-to-add/undo-redo/
+  // Export-Import уже вміють з ним працювати, бо вони завжди були написані проти BLOCK_REGISTRY,
+  // а не проти списку відомих типів. CUSTOM_RENDERERS — єдине, що довелось додати "з нуля":
+  // три default-гілки (editor/email/plain-text) тепер заглядають туди перед тим, як здатися.
+  //
+  // AI: свідомо НЕ телефонуємо в жоден LLM API напряму з цього файлу. Це статичний HTML —
+  // будь-який API-ключ, вписаний у код, був би публічно видимий кожному, хто відкриє "Переглянути код"
+  // у скачаному файлі. Тому AI — це підключувана точка розширення (registerProvider), яка чекає
+  // на СВІЙ бекенд/проксі з ключем на сервері, а не наш.
+  // ═══════════════════════════════════════════════════════════
+
+  const CUSTOM_RENDERERS = {}; // type → { renderEditor, renderEmail, toPlainText }
+  const hookListeners = {};
+  let aiProvider = null;
+
+  function emitHook(name, payload) {
+    (hookListeners[name] || []).forEach(fn => {
+      try { fn(payload); } catch (err) { console.error(`MailCraft: помилка в обробнику хука "${name}":`, err); }
+    });
+  }
+
+  function injectPluginBlockCard(type, label, iconSvg) {
+    const icon = iconSvg || `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>`;
+    const groupHtml = `
+      <div class="block-group">
+        <div class="block-group-title">Плагіни</div>
+        <div class="block-grid">
+          <div class="block-card" data-block="${type}">
+            <div class="bc-icon">${icon}</div>
+            <span>${label}</span>
+          </div>
+        </div>
+      </div>`;
+    BLOCKS_PANEL_HTML += groupHtml; // кеш — картка лишиться і після перемикання на інші вкладки й назад
+    const activeTab = document.querySelector('.rail-btn.active'); // .rail-btn живе в #left-rail, СУСІДНЬОМУ елементі, не всередині #left-panel
+    if (activeTab && activeTab.dataset.panel === 'blocks') {
+      leftPanel.querySelector('.panel-body').insertAdjacentHTML('beforeend', groupHtml);
+    }
+  }
+
+  /**
+   * Реєструє новий тип блоку. config:
+   *  - label: string (обовʼязково) — назва в палітрі й тулбарі блоку
+   *  - defaultProps: object — початкові props нового вузла
+   *  - propertySchema: масив полів для правої панелі (той самий формат, що й PROPERTY_SCHEMAS)
+   *  - renderEditor(node, responsiveTokens): string — HTML для канваса редактора
+   *  - renderEmail(node): string — ОДИН повний "<tr>...</tr>" для email-експорту
+   *  - toPlainText(node): string — резервний текстовий варіант (Copy for Gmail)
+   *  - icon: string (необовʼязково) — SVG-розмітка іконки картки
+   */
+  function registerBlockType(type, config) {
+    if (!type || !config || !config.label) {
+      console.error('MailCraft.registerBlockType: потрібні "type" (string) і "config.label".');
+      return false;
+    }
+    if (BLOCK_REGISTRY[type]) {
+      console.warn(`MailCraft: тип блоку "${type}" вже існує — реєстрацію проігноровано.`);
+      return false;
+    }
+    BLOCK_REGISTRY[type] = { label: config.label, defaultProps: config.defaultProps || {} };
+    if (config.propertySchema) PROPERTY_SCHEMAS[type] = config.propertySchema;
+    CUSTOM_RENDERERS[type] = {
+      renderEditor: config.renderEditor || (() => `<div style="padding:12px 24px;color:var(--muted);font-size:12px;">[${config.label}]</div>`),
+      renderEmail: config.renderEmail || (() => ''),
+      toPlainText: config.toPlainText || (() => ''),
+    };
+    injectPluginBlockCard(type, config.label, config.icon);
+    emitHook('blockType:registered', { type, label: config.label });
+    return true;
+  }
+
+  // ── AI: точка підключення, не вбудований виклик ──
+  async function handleAiGenerateClick() {
+    if (!aiProvider) {
+      alert(
+        'AI-провайдер ще не підключено.\n\n' +
+        'MailCraft свідомо не викликає жоден AI-сервіс "з коробки" — це статичний HTML-файл ' +
+        'без бекенду, і будь-який API-ключ у коді був би видимий усім, хто його відкриє.\n\n' +
+        'Щоб підключити власного AI-провайдера (свій бекенд/проксі з ключем на сервері), ' +
+        'викличте у консолі браузера:\n\n' +
+        'MailCraft.ai.registerProvider(async (promptText) => {\n' +
+        '  // ваш виклик до свого бекенду\n' +
+        '  return [{ type: "heading", props: { text: "..." } }, { type: "paragraph", props: { text: "..." } }];\n' +
+        '});'
+      );
+      return;
+    }
+    const promptText = prompt('Опиши, який лист згенерувати:');
+    if (!promptText || !promptText.trim()) return;
+    try {
+      const blocks = await aiProvider(promptText.trim(), { theme: state.theme.id });
+      if (!Array.isArray(blocks)) throw new Error('провайдер має повернути масив { type, props }');
+      const nodes = blocks.map(b => instantiate(b.type, b.props || {})).filter(Boolean);
+      if (!nodes.length) throw new Error('провайдер не повернув жодного валідного блоку');
+      if (state.document.root.length && !confirm('Замінити поточний лист згенерованим? (можна скасувати через Undo)')) return;
+      state.document.root = nodes;
+      state.selectedId = null;
+      renderCanvas();
+      renderInspector();
+      commitHistory();
+    } catch (err) {
+      alert('AI-провайдер повернув помилку: ' + err.message);
+    }
+  }
+
+  document.getElementById('ai-generate-btn').addEventListener('click', handleAiGenerateClick);
+
+  // ── подіємо ключові точки життєвого циклу — плагіни можуть підписатись через MailCraft.hooks.on(...) ──
+  const _origCommitHistory = commitHistory;
+  commitHistory = function patchedCommitHistory() {
+    const before = historyIndex;
+    _origCommitHistory();
+    if (historyIndex !== before) emitHook('document:changed', { document: state.document });
+  };
+
+  // ── публічний API ──
+  window.MailCraft = {
+    version: '1.0.0',
+    registerBlockType,
+    hooks: {
+      on(name, fn) {
+        if (!hookListeners[name]) hookListeners[name] = [];
+        hookListeners[name].push(fn);
+      },
+      off(name, fn) {
+        if (hookListeners[name]) hookListeners[name] = hookListeners[name].filter(f => f !== fn);
+      },
+    },
+    getDocument: () => JSON.parse(JSON.stringify(state.document)),
+    setDocument(doc) {
+      if (!doc || !Array.isArray(doc.root)) throw new Error('MailCraft.setDocument: очікується обʼєкт { root: [] }');
+      state.document = doc;
+      state.selectedId = null;
+      idCounter = findMaxIdSuffix(state.document.root) + 1;
+      renderCanvas();
+      renderInspector();
+      commitHistory();
+    },
+    addBlock(type, props = {}) {
+      const node = createNode(type);
+      if (!node) throw new Error(`MailCraft.addBlock: невідомий тип блоку "${type}"`);
+      Object.assign(node.props, props);
+      state.document.root.push(node);
+      state.selectedId = node.id;
+      renderCanvas();
+      renderInspector();
+      commitHistory();
+      return node.id;
+    },
+    ai: {
+      registerProvider(fn) {
+        if (typeof fn !== 'function') throw new Error('MailCraft.ai.registerProvider очікує функцію');
+        aiProvider = fn;
+      },
+    },
+  };
+
+  // ── демо-плагін: доказ, що система реально працює "з коробки" (можна сміливо прибрати) ──
+  registerBlockType('timestamp', {
+    label: 'Дата (плагін)',
+    defaultProps: {},
+    propertySchema: [],
+    renderEditor: (node, rt) => `<div style="padding:8px ${rt.padX}px;font-size:${rt.paragraphSize}px;color:var(--muted);font-style:italic;">📅 ${new Date().toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' })}</div>`,
+    renderEmail: () => `<tr><td class="mc-pad mc-paragraph" style="padding:8px 24px;font-family:${FONT_STACK};font-size:12px;color:#9ca3af;font-style:italic;">${new Date().toLocaleDateString('uk-UA', { year: 'numeric', month: 'long', day: 'numeric' })}</td></tr>`,
+    toPlainText: () => new Date().toLocaleDateString('uk-UA'),
+  });
+</script>
+</body>
+</html>
