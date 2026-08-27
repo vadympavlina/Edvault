@@ -160,6 +160,7 @@
   .history-badge.return { background: var(--success-light); color: var(--success); }
   .history-badge svg { width: 13px; height: 13px; flex-shrink: 0; }
   .history-table td.history-name { font-weight: 700; }
+  .history-table td.history-location { color: var(--text2); }
   .history-table td.history-date { color: var(--text2); font-family: 'JetBrains Mono', monospace; font-size: 11.5px; white-space: nowrap; }
   .history-empty { text-align: center; padding: 30px 0; color: var(--muted); font-size: 13px; }
 
@@ -299,6 +300,7 @@
             <tr>
               <th>Дія</th>
               <th>Співробітник</th>
+              <th>Місце здачі</th>
               <th>Дата і час</th>
             </tr>
           </thead>
@@ -344,7 +346,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 const ALLOWED_EMAILS = ['pavlina_vs@itstep.org', 'vadim.table.pc@gmail.com', 'vadym.pavlina@gmail.com'];
-const EQUIPMENT_BASE_URL = 'https://edvault.online/equipment.html';
+const EQUIPMENT_BASE_URL = 'https://edvault.online/equipment';
 
 let equipment = []; // { token, name, status, currentHolder, takenAt }
 let editingToken = null;
@@ -638,6 +640,7 @@ window.openHistoryModal = async function (token) {
           </span>
         </td>
         <td class="history-name">${escapeHtml(ev.surname || '')}</td>
+        <td class="history-location">${ev.type === 'return' ? escapeHtml(ev.location || '—') : '<span style="color:var(--muted);">—</span>'}</td>
         <td class="history-date">${formatDateTime(ev.timestamp)}</td>
       </tr>
     `).join('');
