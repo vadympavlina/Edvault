@@ -245,57 +245,68 @@ function buildEmailHtml(takenEquipment) {
   const reportDate = new Intl.DateTimeFormat("uk-UA", {
     timeZone: "Europe/Kyiv",
     day: "2-digit",
-    month: "long",
+    month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit"
   }).format(now);
 
 
-  const rows = takenEquipment
+  const equipmentCards = takenEquipment
     .map(item => {
-
-      const duration = getDurationText(
-        item.timestamp
-      );
+      const duration = getDurationText(item.timestamp);
 
       return `
         <div style="
-          border:1px solid #e5e7eb;
-          border-radius:12px;
-          padding:18px;
-          margin-top:14px;
           background:#ffffff;
+          border:1px solid #e5e7eb;
+          border-radius:14px;
+          padding:20px;
+          margin-top:12px;
         ">
 
           <div style="
             font-size:17px;
+            line-height:1.4;
             font-weight:600;
             color:#111827;
           ">
-            🔴 ${escapeHtml(item.name)}
+            ${escapeHtml(item.name)}
           </div>
 
 
           <div style="
-            margin-top:10px;
-            color:#4b5563;
+            margin-top:16px;
             font-size:14px;
+            color:#6b7280;
           ">
-            <strong>Взяв:</strong>
+            Взяв
+          </div>
+
+          <div style="
+            margin-top:3px;
+            font-size:15px;
+            font-weight:500;
+            color:#111827;
+          ">
             ${escapeHtml(item.surname)}
           </div>
 
 
           <div style="
-            margin-top:5px;
-            color:#4b5563;
+            margin-top:14px;
             font-size:14px;
+            color:#6b7280;
           ">
-            <strong>Видано:</strong>
-            ${escapeHtml(
-              formatDate(item.timestamp)
-            )}
+            Видано
+          </div>
+
+          <div style="
+            margin-top:3px;
+            font-size:15px;
+            color:#111827;
+          ">
+            ${escapeHtml(formatDate(item.timestamp))}
           </div>
 
 
@@ -303,13 +314,14 @@ function buildEmailHtml(takenEquipment) {
             duration
               ? `
                 <div style="
-                  margin-top:5px;
-                  color:#dc2626;
+                  margin-top:14px;
+                  padding-top:14px;
+                  border-top:1px solid #f0f0f0;
                   font-size:14px;
-                  font-weight:600;
+                  color:#dc2626;
                 ">
                   Не повернуто:
-                  ${escapeHtml(duration)}
+                  <strong>${escapeHtml(duration)}</strong>
                 </div>
               `
               : ""
@@ -327,7 +339,6 @@ function buildEmailHtml(takenEquipment) {
 <html lang="uk">
 
 <head>
-
   <meta charset="UTF-8">
 
   <meta
@@ -335,110 +346,169 @@ function buildEmailHtml(takenEquipment) {
     content="width=device-width, initial-scale=1.0"
   >
 
+  <title>EdVault — Звіт по техніці</title>
 </head>
 
 
 <body style="
   margin:0;
   padding:0;
-  background:#f5f7fb;
+  background:#f5f7fa;
   font-family:Arial,Helvetica,sans-serif;
   color:#111827;
 ">
 
 
   <div style="
-    max-width:620px;
-    margin:0 auto;
-    padding:32px 20px;
+    width:100%;
+    padding:32px 16px;
+    box-sizing:border-box;
   ">
 
 
     <div style="
-      background:#ffffff;
-      border-radius:16px;
-      padding:28px;
-      border:1px solid #e5e7eb;
+      max-width:600px;
+      margin:0 auto;
     ">
 
 
-      <!-- Header -->
+      <!-- Main card -->
 
       <div style="
-        font-size:24px;
-        font-weight:700;
+        background:#ffffff;
+        border:1px solid #e5e7eb;
+        border-radius:18px;
+        overflow:hidden;
       ">
-        EdVault
-      </div>
 
 
-      <div style="
-        font-size:20px;
-        font-weight:600;
-        margin-top:8px;
-      ">
-        Звіт по техніці
-      </div>
-
-
-      <div style="
-        color:#6b7280;
-        font-size:14px;
-        margin-top:6px;
-      ">
-        ${escapeHtml(reportDate)}
-      </div>
-
-
-      <!-- Warning -->
-
-      <div style="
-        background:#fef2f2;
-        border:1px solid #fecaca;
-        border-radius:12px;
-        padding:20px;
-        margin-top:20px;
-      ">
+        <!-- Header -->
 
         <div style="
-          font-size:28px;
+          padding:26px 28px;
+          border-bottom:1px solid #eef0f3;
         ">
-          🔴
+
+          <div style="
+            font-size:13px;
+            font-weight:600;
+            letter-spacing:0.04em;
+            color:#2563eb;
+            text-transform:uppercase;
+          ">
+            EdVault
+          </div>
+
+
+          <div style="
+            margin-top:7px;
+            font-size:24px;
+            line-height:1.25;
+            font-weight:700;
+            color:#111827;
+          ">
+            Звіт по техніці
+          </div>
+
+
+          <div style="
+            margin-top:7px;
+            font-size:13px;
+            color:#6b7280;
+          ">
+            ${escapeHtml(reportDate)}
+          </div>
+
         </div>
 
 
+        <!-- Summary -->
+
         <div style="
-          font-size:18px;
-          font-weight:600;
-          color:#991b1b;
-          margin-top:8px;
+          padding:24px 28px 10px 28px;
         ">
-          Неповернута техніка:
-          ${takenEquipment.length}
+
+          <div style="
+            background:#eff6ff;
+            border:1px solid #dbeafe;
+            border-radius:14px;
+            padding:18px 20px;
+          ">
+
+            <div style="
+              font-size:13px;
+              color:#2563eb;
+              font-weight:600;
+            ">
+              ПОТРІБНА УВАГА
+            </div>
+
+
+            <div style="
+              margin-top:5px;
+              font-size:21px;
+              font-weight:700;
+              color:#111827;
+            ">
+              ${takenEquipment.length}
+              ${
+                takenEquipment.length === 1
+                  ? "одиниця"
+                  : "одиниць"
+              }
+              не повернуто
+            </div>
+
+
+            <div style="
+              margin-top:5px;
+              font-size:14px;
+              color:#6b7280;
+            ">
+              Перевірте повернення техніки.
+            </div>
+
+          </div>
+
         </div>
 
-      </div>
+
+        <!-- Equipment list -->
+
+        <div style="
+          padding:4px 28px 28px 28px;
+        ">
+
+          ${equipmentCards}
+
+        </div>
 
 
-      <!-- Equipment -->
+        <!-- Footer -->
 
-      ${rows}
+        <div style="
+          padding:18px 28px;
+          border-top:1px solid #eef0f3;
+          background:#fafbfc;
+        ">
+
+          <div style="
+            font-size:12px;
+            line-height:1.5;
+            color:#9ca3af;
+          ">
+            Це автоматичний звіт про техніку,
+            яка наразі має статус «Видано».
+          </div>
+
+        </div>
 
 
-      <!-- Footer -->
-
-      <div style="
-        margin-top:28px;
-        padding-top:18px;
-        border-top:1px solid #e5e7eb;
-        color:#9ca3af;
-        font-size:12px;
-      ">
-        Автоматичний звіт EdVault
       </div>
 
 
     </div>
+
 
   </div>
 
@@ -448,7 +518,6 @@ function buildEmailHtml(takenEquipment) {
 </html>
   `;
 }
-
 
 // ============================================================
 // Send email
