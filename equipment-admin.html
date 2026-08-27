@@ -117,6 +117,7 @@
   .modal-overlay.visible { display: flex; }
   .modal { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-lg); max-width: 480px; width: 100%; overflow: hidden; }
   .modal.wide { max-width: 560px; }
+  .modal.wider { max-width: 660px; }
   .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); }
   .modal-head h3 { font-size: 16px; font-weight: 800; }
   .modal-close { width: 30px; height: 30px; border-radius: 8px; border: none; background: var(--surface2); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -148,14 +149,18 @@
   .qr-actions .btn { flex: 1; justify-content: center; }
 
   /* History modal */
-  .history-list { display: flex; flex-direction: column; gap: 10px; }
-  .history-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 12px; }
-  .history-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .history-icon.checkout { background: var(--danger-light); color: var(--danger); }
-  .history-icon.return { background: var(--success-light); color: var(--success); }
-  .history-icon svg { width: 16px; height: 16px; }
-  .history-text b { font-size: 13px; font-weight: 700; display: block; }
-  .history-text span { font-size: 11.5px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .history-table-wrap { border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .history-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .history-table thead th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); background: var(--surface2); padding: 10px 14px; border-bottom: 1.5px solid var(--border); }
+  .history-table tbody td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text); }
+  .history-table tbody tr:last-child td { border-bottom: none; }
+  .history-table tbody tr:nth-child(even) { background: var(--surface2); }
+  .history-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .history-badge.checkout { background: var(--danger-light); color: var(--danger); }
+  .history-badge.return { background: var(--success-light); color: var(--success); }
+  .history-badge svg { width: 13px; height: 13px; flex-shrink: 0; }
+  .history-table td.history-name { font-weight: 700; }
+  .history-table td.history-date { color: var(--text2); font-family: 'JetBrains Mono', monospace; font-size: 11.5px; white-space: nowrap; }
   .history-empty { text-align: center; padding: 30px 0; color: var(--muted); font-size: 13px; }
 
   @media print {
@@ -284,11 +289,22 @@
 
 <!-- HISTORY MODAL -->
 <div class="modal-overlay" id="history-modal-overlay">
-  <div class="modal wide">
+  <div class="modal wider">
     <div class="modal-head"><h3 id="history-modal-title">Історія використання</h3><button class="modal-close" onclick="closeHistoryModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
-    <div class="modal-body">
+    <div class="modal-body" style="padding:16px 20px;">
       <div class="state-block visible" id="history-loading" style="padding:40px 0;"><div class="spinner-lg"></div></div>
-      <div class="history-list" id="history-list" style="display:none;"></div>
+      <div class="history-table-wrap" id="history-table-wrap" style="display:none;">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Дія</th>
+              <th>Співробітник</th>
+              <th>Дата і час</th>
+            </tr>
+          </thead>
+          <tbody id="history-list"></tbody>
+        </table>
+      </div>
       <div class="history-empty" id="history-empty" style="display:none;">Ще немає жодної операції з цією технікою</div>
     </div>
   </div>
@@ -596,7 +612,7 @@ window.openHistoryModal = async function (token) {
   activeHistoryToken = token;
   document.getElementById('history-modal-title').textContent = `Історія · ${e ? e.name : ''}`;
   document.getElementById('history-loading').classList.add('visible');
-  document.getElementById('history-list').style.display = 'none';
+  document.getElementById('history-table-wrap').style.display = 'none';
   document.getElementById('history-empty').style.display = 'none';
   document.getElementById('history-modal-overlay').classList.add('visible');
 
@@ -610,19 +626,20 @@ window.openHistoryModal = async function (token) {
       document.getElementById('history-empty').style.display = 'block';
       return;
     }
-    document.getElementById('history-list').style.display = 'flex';
+    document.getElementById('history-table-wrap').style.display = 'block';
     document.getElementById('history-list').innerHTML = events.map(ev => `
-      <div class="history-item">
-        <div class="history-icon ${ev.type === 'checkout' ? 'checkout' : 'return'}">
-          ${ev.type === 'checkout'
-            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`
-            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>`}
-        </div>
-        <div class="history-text">
-          <b>${ev.type === 'checkout' ? 'Взято' : 'Повернуто'} · ${escapeHtml(ev.surname || '')}</b>
-          <span>${formatDateTime(ev.timestamp)}</span>
-        </div>
-      </div>
+      <tr>
+        <td>
+          <span class="history-badge ${ev.type === 'checkout' ? 'checkout' : 'return'}">
+            ${ev.type === 'checkout'
+              ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`
+              : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>`}
+            ${ev.type === 'checkout' ? 'Взято' : 'Повернуто'}
+          </span>
+        </td>
+        <td class="history-name">${escapeHtml(ev.surname || '')}</td>
+        <td class="history-date">${formatDateTime(ev.timestamp)}</td>
+      </tr>
     `).join('');
   } catch (err) {
     console.error(err);
