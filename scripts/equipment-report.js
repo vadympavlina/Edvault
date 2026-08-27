@@ -15,6 +15,7 @@ const REPORT_RECIPIENTS = (process.env.REPORT_RECIPIENTS || "")
   .map(email => email.trim())
   .filter(Boolean);
 
+
 // ============================================================
 // Validate configuration
 // ============================================================
@@ -39,6 +40,7 @@ if (REPORT_RECIPIENTS.length === 0) {
   throw new Error("Missing REPORT_RECIPIENTS");
 }
 
+
 // ============================================================
 // Firebase
 // ============================================================
@@ -58,11 +60,13 @@ admin.initializeApp({
 
 const db = admin.database();
 
+
 // ============================================================
 // Resend
 // ============================================================
 
 const resend = new Resend(RESEND_API_KEY);
+
 
 // ============================================================
 // Helpers
@@ -179,8 +183,8 @@ function getLatestCheckout(historyForEquipment) {
 // status: "available" → equipment is returned
 // status: "taken"     → equipment is currently borrowed
 //
-// currentHolder → surname/name of person who took it
-// takenAt       → timestamp when it was taken
+// currentHolder → person who took the equipment
+// takenAt       → timestamp when equipment was taken
 // ============================================================
 
 function findTakenEquipment(equipment, history) {
@@ -191,13 +195,12 @@ function findTakenEquipment(equipment, history) {
       continue;
     }
 
-    // IMPORTANT:
-    // EdVault uses "taken", not "issued".
+    // EdVault uses "taken" for currently borrowed equipment.
     if (item.status !== "taken") {
       continue;
     }
 
-    // Get history as a fallback.
+    // Get history as fallback.
     const latestCheckout = getLatestCheckout(
       history[equipmentId]
     );
@@ -248,167 +251,75 @@ function buildEmailHtml(takenEquipment) {
     minute: "2-digit"
   }).format(now);
 
-  let content = "";
 
+  const rows = takenEquipment
+    .map(item => {
 
-  // ==========================================================
-  // NO TAKEN EQUIPMENT
-  // ==========================================================
+      const duration = getDurationText(
+        item.timestamp
+      );
 
-  if (takenEquipment.length === 0) {
-
-    content = `
-      <div style="
-        background:#ecfdf3;
-        border:1px solid #a7f3d0;
-        border-radius:12px;
-        padding:24px;
-        margin-top:20px;
-      ">
-
+      return `
         <div style="
-          font-size:28px;
+          border:1px solid #e5e7eb;
+          border-radius:12px;
+          padding:18px;
+          margin-top:14px;
+          background:#ffffff;
         ">
-          🟢
-        </div>
 
-        <div style="
-          font-size:18px;
-          font-weight:600;
-          color:#065f46;
-          margin-top:8px;
-        ">
-          Уся техніка повернута
-        </div>
-
-        <div style="
-          color:#047857;
-          margin-top:6px;
-          line-height:1.5;
-        ">
-          Станом на момент формування звіту
-          неповернутої техніки немає.
-        </div>
-
-      </div>
-    `;
-
-  }
-
-
-  // ==========================================================
-  // TAKEN EQUIPMENT EXISTS
-  // ==========================================================
-
-  else {
-
-    const rows = takenEquipment
-      .map(item => {
-
-        const duration = getDurationText(
-          item.timestamp
-        );
-
-        return `
           <div style="
-            border:1px solid #e5e7eb;
-            border-radius:12px;
-            padding:18px;
-            margin-top:14px;
-            background:#ffffff;
+            font-size:17px;
+            font-weight:600;
+            color:#111827;
           ">
-
-            <div style="
-              font-size:17px;
-              font-weight:600;
-              color:#111827;
-            ">
-              🔴 ${escapeHtml(item.name)}
-            </div>
-
-
-            <div style="
-              margin-top:10px;
-              color:#4b5563;
-              font-size:14px;
-            ">
-              <strong>Взяв:</strong>
-              ${escapeHtml(item.surname)}
-            </div>
-
-
-            <div style="
-              margin-top:5px;
-              color:#4b5563;
-              font-size:14px;
-            ">
-              <strong>Видано:</strong>
-              ${escapeHtml(
-                formatDate(item.timestamp)
-              )}
-            </div>
-
-
-            ${
-              duration
-                ? `
-                  <div style="
-                    margin-top:5px;
-                    color:#dc2626;
-                    font-size:14px;
-                    font-weight:600;
-                  ">
-                    Не повернуто:
-                    ${escapeHtml(duration)}
-                  </div>
-                `
-                : ""
-            }
-
+            🔴 ${escapeHtml(item.name)}
           </div>
-        `;
-      })
-      .join("");
 
 
-    content = `
+          <div style="
+            margin-top:10px;
+            color:#4b5563;
+            font-size:14px;
+          ">
+            <strong>Взяв:</strong>
+            ${escapeHtml(item.surname)}
+          </div>
 
-      <div style="
-        background:#fef2f2;
-        border:1px solid #fecaca;
-        border-radius:12px;
-        padding:20px;
-        margin-top:20px;
-      ">
 
-        <div style="
-          font-size:28px;
-        ">
-          🔴
+          <div style="
+            margin-top:5px;
+            color:#4b5563;
+            font-size:14px;
+          ">
+            <strong>Видано:</strong>
+            ${escapeHtml(
+              formatDate(item.timestamp)
+            )}
+          </div>
+
+
+          ${
+            duration
+              ? `
+                <div style="
+                  margin-top:5px;
+                  color:#dc2626;
+                  font-size:14px;
+                  font-weight:600;
+                ">
+                  Не повернуто:
+                  ${escapeHtml(duration)}
+                </div>
+              `
+              : ""
+          }
+
         </div>
+      `;
+    })
+    .join("");
 
-        <div style="
-          font-size:18px;
-          font-weight:600;
-          color:#991b1b;
-          margin-top:8px;
-        ">
-          Неповернута техніка:
-          ${takenEquipment.length}
-        </div>
-
-      </div>
-
-
-      ${rows}
-
-    `;
-  }
-
-
-  // ==========================================================
-  // Full email
-  // ==========================================================
 
   return `
 <!DOCTYPE html>
@@ -479,9 +390,39 @@ function buildEmailHtml(takenEquipment) {
       </div>
 
 
-      <!-- Content -->
+      <!-- Warning -->
 
-      ${content}
+      <div style="
+        background:#fef2f2;
+        border:1px solid #fecaca;
+        border-radius:12px;
+        padding:20px;
+        margin-top:20px;
+      ">
+
+        <div style="
+          font-size:28px;
+        ">
+          🔴
+        </div>
+
+
+        <div style="
+          font-size:18px;
+          font-weight:600;
+          color:#991b1b;
+          margin-top:8px;
+        ">
+          Неповернута техніка:
+          ${takenEquipment.length}
+        </div>
+
+      </div>
+
+
+      <!-- Equipment -->
+
+      ${rows}
 
 
       <!-- Footer -->
@@ -518,15 +459,36 @@ async function sendReport(takenEquipment) {
   const count = takenEquipment.length;
 
 
+  // ==========================================================
+  // IMPORTANT:
+  // If everything is returned, DO NOT send an email.
+  // ==========================================================
+
+  if (count === 0) {
+
+    console.log(
+      "All equipment is returned."
+    );
+
+    console.log(
+      "No email will be sent."
+    );
+
+    return;
+  }
+
+
+  // ==========================================================
+  // There is at least one piece of equipment not returned.
+  // Send the report.
+  // ==========================================================
+
   const subject =
-    count === 0
-      ? "🟢 EdVault — вся техніка повернута"
-      : `🔴 EdVault — ${count} од. техніки не повернуто`;
+    `🔴 EdVault — ${count} од. техніки не повернуто`;
 
 
-  const html = buildEmailHtml(
-    takenEquipment
-  );
+  const html =
+    buildEmailHtml(takenEquipment);
 
 
   const { data, error } =
