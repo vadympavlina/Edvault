@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Облік техніки · Edvault</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -134,8 +133,15 @@
 
   /* QR modal */
   .qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-  .qr-canvas-box { background: #fff; padding: 16px; border-radius: 14px; border: 1.5px solid var(--border); }
+  .qr-canvas-box { background: #fff; padding: 16px; border-radius: 14px; border: 1.5px solid var(--border); min-width: 200px; min-height: 200px; display: flex; align-items: center; justify-content: center; }
   .qr-canvas-box canvas { display: block; }
+  .qr-load-error {
+    display: none; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+    color: var(--danger); font-size: 12.5px; font-weight: 600; max-width: 220px;
+  }
+  .qr-load-error.visible { display: flex; }
+  .qr-load-error svg { width: 26px; height: 26px; }
+  .qr-load-spinner { width: 26px; height: 26px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
   .qr-name { font-size: 15px; font-weight: 800; text-align: center; }
   .qr-url { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); text-align: center; word-break: break-all; background: var(--surface2); padding: 8px 12px; border-radius: 8px; width: 100%; }
   .qr-actions { display: flex; gap: 10px; width: 100%; }
@@ -250,7 +256,15 @@
     <div class="modal-head"><h3>QR-код</h3><button class="modal-close" onclick="closeQrModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body">
       <div class="qr-wrap">
-        <div class="qr-canvas-box"><canvas id="qr-canvas"></canvas></div>
+        <div class="qr-canvas-box">
+          <canvas id="qr-canvas"></canvas>
+          <div class="qr-load-spinner" id="qr-load-spinner" style="display:none;"></div>
+          <div class="qr-load-error" id="qr-load-error">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>Не вдалося завантажити бібліотеку QR. Перевір інтернет-з'єднання (можливо, мережа блокує CDN) і спробуй ще раз.</span>
+            <button class="secondary-btn" onclick="retryQrLoad()">Спробувати знову</button>
+          </div>
+        </div>
         <div class="qr-name" id="qr-name"></div>
         <div class="qr-url" id="qr-url"></div>
         <div class="qr-actions">
@@ -314,6 +328,43 @@ let equipment = []; // { token, name, status, currentHolder, takenAt }
 let editingToken = null;
 let activeQrToken = null;
 let activeHistoryToken = null;
+
+// ── Ледаче підвантаження бібліотеки генерації QR ──
+// Не вантажимо в <head>: якщо мережа/файрвол блокує CDN, вся сторінка
+// не повинна падати через це. Пробуємо кілька дзеркал по черзі,
+// підвантажуємо лише тоді, коли адмін реально відкриває QR.
+const QR_LIB_MIRRORS = [
+  'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
+  'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.5.3/qrcode.min.js'
+];
+let qrLibPromise = null;
+
+function loadQrLib() {
+  if (window.QRCode) return Promise.resolve();
+  if (qrLibPromise) return qrLibPromise;
+
+  qrLibPromise = (async () => {
+    for (const src of QR_LIB_MIRRORS) {
+      try {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = src;
+          s.onload = () => (window.QRCode ? resolve() : reject(new Error('QRCode global not found after load')));
+          s.onerror = () => reject(new Error('script load failed: ' + src));
+          document.head.appendChild(s);
+        });
+        return; // успішно завантажено
+      } catch (e) {
+        console.warn('Не вдалось завантажити QR-бібліотеку з', src, e);
+      }
+    }
+    qrLibPromise = null; // дозволяємо повторну спробу пізніше
+    throw new Error('Усі дзеркала QR-бібліотеки недоступні');
+  })();
+
+  return qrLibPromise;
+}
 
 function generateToken(len = 20) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -491,23 +542,49 @@ window.saveEquipment = async function () {
 };
 
 // ── QR modal ──
-window.openQrModal = function (token) {
+window.openQrModal = async function (token) {
   const e = equipment.find(x => x.token === token);
   if (!e) return;
   activeQrToken = token;
   const url = `${EQUIPMENT_BASE_URL}?t=${token}`;
   document.getElementById('qr-name').textContent = e.name;
   document.getElementById('qr-url').textContent = url;
-  const canvas = document.getElementById('qr-canvas');
-  QRCode.toCanvas(canvas, url, { width: 240, margin: 1, color: { dark: '#1a1d23', light: '#ffffff' } }, (err) => {
-    if (err) console.error(err);
-  });
   document.getElementById('qr-modal-overlay').classList.add('visible');
+  await renderQrIntoCanvas('qr-canvas', url);
+};
+
+async function renderQrIntoCanvas(canvasId, url) {
+  const canvas = document.getElementById(canvasId);
+  const spinner = document.getElementById('qr-load-spinner');
+  const errEl = document.getElementById('qr-load-error');
+  canvas.style.display = 'none';
+  errEl.classList.remove('visible');
+  spinner.style.display = 'block';
+
+  try {
+    await loadQrLib();
+    await new Promise((resolve, reject) => {
+      QRCode.toCanvas(canvas, url, { width: 240, margin: 1, color: { dark: '#1a1d23', light: '#ffffff' } }, (err) => err ? reject(err) : resolve());
+    });
+    spinner.style.display = 'none';
+    canvas.style.display = 'block';
+  } catch (err) {
+    console.error('Не вдалось згенерувати QR:', err);
+    spinner.style.display = 'none';
+    errEl.classList.add('visible');
+  }
+}
+
+window.retryQrLoad = async function () {
+  if (!activeQrToken) return;
+  const url = `${EQUIPMENT_BASE_URL}?t=${activeQrToken}`;
+  await renderQrIntoCanvas('qr-canvas', url);
 };
 window.closeQrModal = function () { document.getElementById('qr-modal-overlay').classList.remove('visible'); activeQrToken = null; };
 
 window.downloadQr = function () {
   const canvas = document.getElementById('qr-canvas');
+  if (canvas.style.display === 'none') { showToast('QR ще не завантажено — спробуй ще раз', true); return; }
   const e = equipment.find(x => x.token === activeQrToken);
   const link = document.createElement('a');
   link.download = `qr-${(e?.name || 'equipment').replace(/[^a-zA-Z0-9а-яА-ЯіІїЇєЄ_-]+/g, '_')}.png`;
@@ -515,12 +592,18 @@ window.downloadQr = function () {
   link.click();
 };
 
-window.printQr = function () {
+window.printQr = async function () {
   const e = equipment.find(x => x.token === activeQrToken);
   const url = `${EQUIPMENT_BASE_URL}?t=${activeQrToken}`;
+  try {
+    await loadQrLib();
+  } catch (err) {
+    showToast('Не вдалося завантажити бібліотеку QR для друку', true);
+    return;
+  }
   const printCanvas = document.getElementById('print-qr-canvas');
   QRCode.toCanvas(printCanvas, url, { width: 300, margin: 1 }, (err) => {
-    if (err) { console.error(err); return; }
+    if (err) { console.error(err); showToast('Не вдалося згенерувати QR для друку', true); return; }
     document.getElementById('print-qr-name').textContent = e?.name || '';
     document.getElementById('print-area').style.display = 'block';
     window.print();
