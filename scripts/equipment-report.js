@@ -15,6 +15,10 @@ const REPORT_RECIPIENTS = (process.env.REPORT_RECIPIENTS || "")
   .map(email => email.trim())
   .filter(Boolean);
 
+// ============================================================
+// Validate configuration
+// ============================================================
+
 if (!DATABASE_URL) {
   throw new Error("Missing FIREBASE_DATABASE_URL");
 }
@@ -65,7 +69,9 @@ const resend = new Resend(RESEND_API_KEY);
 // ============================================================
 
 function formatDate(timestamp) {
-  if (!timestamp) return "Невідомо";
+  if (!timestamp) {
+    return "Невідомо";
+  }
 
   return new Intl.DateTimeFormat("uk-UA", {
     timeZone: "Europe/Kyiv",
@@ -77,12 +83,17 @@ function formatDate(timestamp) {
   }).format(new Date(Number(timestamp)));
 }
 
+
 function getDurationText(timestamp) {
-  if (!timestamp) return "";
+  if (!timestamp) {
+    return "";
+  }
 
   const diff = Date.now() - Number(timestamp);
 
-  if (diff < 0) return "";
+  if (diff < 0) {
+    return "";
+  }
 
   const totalMinutes = Math.floor(diff / 60000);
 
@@ -107,6 +118,7 @@ function getDurationText(timestamp) {
   return parts.join(" ");
 }
 
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -116,8 +128,9 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+
 // ============================================================
-// Get data
+// Get Firebase data
 // ============================================================
 
 async function getFirebaseData() {
@@ -132,8 +145,9 @@ async function getFirebaseData() {
   };
 }
 
+
 // ============================================================
-// Find latest checkout
+// Find latest checkout from history
 // ============================================================
 
 function getLatestCheckout(historyForEquipment) {
@@ -145,47 +159,84 @@ function getLatestCheckout(historyForEquipment) {
 
   const checkouts = events
     .filter(event => event && event.type === "checkout")
-    .sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+    .sort(
+      (a, b) =>
+        Number(b.timestamp || 0) -
+        Number(a.timestamp || 0)
+    );
 
-  return checkouts.length > 0 ? checkouts[0] : null;
+  return checkouts.length > 0
+    ? checkouts[0]
+    : null;
 }
 
+
 // ============================================================
-// Build report
+// Find currently taken equipment
+//
+// EdVault structure:
+//
+// status: "available" → equipment is returned
+// status: "taken"     → equipment is currently borrowed
+//
+// currentHolder → surname/name of person who took it
+// takenAt       → timestamp when it was taken
 // ============================================================
 
-function findIssuedEquipment(equipment, history) {
-  const issued = [];
+function findTakenEquipment(equipment, history) {
+  const taken = [];
 
   for (const [equipmentId, item] of Object.entries(equipment)) {
-    if (!item) continue;
-
-    if (item.status !== "issued") {
+    if (!item) {
       continue;
     }
 
-    const latestCheckout = getLatestCheckout(history[equipmentId]);
+    // IMPORTANT:
+    // EdVault uses "taken", not "issued".
+    if (item.status !== "taken") {
+      continue;
+    }
 
-    issued.push({
+    // Get history as a fallback.
+    const latestCheckout = getLatestCheckout(
+      history[equipmentId]
+    );
+
+    const surname =
+      item.currentHolder ||
+      latestCheckout?.surname ||
+      "Невідомо";
+
+    const timestamp =
+      item.takenAt ||
+      latestCheckout?.timestamp ||
+      null;
+
+    taken.push({
       id: equipmentId,
       name: item.name || "Без назви",
-      surname: latestCheckout?.surname || "Невідомо",
-      timestamp: latestCheckout?.timestamp || null
+      surname,
+      timestamp
     });
   }
 
-  issued.sort((a, b) => {
-    return Number(a.timestamp || 0) - Number(b.timestamp || 0);
+  // Oldest borrowed equipment first.
+  taken.sort((a, b) => {
+    return (
+      Number(a.timestamp || 0) -
+      Number(b.timestamp || 0)
+    );
   });
 
-  return issued;
+  return taken;
 }
 
+
 // ============================================================
-// HTML email
+// Build HTML email
 // ============================================================
 
-function buildEmailHtml(issuedEquipment) {
+function buildEmailHtml(takenEquipment) {
   const now = new Date();
 
   const reportDate = new Intl.DateTimeFormat("uk-UA", {
@@ -199,7 +250,13 @@ function buildEmailHtml(issuedEquipment) {
 
   let content = "";
 
-  if (issuedEquipment.length === 0) {
+
+  // ==========================================================
+  // NO TAKEN EQUIPMENT
+  // ==========================================================
+
+  if (takenEquipment.length === 0) {
+
     content = `
       <div style="
         background:#ecfdf3;
@@ -208,7 +265,12 @@ function buildEmailHtml(issuedEquipment) {
         padding:24px;
         margin-top:20px;
       ">
-        <div style="font-size:28px;">🟢</div>
+
+        <div style="
+          font-size:28px;
+        ">
+          🟢
+        </div>
 
         <div style="
           font-size:18px;
@@ -222,68 +284,95 @@ function buildEmailHtml(issuedEquipment) {
         <div style="
           color:#047857;
           margin-top:6px;
+          line-height:1.5;
         ">
-          Станом на момент формування звіту неповернутої техніки немає.
+          Станом на момент формування звіту
+          неповернутої техніки немає.
         </div>
+
       </div>
     `;
-  } else {
-    const rows = issuedEquipment.map(item => {
-      const duration = getDurationText(item.timestamp);
 
-      return `
-        <div style="
-          border:1px solid #e5e7eb;
-          border-radius:12px;
-          padding:18px;
-          margin-top:14px;
-          background:#ffffff;
-        ">
+  }
+
+
+  // ==========================================================
+  // TAKEN EQUIPMENT EXISTS
+  // ==========================================================
+
+  else {
+
+    const rows = takenEquipment
+      .map(item => {
+
+        const duration = getDurationText(
+          item.timestamp
+        );
+
+        return `
           <div style="
-            font-size:17px;
-            font-weight:600;
-            color:#111827;
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            padding:18px;
+            margin-top:14px;
+            background:#ffffff;
           ">
-            🔴 ${escapeHtml(item.name)}
-          </div>
 
-          <div style="
-            margin-top:10px;
-            color:#4b5563;
-            font-size:14px;
-          ">
-            <strong>Взяв:</strong>
-            ${escapeHtml(item.surname)}
-          </div>
+            <div style="
+              font-size:17px;
+              font-weight:600;
+              color:#111827;
+            ">
+              🔴 ${escapeHtml(item.name)}
+            </div>
 
-          <div style="
-            margin-top:5px;
-            color:#4b5563;
-            font-size:14px;
-          ">
-            <strong>Видано:</strong>
-            ${escapeHtml(formatDate(item.timestamp))}
-          </div>
 
-          ${
-            duration
-              ? `
-                <div style="
-                  margin-top:5px;
-                  color:#dc2626;
-                  font-size:14px;
-                  font-weight:600;
-                ">
-                  Не повернуто: ${escapeHtml(duration)}
-                </div>
-              `
-              : ""
-          }
-        </div>
-      `;
-    }).join("");
+            <div style="
+              margin-top:10px;
+              color:#4b5563;
+              font-size:14px;
+            ">
+              <strong>Взяв:</strong>
+              ${escapeHtml(item.surname)}
+            </div>
+
+
+            <div style="
+              margin-top:5px;
+              color:#4b5563;
+              font-size:14px;
+            ">
+              <strong>Видано:</strong>
+              ${escapeHtml(
+                formatDate(item.timestamp)
+              )}
+            </div>
+
+
+            ${
+              duration
+                ? `
+                  <div style="
+                    margin-top:5px;
+                    color:#dc2626;
+                    font-size:14px;
+                    font-weight:600;
+                  ">
+                    Не повернуто:
+                    ${escapeHtml(duration)}
+                  </div>
+                `
+                : ""
+            }
+
+          </div>
+        `;
+      })
+      .join("");
+
 
     content = `
+
       <div style="
         background:#fef2f2;
         border:1px solid #fecaca;
@@ -291,7 +380,12 @@ function buildEmailHtml(issuedEquipment) {
         padding:20px;
         margin-top:20px;
       ">
-        <div style="font-size:28px;">🔴</div>
+
+        <div style="
+          font-size:28px;
+        ">
+          🔴
+        </div>
 
         <div style="
           font-size:18px;
@@ -299,21 +393,39 @@ function buildEmailHtml(issuedEquipment) {
           color:#991b1b;
           margin-top:8px;
         ">
-          Неповернута техніка: ${issuedEquipment.length}
+          Неповернута техніка:
+          ${takenEquipment.length}
         </div>
+
       </div>
 
+
       ${rows}
+
     `;
   }
 
+
+  // ==========================================================
+  // Full email
+  // ==========================================================
+
   return `
 <!DOCTYPE html>
+
 <html lang="uk">
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
 </head>
+
 
 <body style="
   margin:0;
@@ -323,11 +435,13 @@ function buildEmailHtml(issuedEquipment) {
   color:#111827;
 ">
 
+
   <div style="
     max-width:620px;
     margin:0 auto;
     padding:32px 20px;
   ">
+
 
     <div style="
       background:#ffffff;
@@ -336,12 +450,16 @@ function buildEmailHtml(issuedEquipment) {
       border:1px solid #e5e7eb;
     ">
 
+
+      <!-- Header -->
+
       <div style="
         font-size:24px;
         font-weight:700;
       ">
         EdVault
       </div>
+
 
       <div style="
         font-size:20px;
@@ -351,6 +469,7 @@ function buildEmailHtml(issuedEquipment) {
         Звіт по техніці
       </div>
 
+
       <div style="
         color:#6b7280;
         font-size:14px;
@@ -359,7 +478,13 @@ function buildEmailHtml(issuedEquipment) {
         ${escapeHtml(reportDate)}
       </div>
 
+
+      <!-- Content -->
+
       ${content}
+
+
+      <!-- Footer -->
 
       <div style="
         margin-top:28px;
@@ -371,95 +496,187 @@ function buildEmailHtml(issuedEquipment) {
         Автоматичний звіт EdVault
       </div>
 
+
     </div>
 
   </div>
 
+
 </body>
+
 </html>
   `;
 }
+
 
 // ============================================================
 // Send email
 // ============================================================
 
-async function sendReport(issuedEquipment) {
-  const count = issuedEquipment.length;
+async function sendReport(takenEquipment) {
+
+  const count = takenEquipment.length;
+
 
   const subject =
     count === 0
       ? "🟢 EdVault — вся техніка повернута"
       : `🔴 EdVault — ${count} од. техніки не повернуто`;
 
-  const html = buildEmailHtml(issuedEquipment);
 
-  const { data, error } = await resend.emails.send({
-    from: REPORT_FROM,
-    to: REPORT_RECIPIENTS,
-    subject,
-    html
-  });
+  const html = buildEmailHtml(
+    takenEquipment
+  );
+
+
+  const { data, error } =
+    await resend.emails.send({
+
+      from: REPORT_FROM,
+
+      to: REPORT_RECIPIENTS,
+
+      subject,
+
+      html
+
+    });
+
 
   if (error) {
-    throw new Error(`Resend error: ${JSON.stringify(error)}`);
+
+    throw new Error(
+      `Resend error: ${JSON.stringify(error)}`
+    );
+
   }
 
-  console.log("Email sent successfully.");
-  console.log("Resend ID:", data?.id || "unknown");
+
+  console.log(
+    "Email sent successfully."
+  );
+
+  console.log(
+    "Resend ID:",
+    data?.id || "unknown"
+  );
 }
+
 
 // ============================================================
 // Main
 // ============================================================
 
 async function main() {
-  console.log("========================================");
-  console.log("EdVault Equipment Report");
-  console.log("========================================");
-
-  console.log("Reading Firebase...");
-
-  const { equipment, history } = await getFirebaseData();
 
   console.log(
-    `Found ${Object.keys(equipment).length} equipment records.`
+    "========================================"
   );
 
-  const issuedEquipment = findIssuedEquipment(
+  console.log(
+    "EdVault Equipment Report"
+  );
+
+  console.log(
+    "========================================"
+  );
+
+
+  console.log(
+    "Reading Firebase..."
+  );
+
+
+  const {
     equipment,
     history
-  );
+  } = await getFirebaseData();
+
 
   console.log(
-    `Currently issued: ${issuedEquipment.length}`
+    `Found ${
+      Object.keys(equipment).length
+    } equipment records.`
   );
 
-  if (issuedEquipment.length > 0) {
-    console.log("Issued equipment:");
 
-    for (const item of issuedEquipment) {
+  const takenEquipment =
+    findTakenEquipment(
+      equipment,
+      history
+    );
+
+
+  console.log(
+    `Currently taken: ${
+      takenEquipment.length
+    }`
+  );
+
+
+  if (takenEquipment.length > 0) {
+
+    console.log(
+      "Taken equipment:"
+    );
+
+
+    for (
+      const item of takenEquipment
+    ) {
+
       console.log(
-        `- ${item.name} | ${item.surname} | ${formatDate(item.timestamp)}`
+        `- ${item.name} | ` +
+        `${item.surname} | ` +
+        `${formatDate(item.timestamp)}`
       );
+
     }
+
   }
 
-  await sendReport(issuedEquipment);
 
-  console.log("Report completed successfully.");
+  await sendReport(
+    takenEquipment
+  );
+
+
+  console.log(
+    "Report completed successfully."
+  );
 }
 
+
+// ============================================================
+// Run
+// ============================================================
+
 main()
+
   .catch(error => {
-    console.error("REPORT FAILED");
+
+    console.error(
+      "REPORT FAILED"
+    );
+
     console.error(error);
+
     process.exit(1);
+
   })
+
   .finally(async () => {
+
     try {
-      await admin.app().delete();
+
+      await admin
+        .app()
+        .delete();
+
     } catch {
+
       // Ignore cleanup errors
+
     }
+
   });
