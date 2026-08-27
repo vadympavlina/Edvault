@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M8 10h16M8 16h10M8 22h13' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Облік техніки · Edvault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #f7f8fa;
+    --border: #e2e5ea;
+    --border2: #d0d5dd;
+    --accent: #4F6BF4;
+    --accent-light: #eef0fe;
+    --accent-hover: #3d57e0;
+    --danger: #ef4444;
+    --danger-light: #fef2f2;
+    --success: #10b981;
+    --success-light: #ecfdf5;
+    --warn: #f59e0b;
+    --text: #1a1d23;
+    --text2: #4b5563;
+    --muted: #9ca3af;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
+  }
+
+  html, body { height: 100%; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+  button { font-family: inherit; }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+
+  /* =========== GATE SCREENS =========== */
+  .gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .gate-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-lg); padding: 40px 36px; max-width: 380px; width: 100%; text-align: center; }
+  .gate-logo { width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 20px; background: var(--accent); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(79,107,244,.32); }
+  .gate-logo svg { width: 26px; height: 26px; }
+  .gate-card h1 { font-size: 19px; font-weight: 800; letter-spacing: -.3px; margin-bottom: 6px; }
+  .gate-card p { font-size: 13.5px; color: var(--text2); line-height: 1.6; margin-bottom: 26px; }
+  .google-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px 18px; border-radius: 12px; border: 1.5px solid var(--border2); background: var(--surface); font-size: 14px; font-weight: 700; color: var(--text); cursor: pointer; transition: all .13s ease; box-shadow: var(--shadow-sm); }
+  .google-btn:hover { background: var(--surface2); box-shadow: var(--shadow-md); }
+  .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .gate-denied-icon { width: 48px; height: 48px; margin: 0 auto 16px; color: var(--danger); }
+  .gate-email-chip { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--danger); background: var(--danger-light); border: 1px solid #fecaca; padding: 5px 11px; border-radius: 8px; margin-bottom: 22px; }
+  .gate-spinner { width: 30px; height: 30px; margin: 0 auto 16px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .secondary-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: 10px; border: 1.5px solid var(--border2); background: var(--surface); color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; transition: all .13s ease; }
+  .secondary-btn:hover { background: var(--surface2); color: var(--text); }
+
+  /* =========== TOPBAR =========== */
+  .topbar { height: 64px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 28px; position: sticky; top: 0; z-index: 30; }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-logo { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(79,107,244,.3); flex-shrink: 0; }
+  .topbar-logo svg { width: 18px; height: 18px; }
+  .topbar-text h1 { font-size: 16px; font-weight: 700; letter-spacing: -.3px; }
+  .topbar-text p { font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 1px; }
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
+  .user-chip { display: flex; align-items: center; gap: 8px; }
+  .user-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border); }
+  .user-email { font-size: 12.5px; font-weight: 600; color: var(--text2); }
+  .signout-btn { width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .13s ease; }
+  .signout-btn:hover { background: var(--danger-light); border-color: #fecaca; color: var(--danger); }
+  .signout-btn svg { width: 15px; height: 15px; }
+
+  /* =========== MAIN =========== */
+  .main { max-width: 1180px; width: 100%; margin: 0 auto; padding: 32px 28px 90px; }
+  .page-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-bottom: 22px; }
+  .page-header h2 { font-size: 23px; font-weight: 800; letter-spacing: -.4px; }
+  .page-header p { font-size: 13px; color: var(--muted); margin-top: 3px; font-weight: 500; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 11px; border: none; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: all .13s ease; white-space: nowrap; }
+  .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(79,107,244,.28); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border2); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+
+  .rules-notice { display: flex; gap: 12px; align-items: flex-start; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 14px; padding: 14px 16px; margin-bottom: 24px; font-size: 12.5px; color: #92400e; line-height: 1.6; }
+  .rules-notice svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+  .rules-notice b { font-weight: 700; }
+  .rules-notice-close { margin-left: auto; background: none; border: none; color: #92400e; cursor: pointer; font-size: 15px; line-height: 1; flex-shrink: 0; opacity: .6; }
+  .rules-notice-close:hover { opacity: 1; }
+
+  .eq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
+  .eq-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow-sm); }
+  .eq-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .eq-name { font-size: 14.5px; font-weight: 800; letter-spacing: -.2px; line-height: 1.3; }
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .status-badge.available { background: var(--success-light); color: #067a55; }
+  .status-badge.taken { background: var(--danger-light); color: #b91c1c; }
+  .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .eq-holder { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 6px; }
+  .eq-holder svg { width: 13px; height: 13px; color: var(--muted); }
+  .eq-card-actions { display: flex; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .icon-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; border-radius: 9px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text2); font-size: 12px; font-weight: 700; cursor: pointer; transition: all .13s ease; }
+  .icon-btn svg { width: 13px; height: 13px; }
+  .icon-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--text); }
+  .icon-btn.danger:hover { background: var(--danger-light); border-color: #fecaca; color: var(--danger); }
+
+  .state-block { text-align: center; padding: 90px 20px; display: none; }
+  .state-block.visible { display: block; }
+  .state-block .icon-lg { font-size: 44px; margin-bottom: 14px; }
+  .state-block h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .state-block p { font-size: 13px; color: var(--text2); }
+  .spinner-lg { width: 32px; height: 32px; margin: 0 auto 16px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+
+  /* =========== MODALS =========== */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(20,22,28,.5); display: none; align-items: flex-start; justify-content: center; padding: 40px 20px; z-index: 100; overflow-y: auto; backdrop-filter: blur(2px); }
+  .modal-overlay.visible { display: flex; }
+  .modal { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-lg); max-width: 480px; width: 100%; overflow: hidden; }
+  .modal.wide { max-width: 560px; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); }
+  .modal-head h3 { font-size: 16px; font-weight: 800; }
+  .modal-close { width: 30px; height: 30px; border-radius: 8px; border: none; background: var(--surface2); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .modal-close:hover { background: var(--border); color: var(--text); }
+  .modal-close svg { width: 14px; height: 14px; }
+  .modal-body { padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; max-height: 72vh; overflow-y: auto; }
+  .modal-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border); background: var(--surface2); }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; font-weight: 700; color: var(--text2); }
+  .field input { font-family: inherit; font-size: 13.5px; color: var(--text); border: 1.5px solid var(--border2); border-radius: 10px; padding: 9px 12px; outline: none; transition: border-color .13s ease; background: var(--surface); width: 100%; }
+  .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.1); }
+  .form-error { font-size: 12px; font-weight: 600; color: var(--danger); background: var(--danger-light); border: 1px solid #fecaca; border-radius: 9px; padding: 8px 12px; display: none; }
+  .form-error.visible { display: block; }
+
+  /* QR modal */
+  .qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .qr-canvas-box { background: #fff; padding: 16px; border-radius: 14px; border: 1.5px solid var(--border); }
+  .qr-canvas-box canvas { display: block; }
+  .qr-name { font-size: 15px; font-weight: 800; text-align: center; }
+  .qr-url { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); text-align: center; word-break: break-all; background: var(--surface2); padding: 8px 12px; border-radius: 8px; width: 100%; }
+  .qr-actions { display: flex; gap: 10px; width: 100%; }
+  .qr-actions .btn { flex: 1; justify-content: center; }
+
+  /* History modal */
+  .history-list { display: flex; flex-direction: column; gap: 10px; }
+  .history-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 12px; }
+  .history-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .history-icon.checkout { background: var(--danger-light); color: var(--danger); }
+  .history-icon.return { background: var(--success-light); color: var(--success); }
+  .history-icon svg { width: 16px; height: 16px; }
+  .history-text b { font-size: 13px; font-weight: 700; display: block; }
+  .history-text span { font-size: 11.5px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .history-empty { text-align: center; padding: 30px 0; color: var(--muted); font-size: 13px; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #print-area, #print-area * { visibility: visible; }
+    #print-area { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  }
+  #print-area { display: none; }
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate-loading">
+  <div class="gate-card"><div class="gate-spinner"></div><p style="margin-bottom:0;">Перевіряємо доступ…</p></div>
+</div>
+
+<div class="gate" id="gate-login" style="display:none;">
+  <div class="gate-card">
+    <div class="gate-logo"><svg viewBox="0 0 32 32" fill="none"><path d="M8 10h16M8 16h10M8 22h13" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+    <h1>Облік техніки</h1>
+    <p>Доступ лише для адміністраторів Edvault. Увійди через Google-акаунт з правом редагування.</p>
+    <button class="google-btn" onclick="handleSignIn()">
+      <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.6 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.1 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.1 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.4 0 10.2-2 13.8-5.4l-6.4-5.4C29.3 34.8 26.8 36 24 36c-5.3 0-9.6-3.4-11.2-8l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.4 5.4C40.9 36.6 44 30.9 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+      Увійти через Google
+    </button>
+    <div id="login-error" class="form-error" style="margin-top:14px; text-align:left;"></div>
+  </div>
+</div>
+
+<div class="gate" id="gate-denied" style="display:none;">
+  <div class="gate-card">
+    <svg class="gate-denied-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+    <h1>Доступу немає</h1>
+    <p>Цей акаунт не має прав на керування технікою.</p>
+    <div class="gate-email-chip" id="denied-email"></div>
+    <button class="secondary-btn" style="width:100%;" onclick="handleSignOut()">Спробувати інший акаунт</button>
+  </div>
+</div>
+
+<div id="admin-app" style="display:none;">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>
+      <div class="topbar-text"><h1>Edvault</h1><p>Облік техніки</p></div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip"><img class="user-avatar" id="user-avatar" src="" alt=""><span class="user-email" id="user-email"></span></div>
+      <button class="signout-btn" onclick="handleSignOut()" title="Вийти">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="rules-notice" id="rules-notice">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div><b>Постав Firebase Rules перед використанням.</b> Без них будь-хто зможе прочитати чи змінити базу техніки. Правила — окремим блоком у чаті.</div>
+      <button class="rules-notice-close" onclick="document.getElementById('rules-notice').classList.add('hidden')">✕</button>
+    </div>
+
+    <div class="page-header">
+      <div><h2>Техніка</h2><p id="eq-count">0 одиниць техніки</p></div>
+      <button class="btn btn-primary" onclick="openAddModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Додати техніку
+      </button>
+    </div>
+
+    <div class="state-block visible" id="loading-block"><div class="spinner-lg"></div><p>Завантажуємо список техніки…</p></div>
+    <div class="state-block" id="error-block"><div class="icon-lg">⚠️</div><h3>Не вдалося завантажити дані</h3><p>Перевір з'єднання і спробуй ще раз</p><div style="margin-top:16px;"><button class="secondary-btn" onclick="loadEquipment()">Спробувати знову</button></div></div>
+    <div class="state-block" id="empty-block"><div class="icon-lg">📦</div><h3>Техніки ще немає</h3><p>Натисни «Додати техніку», щоб створити перший запис і QR-код</p></div>
+
+    <div class="eq-grid" id="eq-grid"></div>
+  </div>
+</div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal-overlay" id="add-modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="add-modal-title">Нова техніка</h3><button class="modal-close" onclick="closeAddModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-error" id="add-form-error"></div>
+      <div class="field">
+        <label for="f-eq-name">Назва техніки</label>
+        <input type="text" id="f-eq-name" placeholder="Web Camera Logitech C920">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeAddModal()">Скасувати</button>
+      <button class="btn btn-primary" onclick="saveEquipment()">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR MODAL -->
+<div class="modal-overlay" id="qr-modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>QR-код</h3><button class="modal-close" onclick="closeQrModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="qr-wrap">
+        <div class="qr-canvas-box"><canvas id="qr-canvas"></canvas></div>
+        <div class="qr-name" id="qr-name"></div>
+        <div class="qr-url" id="qr-url"></div>
+        <div class="qr-actions">
+          <button class="btn btn-ghost" onclick="downloadQr()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Завантажити PNG
+          </button>
+          <button class="btn btn-primary" onclick="printQr()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Друк
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY MODAL -->
+<div class="modal-overlay" id="history-modal-overlay">
+  <div class="modal wide">
+    <div class="modal-head"><h3 id="history-modal-title">Історія використання</h3><button class="modal-close" onclick="closeHistoryModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="state-block visible" id="history-loading" style="padding:40px 0;"><div class="spinner-lg"></div></div>
+      <div class="history-list" id="history-list" style="display:none;"></div>
+      <div class="history-empty" id="history-empty" style="display:none;">Ще немає жодної операції з цією технікою</div>
+    </div>
+  </div>
+</div>
+
+<div id="print-area">
+  <div style="padding:24px; text-align:center;">
+    <canvas id="print-qr-canvas"></canvas>
+    <div style="font-size:16px; font-weight:800; margin-top:10px; font-family:'Inter',sans-serif;" id="print-qr-name"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, get, set, update, remove, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getAuth, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyASpQTZaka3P-YUJ4tfHNmG-LCI-hQPhAI",
+  authDomain: "edvault-d4a7f.firebaseapp.com",
+  projectId: "edvault-d4a7f",
+  databaseURL: "https://edvault-d4a7f-default-rtdb.firebaseio.com/",
+  storageBucket: "edvault-d4a7f.firebasestorage.app",
+  messagingSenderId: "181496726566",
+  appId: "1:181496726566:web:5a86e78588c9440a0b52e7"
+};
+const app = initializeApp(FIREBASE_CONFIG);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+const ALLOWED_EMAILS = ['pavlina_vs@itstep.org', 'vadim.table.pc@gmail.com', 'vadym.pavlina@gmail.com'];
+const EQUIPMENT_BASE_URL = 'https://edvault.online/equipment.html';
+
+let equipment = []; // { token, name, status, currentHolder, takenAt }
+let editingToken = null;
+let activeQrToken = null;
+let activeHistoryToken = null;
+
+function generateToken(len = 20) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => chars[b % chars.length]).join('');
+}
+
+// ── Gate screens ──
+function showGate(name) {
+  document.getElementById('gate-loading').style.display = name === 'loading' ? 'flex' : 'none';
+  document.getElementById('gate-login').style.display = name === 'login' ? 'flex' : 'none';
+  document.getElementById('gate-denied').style.display = name === 'denied' ? 'flex' : 'none';
+  document.getElementById('admin-app').style.display = name === 'app' ? 'block' : 'none';
+}
+
+window.handleSignIn = async function () {
+  document.getElementById('login-error').classList.remove('visible');
+  try {
+    await signInWithRedirect(auth, googleProvider);
+  } catch (err) {
+    console.error(err);
+    const el = document.getElementById('login-error');
+    el.textContent = 'Не вдалося увійти. Спробуй ще раз.';
+    el.classList.add('visible');
+  }
+};
+window.handleSignOut = async function () { await signOut(auth); showGate('login'); };
+
+getRedirectResult(auth).catch((err) => {
+  console.error('Помилка redirect-входу:', err);
+  const el = document.getElementById('login-error');
+  if (el) { el.textContent = 'Вхід не вдався: ' + (err.code || err.message || 'невідома помилка'); el.classList.add('visible'); }
+});
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) { showGate('login'); return; }
+  const email = (user.email || '').toLowerCase();
+  const allowed = ALLOWED_EMAILS.some(e => e.toLowerCase() === email);
+  if (!allowed) {
+    document.getElementById('denied-email').textContent = user.email || '';
+    showGate('denied');
+    signOut(auth);
+    return;
+  }
+  document.getElementById('user-email').textContent = user.email;
+  document.getElementById('user-avatar').src = user.photoURL || '';
+  showGate('app');
+  loadEquipment();
+});
+
+// ── Дані ──
+window.loadEquipment = async function () {
+  setListState('loading');
+  try {
+    const snap = await get(ref(db, 'equipment'));
+    const data = snap.exists() ? snap.val() : {};
+    equipment = Object.entries(data).map(([token, val]) => ({ token, ...val }));
+    equipment.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+    renderGrid();
+  } catch (err) {
+    console.error('Помилка завантаження equipment/:', err);
+    setListState('error');
+  }
+};
+
+function setListState(state) {
+  document.getElementById('loading-block').classList.toggle('visible', state === 'loading');
+  document.getElementById('error-block').classList.toggle('visible', state === 'error');
+  document.getElementById('empty-block').classList.toggle('visible', state === 'empty');
+  document.getElementById('eq-grid').style.display = state === 'ready' ? 'grid' : 'none';
+}
+
+function formatDateTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleDateString('uk-UA') + ' ' + d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderGrid() {
+  document.getElementById('eq-count').textContent = `${equipment.length} ${pluralUnit(equipment.length)} техніки`;
+  if (equipment.length === 0) { setListState('empty'); return; }
+  setListState('ready');
+
+  const grid = document.getElementById('eq-grid');
+  grid.innerHTML = equipment.map(e => `
+    <div class="eq-card">
+      <div class="eq-card-top">
+        <div class="eq-name">${escapeHtml(e.name)}</div>
+        ${e.status === 'taken'
+          ? `<span class="status-badge taken"><span class="dot"></span>Видано</span>`
+          : `<span class="status-badge available"><span class="dot"></span>В наявності</span>`}
+      </div>
+      ${e.status === 'taken' ? `
+        <div class="eq-holder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          ${escapeHtml(e.currentHolder || '')} · ${formatDateTime(e.takenAt)}
+        </div>` : ''}
+      <div class="eq-card-actions">
+        <button class="icon-btn" onclick="openQrModal('${e.token}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg>
+          QR
+        </button>
+        <button class="icon-btn" onclick="openHistoryModal('${e.token}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Історія
+        </button>
+        <button class="icon-btn" onclick="openEditModal('${e.token}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn danger" onclick="deleteEquipment('${e.token}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.deleteEquipment = async function (token) {
+  const e = equipment.find(x => x.token === token);
+  if (!e) return;
+  if (!confirm(`Видалити «${e.name}»? Історія використання теж буде видалена. Цю дію не можна скасувати.`)) return;
+  try {
+    await remove(ref(db, `equipment/${token}`));
+    await remove(ref(db, `equipmentHistory/${token}`));
+    showToast('Техніку видалено');
+    loadEquipment();
+  } catch (err) {
+    console.error(err);
+    showToast('Не вдалося видалити — перевір права доступу в Firebase Rules', true);
+  }
+};
+
+// ── Add / Edit modal ──
+window.openAddModal = function () {
+  editingToken = null;
+  document.getElementById('add-modal-title').textContent = 'Нова техніка';
+  document.getElementById('f-eq-name').value = '';
+  document.getElementById('add-form-error').classList.remove('visible');
+  document.getElementById('add-modal-overlay').classList.add('visible');
+  setTimeout(() => document.getElementById('f-eq-name').focus(), 50);
+};
+window.openEditModal = function (token) {
+  const e = equipment.find(x => x.token === token);
+  if (!e) return;
+  editingToken = token;
+  document.getElementById('add-modal-title').textContent = 'Редагування техніки';
+  document.getElementById('f-eq-name').value = e.name;
+  document.getElementById('add-form-error').classList.remove('visible');
+  document.getElementById('add-modal-overlay').classList.add('visible');
+};
+window.closeAddModal = function () { document.getElementById('add-modal-overlay').classList.remove('visible'); editingToken = null; };
+
+window.saveEquipment = async function () {
+  const name = document.getElementById('f-eq-name').value.trim();
+  const errEl = document.getElementById('add-form-error');
+  errEl.classList.remove('visible');
+  if (!name) { errEl.textContent = 'Вкажи назву техніки.'; errEl.classList.add('visible'); return; }
+
+  try {
+    if (editingToken) {
+      await update(ref(db, `equipment/${editingToken}`), { name });
+    } else {
+      const token = generateToken();
+      await set(ref(db, `equipment/${token}`), { name, status: 'available', currentHolder: null, takenAt: null });
+    }
+    showToast(editingToken ? 'Зміни збережено' : 'Техніку додано');
+    closeAddModal();
+    loadEquipment();
+  } catch (err) {
+    console.error(err);
+    errEl.textContent = 'Не вдалося зберегти — перевір права доступу в Firebase Rules.';
+    errEl.classList.add('visible');
+  }
+};
+
+// ── QR modal ──
+window.openQrModal = function (token) {
+  const e = equipment.find(x => x.token === token);
+  if (!e) return;
+  activeQrToken = token;
+  const url = `${EQUIPMENT_BASE_URL}?t=${token}`;
+  document.getElementById('qr-name').textContent = e.name;
+  document.getElementById('qr-url').textContent = url;
+  const canvas = document.getElementById('qr-canvas');
+  QRCode.toCanvas(canvas, url, { width: 240, margin: 1, color: { dark: '#1a1d23', light: '#ffffff' } }, (err) => {
+    if (err) console.error(err);
+  });
+  document.getElementById('qr-modal-overlay').classList.add('visible');
+};
+window.closeQrModal = function () { document.getElementById('qr-modal-overlay').classList.remove('visible'); activeQrToken = null; };
+
+window.downloadQr = function () {
+  const canvas = document.getElementById('qr-canvas');
+  const e = equipment.find(x => x.token === activeQrToken);
+  const link = document.createElement('a');
+  link.download = `qr-${(e?.name || 'equipment').replace(/[^a-zA-Z0-9а-яА-ЯіІїЇєЄ_-]+/g, '_')}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+};
+
+window.printQr = function () {
+  const e = equipment.find(x => x.token === activeQrToken);
+  const url = `${EQUIPMENT_BASE_URL}?t=${activeQrToken}`;
+  const printCanvas = document.getElementById('print-qr-canvas');
+  QRCode.toCanvas(printCanvas, url, { width: 300, margin: 1 }, (err) => {
+    if (err) { console.error(err); return; }
+    document.getElementById('print-qr-name').textContent = e?.name || '';
+    document.getElementById('print-area').style.display = 'block';
+    window.print();
+    setTimeout(() => { document.getElementById('print-area').style.display = 'none'; }, 300);
+  });
+};
+
+// ── History modal ──
+window.openHistoryModal = async function (token) {
+  const e = equipment.find(x => x.token === token);
+  activeHistoryToken = token;
+  document.getElementById('history-modal-title').textContent = `Історія · ${e ? e.name : ''}`;
+  document.getElementById('history-loading').classList.add('visible');
+  document.getElementById('history-list').style.display = 'none';
+  document.getElementById('history-empty').style.display = 'none';
+  document.getElementById('history-modal-overlay').classList.add('visible');
+
+  try {
+    const snap = await get(ref(db, `equipmentHistory/${token}`));
+    const data = snap.exists() ? snap.val() : {};
+    const events = Object.values(data).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    document.getElementById('history-loading').classList.remove('visible');
+
+    if (events.length === 0) {
+      document.getElementById('history-empty').style.display = 'block';
+      return;
+    }
+    document.getElementById('history-list').style.display = 'flex';
+    document.getElementById('history-list').innerHTML = events.map(ev => `
+      <div class="history-item">
+        <div class="history-icon ${ev.type === 'checkout' ? 'checkout' : 'return'}">
+          ${ev.type === 'checkout'
+            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>`}
+        </div>
+        <div class="history-text">
+          <b>${ev.type === 'checkout' ? 'Взято' : 'Повернуто'} · ${escapeHtml(ev.surname || '')}</b>
+          <span>${formatDateTime(ev.timestamp)}</span>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error(err);
+    document.getElementById('history-loading').classList.remove('visible');
+    document.getElementById('history-empty').textContent = 'Не вдалося завантажити історію';
+    document.getElementById('history-empty').style.display = 'block';
+  }
+};
+window.closeHistoryModal = function () { document.getElementById('history-modal-overlay').classList.remove('visible'); activeHistoryToken = null; };
+
+// ── Helpers ──
+function escapeHtml(str) { return String(str || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function pluralUnit(n) {
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'одиниця';
+  if ([2,3,4].includes(mod10) && ![12,13,14].includes(mod100)) return 'одиниці';
+  return 'одиниць';
+}
+let toastTimer = null;
+function showToast(msg, isError) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1d23;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:0 24px 60px rgba(0,0,0,.14);opacity:0;pointer-events:none;transition:all .22s cubic-bezier(.16,1,.3,1);z-index:200;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = isError ? '#ef4444' : '#1a1d23';
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(20px)'; }, 2600);
+}
+
+showGate('loading');
+</script>
+</body>
+</html>

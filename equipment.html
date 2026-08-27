@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M8 10h16M8 16h10M8 22h13' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Техніка · Edvault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #f7f8fa;
+    --border: #e2e5ea;
+    --border2: #d0d5dd;
+    --accent: #4F6BF4;
+    --accent-light: #eef0fe;
+    --accent-hover: #3d57e0;
+    --danger: #ef4444;
+    --danger-light: #fef2f2;
+    --success: #10b981;
+    --success-light: #ecfdf5;
+    --text: #1a1d23;
+    --text2: #4b5563;
+    --muted: #9ca3af;
+    --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text);
+    -webkit-font-smoothing: antialiased; display: flex; align-items: center; justify-content: center;
+    padding: 20px; min-height: 100vh;
+  }
+  button { font-family: inherit; }
+
+  .card {
+    background: var(--surface); border-radius: 22px; box-shadow: var(--shadow-lg);
+    max-width: 400px; width: 100%; overflow: hidden;
+  }
+  .card-head { padding: 26px 26px 0; text-align: center; }
+  .logo { width: 44px; height: 44px; border-radius: 12px; background: var(--accent); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; box-shadow: 0 4px 14px rgba(79,107,244,.3); }
+  .logo svg { width: 22px; height: 22px; }
+  .card-body { padding: 24px 26px 28px; }
+
+  /* loading / error */
+  .center-state { text-align: center; padding: 40px 10px; }
+  .spinner { width: 32px; height: 32px; margin: 0 auto 16px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .center-state h3 { font-size: 16.5px; font-weight: 800; margin-bottom: 6px; }
+  .center-state p { font-size: 13.5px; color: var(--text2); line-height: 1.6; }
+  .error-icon { width: 42px; height: 42px; margin: 0 auto 14px; color: var(--danger); }
+
+  /* equipment view */
+  .eq-name { font-size: 19px; font-weight: 800; letter-spacing: -.3px; text-align: center; margin-bottom: 14px; line-height: 1.3; }
+  .status-pill { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13.5px; font-weight: 700; padding: 10px 16px; border-radius: 12px; margin-bottom: 22px; }
+  .status-pill.available { background: var(--success-light); color: #067a55; }
+  .status-pill.taken { background: var(--danger-light); color: #b91c1c; }
+  .status-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  .holder-box { background: var(--surface2); border: 1.5px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 22px; }
+  .holder-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+  .holder-row + .holder-row { border-top: 1px solid var(--border); }
+  .holder-row .label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .holder-row .value { font-size: 13.5px; color: var(--text); font-weight: 700; }
+
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--text2); margin-bottom: 7px; }
+  .field input {
+    width: 100%; font-family: inherit; font-size: 16px; color: var(--text);
+    border: 1.5px solid var(--border2); border-radius: 13px; padding: 14px 16px;
+    outline: none; transition: border-color .13s ease; background: var(--surface);
+  }
+  .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.12); }
+
+  .big-btn {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 9px;
+    padding: 16px; border-radius: 14px; border: none; font-size: 15.5px; font-weight: 800;
+    cursor: pointer; transition: all .13s ease; -webkit-tap-highlight-color: transparent;
+  }
+  .big-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .big-btn.primary { background: var(--accent); color: #fff; box-shadow: 0 4px 16px rgba(79,107,244,.32); }
+  .big-btn.primary:active { background: var(--accent-hover); transform: scale(.98); }
+  .big-btn.primary:disabled { background: var(--border2); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+  .big-btn.danger { background: var(--danger); color: #fff; box-shadow: 0 4px 16px rgba(239,68,68,.28); }
+  .big-btn.danger:active { background: #dc2626; transform: scale(.98); }
+  .big-btn.danger:disabled { background: var(--border2); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+
+  .inline-error {
+    font-size: 12.5px; font-weight: 600; color: var(--danger); background: var(--danger-light);
+    border: 1px solid #fecaca; border-radius: 10px; padding: 9px 13px; margin-bottom: 16px; display: none;
+  }
+  .inline-error.visible { display: block; }
+
+  /* success */
+  .success-icon { width: 62px; height: 62px; border-radius: 50%; background: var(--success-light); color: var(--success); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
+  .success-icon svg { width: 30px; height: 30px; }
+  .success-title { font-size: 18px; font-weight: 800; text-align: center; margin-bottom: 20px; }
+
+  .btn-secondary {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 13px; border-radius: 13px; border: 1.5px solid var(--border2); background: var(--surface);
+    color: var(--text2); font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 12px;
+  }
+  .btn-secondary:active { background: var(--surface2); }
+
+  .footer-hint { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 18px; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-head">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>
+  </div>
+  <div class="card-body" id="card-body">
+    <div class="center-state">
+      <div class="spinner"></div>
+      <h3>Завантажуємо…</h3>
+      <p>Перевіряємо статус техніки</p>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, get, runTransaction, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyASpQTZaka3P-YUJ4tfHNmG-LCI-hQPhAI",
+  authDomain: "edvault-d4a7f.firebaseapp.com",
+  projectId: "edvault-d4a7f",
+  databaseURL: "https://edvault-d4a7f-default-rtdb.firebaseio.com/",
+  storageBucket: "edvault-d4a7f.firebasestorage.app",
+  messagingSenderId: "181496726566",
+  appId: "1:181496726566:web:5a86e78588c9440a0b52e7"
+};
+const app = initializeApp(FIREBASE_CONFIG);
+const db = getDatabase(app);
+
+const params = new URLSearchParams(window.location.search);
+const token = params.get('t');
+const body = document.getElementById('card-body');
+
+function escapeHtml(str) { return String(str || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function formatDate(ts) { return ts ? new Date(ts).toLocaleDateString('uk-UA') : '—'; }
+function formatTime(ts) { return ts ? new Date(ts).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '—'; }
+
+// ────────────────────────────────────────────────────────────
+// РЕНДЕР ЕКРАНІВ
+// ────────────────────────────────────────────────────────────
+function renderError(title, text) {
+  body.innerHTML = `
+    <div class="center-state">
+      <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(text)}</p>
+    </div>`;
+}
+
+function renderAvailable(eq) {
+  body.innerHTML = `
+    <div class="eq-name">${escapeHtml(eq.name)}</div>
+    <div class="status-pill available"><span class="dot"></span>В наявності</div>
+    <div class="inline-error" id="take-error"></div>
+    <div class="field">
+      <label for="surname-input">Хто бере техніку?</label>
+      <input type="text" id="surname-input" placeholder="Введіть прізвище" autocomplete="off">
+    </div>
+    <button class="big-btn primary" id="take-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+      Взяти техніку
+    </button>`;
+
+  const input = document.getElementById('surname-input');
+  const btn = document.getElementById('take-btn');
+  const errEl = document.getElementById('take-error');
+
+  btn.addEventListener('click', async () => {
+    const surname = input.value.trim();
+    errEl.classList.remove('visible');
+    if (!surname) { errEl.textContent = 'Введи своє прізвище.'; errEl.classList.add('visible'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Зачекай…';
+    try {
+      const result = await runTransaction(ref(db, `equipment/${token}`), (current) => {
+        if (!current) return current; // аборт — запису не існує
+        if (current.status !== 'available') return; // хтось уже забрав — аборт транзакції
+        current.status = 'taken';
+        current.currentHolder = surname;
+        current.takenAt = Date.now();
+        return current;
+      });
+
+      if (!result.committed) {
+        // хтось встиг забрати техніку раніше нас
+        await loadAndRender();
+        return;
+      }
+      // журнал — окремий, незалежний запис, транзакція вже гарантувала ексклюзивність
+      await push(ref(db, `equipmentHistory/${token}`), { type: 'checkout', surname, timestamp: serverTimestamp() });
+      renderSuccessTaken(result.snapshot.val());
+    } catch (err) {
+      console.error(err);
+      errEl.textContent = 'Не вдалося записати — перевір з’єднання і спробуй ще раз.';
+      errEl.classList.add('visible');
+      btn.disabled = false;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>Взяти техніку`;
+    }
+  });
+}
+
+function renderTaken(eq) {
+  body.innerHTML = `
+    <div class="eq-name">${escapeHtml(eq.name)}</div>
+    <div class="status-pill taken"><span class="dot"></span>Видано</div>
+    <div class="holder-box">
+      <div class="holder-row"><span class="label">Взяв</span><span class="value">${escapeHtml(eq.currentHolder || '—')}</span></div>
+      <div class="holder-row"><span class="label">Дата</span><span class="value">${formatDate(eq.takenAt)}</span></div>
+      <div class="holder-row"><span class="label">Час</span><span class="value">${formatTime(eq.takenAt)}</span></div>
+    </div>
+    <div class="inline-error" id="return-error"></div>
+    <button class="big-btn danger" id="return-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+      Повернути техніку
+    </button>`;
+
+  const btn = document.getElementById('return-btn');
+  const errEl = document.getElementById('return-error');
+  const holderAtOpen = eq.currentHolder; // фіксуємо, хто саме повертає, для журналу
+
+  btn.addEventListener('click', async () => {
+    errEl.classList.remove('visible');
+    btn.disabled = true;
+    btn.textContent = 'Зачекай…';
+    try {
+      const result = await runTransaction(ref(db, `equipment/${token}`), (current) => {
+        if (!current) return current;
+        if (current.status !== 'taken') return; // вже хтось повернув — аборт
+        current.status = 'available';
+        current.currentHolder = null;
+        current.takenAt = null;
+        return current;
+      });
+
+      if (!result.committed) {
+        await loadAndRender();
+        return;
+      }
+      await push(ref(db, `equipmentHistory/${token}`), { type: 'return', surname: holderAtOpen || '', timestamp: serverTimestamp() });
+      renderSuccessReturned(eq.name);
+    } catch (err) {
+      console.error(err);
+      errEl.textContent = 'Не вдалося записати — перевір з’єднання і спробуй ще раз.';
+      errEl.classList.add('visible');
+      btn.disabled = false;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Повернути техніку`;
+    }
+  });
+}
+
+function renderSuccessTaken(eq) {
+  body.innerHTML = `
+    <div class="success-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div class="success-title">Техніку видано</div>
+    <div class="holder-box">
+      <div class="holder-row"><span class="label">Користувач</span><span class="value">${escapeHtml(eq.currentHolder || '')}</span></div>
+      <div class="holder-row"><span class="label">Дата</span><span class="value">${formatDate(eq.takenAt)}</span></div>
+      <div class="holder-row"><span class="label">Час</span><span class="value">${formatTime(eq.takenAt)}</span></div>
+    </div>
+    <div class="footer-hint">Щоб повернути — відскануй цей самий QR ще раз</div>`;
+}
+
+function renderSuccessReturned(name) {
+  body.innerHTML = `
+    <div class="success-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div class="success-title">Техніку повернено</div>
+    <div class="status-pill available" style="margin-bottom:0;"><span class="dot"></span>В наявності</div>
+    <div class="footer-hint">${escapeHtml(name)}</div>`;
+}
+
+// ────────────────────────────────────────────────────────────
+// ЗАВАНТАЖЕННЯ
+// ────────────────────────────────────────────────────────────
+async function loadAndRender() {
+  try {
+    const snap = await get(ref(db, `equipment/${token}`));
+    if (!snap.exists()) {
+      renderError('Техніку не знайдено', 'Цей QR-код недійсний або техніку вже видалили з системи.');
+      return;
+    }
+    const eq = snap.val();
+    if (eq.status === 'taken') renderTaken(eq);
+    else renderAvailable(eq);
+  } catch (err) {
+    console.error(err);
+    renderError('Помилка з’єднання', 'Не вдалося звʼязатися з базою даних. Перевір інтернет і онови сторінку.');
+  }
+}
+
+if (!token) {
+  renderError('QR не знайдено', 'Відскануй QR-код на техніці ще раз — посилання неповне.');
+} else {
+  loadAndRender();
+}
+</script>
+</body>
+</html>
