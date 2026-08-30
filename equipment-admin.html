@@ -336,7 +336,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, set, update, remove, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { getAuth, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, GoogleAuthProvider, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyASpQTZaka3P-YUJ4tfHNmG-LCI-hQPhAI",
@@ -395,9 +395,30 @@ function showGate(name) {
 window.handleSignIn = async function () {
   document.getElementById('login-error').classList.remove('visible');
   try {
-    await signInWithRedirect(auth, googleProvider);
+    await setPersistence(auth, browserLocalPersistence);
+  } catch (err) {
+    console.warn('Не вдалося встановити persistence:', err);
+  }
+  try {
+    // Попап надійніший за редирект: не залежить від cross-domain
+    // сховища між edvault.online і *.firebaseapp.com, яке браузери
+    // (Chrome/Safari) все частіше блокують за замовчуванням.
+    await signInWithPopup(auth, googleProvider);
   } catch (err) {
     console.error(err);
+    const blockedOrClosed = ['auth/popup-blocked', 'auth/cancelled-popup-request', 'auth/popup-closed-by-user'].includes(err.code);
+    if (blockedOrClosed) {
+      // Фолбек на редирект, якщо браузер не дозволив попап
+      try {
+        await signInWithRedirect(auth, googleProvider);
+      } catch (err2) {
+        console.error(err2);
+        const el = document.getElementById('login-error');
+        el.textContent = 'Не вдалося увійти. Спробуй ще раз.';
+        el.classList.add('visible');
+      }
+      return;
+    }
     const el = document.getElementById('login-error');
     el.textContent = 'Не вдалося увійти. Спробуй ще раз.';
     el.classList.add('visible');
