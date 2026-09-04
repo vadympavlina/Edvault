@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M8 22V10h4l4 6 4-6h4v12h-3v-7l-4 6h-2l-4-6v7H8z' fill='white'/%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вайтборд · Edvault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* ── EdVault design tokens (ті самі, що в MailCraft) ── */
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #f7f8fa;
+    --border: #e2e5ea;
+    --border2: #d0d5dd;
+    --accent: #4F6BF4;
+    --accent-light: #eef0fe;
+    --accent-hover: #3d57e0;
+    --danger: #ef4444;
+    --danger-light: #fef2f2;
+    --gold: #f5b942;
+    --text: #1a1d23;
+    --text2: #4b5563;
+    --muted: #9ca3af;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
+
+    --topbar-h: 64px;
+    --left-panel-w: 232px;
+    --strip-h: 66px;
+    --canvas-bg: #e4e7ed;
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  button { font-family: inherit; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+
+  /* =========== BUTTONS =========== */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 9px 15px;
+    border-radius: 10px; border: none; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .13s ease; white-space: nowrap;
+  }
+  .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(79,107,244,.28); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border2); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-icon {
+    width: 34px; height: 34px; padding: 0; border-radius: 9px; border: 1.5px solid var(--border2);
+    background: var(--surface); color: var(--text2); display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .13s ease;
+  }
+  .btn-icon:hover:not(:disabled) { background: var(--surface2); color: var(--text); border-color: var(--muted); }
+  .btn-icon:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-icon svg { width: 16px; height: 16px; }
+
+  /* =========== TOPBAR =========== */
+  .topbar {
+    height: var(--topbar-h); background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 18px;
+    gap: 16px; flex-shrink: 0;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .topbar-logo {
+    width: 36px; height: 36px; border-radius: 10px; background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(79,107,244,.3); flex-shrink: 0;
+  }
+  .topbar-logo svg { width: 19px; height: 19px; color: #fff; }
+  .topbar-text h1 { font-size: 15.5px; font-weight: 800; letter-spacing: -.3px; }
+  .topbar-text p { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 1px; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .topbar-divider { width: 1px; height: 26px; background: var(--border); margin: 0 4px; }
+
+  /* =========== LAYOUT =========== */
+  .app { height: 100vh; display: flex; flex-direction: column; }
+  .main { flex: 1; display: flex; min-height: 0; }
+
+  /* =========== LEFT TOOLS PANEL =========== */
+  .tools-panel {
+    width: var(--left-panel-w); background: var(--surface); border-right: 1px solid var(--border);
+    flex-shrink: 0; overflow-y: auto; padding: 16px 14px;
+  }
+  .tp-section { margin-bottom: 20px; }
+  .tp-section:last-child { margin-bottom: 0; }
+  .tp-label {
+    font-size: 10.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px; padding: 0 2px;
+  }
+  .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .tool-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    padding: 11px 6px; border-radius: 10px; border: 1.5px solid var(--border2); background: var(--surface);
+    color: var(--text2); cursor: pointer; transition: all .13s ease;
+  }
+  .tool-btn svg { width: 18px; height: 18px; }
+  .tool-btn span { font-size: 10.5px; font-weight: 700; }
+  .tool-btn:hover { background: var(--surface2); border-color: var(--muted); color: var(--text); }
+  .tool-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+  .swatch-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; margin-bottom: 10px; }
+  .swatch {
+    width: 100%; aspect-ratio: 1; border-radius: 50%; cursor: pointer; border: 2px solid var(--surface);
+    box-shadow: 0 0 0 1.5px var(--border2); transition: all .13s ease; padding: 0;
+  }
+  .swatch:hover { transform: scale(1.1); }
+  .swatch.active { box-shadow: 0 0 0 2px var(--accent); }
+  .color-custom-row { display: flex; align-items: center; gap: 8px; }
+  .color-custom-row input[type="color"] {
+    width: 34px; height: 30px; border-radius: 8px; border: 1.5px solid var(--border2); cursor: pointer; padding: 2px;
+  }
+  .color-custom-row span { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+
+  .size-row { display: flex; align-items: center; gap: 10px; }
+  .size-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .size-row .size-val {
+    width: 30px; text-align: right; font-size: 11.5px; font-weight: 700; color: var(--text2);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .size-preview {
+    width: 100%; height: 34px; border-radius: 8px; background: var(--surface2); border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center; margin-top: 8px;
+  }
+  .size-preview-dot { border-radius: 50%; background: var(--text); }
+
+  .sticky-swatch-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sticky-swatch {
+    width: 30px; height: 30px; border-radius: 8px; cursor: pointer; border: 2px solid transparent;
+    transition: all .13s ease;
+  }
+  .sticky-swatch:hover { transform: scale(1.08); }
+  .sticky-swatch.active { border-color: var(--text2); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--border2); }
+
+  /* =========== CANVAS AREA =========== */
+  .canvas-area {
+    flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative;
+  }
+  .canvas-viewport {
+    flex: 1; overflow: auto; background: var(--canvas-bg); display: flex; align-items: flex-start;
+    justify-content: center; padding: 32px;
+  }
+  .page-stage {
+    position: relative; background: #fff; box-shadow: var(--shadow-lg); border-radius: 4px; flex-shrink: 0;
+  }
+  .page-stage canvas { position: absolute; top: 0; left: 0; display: block; width: 100%; height: 100%; }
+  .page-stage canvas.layer-bg { z-index: 1; }
+  .page-stage canvas.layer-strokes { z-index: 2; }
+  .page-stage canvas.layer-objects { z-index: 3; }
+  .page-stage canvas.layer-preview { z-index: 4; pointer-events: none; }
+  .page-stage canvas.layer-interact { z-index: 5; }
+
+  /* ── зум-панель, плаває над полотном ── */
+  .zoom-controls {
+    position: absolute; right: 20px; bottom: 20px; z-index: 20;
+    display: flex; align-items: center; gap: 2px; background: var(--surface);
+    border: 1.5px solid var(--border2); border-radius: 12px; padding: 5px; box-shadow: var(--shadow-md);
+  }
+  .zc-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent;
+    color: var(--text2); display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: all .12s ease; font-size: 16px; font-weight: 700;
+  }
+  .zc-btn:hover { background: var(--surface2); color: var(--text); }
+  .zc-btn svg { width: 15px; height: 15px; }
+  .zc-label {
+    min-width: 46px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text2);
+    font-family: 'JetBrains Mono', monospace; cursor: pointer; user-select: none; border-radius: 8px; padding: 6px 2px;
+  }
+  .zc-label:hover { background: var(--surface2); color: var(--text); }
+  .zc-sep { width: 1px; height: 20px; background: var(--border); margin: 0 3px; }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    color: var(--muted); text-align: center; margin: auto;
+  }
+  .empty-state svg { width: 56px; height: 56px; opacity: .5; }
+  .empty-state p { font-size: 13.5px; max-width: 280px; line-height: 1.5; }
+
+  /* editable overlay (text / sticky input) */
+  .canvas-edit-box {
+    position: absolute; z-index: 10; border: 1.5px dashed var(--accent); border-radius: 6px;
+    resize: none; outline: none; font-family: 'Inter', system-ui, sans-serif; padding: 6px 8px;
+    background: rgba(255,255,255,.55); line-height: 1.35;
+  }
+  .canvas-edit-box.sticky-box { border-style: solid; border-color: rgba(0,0,0,.12); border-radius: 10px; box-shadow: var(--shadow-md); padding: 12px; }
+
+  /* =========== PAGE STRIP =========== */
+  .page-strip {
+    height: var(--strip-h); background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; padding: 0 16px; flex-shrink: 0; overflow-x: auto;
+  }
+  .page-pill {
+    display: flex; align-items: center; gap: 8px; padding: 7px 8px 7px 14px; border-radius: 20px;
+    border: 1.5px solid var(--border2); background: var(--surface); cursor: pointer; flex-shrink: 0;
+    transition: all .13s ease; font-size: 12.5px; font-weight: 700; color: var(--text2);
+  }
+  .page-pill:hover { border-color: var(--muted); }
+  .page-pill.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+  .page-pill .pg-del {
+    width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); flex-shrink: 0;
+  }
+  .page-pill .pg-del:hover { background: var(--danger-light); color: var(--danger); }
+  .page-pill .pg-del svg { width: 10px; height: 10px; }
+  .strip-add {
+    width: 34px; height: 34px; border-radius: 50%; border: 1.5px dashed var(--border2); background: var(--surface);
+    color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer;
+    flex-shrink: 0; transition: all .13s ease;
+  }
+  .strip-add:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .strip-add svg { width: 15px; height: 15px; }
+  .strip-hint { font-size: 11px; color: var(--muted); font-weight: 600; flex-shrink: 0; margin-left: auto; padding-left: 12px; white-space: nowrap; }
+
+  .interact-select { cursor: default; }
+  .interact-move { cursor: move; }
+  .interact-screenshot { cursor: crosshair !important; }
+  .sel-outline { position: absolute; border: 1.5px dashed var(--accent); pointer-events: none; border-radius: 4px; z-index: 6; }
+
+  .toast {
+    position: fixed; bottom: calc(var(--strip-h) + 18px); left: 50%; transform: translateX(-50%) translateY(8px);
+    background: var(--text); color: #fff; font-size: 12.5px; font-weight: 700; padding: 10px 16px;
+    border-radius: 10px; box-shadow: var(--shadow-md); opacity: 0; pointer-events: none; transition: all .2s ease; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── плаваюча міні-панель над виділеним елементом (як тултіп) ── */
+  .sel-toolbar {
+    position: fixed; z-index: 60; display: none; align-items: center; gap: 2px;
+    background: var(--text); border-radius: 10px; padding: 5px; box-shadow: var(--shadow-md);
+    transform: translate(-50%, -100%); pointer-events: auto;
+  }
+  .sel-toolbar.show { display: flex; }
+  .sel-toolbar::after {
+    content: ''; position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%);
+    width: 9px; height: 9px; background: var(--text); border-radius: 2px; rotate: 45deg;
+  }
+  .sel-tb-btn {
+    width: 30px; height: 30px; border-radius: 7px; border: none; background: transparent;
+    color: #d1d5db; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: all .12s ease;
+  }
+  .sel-tb-btn svg { width: 15px; height: 15px; }
+  .sel-tb-btn:hover { background: rgba(255,255,255,.14); color: #fff; }
+  .sel-tb-danger:hover { background: var(--danger); color: #fff; }
+  .sel-tb-sep { width: 1px; height: 20px; background: rgba(255,255,255,.18); margin: 0 3px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20V6h3l3 5 3-5h3v14h-2.5v-9l-3 5h-1l-3-5v9H2z"/></svg>
+      </div>
+      <div class="topbar-text">
+        <h1>Вайтборд</h1>
+        <p>Edvault</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-icon" id="btnUndo" title="Скасувати (Ctrl+Z)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-6.7L3 9"/></svg>
+      </button>
+      <button class="btn-icon" id="btnRedo" title="Повторити (Ctrl+Shift+Z)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M21 13a9 9 0 1 1-3-6.7L21 9"/></svg>
+      </button>
+      <div class="topbar-divider"></div>
+      <button class="btn btn-ghost" id="btnClearPage" title="Очистити малюнки на сторінці">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        Очистити
+      </button>
+      <button class="btn btn-ghost" id="btnScreenshot" title="Виділити область і зберегти як зображення">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3M6 18v3M3 6h3M18 6h3M3 18h3M18 18h3M9 3h6M9 21h6M21 9v6M3 9v6"/></svg>
+        Скріншот
+      </button>
+      <div class="topbar-divider"></div>
+      <input type="file" id="pdfInput" accept="application/pdf" style="display:none;">
+      <button class="btn btn-ghost" id="btnOpenPdf">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        Відкрити PDF
+      </button>
+      <button class="btn btn-primary" id="btnAddPage">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Нова сторінка
+      </button>
+    </div>
+  </div>
+
+  <div class="main">
+    <aside class="tools-panel">
+      <div class="tp-section">
+        <div class="tp-label">Інструменти</div>
+        <div class="tool-grid" id="toolGrid">
+          <button class="tool-btn" data-tool="select" title="Виділити / перемістити">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l7.07 17 2.51-7.39L21 11.07z"/></svg>
+            <span>Виділити</span>
+          </button>
+          <button class="tool-btn active" data-tool="pen" title="Олівець">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+            <span>Олівець</span>
+          </button>
+          <button class="tool-btn" data-tool="highlighter" title="Маркер">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l6-6 4 4-6 6z"/><path d="M3 21l4-1 8.5-8.5-3-3L4 17l-1 4z"/></svg>
+            <span>Маркер</span>
+          </button>
+          <button class="tool-btn" data-tool="eraser" title="Гумка">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H8.5L3 14.5a1 1 0 0 1 0-1.41l9-9a1 1 0 0 1 1.41 0l7 7a1 1 0 0 1 0 1.41L13 20"/><path d="M14 5 5 14"/></svg>
+            <span>Гумка</span>
+          </button>
+          <button class="tool-btn" data-tool="text" title="Текст">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            <span>Текст</span>
+          </button>
+          <button class="tool-btn" data-tool="sticky" title="Стікер">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v11l-5 5H4z"/><path d="M15 20v-5h5"/></svg>
+            <span>Стікер</span>
+          </button>
+          <button class="tool-btn" data-tool="rect" title="Прямокутник">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/></svg>
+            <span>Прямокутник</span>
+          </button>
+          <button class="tool-btn" data-tool="circle" title="Коло">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>
+            <span>Коло</span>
+          </button>
+          <button class="tool-btn" data-tool="line" title="Лінія">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+            <span>Лінія</span>
+          </button>
+          <button class="tool-btn" data-tool="arrow" title="Стрілка">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="9 5 19 5 19 15"/></svg>
+            <span>Стрілка</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="tp-section" id="colorSection">
+        <div class="tp-label">Колір</div>
+        <div class="swatch-grid" id="swatchGrid"></div>
+        <div class="color-custom-row">
+          <input type="color" id="customColor" value="#1a1d23">
+          <span>Свій колір</span>
+        </div>
+      </div>
+
+      <div class="tp-section" id="stickyColorSection" style="display:none;">
+        <div class="tp-label">Колір стікера</div>
+        <div class="sticky-swatch-row" id="stickySwatchRow"></div>
+      </div>
+
+      <div class="tp-section" id="sizeSection">
+        <div class="tp-label" id="sizeLabel">Товщина</div>
+        <div class="size-row">
+          <input type="range" id="sizeRange" min="1" max="40" value="3">
+          <span class="size-val" id="sizeVal">3</span>
+        </div>
+        <div class="size-preview"><div class="size-preview-dot" id="sizePreviewDot"></div></div>
+      </div>
+    </aside>
+
+    <div class="canvas-area">
+      <div class="canvas-viewport" id="canvasViewport">
+        <!-- сторінки монтуються сюди динамічно -->
+      </div>
+      <div class="zoom-controls">
+        <button class="zc-btn" id="btnZoomOut" title="Зменшити (Ctrl+−)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <span class="zc-label" id="zoomLabel" title="Скинути до 100%">100%</span>
+        <button class="zc-btn" id="btnZoomIn" title="Збільшити (Ctrl++)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="zc-sep"></div>
+        <button class="zc-btn" id="btnZoomFit" title="Вписати сторінку">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-strip" id="pageStrip">
+    <!-- пігулки сторінок -->
+    <button class="strip-add" id="stripAdd" title="Додати сторінку">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <span class="strip-hint">Прогрес не зберігається між сеансами</span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="sel-toolbar" id="selToolbar">
+  <button class="sel-tb-btn" id="btnToBack" title="На задній план">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="2"/><path d="M9 15v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-3"/></svg>
+  </button>
+  <button class="sel-tb-btn" id="btnToFront" title="На передній план">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></svg>
+  </button>
+  <div class="sel-tb-sep"></div>
+  <button class="sel-tb-btn sel-tb-danger" id="btnDeleteSel" title="Видалити (Delete)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+  </button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── PDF.js worker ──
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  const PEN_COLORS = ['#1a1d23', '#ef4444', '#f5b942', '#16a34a', '#4F6BF4', '#a855f7', '#ec4899', '#0891b2', '#78716c', '#ffffff'];
+  const STICKY_COLORS = ['#fef3c7', '#fde2e2', '#dcfce7', '#dbeafe', '#f3e8ff', '#fee2e2'];
+  const TOOL_DEFAULT_SIZE = { pen: 3, highlighter: 18, eraser: 22, rect: 3, circle: 3, line: 3, arrow: 3, text: 22, sticky: 15 };
+  const BLANK_W = 1400, BLANK_H = 900;
+  const STICKY_W = 190, STICKY_H = 170;
+
+  const state = {
+    tool: 'pen',
+    color: '#1a1d23',
+    stickyColor: STICKY_COLORS[0],
+    size: TOOL_DEFAULT_SIZE.pen,
+    pages: [],
+    activePageId: null,
+    drawing: false,
+    dragStart: null,
+    dragObj: null,       // { offX, offY } або { offX1,offY1,offX2,offY2 } під час перетягування об'єкта
+    resizeObj: null,     // { obj, handleId } під час зміни розміру за ручку
+    pageSeq: 0,
+    objSeq: 0,
+    screenshotMode: false,
+    zoom: 1,
+  };
+
+  const viewport = document.getElementById('canvasViewport');
+  const stripEl = document.getElementById('pageStrip');
+  const stripAddBtn = document.getElementById('stripAdd');
+
+  // ═══════════════════════ СТОРІНКИ ═══════════════════════
+  // Кожна сторінка має ДВА шари малюнку:
+  //  - strokesCanvas (растр): вільне малювання олівцем/маркером/гумкою — назавжди "запечене" в пікселі
+  //  - objects[] (вектор): текст, стікери, фігури — зберігаються як об'єкти й перемальовуються щоразу,
+  //    тому їх можна виділити та перетягнути інструментом "Виділити"
+
+  function createPage(bgImage) {
+    state.pageSeq += 1;
+    const id = 'pg' + state.pageSeq;
+    const w = bgImage ? bgImage.width : BLANK_W;
+    const h = bgImage ? bgImage.height : BLANK_H;
+
+    const stage = document.createElement('div');
+    stage.className = 'page-stage';
+    stage.style.width = w + 'px';
+    stage.style.height = h + 'px';
+    stage.dataset.pageId = id;
+
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.className = 'layer-bg';
+    bgCanvas.width = w; bgCanvas.height = h;
+    const bgCtx = bgCanvas.getContext('2d');
+    if (bgImage) { bgCtx.drawImage(bgImage, 0, 0, w, h); }
+    else { bgCtx.fillStyle = '#ffffff'; bgCtx.fillRect(0, 0, w, h); }
+
+    const strokesCanvas = document.createElement('canvas');
+    strokesCanvas.className = 'layer-strokes';
+    strokesCanvas.width = w; strokesCanvas.height = h;
+
+    const objectsCanvas = document.createElement('canvas');
+    objectsCanvas.className = 'layer-objects';
+    objectsCanvas.width = w; objectsCanvas.height = h;
+
+    const previewCanvas = document.createElement('canvas');
+    previewCanvas.className = 'layer-preview';
+    previewCanvas.width = w; previewCanvas.height = h;
+
+    const interactCanvas = document.createElement('canvas');
+    interactCanvas.className = 'layer-interact';
+    interactCanvas.width = w; interactCanvas.height = h;
+    interactCanvas.style.background = 'transparent';
+
+    stage.appendChild(bgCanvas);
+    stage.appendChild(strokesCanvas);
+    stage.appendChild(objectsCanvas);
+    stage.appendChild(previewCanvas);
+    stage.appendChild(interactCanvas);
+
+    const page = {
+      id, w, h, stage, bgCanvas, strokesCanvas, objectsCanvas, previewCanvas, interactCanvas,
+      strokesCtx: strokesCanvas.getContext('2d'),
+      objectsCtx: objectsCanvas.getContext('2d'),
+      previewCtx: previewCanvas.getContext('2d'),
+      objects: [],
+      selectedId: null,
+      undoStack: [], redoStack: [],
+    };
+    state.pages.push(page);
+    viewport.appendChild(stage);
+    bindPageEvents(page);
+    return page;
+  }
+
+  function removePage(id) {
+    const idx = state.pages.findIndex(p => p.id === id);
+    if (idx === -1 || state.pages.length <= 1) return;
+    state.pages[idx].stage.remove();
+    state.pages.splice(idx, 1);
+    if (state.activePageId === id) {
+      const next = state.pages[Math.max(0, idx - 1)];
+      switchToPage(next.id);
+    }
+    renderPageStrip();
+  }
+
+  function switchToPage(id) {
+    state.activePageId = id;
+    state.pages.forEach(p => { p.stage.style.display = (p.id === id) ? 'block' : 'none'; });
+    renderPageStrip();
+    updateUndoRedoButtons();
+    const p = state.pages.find(pg => pg.id === id);
+    if (p) { p.selectedId = null; renderSelectionOutline(p); applyZoom(); }
+  }
+
+  function getActivePage() {
+    return state.pages.find(p => p.id === state.activePageId) || null;
+  }
+
+  function renderPageStrip() {
+    stripEl.querySelectorAll('.page-pill').forEach(el => el.remove());
+    state.pages.forEach((p, i) => {
+      const pill = document.createElement('button');
+      pill.className = 'page-pill' + (p.id === state.activePageId ? ' active' : '');
+      pill.innerHTML = `<span>Стор. ${i + 1}</span>`;
+      if (state.pages.length > 1) {
+        const del = document.createElement('span');
+        del.className = 'pg-del';
+        del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>';
+        del.addEventListener('click', (e) => { e.stopPropagation(); removePage(p.id); });
+        pill.appendChild(del);
+      }
+      pill.addEventListener('click', () => switchToPage(p.id));
+      stripEl.insertBefore(pill, stripAddBtn);
+    });
+  }
+
+  // ═══════════════════════ УНДО / РЕДО ═══════════════════════
+  // Один знімок = растр (strokes) + глибока копія масиву об'єктів. Так одна дія (мазок, фігура,
+  // текст, стікер, переміщення) завжди відкочується єдиним кроком.
+
+  function cloneObjects(arr) { return arr.map(o => ({ ...o })); }
+
+  function snapshot(page) {
+    return { strokes: page.strokesCtx.getImageData(0, 0, page.w, page.h), objects: cloneObjects(page.objects) };
+  }
+
+  function applySnapshot(page, snap) {
+    page.strokesCtx.putImageData(snap.strokes, 0, 0);
+    page.objects = cloneObjects(snap.objects);
+    page.selectedId = null;
+    renderObjects(page);
+  }
+
+  function pushUndo(page) {
+    page.undoStack.push(snapshot(page));
+    if (page.undoStack.length > 40) page.undoStack.shift();
+    page.redoStack.length = 0;
+    updateUndoRedoButtons();
+  }
+
+  function undo() {
+    const page = getActivePage();
+    if (!page || !page.undoStack.length) return;
+    page.redoStack.push(snapshot(page));
+    applySnapshot(page, page.undoStack.pop());
+    updateUndoRedoButtons();
+  }
+
+  function redo() {
+    const page = getActivePage();
+    if (!page || !page.redoStack.length) return;
+    page.undoStack.push(snapshot(page));
+    applySnapshot(page, page.redoStack.pop());
+    updateUndoRedoButtons();
+  }
+
+  function updateUndoRedoButtons() {
+    const page = getActivePage();
+    document.getElementById('btnUndo').disabled = !page || !page.undoStack.length;
+    document.getElementById('btnRedo').disabled = !page || !page.redoStack.length;
+  }
+
+  // ═══════════════════════ ОБ'ЄКТИ: малювання / хіт-тест ═══════════════════════
+
+  function roundRectPath(ctx, x, y, w, h, r) {
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); return; }
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function wrapText(ctx, text, maxWidth) {
+    const out = [];
+    text.split('\n').forEach(paragraph => {
+      const words = paragraph.split(/\s+/).filter(Boolean);
+      let current = '';
+      words.forEach(word => {
+        const test = current ? current + ' ' + word : word;
+        if (ctx.measureText(test).width > maxWidth && current) { out.push(current); current = word; }
+        else { current = test; }
+      });
+      out.push(current);
+    });
+    return out;
+  }
+
+  function drawObject(ctx, obj) {
+    ctx.save();
+    if (obj.type === 'text') {
+      ctx.fillStyle = obj.color;
+      ctx.font = `700 ${obj.size}px Inter, system-ui, sans-serif`;
+      ctx.textBaseline = 'top';
+      const lineHeight = obj.size * 1.3;
+      obj.text.split('\n').forEach((line, i) => ctx.fillText(line, obj.x, obj.y + i * lineHeight));
+    } else if (obj.type === 'sticky') {
+      ctx.shadowColor = 'rgba(0,0,0,.18)';
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetY = 6;
+      roundRectPath(ctx, obj.x, obj.y, obj.w, obj.h, 14);
+      ctx.fillStyle = obj.color;
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = '#3a3220';
+      ctx.font = '600 20px Inter, system-ui, sans-serif';
+      ctx.textBaseline = 'top';
+      const pad = 16, lineHeight = 26;
+      const lines = wrapText(ctx, obj.text, obj.w - pad * 2);
+      lines.slice(0, Math.floor((obj.h - pad * 2) / lineHeight)).forEach((line, i) => {
+        ctx.fillText(line, obj.x + pad, obj.y + pad + i * lineHeight);
+      });
+    } else {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = obj.color;
+      ctx.lineWidth = obj.size;
+      drawShape(ctx, obj.type, { x: obj.x1, y: obj.y1 }, { x: obj.x2, y: obj.y2 }, obj.size);
+    }
+    ctx.restore();
+  }
+
+  function drawShape(ctx, tool, from, to, size) {
+    ctx.beginPath();
+    if (tool === 'rect') {
+      ctx.strokeRect(Math.min(from.x, to.x), Math.min(from.y, to.y), Math.abs(to.x - from.x), Math.abs(to.y - from.y));
+    } else if (tool === 'circle') {
+      const rx = Math.abs(to.x - from.x) / 2, ry = Math.abs(to.y - from.y) / 2;
+      const cx = (from.x + to.x) / 2, cy = (from.y + to.y) / 2;
+      ctx.ellipse(cx, cy, Math.max(rx, 0.01), Math.max(ry, 0.01), 0, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (tool === 'line') {
+      ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
+    } else if (tool === 'arrow') {
+      ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
+      const angle = Math.atan2(to.y - from.y, to.x - from.x);
+      const headLen = Math.max(12, size * 3);
+      ctx.beginPath();
+      ctx.moveTo(to.x, to.y);
+      ctx.lineTo(to.x - headLen * Math.cos(angle - Math.PI / 7), to.y - headLen * Math.sin(angle - Math.PI / 7));
+      ctx.moveTo(to.x, to.y);
+      ctx.lineTo(to.x - headLen * Math.cos(angle + Math.PI / 7), to.y - headLen * Math.sin(angle + Math.PI / 7));
+      ctx.stroke();
+    }
+  }
+
+  function objectBounds(obj) {
+    if (obj.type === 'text' || obj.type === 'sticky') return { x: obj.x, y: obj.y, w: obj.w, h: obj.h };
+    const x = Math.min(obj.x1, obj.x2), y = Math.min(obj.y1, obj.y2);
+    return { x, y, w: Math.abs(obj.x2 - obj.x1), h: Math.abs(obj.y2 - obj.y1) };
+  }
+
+  function objectHandles(obj) {
+    // текст/стікер — одна ручка в правому нижньому куті; фігури — дві ручки за їхніми ж опорними точками
+    if (obj.type === 'text' || obj.type === 'sticky') {
+      return [{ id: 'br', x: obj.x + obj.w, y: obj.y + obj.h }];
+    }
+    return [{ id: 'p1', x: obj.x1, y: obj.y1 }, { id: 'p2', x: obj.x2, y: obj.y2 }];
+  }
+
+  function hitTestHandle(page, pos) {
+    if (!page.selectedId) return null;
+    const obj = page.objects.find(o => o.id === page.selectedId);
+    if (!obj) return null;
+    const tol = 11 / state.zoom;
+    for (const h of objectHandles(obj)) {
+      if (Math.hypot(pos.x - h.x, pos.y - h.y) <= tol) return { obj, handleId: h.id };
+    }
+    return null;
+  }
+
+  function measureTextDims(page, text, size) {
+    const ctx = page.objectsCtx;
+    ctx.save();
+    ctx.font = `700 ${size}px Inter, system-ui, sans-serif`;
+    const lines = text.split('\n');
+    const w = Math.max(...lines.map(l => ctx.measureText(l).width), 10);
+    ctx.restore();
+    return { w, h: lines.length * size * 1.3 };
+  }
+
+  function resizeObject(page, obj, handleId, pos) {
+    if (obj.type === 'text') {
+      const newH = Math.max(14, pos.y - obj.y);
+      const scale = newH / obj.h;
+      obj.size = Math.max(8, Math.min(220, obj.size * scale));
+      const dims = measureTextDims(page, obj.text, obj.size);
+      obj.w = dims.w; obj.h = dims.h;
+    } else if (obj.type === 'sticky') {
+      obj.w = Math.max(70, pos.x - obj.x);
+      obj.h = Math.max(60, pos.y - obj.y);
+    } else if (handleId === 'p1') {
+      obj.x1 = pos.x; obj.y1 = pos.y;
+    } else {
+      obj.x2 = pos.x; obj.y2 = pos.y;
+    }
+  }
+
+  function distToSegment(p, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+    let t = len2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const cx = a.x + t * dx, cy = a.y + t * dy;
+    return Math.hypot(p.x - cx, p.y - cy);
+  }
+
+  function hitTestObjects(page, pos) {
+    for (let i = page.objects.length - 1; i >= 0; i--) {
+      const obj = page.objects[i];
+      if (obj.type === 'line' || obj.type === 'arrow') {
+        if (distToSegment(pos, { x: obj.x1, y: obj.y1 }, { x: obj.x2, y: obj.y2 }) <= Math.max(10, obj.size + 6)) return obj;
+      } else {
+        const b = objectBounds(obj);
+        const pad = 4;
+        if (pos.x >= b.x - pad && pos.x <= b.x + b.w + pad && pos.y >= b.y - pad && pos.y <= b.y + b.h + pad) return obj;
+      }
+    }
+    return null;
+  }
+
+  function renderObjects(page) {
+    page.objectsCtx.clearRect(0, 0, page.w, page.h);
+    page.objects.forEach(obj => drawObject(page.objectsCtx, obj));
+    renderSelectionOutline(page);
+  }
+
+  function renderSelectionOutline(page) {
+    page.previewCtx.clearRect(0, 0, page.w, page.h);
+    if (!page.selectedId) { positionSelToolbar(null); return; }
+    const obj = page.objects.find(o => o.id === page.selectedId);
+    if (!obj) { positionSelToolbar(null); return; }
+    const b = objectBounds(obj);
+    const ctx = page.previewCtx;
+    ctx.save();
+    ctx.strokeStyle = '#4F6BF4';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.strokeRect(b.x - 6, b.y - 6, b.w + 12, b.h + 12);
+    ctx.setLineDash([]);
+    const hs = 9 / state.zoom; // сталий розмір ручки на екрані незалежно від масштабу
+    ctx.fillStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    objectHandles(obj).forEach(h => {
+      ctx.fillRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+      ctx.strokeRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+    });
+    ctx.restore();
+    positionSelToolbar(page, b);
+  }
+
+  const selToolbarEl = document.getElementById('selToolbar');
+  function positionSelToolbar(page, bounds) {
+    if (!page || !bounds) { selToolbarEl.classList.remove('show'); return; }
+    const stageRect = page.stage.getBoundingClientRect();
+    const scale = stageRect.width / page.w;
+    const left = stageRect.left + (bounds.x + bounds.w / 2) * scale;
+    const top = stageRect.top + (bounds.y - 6) * scale - 12;
+    selToolbarEl.style.left = left + 'px';
+    selToolbarEl.style.top = Math.max(10, top) + 'px';
+    selToolbarEl.classList.add('show');
+  }
+  // тримаємо панельку прив'язаною до об'єкта і під час скролу полотна
+  document.getElementById('canvasViewport').addEventListener('scroll', () => {
+    const page = getActivePage();
+    if (page && page.selectedId) renderSelectionOutline(page);
+  });
+
+  function sendSelected(dir) {
+    const page = getActivePage();
+    if (!page || !page.selectedId) return;
+    const idx = page.objects.findIndex(o => o.id === page.selectedId);
+    if (idx === -1) return;
+    pushUndo(page);
+    const [obj] = page.objects.splice(idx, 1);
+    if (dir === 'back') page.objects.unshift(obj); else page.objects.push(obj);
+    renderObjects(page);
+  }
+  document.getElementById('btnToBack').addEventListener('click', () => sendSelected('back'));
+  document.getElementById('btnToFront').addEventListener('click', () => sendSelected('front'));
+  document.getElementById('btnDeleteSel').addEventListener('click', () => {
+    const page = getActivePage();
+    if (!page || !page.selectedId) return;
+    pushUndo(page);
+    page.objects = page.objects.filter(o => o.id !== page.selectedId);
+    page.selectedId = null;
+    renderObjects(page);
+  });
+
+  // ═══════════════════════ ВКАЗІВНИК: down / move / up ═══════════════════════
+
+  function getPos(e, canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+  }
+
+  function bindPageEvents(page) {
+    const el = page.interactCanvas;
+    el.addEventListener('pointerdown', (e) => onPointerDown(page, e));
+    el.addEventListener('pointermove', (e) => onPointerMove(page, e));
+    el.addEventListener('dblclick', (e) => onDoubleClick(page, e));
+  }
+  // один спільний слухач на window (а не по одному на кожну сторінку) — інакше мишка,
+  // відпущена деінде, спрацьовувала б одразу для всіх створених сторінок
+  window.addEventListener('pointerup', (e) => {
+    const page = getActivePage();
+    if (page) onPointerUp(page, e);
+  });
+
+  // ═══════════════════════ ЗУМ ═══════════════════════
+
+  const ZOOM_MIN = 0.2, ZOOM_MAX = 3;
+
+  function applyZoom() {
+    const page = getActivePage();
+    if (!page) return;
+    page.stage.style.width = (page.w * state.zoom) + 'px';
+    page.stage.style.height = (page.h * state.zoom) + 'px';
+    document.getElementById('zoomLabel').textContent = Math.round(state.zoom * 100) + '%';
+  }
+
+  function setZoom(zoom, opts) {
+    state.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom));
+    applyZoom();
+    if (opts && opts.resetScroll) {
+      const vp = document.getElementById('canvasViewport');
+      vp.scrollLeft = 0; vp.scrollTop = 0;
+    }
+  }
+
+  function zoomFitToScreen() {
+    const page = getActivePage();
+    if (!page) return;
+    const vp = document.getElementById('canvasViewport');
+    const availW = vp.clientWidth - 64;  // мінус padding в'юпорту (32px з кожного боку)
+    const availH = vp.clientHeight - 64;
+    const fit = Math.min(availW / page.w, availH / page.h, ZOOM_MAX);
+    setZoom(Math.max(ZOOM_MIN, fit), { resetScroll: true });
+  }
+
+  document.getElementById('btnZoomIn').addEventListener('click', () => setZoom(state.zoom + 0.15));
+  document.getElementById('btnZoomOut').addEventListener('click', () => setZoom(state.zoom - 0.15));
+  document.getElementById('btnZoomFit').addEventListener('click', zoomFitToScreen);
+  document.getElementById('zoomLabel').addEventListener('click', () => setZoom(1));
+
+  // Ctrl/Cmd + колесо миші — зум із наведенням (як у Figma/Miro)
+  document.getElementById('canvasViewport').addEventListener('wheel', (e) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    setZoom(state.zoom + (e.deltaY < 0 ? 0.1 : -0.1));
+  }, { passive: false });
+
+  // ═══════════════════════ СКРІНШОТ ОБЛАСТІ ═══════════════════════
+
+  function enterScreenshotMode() {
+    state.screenshotMode = true;
+    document.querySelectorAll('.layer-interact').forEach(c => c.classList.add('interact-screenshot'));
+    document.getElementById('btnScreenshot').classList.add('btn-primary');
+    document.getElementById('btnScreenshot').classList.remove('btn-ghost');
+    showToast('Виділіть область на полотні для скріншота');
+  }
+
+  function exitScreenshotMode() {
+    state.screenshotMode = false;
+    document.querySelectorAll('.layer-interact').forEach(c => c.classList.remove('interact-screenshot'));
+    document.getElementById('btnScreenshot').classList.remove('btn-primary');
+    document.getElementById('btnScreenshot').classList.add('btn-ghost');
+  }
+
+  document.getElementById('btnScreenshot').addEventListener('click', () => {
+    if (state.screenshotMode) { exitScreenshotMode(); return; }
+    const page = getActivePage();
+    if (!page) return;
+    page.selectedId = null;
+    renderSelectionOutline(page);
+    enterScreenshotMode();
+  });
+
+  function captureScreenshot(page, x, y, w, h) {
+    const out = document.createElement('canvas');
+    out.width = Math.round(w);
+    out.height = Math.round(h);
+    const ctx = out.getContext('2d');
+    // складаємо всі три шари сторінки (фон/PDF + мазки олівцем + текст/стікери/фігури) в один кадр
+    [page.bgCanvas, page.strokesCanvas, page.objectsCanvas].forEach(layer => {
+      ctx.drawImage(layer, x, y, w, h, 0, 0, out.width, out.height);
+    });
+    out.toBlob((blob) => {
+      if (!blob) { showToast('Не вдалося зберегти скріншот'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vaitbord-screenshot-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      showToast('Скріншот збережено');
+    }, 'image/png');
+  }
+
+  function onPointerDown(page, e) {
+    if (page.id !== state.activePageId) return;
+    e.preventDefault();
+    const pos = getPos(e, page.interactCanvas);
+    const tool = state.tool;
+
+    if (state.screenshotMode) {
+      state.drawing = true;
+      state.dragStart = pos;
+      return;
+    }
+
+    if (tool === 'select') {
+      const handleHit = hitTestHandle(page, pos);
+      if (handleHit) {
+        pushUndo(page); // знімок ДО зміни розміру — Undo повертає форму одним кроком
+        state.drawing = true;
+        state.resizeObj = handleHit;
+        return;
+      }
+      const hit = hitTestObjects(page, pos);
+      if (hit) {
+        page.selectedId = hit.id;
+        pushUndo(page); // знімок ДО переміщення — щоб Undo повертав об'єкт на місце одним кроком
+        state.drawing = true;
+        if (hit.x1 !== undefined) {
+          // прямокутник / коло / лінія / стрілка — усі зберігаються як відрізок (x1,y1)-(x2,y2)
+          state.dragObj = { obj: hit, offX1: pos.x - hit.x1, offY1: pos.y - hit.y1, offX2: pos.x - hit.x2, offY2: pos.y - hit.y2 };
+        } else {
+          state.dragObj = { obj: hit, offX: pos.x - hit.x, offY: pos.y - hit.y };
+        }
+        renderObjects(page);
+      } else {
+        page.selectedId = null;
+        state.dragObj = null;
+        renderObjects(page);
+      }
+      return;
+    }
+
+    if (tool === 'text') { openTextEditor(page, pos); return; }
+    if (tool === 'sticky') { openStickyEditor(page, pos); return; }
+
+    state.drawing = true;
+    state.dragStart = pos;
+
+    if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
+      pushUndo(page);
+      const ctx = page.strokesCtx;
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      if (tool === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = state.size;
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = state.color;
+        ctx.globalAlpha = tool === 'highlighter' ? 0.35 : 1;
+        ctx.lineWidth = state.size;
+      }
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      ctx.lineTo(pos.x + 0.01, pos.y + 0.01);
+      ctx.stroke();
+    }
+    // для фігур (rect/circle/line/arrow) undo відкладаємо до pointerup — щоб порожній клік
+    // без перетягування не створював зайвий крок історії
+  }
+
+  function onPointerMove(page, e) {
+    if (!state.drawing || page.id !== state.activePageId) return;
+    const pos = getPos(e, page.interactCanvas);
+    const tool = state.tool;
+
+    if (state.screenshotMode) {
+      const pctx = page.previewCtx;
+      pctx.clearRect(0, 0, page.w, page.h);
+      const x = Math.min(state.dragStart.x, pos.x), y = Math.min(state.dragStart.y, pos.y);
+      const w = Math.abs(pos.x - state.dragStart.x), h = Math.abs(pos.y - state.dragStart.y);
+      pctx.save();
+      pctx.fillStyle = 'rgba(0,0,0,.4)';
+      pctx.fillRect(0, 0, page.w, page.h);
+      pctx.clearRect(x, y, w, h);
+      pctx.strokeStyle = '#4F6BF4';
+      pctx.lineWidth = 2;
+      pctx.strokeRect(x, y, w, h);
+      pctx.restore();
+      return;
+    }
+
+    if (tool === 'select' && state.resizeObj) {
+      resizeObject(page, state.resizeObj.obj, state.resizeObj.handleId, pos);
+      renderObjects(page);
+      return;
+    }
+
+    if (tool === 'select' && state.dragObj) {
+      const obj = state.dragObj.obj;
+      if (obj.x1 !== undefined) {
+        obj.x1 = pos.x - state.dragObj.offX1; obj.y1 = pos.y - state.dragObj.offY1;
+        obj.x2 = pos.x - state.dragObj.offX2; obj.y2 = pos.y - state.dragObj.offY2;
+      } else {
+        obj.x = pos.x - state.dragObj.offX; obj.y = pos.y - state.dragObj.offY;
+      }
+      renderObjects(page);
+      return;
+    }
+
+    if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
+      const ctx = page.strokesCtx;
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      return;
+    }
+
+    if (['rect', 'circle', 'line', 'arrow'].includes(tool)) {
+      const pctx = page.previewCtx;
+      pctx.clearRect(0, 0, page.w, page.h);
+      pctx.save();
+      pctx.lineCap = 'round';
+      pctx.lineJoin = 'round';
+      pctx.strokeStyle = state.color;
+      pctx.lineWidth = state.size;
+      drawShape(pctx, tool, state.dragStart, pos, state.size);
+      pctx.restore();
+    }
+  }
+
+  function onPointerUp(page, e) {
+    if (!state.drawing) return;
+    state.drawing = false;
+    const tool = state.tool;
+
+    if (state.screenshotMode) {
+      const pos = getPos(e, page.interactCanvas);
+      page.previewCtx.clearRect(0, 0, page.w, page.h);
+      const x = Math.max(0, Math.min(state.dragStart.x, pos.x));
+      const y = Math.max(0, Math.min(state.dragStart.y, pos.y));
+      const w = Math.min(page.w - x, Math.abs(pos.x - state.dragStart.x));
+      const h = Math.min(page.h - y, Math.abs(pos.y - state.dragStart.y));
+      exitScreenshotMode();
+      if (w < 4 || h < 4) { showToast('Область занадто мала'); return; }
+      captureScreenshot(page, x, y, w, h);
+      return;
+    }
+
+    if (tool === 'select') { state.dragObj = null; state.resizeObj = null; return; }
+
+    if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
+      page.strokesCtx.restore();
+      return;
+    }
+
+    if (['rect', 'circle', 'line', 'arrow'].includes(tool)) {
+      const pos = getPos(e, page.interactCanvas);
+      page.previewCtx.clearRect(0, 0, page.w, page.h);
+      if (Math.hypot(pos.x - state.dragStart.x, pos.y - state.dragStart.y) < 3) return; // ігноруємо випадковий клік без руху
+      pushUndo(page);
+      state.objSeq += 1;
+      page.objects.push({
+        id: 'obj' + state.objSeq, type: tool,
+        x1: state.dragStart.x, y1: state.dragStart.y, x2: pos.x, y2: pos.y,
+        color: state.color, size: state.size,
+      });
+      renderObjects(page);
+    }
+  }
+
+  function onDoubleClick(page, e) {
+    if (page.id !== state.activePageId) return;
+    if (state.tool !== 'select') return;
+    const pos = getPos(e, page.interactCanvas);
+    const hit = hitTestObjects(page, pos);
+    if (!hit || (hit.type !== 'text' && hit.type !== 'sticky')) return;
+    editExistingObject(page, hit);
+  }
+
+  // ═══════════════════════ ТЕКСТ ═══════════════════════
+
+  function openTextEditor(page, pos, existing) {
+    const rect = page.interactCanvas.getBoundingClientRect();
+    const scale = rect.width / page.w;
+    const anchorX = existing ? existing.x : pos.x;
+    const anchorY = existing ? existing.y : pos.y;
+    const color = existing ? existing.color : state.color;
+    const size = existing ? existing.size : Math.max(12, state.size);
+
+    const box = document.createElement('textarea');
+    box.className = 'canvas-edit-box';
+    box.style.left = (anchorX * scale) + 'px';
+    box.style.top = (anchorY * scale) + 'px';
+    box.style.width = Math.max(180, page.w * scale - anchorX * scale - 20) + 'px';
+    box.style.height = '80px';
+    box.style.color = color;
+    box.style.fontSize = size + 'px';
+    box.style.fontWeight = '700';
+    if (existing) box.value = existing.text;
+    page.stage.appendChild(box);
+    setTimeout(() => { box.focus(); if (existing) box.select(); }, 0);
+
+    function commit() {
+      const value = box.value;
+      box.remove();
+      if (!value.trim()) { if (existing) { renderObjects(page); } return; }
+      pushUndo(page);
+      const dims = measureTextDims(page, value, size);
+      if (existing) {
+        existing.text = value; existing.w = dims.w; existing.h = dims.h;
+      } else {
+        state.objSeq += 1;
+        page.objects.push({ id: 'obj' + state.objSeq, type: 'text', x: anchorX, y: anchorY, w: dims.w, h: dims.h, text: value, color, size });
+      }
+      renderObjects(page);
+    }
+    box.addEventListener('blur', commit);
+    box.addEventListener('keydown', (e) => { if (e.key === 'Escape') { box.value = existing ? existing.text : ''; box.blur(); } e.stopPropagation(); });
+  }
+
+  // ═══════════════════════ СТІКЕРИ ═══════════════════════
+
+  function openStickyEditor(page, pos, existing) {
+    const rect = page.interactCanvas.getBoundingClientRect();
+    const scale = rect.width / page.w;
+    const anchorX = existing ? existing.x : Math.min(pos.x, page.w - STICKY_W - 4);
+    const anchorY = existing ? existing.y : Math.min(pos.y, page.h - STICKY_H - 4);
+    const color = existing ? existing.color : state.stickyColor;
+
+    const box = document.createElement('textarea');
+    box.className = 'canvas-edit-box sticky-box';
+    box.style.left = (anchorX * scale) + 'px';
+    box.style.top = (anchorY * scale) + 'px';
+    box.style.width = (STICKY_W * scale) + 'px';
+    box.style.height = (STICKY_H * scale) + 'px';
+    box.style.background = color;
+    box.style.color = '#3a3220';
+    box.style.fontSize = '14px';
+    box.style.fontWeight = '600';
+    box.placeholder = 'Нотатка…';
+    if (existing) box.value = existing.text;
+    page.stage.appendChild(box);
+    setTimeout(() => { box.focus(); if (existing) box.select(); }, 0);
+
+    function commit() {
+      const value = box.value;
+      box.remove();
+      if (!value.trim()) { if (existing) { renderObjects(page); } return; }
+      pushUndo(page);
+      if (existing) {
+        existing.text = value;
+      } else {
+        state.objSeq += 1;
+        page.objects.push({ id: 'obj' + state.objSeq, type: 'sticky', x: anchorX, y: anchorY, w: STICKY_W, h: STICKY_H, text: value, color });
+      }
+      renderObjects(page);
+    }
+    box.addEventListener('blur', commit);
+    box.addEventListener('keydown', (e) => { if (e.key === 'Escape') { box.value = existing ? existing.text : ''; box.blur(); } e.stopPropagation(); });
+  }
+
+  function editExistingObject(page, obj) {
+    // тимчасово ховаємо оригінал, поки він редагується, щоб уникнути візуального дублювання
+    const idx = page.objects.indexOf(obj);
+    if (idx !== -1) page.objects.splice(idx, 1);
+    page.selectedId = null;
+    renderObjects(page);
+    if (obj.type === 'text') openTextEditor(page, { x: obj.x, y: obj.y }, obj);
+    else if (obj.type === 'sticky') openStickyEditor(page, { x: obj.x, y: obj.y }, obj);
+  }
+
+  // ═══════════════════════ ІНСТРУМЕНТИ / КОЛІР / РОЗМІР — UI ═══════════════════════
+
+  function renderSwatches() {
+    const grid = document.getElementById('swatchGrid');
+    grid.innerHTML = '';
+    PEN_COLORS.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'swatch' + (c === state.color ? ' active' : '');
+      b.style.background = c;
+      if (c === '#ffffff') b.style.boxShadow = '0 0 0 1.5px var(--border2), inset 0 0 0 1px var(--border2)';
+      b.addEventListener('click', () => { state.color = c; document.getElementById('customColor').value = c; renderSwatches(); updateSizePreview(); });
+      grid.appendChild(b);
+    });
+  }
+
+  function renderStickySwatches() {
+    const row = document.getElementById('stickySwatchRow');
+    row.innerHTML = '';
+    STICKY_COLORS.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'sticky-swatch' + (c === state.stickyColor ? ' active' : '');
+      b.style.background = c;
+      b.addEventListener('click', () => { state.stickyColor = c; renderStickySwatches(); });
+      row.appendChild(b);
+    });
+  }
+
+  function setTool(tool) {
+    if (state.screenshotMode) exitScreenshotMode();
+    state.tool = tool;
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+    if (TOOL_DEFAULT_SIZE[tool] != null) state.size = TOOL_DEFAULT_SIZE[tool];
+    document.getElementById('sizeRange').value = state.size;
+    document.getElementById('sizeVal').textContent = state.size;
+    updateSizePreview();
+    document.getElementById('stickyColorSection').style.display = tool === 'sticky' ? 'block' : 'none';
+    document.getElementById('colorSection').style.display = (tool === 'sticky' || tool === 'eraser' || tool === 'select') ? 'none' : 'block';
+    document.getElementById('sizeSection').style.display = (tool === 'sticky' || tool === 'select') ? 'none' : 'block';
+    document.getElementById('sizeLabel').textContent = tool === 'text' ? 'Розмір шрифту' : 'Товщина';
+    const page = getActivePage();
+    if (page && tool !== 'select') { page.selectedId = null; renderSelectionOutline(page); }
+    document.querySelectorAll('.layer-interact').forEach(c => c.classList.toggle('interact-select', tool === 'select'));
+  }
+
+  function updateSizePreview() {
+    const dot = document.getElementById('sizePreviewDot');
+    const px = Math.min(28, Math.max(2, state.size));
+    dot.style.width = px + 'px';
+    dot.style.height = px + 'px';
+    dot.style.background = state.tool === 'eraser' ? 'var(--border2)' : state.color;
+  }
+
+  document.getElementById('toolGrid').addEventListener('click', (e) => {
+    const btn = e.target.closest('.tool-btn');
+    if (btn) setTool(btn.dataset.tool);
+  });
+
+  document.getElementById('customColor').addEventListener('input', (e) => {
+    state.color = e.target.value;
+    renderSwatches();
+    updateSizePreview();
+  });
+
+  document.getElementById('sizeRange').addEventListener('input', (e) => {
+    state.size = Number(e.target.value);
+    document.getElementById('sizeVal').textContent = state.size;
+    updateSizePreview();
+  });
+
+  // ═══════════════════════ ТОПБАР: undo/redo/clear/pages/pdf ═══════════════════════
+
+  document.getElementById('btnUndo').addEventListener('click', undo);
+  document.getElementById('btnRedo').addEventListener('click', redo);
+
+  document.getElementById('btnClearPage').addEventListener('click', () => {
+    const page = getActivePage();
+    if (!page) return;
+    if (!confirm('Очистити всі малюнки на цій сторінці?')) return;
+    pushUndo(page);
+    page.strokesCtx.clearRect(0, 0, page.w, page.h);
+    page.objects = [];
+    page.selectedId = null;
+    renderObjects(page);
+  });
+
+  function addBlankPage() {
+    const page = createPage(null);
+    switchToPage(page.id);
+    showToast('Додано нову сторінку');
+  }
+  document.getElementById('btnAddPage').addEventListener('click', addBlankPage);
+  stripAddBtn.addEventListener('click', addBlankPage);
+
+  document.getElementById('btnOpenPdf').addEventListener('click', () => document.getElementById('pdfInput').click());
+  document.getElementById('pdfInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!window.pdfjsLib) { showToast('Не вдалося завантажити модуль PDF'); return; }
+    showToast('Завантаження PDF…');
+    try {
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      let firstNewId = null;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const pdfPage = await pdf.getPage(i);
+        const viewportPdf = pdfPage.getViewport({ scale: 2 });
+        const off = document.createElement('canvas');
+        off.width = viewportPdf.width;
+        off.height = viewportPdf.height;
+        await pdfPage.render({ canvasContext: off.getContext('2d'), viewport: viewportPdf }).promise;
+        const page = createPage(off);
+        if (firstNewId === null) firstNewId = page.id;
+      }
+      if (firstNewId) switchToPage(firstNewId);
+      showToast(`Завантажено сторінок: ${pdf.numPages}`);
+    } catch (err) {
+      console.error(err);
+      showToast('Не вдалося відкрити цей PDF-файл');
+    }
+  });
+
+  let toastTimer = null;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // ═══════════════════════ ГАРЯЧІ КЛАВІШІ ═══════════════════════
+
+  window.addEventListener('keydown', (e) => {
+    if (document.activeElement && ['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.shiftKey) { e.preventDefault(); redo(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
+    if (e.key === 'Escape' && state.screenshotMode) { exitScreenshotMode(); return; }
+    if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) { e.preventDefault(); setZoom(state.zoom + 0.15); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key === '-') { e.preventDefault(); setZoom(state.zoom - 0.15); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setZoom(1); return; }
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const page = getActivePage();
+      if (page && page.selectedId) {
+        e.preventDefault();
+        pushUndo(page);
+        page.objects = page.objects.filter(o => o.id !== page.selectedId);
+        page.selectedId = null;
+        renderObjects(page);
+      }
+      return;
+    }
+    const map = { v: 'select', p: 'pen', h: 'highlighter', e: 'eraser', t: 'text', s: 'sticky', r: 'rect', c: 'circle', l: 'line', a: 'arrow' };
+    if (map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
+  });
+
+  // ═══════════════════════ СТАРТ ═══════════════════════
+
+  renderSwatches();
+  renderStickySwatches();
+  setTool('pen');
+  const first = createPage(null);
+  switchToPage(first.id);
+})();
+</script>
+</body>
+</html>
