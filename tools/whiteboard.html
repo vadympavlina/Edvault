@@ -278,6 +278,67 @@
   .sel-tb-size { display: flex; align-items: center; gap: 6px; padding: 0 6px; }
   .sel-tb-size input[type="range"] { width: 70px; accent-color: #7c93ff; }
   .sel-tb-size span { font-size: 11px; font-weight: 700; color: #d1d5db; font-family: 'JetBrains Mono', monospace; min-width: 16px; text-align: right; }
+
+  /* =========== РЕЖИМ ПРЕЗЕНТАЦІЇ =========== */
+  .presentation-mode .topbar,
+  .presentation-mode .page-strip,
+  .presentation-mode .tools-panel { display: none; }
+  .presentation-mode .zoom-controls { bottom: 76px; } /* щоб не перекривалась плаваючим present-bar знизу */
+
+  .present-bar {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 95;
+    display: none; align-items: center; gap: 2px; background: var(--text); border-radius: 14px;
+    padding: 6px; box-shadow: var(--shadow-lg);
+  }
+  .presentation-mode .present-bar { display: flex; }
+  .pb-btn {
+    width: 34px; height: 34px; border-radius: 9px; border: none; background: transparent;
+    color: #d1d5db; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .12s ease;
+  }
+  .pb-btn svg { width: 16px; height: 16px; }
+  .pb-btn:hover:not(:disabled) { background: rgba(255,255,255,.14); color: #fff; }
+  .pb-btn:disabled { opacity: .3; cursor: not-allowed; }
+  .pb-btn.pb-active { background: var(--accent); color: #fff; }
+  .pb-sep { width: 1px; height: 20px; background: rgba(255,255,255,.18); margin: 0 4px; }
+  .pb-pagelabel { color: #d1d5db; font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace; padding: 0 8px; min-width: 44px; text-align: center; }
+
+  /* ── компактна вертикальна панель інструментів збоку (тільки в презентації) ── */
+  .present-tools {
+    position: fixed; left: 16px; top: 50%; transform: translateY(-50%); z-index: 95;
+    display: none; flex-direction: column; align-items: center; gap: 3px;
+    background: var(--text); border-radius: 14px; padding: 8px 6px; box-shadow: var(--shadow-lg);
+    max-height: 84vh; overflow-y: auto;
+  }
+  .presentation-mode .present-tools { display: flex; }
+  .pt-btn {
+    width: 32px; height: 32px; border-radius: 9px; border: none; background: transparent; flex-shrink: 0;
+    color: #d1d5db; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .12s ease;
+  }
+  .pt-btn svg { width: 16px; height: 16px; }
+  .pt-btn:hover { background: rgba(255,255,255,.14); color: #fff; }
+  .pt-btn.pt-active { background: var(--accent); color: #fff; }
+  .pt-sep { width: 22px; height: 1px; background: rgba(255,255,255,.18); margin: 4px 0; flex-shrink: 0; }
+  .pt-color-wrap { position: relative; flex-shrink: 0; }
+  .pt-color-dot { width: 17px; height: 17px; border-radius: 50%; display: block; border: 1.5px solid rgba(255,255,255,.5); }
+  .pt-color-pop {
+    display: none; position: fixed; /* fixed, а не absolute — щоб overflow:auto бічної панелі не обрізав попап */
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px;
+    box-shadow: var(--shadow-md); width: 132px; z-index: 96;
+  }
+  .pt-color-pop.show { display: block; }
+  .pt-color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
+  .pt-color-swatch {
+    width: 20px; height: 20px; border-radius: 50%; cursor: pointer; padding: 0;
+    border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--border2);
+  }
+  .pt-color-pop input[type="color"] { width: 100%; height: 28px; border-radius: 6px; border: 1.5px solid var(--border2); cursor: pointer; padding: 2px; }
+  .pt-size-row { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+  .pt-size-btn {
+    width: 24px; height: 20px; border-radius: 6px; border: none; background: rgba(255,255,255,.1); color: #d1d5db;
+    font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;
+  }
+  .pt-size-btn:hover { background: rgba(255,255,255,.2); color: #fff; }
+  .pt-size-val { color: #d1d5db; font-size: 10.5px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
 </style>
 </head>
 <body>
@@ -318,6 +379,11 @@
       <button class="btn btn-primary" id="btnAddPage">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Нова сторінка
+      </button>
+      <div class="topbar-divider"></div>
+      <button class="btn btn-ghost" id="btnPresent" title="Сховати інтерфейс, лишити тільки полотно й інструменти">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
+        Презентація
       </button>
     </div>
   </div>
@@ -411,7 +477,76 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         </button>
       </div>
+      <div class="present-bar" id="presentBar">
+        <button class="pb-btn" id="pbUndo" title="Скасувати">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-6.7L3 9"/></svg>
+        </button>
+        <button class="pb-btn" id="pbRedo" title="Повторити">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M21 13a9 9 0 1 1-3-6.7L21 9"/></svg>
+        </button>
+        <div class="pb-sep"></div>
+        <button class="pb-btn" id="pbPrevPage" title="Попередня сторінка">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="pb-pagelabel" id="pbPageLabel">1/1</span>
+        <button class="pb-btn" id="pbNextPage" title="Наступна сторінка">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <div class="pb-sep"></div>
+        <button class="pb-btn" id="btnExitPresent" title="Вийти з презентації (Esc)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="present-tools" id="presentTools">
+        <button class="pt-btn" data-tool="select" title="Виділити">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l7.07 17 2.51-7.39L21 11.07z"/></svg>
+        </button>
+        <button class="pt-btn" data-tool="pen" title="Олівець">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        </button>
+        <button class="pt-btn" data-tool="highlighter" title="Маркер">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l6-6 4 4-6 6z"/><path d="M3 21l4-1 8.5-8.5-3-3L4 17l-1 4z"/></svg>
+        </button>
+        <button class="pt-btn" data-tool="eraser" title="Гумка">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H8.5L3 14.5a1 1 0 0 1 0-1.41l9-9a1 1 0 0 1 1.41 0l7 7a1 1 0 0 1 0 1.41L13 20"/><path d="M14 5 5 14"/></svg>
+        </button>
+        <button class="pt-btn" data-tool="text" title="Текст">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        </button>
+        <button class="pt-btn" data-tool="sticky" title="Стікер">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v11l-5 5H4z"/><path d="M15 20v-5h5"/></svg>
+        </button>
+        <button class="pt-btn" data-tool="rect" title="Прямокутник">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/></svg>
+        </button>
+        <button class="pt-btn" data-tool="circle" title="Коло">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>
+        </button>
+        <button class="pt-btn" data-tool="line" title="Лінія">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+        </button>
+        <button class="pt-btn" data-tool="arrow" title="Стрілка">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="9 5 19 5 19 15"/></svg>
+        </button>
+        <div class="pt-sep"></div>
+        <div class="pt-color-wrap">
+          <button class="pt-btn" id="ptColorBtn" title="Колір">
+            <span class="pt-color-dot" id="ptColorDot"></span>
+          </button>
+        </div>
+        <div class="pt-size-row">
+          <button class="pt-size-btn" id="ptSizePlus">+</button>
+          <span class="pt-size-val" id="ptSizeVal">3</span>
+          <button class="pt-size-btn" id="ptSizeMinus">−</button>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <!-- поза .present-tools навмисно: та панель має transform+overflow, які "замикають" position:fixed нащадків -->
+  <div class="pt-color-pop" id="ptColorPop">
+    <div class="pt-color-grid" id="ptColorGrid"></div>
+    <input type="color" id="ptColorCustom" title="Свій колір">
   </div>
 
   <div class="page-strip" id="pageStrip">
@@ -571,6 +706,7 @@
     updateUndoRedoButtons();
     const p = state.pages.find(pg => pg.id === id);
     if (p) { p.selectedId = null; renderSelectionOutline(p); applyZoom(); }
+    updatePresentPageLabel();
   }
 
   function getActivePage() {
@@ -1418,6 +1554,7 @@
     const page = getActivePage();
     if (page && tool !== 'select') { page.selectedId = null; renderSelectionOutline(page); }
     document.querySelectorAll('.layer-interact').forEach(c => c.classList.toggle('interact-select', tool === 'select'));
+    syncPresentTools();
   }
 
   function updateSizePreview() {
@@ -1514,6 +1651,7 @@
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.shiftKey) { e.preventDefault(); redo(); return; }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
     if (e.key === 'Escape' && state.screenshotMode) { exitScreenshotMode(); return; }
+    if (e.key === 'Escape' && appEl.classList.contains('presentation-mode')) { exitPresentation(); return; }
     if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) { e.preventDefault(); setZoom(state.zoom + 0.15); return; }
     if ((e.ctrlKey || e.metaKey) && e.key === '-') { e.preventDefault(); setZoom(state.zoom - 0.15); return; }
     if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setZoom(1); return; }
@@ -1531,6 +1669,113 @@
     const map = { v: 'select', p: 'pen', h: 'highlighter', e: 'eraser', t: 'text', s: 'sticky', r: 'rect', c: 'circle', l: 'line', a: 'arrow' };
     if (map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
   });
+
+  // ═══════════════════════ РЕЖИМ ПРЕЗЕНТАЦІЇ ═══════════════════════
+
+  const appEl = document.querySelector('.app');
+  const toolsPanelEl = document.querySelector('.tools-panel');
+
+  function updatePresentPageLabel() {
+    const idx = state.pages.findIndex(p => p.id === state.activePageId);
+    document.getElementById('pbPageLabel').textContent = `${idx + 1}/${state.pages.length}`;
+    document.getElementById('pbPrevPage').disabled = idx <= 0;
+    document.getElementById('pbNextPage').disabled = idx >= state.pages.length - 1;
+  }
+
+  function gotoAdjacentPage(delta) {
+    const idx = state.pages.findIndex(p => p.id === state.activePageId);
+    const next = state.pages[idx + delta];
+    if (next) switchToPage(next.id);
+  }
+
+  function enterPresentation() {
+    appEl.classList.add('presentation-mode');
+    updatePresentPageLabel();
+    syncPresentTools();
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {}); // необов'язково: якщо браузер не дав дозвіл — просто лишаємось у CSS-режимі
+    }
+  }
+
+  function exitPresentation() {
+    appEl.classList.remove('presentation-mode');
+    closePtColorPop();
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  document.getElementById('btnPresent').addEventListener('click', enterPresentation);
+  document.getElementById('btnExitPresent').addEventListener('click', exitPresentation);
+  document.getElementById('pbUndo').addEventListener('click', undo);
+  document.getElementById('pbRedo').addEventListener('click', redo);
+  document.getElementById('pbPrevPage').addEventListener('click', () => gotoAdjacentPage(-1));
+  document.getElementById('pbNextPage').addEventListener('click', () => gotoAdjacentPage(1));
+  // якщо браузер сам вийшов з fullscreen (напр. по Esc) — синхронно виходимо і з режиму презентації
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && appEl.classList.contains('presentation-mode')) exitPresentation();
+  });
+
+  // ── компактна бічна панель інструментів у презентації — дублює ліву панель у міні-вигляді ──
+  document.getElementById('presentTools').querySelectorAll('.pt-btn[data-tool]').forEach(btn => {
+    btn.addEventListener('click', () => setTool(btn.dataset.tool));
+  });
+
+  function syncPresentTools() {
+    document.querySelectorAll('#presentTools .pt-btn[data-tool]').forEach(b => b.classList.toggle('pt-active', b.dataset.tool === state.tool));
+    document.getElementById('ptColorDot').style.background = state.color;
+    document.getElementById('ptColorCustom').value = /^#[0-9a-f]{6}$/i.test(state.color) ? state.color : '#000000';
+    document.getElementById('ptSizeVal').textContent = state.size;
+  }
+
+  function closePtColorPop() { document.getElementById('ptColorPop').classList.remove('show'); }
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.pt-color-wrap') && !e.target.closest('.pt-color-pop')) closePtColorPop();
+  });
+
+  (function initPresentColorGrid() {
+    const grid = document.getElementById('ptColorGrid');
+    PEN_COLORS.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'pt-color-swatch';
+      b.style.background = c;
+      if (c === '#ffffff') b.style.boxShadow = '0 0 0 1.5px var(--border2), inset 0 0 0 1px var(--border2)';
+      b.addEventListener('click', () => {
+        state.color = c;
+        renderSwatches(); updateSizePreview(); syncPresentTools();
+        closePtColorPop();
+      });
+      grid.appendChild(b);
+    });
+  })();
+
+  document.getElementById('ptColorBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const pop = document.getElementById('ptColorPop');
+    const opening = !pop.classList.contains('show');
+    closePtColorPop();
+    if (opening) {
+      const btnRect = e.currentTarget.getBoundingClientRect();
+      const top = Math.max(10, Math.min(window.innerHeight - 160, btnRect.top + btnRect.height / 2 - 70));
+      pop.style.left = (btnRect.right + 10) + 'px';
+      pop.style.top = top + 'px';
+      pop.classList.add('show');
+    }
+  });
+  document.getElementById('ptColorCustom').addEventListener('input', (e) => {
+    state.color = e.target.value;
+    renderSwatches(); updateSizePreview(); syncPresentTools();
+  });
+
+  function ptAdjustSize(delta) {
+    state.size = Math.max(1, Math.min(200, state.size + delta));
+    document.getElementById('sizeRange').value = state.size;
+    document.getElementById('sizeVal').textContent = state.size;
+    updateSizePreview();
+    syncPresentTools();
+  }
+  document.getElementById('ptSizePlus').addEventListener('click', () => ptAdjustSize(1));
+  document.getElementById('ptSizeMinus').addEventListener('click', () => ptAdjustSize(-1));
 
   // ═══════════════════════ СТАРТ ═══════════════════════
 
