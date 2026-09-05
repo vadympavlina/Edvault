@@ -258,6 +258,26 @@
   .sel-tb-btn:hover { background: rgba(255,255,255,.14); color: #fff; }
   .sel-tb-danger:hover { background: var(--danger); color: #fff; }
   .sel-tb-sep { width: 1px; height: 20px; background: rgba(255,255,255,.18); margin: 0 3px; }
+
+  .sel-tb-color-wrap { position: relative; }
+  .sel-tb-swatch-dot { width: 16px; height: 16px; border-radius: 50%; display: block; border: 1.5px solid rgba(255,255,255,.5); }
+  .sel-color-pop {
+    display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 8px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px;
+    box-shadow: var(--shadow-md); z-index: 70; width: 132px;
+  }
+  .sel-color-pop.show { display: block; }
+  .sel-color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
+  .sel-color-swatch {
+    width: 20px; height: 20px; border-radius: 50%; cursor: pointer; padding: 0;
+    border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--border2); transition: transform .12s ease;
+  }
+  .sel-color-swatch:hover { transform: scale(1.12); }
+  .sel-color-pop input[type="color"] { width: 100%; height: 28px; border-radius: 6px; border: 1.5px solid var(--border2); cursor: pointer; padding: 2px; }
+
+  .sel-tb-size { display: flex; align-items: center; gap: 6px; padding: 0 6px; }
+  .sel-tb-size input[type="range"] { width: 70px; accent-color: #7c93ff; }
+  .sel-tb-size span { font-size: 11px; font-weight: 700; color: #d1d5db; font-family: 'JetBrains Mono', monospace; min-width: 16px; text-align: right; }
 </style>
 </head>
 <body>
@@ -406,6 +426,20 @@
 <div class="toast" id="toast"></div>
 
 <div class="sel-toolbar" id="selToolbar">
+  <div class="sel-tb-color-wrap">
+    <button class="sel-tb-btn sel-tb-swatch" id="btnSelColor" title="Колір">
+      <span class="sel-tb-swatch-dot" id="selColorDot"></span>
+    </button>
+    <div class="sel-color-pop" id="selColorPop">
+      <div class="sel-color-grid" id="selColorGrid"></div>
+      <input type="color" id="selColorCustom" title="Свій колір">
+    </div>
+  </div>
+  <div class="sel-tb-size" id="selSizeWrap">
+    <input type="range" id="selSizeRange" min="1" max="60" value="3">
+    <span id="selSizeVal">3</span>
+  </div>
+  <div class="sel-tb-sep"></div>
   <button class="sel-tb-btn" id="btnToBack" title="На задній план">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="2"/><path d="M9 15v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-3"/></svg>
   </button>
@@ -509,6 +543,7 @@
       previewCtx: previewCanvas.getContext('2d'),
       objects: [],
       selectedId: null,
+      editingId: null,
       undoStack: [], redoStack: [],
     };
     state.pages.push(page);
@@ -767,17 +802,25 @@
     return null;
   }
 
-  function renderObjects(page) {
+  function renderObjects(page, skipToolbar) {
     page.objectsCtx.clearRect(0, 0, page.w, page.h);
-    page.objects.forEach(obj => drawObject(page.objectsCtx, obj));
-    renderSelectionOutline(page);
+    page.objects.forEach(obj => { if (obj.id !== page.editingId) drawObject(page.objectsCtx, obj); });
+    renderSelectionOutline(page, skipToolbar);
   }
 
-  function renderSelectionOutline(page) {
+  function redrawObjectsLayerOnly(page) {
+    // легка перемальовка — БЕЗ ручок/рамки/тулбара; використовується під час активного
+    // перетягування (ручка resize / повзунок товщини), щоб не смикати панель щокадру
+    page.objectsCtx.clearRect(0, 0, page.w, page.h);
+    page.objects.forEach(o => { if (o.id !== page.editingId) drawObject(page.objectsCtx, o); });
+  }
+
+  let lastToolbarKey = null; // кеш "obj.id:obj.type" — щоб НЕ перебудовувати DOM палітри кольорів щокадру
+  function renderSelectionOutline(page, skipToolbar) {
     page.previewCtx.clearRect(0, 0, page.w, page.h);
-    if (!page.selectedId) { positionSelToolbar(null); return; }
+    if (!page.selectedId) { positionSelToolbar(null); selCtx = null; lastToolbarKey = null; return; }
     const obj = page.objects.find(o => o.id === page.selectedId);
-    if (!obj) { positionSelToolbar(null); return; }
+    if (!obj) { positionSelToolbar(null); selCtx = null; lastToolbarKey = null; return; }
     const b = objectBounds(obj);
     const ctx = page.previewCtx;
     ctx.save();
@@ -794,12 +837,19 @@
       ctx.strokeRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
     });
     ctx.restore();
-    positionSelToolbar(page, b);
+    selCtx = { page, obj };
+    if (skipToolbar) return; // під час активного перетягування пропускаємо DOM-важку частину (тулбар/палітра)
+    // поки триває перетягування повзунка товщини, тулбар навмисно НЕ переміщуємо —
+    // інакше він "тікає" з-під курсора щокадру й усе виглядає, ніби смикається
+    if (!sizeSessionStarted) positionSelToolbar(page, b);
+    const key = obj.id + ':' + obj.type;
+    updateSelToolbarControls(obj, key !== lastToolbarKey);
+    lastToolbarKey = key;
   }
 
   const selToolbarEl = document.getElementById('selToolbar');
   function positionSelToolbar(page, bounds) {
-    if (!page || !bounds) { selToolbarEl.classList.remove('show'); return; }
+    if (!page || !bounds) { selToolbarEl.classList.remove('show'); closeColorPop(); return; }
     const stageRect = page.stage.getBoundingClientRect();
     const scale = stageRect.width / page.w;
     const left = stageRect.left + (bounds.x + bounds.w / 2) * scale;
@@ -813,6 +863,92 @@
     const page = getActivePage();
     if (page && page.selectedId) renderSelectionOutline(page);
   });
+
+  // ── редагування кольору/товщини вже намальованого об'єкта через плаваючу панель ──
+  let selCtx = null; // { page, obj } — те, що зараз виділено і доступне для правки
+  let colorSessionStarted = false;
+  let sizeSessionStarted = false;
+
+  function updateSelToolbarControls(obj, full) {
+    const dot = document.getElementById('selColorDot');
+    dot.style.background = obj.color;
+    document.getElementById('selColorCustom').value = /^#[0-9a-f]{6}$/i.test(obj.color) ? obj.color : '#000000';
+
+    const range = document.getElementById('selSizeRange');
+    if (obj.size != null && !sizeSessionStarted) range.value = obj.size;
+    document.getElementById('selSizeVal').textContent = Math.round(obj.size ?? 0);
+
+    if (!full) return; // під час активного перетягування пропускаємо перебудову DOM-палітри й ін. — вона важка й смикає
+
+    const grid = document.getElementById('selColorGrid');
+    grid.innerHTML = '';
+    const palette = obj.type === 'sticky' ? STICKY_COLORS : PEN_COLORS;
+    palette.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'sel-color-swatch';
+      b.style.background = c;
+      if (c === '#ffffff') b.style.boxShadow = '0 0 0 1.5px var(--border2), inset 0 0 0 1px var(--border2)';
+      b.addEventListener('click', () => applySelColor(c));
+      grid.appendChild(b);
+    });
+
+    const sizeWrap = document.getElementById('selSizeWrap');
+    const hasSize = obj.type !== 'sticky';
+    sizeWrap.style.display = hasSize ? 'flex' : 'none';
+    if (hasSize) {
+      if (obj.type === 'text') { range.min = 8; range.max = 140; } else { range.min = 1; range.max = 60; }
+    }
+  }
+
+  function applySelColor(c) {
+    if (!selCtx) return;
+    pushUndo(selCtx.page);
+    selCtx.obj.color = c;
+    renderObjects(selCtx.page);
+    closeColorPop();
+  }
+
+  function closeColorPop() { document.getElementById('selColorPop').classList.remove('show'); }
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.sel-tb-color-wrap')) closeColorPop();
+  });
+  document.getElementById('btnSelColor').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const pop = document.getElementById('selColorPop');
+    const opening = !pop.classList.contains('show');
+    closeColorPop();
+    if (opening) { pop.classList.add('show'); colorSessionStarted = false; }
+  });
+  document.getElementById('selColorCustom').addEventListener('input', (e) => {
+    if (!selCtx) return;
+    if (!colorSessionStarted) { pushUndo(selCtx.page); colorSessionStarted = true; }
+    selCtx.obj.color = e.target.value;
+    document.getElementById('selColorDot').style.background = e.target.value;
+    renderObjects(selCtx.page);
+  });
+
+  const selSizeRangeEl = document.getElementById('selSizeRange');
+  selSizeRangeEl.addEventListener('pointerdown', () => { sizeSessionStarted = false; });
+  selSizeRangeEl.addEventListener('input', (e) => {
+    if (!selCtx) return;
+    if (!sizeSessionStarted) { pushUndo(selCtx.page); sizeSessionStarted = true; }
+    const val = Number(e.target.value);
+    const obj = selCtx.obj;
+    obj.size = val;
+    if (obj.type === 'text') {
+      const dims = measureTextDims(selCtx.page, obj.text, val);
+      obj.w = dims.w; obj.h = dims.h;
+    }
+    document.getElementById('selSizeVal').textContent = val;
+    redrawObjectsLayerOnly(selCtx.page); // без ручок/тулбара під час руху повзунка — щоб не смикало
+  });
+  function finishSizeDrag() {
+    if (!sizeSessionStarted) return;
+    sizeSessionStarted = false;
+    if (selCtx) renderSelectionOutline(selCtx.page); // одне повне оновлення ручок/тулбара після відпускання
+  }
+  selSizeRangeEl.addEventListener('change', finishSizeDrag);
+  selSizeRangeEl.addEventListener('pointerup', finishSizeDrag);
 
   function sendSelected(dir) {
     const page = getActivePage();
@@ -1042,7 +1178,7 @@
 
     if (tool === 'select' && state.resizeObj) {
       resizeObject(page, state.resizeObj.obj, state.resizeObj.handleId, pos);
-      renderObjects(page);
+      renderObjects(page, true); // ручки/контур живі, але тулбар не смикаємо під час руху
       return;
     }
 
@@ -1096,7 +1232,12 @@
       return;
     }
 
-    if (tool === 'select') { state.dragObj = null; state.resizeObj = null; return; }
+    if (tool === 'select') {
+      const wasResizing = !!state.resizeObj;
+      state.dragObj = null; state.resizeObj = null;
+      if (wasResizing) renderSelectionOutline(page); // одне повне оновлення ручок/тулбара після відпускання
+      return;
+    }
 
     if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
       page.strokesCtx.restore();
@@ -1132,8 +1273,9 @@
   function openTextEditor(page, pos, existing) {
     const rect = page.interactCanvas.getBoundingClientRect();
     const scale = rect.width / page.w;
-    const anchorX = existing ? existing.x : pos.x;
-    const anchorY = existing ? existing.y : pos.y;
+    const estBoxW = 220, estBoxH = 80; // орієнтовний розмір поля вводу — щоб не вилазило за край сторінки
+    const anchorX = existing ? existing.x : Math.min(pos.x, Math.max(0, page.w - estBoxW / scale - 4));
+    const anchorY = existing ? existing.y : Math.min(pos.y, Math.max(0, page.h - estBoxH / scale - 4));
     const color = existing ? existing.color : state.color;
     const size = existing ? existing.size : Math.max(12, state.size);
 
@@ -1142,7 +1284,7 @@
     box.style.left = (anchorX * scale) + 'px';
     box.style.top = (anchorY * scale) + 'px';
     box.style.width = Math.max(180, page.w * scale - anchorX * scale - 20) + 'px';
-    box.style.height = '80px';
+    box.style.height = estBoxH + 'px';
     box.style.color = color;
     box.style.fontSize = size + 'px';
     box.style.fontWeight = '700';
@@ -1153,11 +1295,15 @@
     function commit() {
       const value = box.value;
       box.remove();
-      if (!value.trim()) { if (existing) { renderObjects(page); } return; }
+      if (!value.trim()) {
+        if (existing) { pushUndo(page); page.objects = page.objects.filter(o => o.id !== existing.id); page.editingId = null; renderObjects(page); }
+        return;
+      }
       pushUndo(page);
       const dims = measureTextDims(page, value, size);
       if (existing) {
         existing.text = value; existing.w = dims.w; existing.h = dims.h;
+        page.editingId = null;
       } else {
         state.objSeq += 1;
         page.objects.push({ id: 'obj' + state.objSeq, type: 'text', x: anchorX, y: anchorY, w: dims.w, h: dims.h, text: value, color, size });
@@ -1165,7 +1311,11 @@
       renderObjects(page);
     }
     box.addEventListener('blur', commit);
-    box.addEventListener('keydown', (e) => { if (e.key === 'Escape') { box.value = existing ? existing.text : ''; box.blur(); } e.stopPropagation(); });
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { box.value = existing ? existing.text : ''; box.blur(); }
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); box.blur(); }
+      e.stopPropagation();
+    });
   }
 
   // ═══════════════════════ СТІКЕРИ ═══════════════════════
@@ -1195,10 +1345,14 @@
     function commit() {
       const value = box.value;
       box.remove();
-      if (!value.trim()) { if (existing) { renderObjects(page); } return; }
+      if (!value.trim()) {
+        if (existing) { pushUndo(page); page.objects = page.objects.filter(o => o.id !== existing.id); page.editingId = null; renderObjects(page); }
+        return;
+      }
       pushUndo(page);
       if (existing) {
         existing.text = value;
+        page.editingId = null;
       } else {
         state.objSeq += 1;
         page.objects.push({ id: 'obj' + state.objSeq, type: 'sticky', x: anchorX, y: anchorY, w: STICKY_W, h: STICKY_H, text: value, color });
@@ -1206,13 +1360,16 @@
       renderObjects(page);
     }
     box.addEventListener('blur', commit);
-    box.addEventListener('keydown', (e) => { if (e.key === 'Escape') { box.value = existing ? existing.text : ''; box.blur(); } e.stopPropagation(); });
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { box.value = existing ? existing.text : ''; box.blur(); }
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); box.blur(); }
+      e.stopPropagation();
+    });
   }
 
   function editExistingObject(page, obj) {
-    // тимчасово ховаємо оригінал, поки він редагується, щоб уникнути візуального дублювання
-    const idx = page.objects.indexOf(obj);
-    if (idx !== -1) page.objects.splice(idx, 1);
+    // не видаляємо з масиву — просто ховаємо під час редагування, щоб не загубити при збереженні
+    page.editingId = obj.id;
     page.selectedId = null;
     renderObjects(page);
     if (obj.type === 'text') openTextEditor(page, { x: obj.x, y: obj.y }, obj);
