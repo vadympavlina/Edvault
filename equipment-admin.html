@@ -115,10 +115,12 @@
   .eq-holder svg { width: 13px; height: 13px; color: var(--muted); flex-shrink: 0; }
   .eq-location-chip {
     display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
-    font-size: 12px; font-weight: 700; color: #067a55; background: var(--success-light);
-    border: 1px solid rgba(16,185,129,.25); padding: 5px 11px 5px 8px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; padding: 5px 11px 5px 8px; border-radius: 999px;
   }
   .eq-location-chip svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .eq-location-chip.loc-reception { color: #067a55; background: var(--success-light); border: 1px solid rgba(16,185,129,.25); }
+  .eq-location-chip.loc-teachers { color: #92400e; background: #fef3c7; border: 1px solid rgba(217,119,6,.3); }
+  .eq-location-chip.loc-other { color: var(--text2); background: var(--surface2); border: 1px solid var(--border2); }
   .eq-card-actions { display: flex; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
   .icon-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; border-radius: 9px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text2); font-size: 12px; font-weight: 700; cursor: pointer; transition: all .13s ease; }
   .icon-btn svg { width: 13px; height: 13px; }
@@ -572,6 +574,12 @@ function formatDateTime(ts) {
   return d.toLocaleDateString('uk-UA') + ' ' + d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
 }
 
+function locationChipClass(location) {
+  if (location === 'Приймальня') return 'loc-reception';
+  if (location === 'Викладацька') return 'loc-teachers';
+  return 'loc-other';
+}
+
 function updateStats() {
   const total = equipment.length;
   const taken = equipment.filter(e => e.status === 'taken').length;
@@ -603,7 +611,7 @@ function renderGrid() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           ${escapeHtml(e.currentHolder || '')} · ${formatDateTime(e.takenAt)}
         </div>` : (e.lastLocation ? `
-        <div class="eq-location-chip">
+        <div class="eq-location-chip ${locationChipClass(e.lastLocation)}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           ${escapeHtml(e.lastLocation)}
         </div>` : '')}
