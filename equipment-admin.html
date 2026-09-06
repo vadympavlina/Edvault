@@ -475,6 +475,37 @@ window.handleRefreshClick = async function () {
   btn.disabled = false;
 };
 
+// ── Одноразова міграція: проставити lastLocation на основі історії ──
+// Для техніки, яку повертали ще до появи поля lastLocation, дивимось
+// останню подію 'return' в equipmentHistory і проставляємо location
+// в сам запис equipment/{token}, якщо техніка зараз вільна (available).
+// Запускається вручну з консолі браузера: migrateLocations()
+window.migrateLocations = async function () {
+  console.log('Міграція locations: старт…');
+  let updated = 0, skipped = 0, noHistory = 0;
+  for (const e of equipment) {
+    if (e.status !== 'available') { skipped++; continue; }
+    if (e.lastLocation) { skipped++; continue; } // вже проставлено, не чіпаємо
+    try {
+      const snap = await get(ref(db, `equipmentHistory/${e.token}`));
+      if (!snap.exists()) { noHistory++; continue; }
+      const events = Object.values(snap.val());
+      const lastReturn = events
+        .filter(ev => ev.type === 'return' && ev.location)
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0];
+      if (!lastReturn) { noHistory++; continue; }
+      await update(ref(db, `equipment/${e.token}`), { lastLocation: lastReturn.location });
+      console.log(`✓ ${e.name}: ${lastReturn.location}`);
+      updated++;
+    } catch (err) {
+      console.error(`✗ Помилка для ${e.name}:`, err);
+    }
+  }
+  console.log(`Готово. Оновлено: ${updated}, пропущено: ${skipped}, без історії з локацією: ${noHistory}`);
+  showToast(`Міграцію завершено: оновлено ${updated} од. техніки`);
+  await loadEquipment();
+};
+
 function setListState(state) {
   document.getElementById('loading-block').classList.toggle('visible', state === 'loading');
   document.getElementById('error-block').classList.toggle('visible', state === 'error');
