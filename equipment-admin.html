@@ -101,6 +101,8 @@
   .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .eq-holder { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 6px; }
   .eq-holder svg { width: 13px; height: 13px; color: var(--muted); }
+  .eq-holder.eq-location { color: var(--success); font-weight: 600; }
+  .eq-holder.eq-location svg { color: var(--success); }
   .eq-card-actions { display: flex; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
   .icon-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; border-radius: 9px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text2); font-size: 12px; font-weight: 700; cursor: pointer; transition: all .13s ease; }
   .icon-btn svg { width: 13px; height: 13px; }
@@ -504,7 +506,11 @@ function renderGrid() {
         <div class="eq-holder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           ${escapeHtml(e.currentHolder || '')} · ${formatDateTime(e.takenAt)}
-        </div>` : ''}
+        </div>` : (e.lastLocation ? `
+        <div class="eq-holder eq-location">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          ${escapeHtml(e.lastLocation)}
+        </div>` : '')}
       <div class="eq-card-actions">
         <button class="icon-btn" onclick="openQrModal('${e.token}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg>
