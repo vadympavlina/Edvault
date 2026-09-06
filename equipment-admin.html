@@ -149,7 +149,16 @@
   .field label { font-size: 12px; font-weight: 700; color: var(--text2); }
   .field input { font-family: inherit; font-size: 13.5px; color: var(--text); border: 1.5px solid var(--border2); border-radius: 10px; padding: 9px 12px; outline: none; transition: border-color .13s ease; background: var(--surface); width: 100%; }
   .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.1); }
+  .field select {
+    font-family: inherit; font-size: 13.5px; color: var(--text); border: 1.5px solid var(--border2);
+    border-radius: 10px; padding: 9px 34px 9px 12px; outline: none; transition: border-color .13s ease;
+    background-color: var(--surface); width: 100%; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; background-size: 16px;
+  }
+  .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.1); }
   .form-error { font-size: 12px; font-weight: 600; color: var(--danger); background: var(--danger-light); border: 1px solid #fecaca; border-radius: 9px; padding: 8px 12px; display: none; }
+  .field-hint { font-size: 12px; color: var(--muted); background: var(--surface2); border-radius: 9px; padding: 9px 12px; margin-top: -6px; }
   .form-error.visible { display: block; }
 
   /* QR modal */
@@ -293,6 +302,15 @@
         <label for="f-eq-name">Назва техніки</label>
         <input type="text" id="f-eq-name" placeholder="Web Camera Logitech C920">
       </div>
+      <div class="field" id="f-eq-location-wrap">
+        <label for="f-eq-location">Де зараз перебуває</label>
+        <select id="f-eq-location">
+          <option value="">Не вказано</option>
+          <option value="Приймальня">Приймальня</option>
+          <option value="Викладацька">Викладацька</option>
+        </select>
+      </div>
+      <div class="field-hint" id="f-eq-location-taken-hint" style="display:none;">Техніка зараз видана — місце проставиться автоматично, коли її повернуть.</div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeAddModal()">Скасувати</button>
@@ -629,6 +647,9 @@ window.openAddModal = function () {
   editingToken = null;
   document.getElementById('add-modal-title').textContent = 'Нова техніка';
   document.getElementById('f-eq-name').value = '';
+  document.getElementById('f-eq-location').value = '';
+  document.getElementById('f-eq-location-wrap').style.display = 'block';
+  document.getElementById('f-eq-location-taken-hint').style.display = 'none';
   document.getElementById('add-form-error').classList.remove('visible');
   document.getElementById('add-modal-overlay').classList.add('visible');
   setTimeout(() => document.getElementById('f-eq-name').focus(), 50);
@@ -639,6 +660,14 @@ window.openEditModal = function (token) {
   editingToken = token;
   document.getElementById('add-modal-title').textContent = 'Редагування техніки';
   document.getElementById('f-eq-name').value = e.name;
+  if (e.status === 'taken') {
+    document.getElementById('f-eq-location-wrap').style.display = 'none';
+    document.getElementById('f-eq-location-taken-hint').style.display = 'block';
+  } else {
+    document.getElementById('f-eq-location').value = e.lastLocation || '';
+    document.getElementById('f-eq-location-wrap').style.display = 'block';
+    document.getElementById('f-eq-location-taken-hint').style.display = 'none';
+  }
   document.getElementById('add-form-error').classList.remove('visible');
   document.getElementById('add-modal-overlay').classList.add('visible');
 };
@@ -646,16 +675,20 @@ window.closeAddModal = function () { document.getElementById('add-modal-overlay'
 
 window.saveEquipment = async function () {
   const name = document.getElementById('f-eq-name').value.trim();
+  const locationFieldVisible = document.getElementById('f-eq-location-wrap').style.display !== 'none';
+  const location = document.getElementById('f-eq-location').value;
   const errEl = document.getElementById('add-form-error');
   errEl.classList.remove('visible');
   if (!name) { errEl.textContent = 'Вкажи назву техніки.'; errEl.classList.add('visible'); return; }
 
   try {
     if (editingToken) {
-      await update(ref(db, `equipment/${editingToken}`), { name });
+      const payload = { name };
+      if (locationFieldVisible) payload.lastLocation = location || null;
+      await update(ref(db, `equipment/${editingToken}`), payload);
     } else {
       const token = generateToken();
-      await set(ref(db, `equipment/${token}`), { name, status: 'available', currentHolder: null, takenAt: null });
+      await set(ref(db, `equipment/${token}`), { name, status: 'available', currentHolder: null, takenAt: null, lastLocation: location || null });
     }
     showToast(editingToken ? 'Зміни збережено' : 'Техніку додано');
     closeAddModal();
