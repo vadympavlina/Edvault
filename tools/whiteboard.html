@@ -67,6 +67,8 @@
   }
   .btn-icon:hover:not(:disabled) { background: var(--surface2); color: var(--text); border-color: var(--muted); }
   .btn-icon:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-icon-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-icon-active:hover { background: var(--accent-hover); color: #fff; border-color: var(--accent-hover); }
   .btn-icon svg { width: 16px; height: 16px; }
 
   /* =========== TOPBAR =========== */
@@ -187,7 +189,9 @@
   .empty-state {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
     color: var(--muted); text-align: center; margin: auto;
+    position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0; transition: opacity .2s ease;
   }
+  .empty-state.show { opacity: 1; }
   .empty-state svg { width: 56px; height: 56px; opacity: .5; }
   .empty-state p { font-size: 13.5px; max-width: 280px; line-height: 1.5; }
 
@@ -263,11 +267,11 @@
   .sel-tb-swatch-dot { width: 16px; height: 16px; border-radius: 50%; display: block; border: 1.5px solid rgba(255,255,255,.5); }
   .sel-color-pop {
     display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 8px;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px;
-    box-shadow: var(--shadow-md); z-index: 70; width: 132px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px;
+    box-shadow: var(--shadow-md); z-index: 70; width: 156px;
   }
   .sel-color-pop.show { display: block; }
-  .sel-color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
+  .sel-color-grid { display: grid; grid-template-columns: repeat(5, 20px); gap: 7px; margin-bottom: 8px; justify-content: space-between; }
   .sel-color-swatch {
     width: 20px; height: 20px; border-radius: 50%; cursor: pointer; padding: 0;
     border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--border2); transition: transform .12s ease;
@@ -322,16 +326,24 @@
   .pt-color-dot { width: 17px; height: 17px; border-radius: 50%; display: block; border: 1.5px solid rgba(255,255,255,.5); }
   .pt-color-pop {
     display: none; position: fixed; /* fixed, а не absolute — щоб overflow:auto бічної панелі не обрізав попап */
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px;
-    box-shadow: var(--shadow-md); width: 132px; z-index: 96;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px;
+    box-shadow: var(--shadow-md); width: 156px; z-index: 96;
   }
   .pt-color-pop.show { display: block; }
-  .pt-color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
+  .pt-color-grid { display: grid; grid-template-columns: repeat(5, 20px); gap: 7px; margin-bottom: 8px; justify-content: space-between; }
   .pt-color-swatch {
     width: 20px; height: 20px; border-radius: 50%; cursor: pointer; padding: 0;
     border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--border2);
   }
-  .pt-color-pop input[type="color"] { width: 100%; height: 28px; border-radius: 6px; border: 1.5px solid var(--border2); cursor: pointer; padding: 2px; }
+  .pt-color-custom-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    border: 1.5px solid var(--border2); border-radius: 8px; padding: 6px 8px 6px 10px; cursor: pointer; transition: border-color .12s ease;
+  }
+  .pt-color-custom-row:hover { border-color: var(--muted); }
+  .pt-color-custom-row span { font-size: 11.5px; font-weight: 700; color: var(--text2); }
+  .pt-color-custom-row input[type="color"] {
+    width: 26px; height: 26px; border-radius: 6px; border: 1.5px solid var(--border2); cursor: pointer; padding: 2px; flex-shrink: 0;
+  }
   .pt-size-row { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
   .pt-size-btn {
     width: 24px; height: 20px; border-radius: 6px; border: none; background: rgba(255,255,255,.1); color: #d1d5db;
@@ -362,13 +374,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M21 13a9 9 0 1 1-3-6.7L21 9"/></svg>
       </button>
       <div class="topbar-divider"></div>
-      <button class="btn btn-ghost" id="btnClearPage" title="Очистити малюнки на сторінці">
+      <button class="btn-icon" id="btnClearPage" title="Очистити малюнки на сторінці">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-        Очистити
       </button>
-      <button class="btn btn-ghost" id="btnScreenshot" title="Виділити область і зберегти як зображення">
+      <button class="btn-icon" id="btnScreenshot" title="Виділити область і зберегти як зображення">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3M6 18v3M3 6h3M18 6h3M3 18h3M18 18h3M9 3h6M9 21h6M21 9v6M3 9v6"/></svg>
-        Скріншот
       </button>
       <div class="topbar-divider"></div>
       <input type="file" id="pdfInput" accept="application/pdf" style="display:none;">
@@ -546,7 +556,10 @@
   <!-- поза .present-tools навмисно: та панель має transform+overflow, які "замикають" position:fixed нащадків -->
   <div class="pt-color-pop" id="ptColorPop">
     <div class="pt-color-grid" id="ptColorGrid"></div>
-    <input type="color" id="ptColorCustom" title="Свій колір">
+    <label class="pt-color-custom-row" for="ptColorCustom">
+      <span>Свій колір</span>
+      <input type="color" id="ptColorCustom">
+    </label>
   </div>
 
   <div class="page-strip" id="pageStrip">
@@ -671,8 +684,19 @@
     stage.appendChild(previewCanvas);
     stage.appendChild(interactCanvas);
 
+    let emptyHintEl = null;
+    if (!bgImage) {
+      // підказка тільки на чистій сторінці — на PDF-сторінках і так є вміст для читання
+      emptyHintEl = document.createElement('div');
+      emptyHintEl.className = 'empty-state show';
+      emptyHintEl.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        <p>Порожня сторінка — обери інструмент зліва й почни малювати</p>`;
+      stage.appendChild(emptyHintEl);
+    }
+
     const page = {
-      id, w, h, stage, bgCanvas, strokesCanvas, objectsCanvas, previewCanvas, interactCanvas,
+      id, w, h, stage, bgCanvas, strokesCanvas, objectsCanvas, previewCanvas, interactCanvas, emptyHintEl,
       strokesCtx: strokesCanvas.getContext('2d'),
       objectsCtx: objectsCanvas.getContext('2d'),
       previewCtx: previewCanvas.getContext('2d'),
@@ -685,6 +709,12 @@
     viewport.appendChild(stage);
     bindPageEvents(page);
     return page;
+  }
+
+  function updateEmptyHint(page) {
+    if (!page.emptyHintEl) return; // PDF-сторінка — підказки нема
+    const isEmpty = page.objects.length === 0 && !page.hasStrokes;
+    page.emptyHintEl.classList.toggle('show', isEmpty);
   }
 
   function removePage(id) {
@@ -738,13 +768,14 @@
   function cloneObjects(arr) { return arr.map(o => ({ ...o })); }
 
   function snapshot(page) {
-    return { strokes: page.strokesCtx.getImageData(0, 0, page.w, page.h), objects: cloneObjects(page.objects) };
+    return { strokes: page.strokesCtx.getImageData(0, 0, page.w, page.h), objects: cloneObjects(page.objects), hasStrokes: !!page.hasStrokes };
   }
 
   function applySnapshot(page, snap) {
     page.strokesCtx.putImageData(snap.strokes, 0, 0);
     page.objects = cloneObjects(snap.objects);
     page.selectedId = null;
+    page.hasStrokes = !!snap.hasStrokes;
     renderObjects(page);
   }
 
@@ -942,6 +973,7 @@
     page.objectsCtx.clearRect(0, 0, page.w, page.h);
     page.objects.forEach(obj => { if (obj.id !== page.editingId) drawObject(page.objectsCtx, obj); });
     renderSelectionOutline(page, skipToolbar);
+    updateEmptyHint(page);
   }
 
   function redrawObjectsLayerOnly(page) {
@@ -1177,16 +1209,14 @@
   function enterScreenshotMode() {
     state.screenshotMode = true;
     document.querySelectorAll('.layer-interact').forEach(c => c.classList.add('interact-screenshot'));
-    document.getElementById('btnScreenshot').classList.add('btn-primary');
-    document.getElementById('btnScreenshot').classList.remove('btn-ghost');
+    document.getElementById('btnScreenshot').classList.add('btn-icon-active');
     showToast('Виділіть область на полотні для скріншота');
   }
 
   function exitScreenshotMode() {
     state.screenshotMode = false;
     document.querySelectorAll('.layer-interact').forEach(c => c.classList.remove('interact-screenshot'));
-    document.getElementById('btnScreenshot').classList.remove('btn-primary');
-    document.getElementById('btnScreenshot').classList.add('btn-ghost');
+    document.getElementById('btnScreenshot').classList.remove('btn-icon-active');
   }
 
   document.getElementById('btnScreenshot').addEventListener('click', () => {
@@ -1269,6 +1299,7 @@
 
     if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
       pushUndo(page);
+      if (page.emptyHintEl) { page.hasStrokes = true; page.emptyHintEl.classList.remove('show'); }
       const ctx = page.strokesCtx;
       ctx.save();
       ctx.lineCap = 'round';
@@ -1595,6 +1626,7 @@
     page.strokesCtx.clearRect(0, 0, page.w, page.h);
     page.objects = [];
     page.selectedId = null;
+    page.hasStrokes = false;
     renderObjects(page);
   });
 
