@@ -116,7 +116,7 @@
   .tool-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
   .style-trigger-dot {
     position: absolute; bottom: 5px; right: 9px; width: 9px; height: 9px; border-radius: 50%;
-    box-shadow: 0 0 0 2px var(--surface); background: #1a1d23; display: block !important;
+    box-shadow: 0 0 0 2px var(--surface); background: #ef4444; display: block !important;
   }
 
   /* =========== ПЛАВАЮЧИЙ ПОПАП «Колір і товщина» (додано) — виринає біля вузької панелі,
@@ -291,6 +291,15 @@
   .sel-tb-btn:hover { background: rgba(255,255,255,.14); color: #fff; }
   .sel-tb-danger:hover { background: var(--danger); color: #fff; }
   .sel-tb-sep { width: 1px; height: 20px; background: rgba(255,255,255,.18); margin: 0 3px; }
+
+  /* =========== ГРУПОВЕ ВИДІЛЕННЯ (додано) =========== */
+  .sel-tb-count {
+    display: none; font-size: 11px; font-weight: 700; color: #d1d5db; padding: 0 8px 0 6px;
+    font-family: 'JetBrains Mono', monospace; white-space: nowrap;
+  }
+  .sel-toolbar.group-mode .sel-tb-count { display: inline-block; }
+  .sel-toolbar.group-mode .sel-tb-color-wrap,
+  .sel-toolbar.group-mode .sel-tb-size { display: none; }
 
   .sel-tb-color-wrap { position: relative; }
   .sel-tb-swatch-dot { width: 16px; height: 16px; border-radius: 50%; display: block; border: 1.5px solid rgba(255,255,255,.5); }
@@ -574,7 +583,7 @@
         <div class="tp-label">Колір</div>
         <div class="swatch-grid" id="swatchGrid"></div>
         <div class="color-custom-row">
-          <input type="color" id="customColor" value="#1a1d23">
+          <input type="color" id="customColor" value="#ef4444">
           <span>Свій колір</span>
         </div>
       </div>
@@ -700,7 +709,8 @@
 <div class="toast" id="toast"></div>
 
 <div class="sel-toolbar" id="selToolbar">
-  <div class="sel-tb-color-wrap">
+  <span class="sel-tb-count" id="selTbCount"></span>
+  <div class="sel-tb-color-wrap" id="selColorWrap">
     <button class="sel-tb-btn sel-tb-swatch" id="btnSelColor" title="Колір">
       <span class="sel-tb-swatch-dot" id="selColorDot"></span>
     </button>
@@ -751,6 +761,11 @@
       <div class="kbd-row"><span>Скасувати</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">Z</span></span></div>
       <div class="kbd-row"><span>Повторити</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">Shift</span><span class="kbd">Z</span></span></div>
       <div class="kbd-row"><span>Видалити виділене</span><span class="kbd-keys"><span class="kbd">Del</span></span></div>
+      <div class="kbd-group-label">Групове виділення (інструмент "Виділити")</div>
+      <div class="kbd-row"><span>Тягнути рамкою по порожньому місцю</span><span class="kbd-keys"><span class="kbd">Тягнути</span></span></div>
+      <div class="kbd-row"><span>Додати/прибрати об'єкт із виділення</span><span class="kbd-keys"><span class="kbd">Shift</span><span class="kbd">+ клік</span></span></div>
+      <div class="kbd-row"><span>Виділити всі об'єкти сторінки</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">A</span></span></div>
+      <div class="kbd-row"><span>Зняти виділення</span><span class="kbd-keys"><span class="kbd">Esc</span></span></div>
       <div class="kbd-group-label">Переміщення полотном</div>
       <div class="kbd-row"><span>Тягнути в будь-якому напрямку</span><span class="kbd-keys"><span class="kbd">Пробіл</span><span class="kbd">+ тягнути</span></span></div>
       <div class="kbd-row"><span>Тягнути в будь-якому напрямку</span><span class="kbd-keys"><span class="kbd">Середня кнопка</span></span></div>
@@ -781,15 +796,16 @@
 
   const state = {
     tool: 'pen',
-    color: '#1a1d23',
+    color: '#ef4444',
     stickyColor: STICKY_COLORS[0],
     size: TOOL_DEFAULT_SIZE.pen,
     pages: [],
     activePageId: null,
     drawing: false,
     dragStart: null,
-    dragObj: null,       // { offX, offY } або { offX1,offY1,offX2,offY2 } під час перетягування об'єкта
+    dragGroup: null,     // масив { obj, offX, offY } або { obj, offX1,offY1,offX2,offY2 } — переміщення одного чи кількох об'єктів разом (додано: групове виділення)
     resizeObj: null,     // { obj, handleId } під час зміни розміру за ручку
+    marqueeSelect: false, // тягнемо рамку групового виділення по порожньому місцю (додано)
     pageSeq: 0,
     objSeq: 0,
     screenshotMode: false,
@@ -867,6 +883,7 @@
       previewCtx: previewCanvas.getContext('2d'),
       objects: [],
       selectedId: null,
+      selectedIds: [],  // групове виділення (додано) — містить selectedId і решту обраних об'єктів
       editingId: null,
       undoStack: [], redoStack: [],
     };
@@ -901,7 +918,7 @@
     updateUndoRedoButtons();
     const p = state.pages.find(pg => pg.id === id);
     if (p) {
-      p.selectedId = null; renderSelectionOutline(p); applyZoom();
+      p.selectedId = null; p.selectedIds = []; renderSelectionOutline(p); applyZoom();
       sizeWorldForPage(p); centerWorldScroll();
     }
     updatePresentPageLabel();
@@ -979,7 +996,7 @@
   function applySnapshot(page, snap) {
     page.strokesCtx.putImageData(snap.strokes, 0, 0);
     page.objects = cloneObjects(snap.objects);
-    page.selectedId = null;
+    page.selectedId = null; page.selectedIds = [];
     page.hasStrokes = !!snap.hasStrokes;
     renderObjects(page);
     scheduleThumbRefresh();
@@ -1117,6 +1134,7 @@
 
   function hitTestHandle(page, pos) {
     if (!page.selectedId) return null;
+    if (page.selectedIds && page.selectedIds.length > 1) return null; // ручки resize — лише для одиночного виділення (додано)
     const obj = page.objects.find(o => o.id === page.selectedId);
     if (!obj) return null;
     const tol = 11 / state.zoom;
@@ -1193,33 +1211,64 @@
   let lastToolbarKey = null; // кеш "obj.id:obj.type" — щоб НЕ перебудовувати DOM палітри кольорів щокадру
   function renderSelectionOutline(page, skipToolbar) {
     page.previewCtx.clearRect(0, 0, page.w, page.h);
-    if (!page.selectedId) { positionSelToolbar(null); selCtx = null; lastToolbarKey = null; return; }
-    const obj = page.objects.find(o => o.id === page.selectedId);
-    if (!obj) { positionSelToolbar(null); selCtx = null; lastToolbarKey = null; return; }
-    const b = objectBounds(obj);
+    const ids = (page.selectedIds && page.selectedIds.length) ? page.selectedIds : (page.selectedId ? [page.selectedId] : []);
+    const objs = ids.map(id => page.objects.find(o => o.id === id)).filter(Boolean);
+
+    if (!objs.length) {
+      page.selectedIds = []; page.selectedId = null;
+      positionSelToolbar(null); selCtx = null; lastToolbarKey = null;
+      selToolbarEl.classList.remove('group-mode');
+      return;
+    }
+
     const ctx = page.previewCtx;
     ctx.save();
     ctx.strokeStyle = '#4F6BF4';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([6, 4]);
-    ctx.strokeRect(b.x - 6, b.y - 6, b.w + 12, b.h + 12);
-    ctx.setLineDash([]);
-    const hs = 9 / state.zoom; // сталий розмір ручки на екрані незалежно від масштабу
-    ctx.fillStyle = '#ffffff';
-    ctx.lineWidth = 1.5;
-    objectHandles(obj).forEach(h => {
-      ctx.fillRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
-      ctx.strokeRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+    objs.forEach(o => {
+      const b = objectBounds(o);
+      ctx.strokeRect(b.x - 6, b.y - 6, b.w + 12, b.h + 12);
     });
+    ctx.setLineDash([]);
+
+    if (objs.length === 1) {
+      // єдиний обраний об'єкт — як і раніше, показуємо ручки для зміни розміру
+      const obj = objs[0];
+      const hs = 9 / state.zoom; // сталий розмір ручки на екрані незалежно від масштабу
+      ctx.fillStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      objectHandles(obj).forEach(h => {
+        ctx.fillRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+        ctx.strokeRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+      });
+    }
     ctx.restore();
-    selCtx = { page, obj };
+
+    // об'єднана рамка всіх обраних об'єктів — для позиціювання плаваючої панельки (додано)
+    const bounds = objs.map(objectBounds);
+    const ub = {
+      x: Math.min(...bounds.map(b => b.x)), y: Math.min(...bounds.map(b => b.y)),
+      x2: Math.max(...bounds.map(b => b.x + b.w)), y2: Math.max(...bounds.map(b => b.y + b.h)),
+    };
+    const unionBounds = { x: ub.x, y: ub.y, w: ub.x2 - ub.x, h: ub.y2 - ub.y };
+
+    selCtx = objs.length === 1 ? { page, obj: objs[0] } : null;
+    selToolbarEl.classList.toggle('group-mode', objs.length > 1);
+    document.getElementById('selTbCount').textContent = objs.length > 1 ? `Обрано: ${objs.length}` : '';
+
     if (skipToolbar) return; // під час активного перетягування пропускаємо DOM-важку частину (тулбар/палітра)
     // поки триває перетягування повзунка товщини, тулбар навмисно НЕ переміщуємо —
     // інакше він "тікає" з-під курсора щокадру й усе виглядає, ніби смикається
-    if (!sizeSessionStarted) positionSelToolbar(page, b);
-    const key = obj.id + ':' + obj.type;
-    updateSelToolbarControls(obj, key !== lastToolbarKey);
-    lastToolbarKey = key;
+    if (!sizeSessionStarted) positionSelToolbar(page, unionBounds);
+    if (objs.length === 1) {
+      const obj = objs[0];
+      const key = obj.id + ':' + obj.type;
+      updateSelToolbarControls(obj, key !== lastToolbarKey);
+      lastToolbarKey = key;
+    } else {
+      lastToolbarKey = null;
+    }
   }
 
   const selToolbarEl = document.getElementById('selToolbar');
@@ -1236,7 +1285,7 @@
   // тримаємо панельку прив'язаною до об'єкта і під час скролу полотна
   document.getElementById('canvasViewport').addEventListener('scroll', () => {
     const page = getActivePage();
-    if (page && page.selectedId) renderSelectionOutline(page);
+    if (page && (page.selectedId || (page.selectedIds && page.selectedIds.length))) renderSelectionOutline(page);
   });
 
   // ── редагування кольору/товщини вже намальованого об'єкта через плаваючу панель ──
@@ -1327,22 +1376,24 @@
 
   function sendSelected(dir) {
     const page = getActivePage();
-    if (!page || !page.selectedId) return;
-    const idx = page.objects.findIndex(o => o.id === page.selectedId);
-    if (idx === -1) return;
+    const ids = page && page.selectedIds && page.selectedIds.length ? page.selectedIds : (page && page.selectedId ? [page.selectedId] : []);
+    if (!page || !ids.length) return;
     pushUndo(page);
-    const [obj] = page.objects.splice(idx, 1);
-    if (dir === 'back') page.objects.unshift(obj); else page.objects.push(obj);
+    // забираємо обрані об'єкти (зберігаючи їх відносний порядок між собою) і повертаємо групою на новий план (додано: групова дія)
+    const moved = ids.map(id => page.objects.find(o => o.id === id)).filter(Boolean);
+    page.objects = page.objects.filter(o => !ids.includes(o.id));
+    if (dir === 'back') page.objects.unshift(...moved); else page.objects.push(...moved);
     renderObjects(page);
   }
   document.getElementById('btnToBack').addEventListener('click', () => sendSelected('back'));
   document.getElementById('btnToFront').addEventListener('click', () => sendSelected('front'));
   document.getElementById('btnDeleteSel').addEventListener('click', () => {
     const page = getActivePage();
-    if (!page || !page.selectedId) return;
+    const ids = page && page.selectedIds && page.selectedIds.length ? page.selectedIds : (page && page.selectedId ? [page.selectedId] : []);
+    if (!page || !ids.length) return;
     pushUndo(page);
-    page.objects = page.objects.filter(o => o.id !== page.selectedId);
-    page.selectedId = null;
+    page.objects = page.objects.filter(o => !ids.includes(o.id));
+    page.selectedIds = []; page.selectedId = null;
     renderObjects(page);
   });
 
@@ -1510,7 +1561,7 @@
     if (state.screenshotMode) { exitScreenshotMode(); return; }
     const page = getActivePage();
     if (!page) return;
-    page.selectedId = null;
+    page.selectedId = null; page.selectedIds = [];
     renderSelectionOutline(page);
     enterScreenshotMode();
   });
@@ -1560,19 +1611,35 @@
       }
       const hit = hitTestObjects(page, pos);
       if (hit) {
-        page.selectedId = hit.id;
-        pushUndo(page); // знімок ДО переміщення — щоб Undo повертав об'єкт на місце одним кроком
-        state.drawing = true;
-        if (hit.x1 !== undefined) {
-          // прямокутник / коло / лінія / стрілка — усі зберігаються як відрізок (x1,y1)-(x2,y2)
-          state.dragObj = { obj: hit, offX1: pos.x - hit.x1, offY1: pos.y - hit.y1, offX2: pos.x - hit.x2, offY2: pos.y - hit.y2 };
-        } else {
-          state.dragObj = { obj: hit, offX: pos.x - hit.x, offY: pos.y - hit.y };
+        // Shift+клік — додати/прибрати один об'єкт із групового виділення, без старту перетягування (додано)
+        if (e.shiftKey) {
+          const idx = page.selectedIds.indexOf(hit.id);
+          if (idx === -1) page.selectedIds.push(hit.id); else page.selectedIds.splice(idx, 1);
+          page.selectedId = page.selectedIds.length ? page.selectedIds[page.selectedIds.length - 1] : null;
+          renderObjects(page);
+          return;
         }
+        // клік по об'єкту, який вже частина групи, — тягнемо всю групу; інакше вибираємо тільки його (додано)
+        if (!(page.selectedIds.length > 1 && page.selectedIds.includes(hit.id))) {
+          page.selectedIds = [hit.id];
+        }
+        page.selectedId = hit.id;
+        pushUndo(page); // знімок ДО переміщення — щоб Undo повертав об'єкт(и) на місце одним кроком
+        state.drawing = true;
+        state.dragGroup = page.selectedIds.map(id => {
+          const o = page.objects.find(ob => ob.id === id);
+          return o.x1 !== undefined
+            ? { obj: o, offX1: pos.x - o.x1, offY1: pos.y - o.y1, offX2: pos.x - o.x2, offY2: pos.y - o.y2 }
+            : { obj: o, offX: pos.x - o.x, offY: pos.y - o.y };
+        });
         renderObjects(page);
       } else {
-        page.selectedId = null;
-        state.dragObj = null;
+        // клік по порожньому місцю — починаємо тягнути рамку групового виділення (додано)
+        state.drawing = true;
+        state.marqueeSelect = true;
+        state.dragStart = pos;
+        if (!e.shiftKey) { page.selectedIds = []; page.selectedId = null; }
+        state.dragGroup = null;
         renderObjects(page);
       }
       return;
@@ -1636,14 +1703,33 @@
       return;
     }
 
-    if (tool === 'select' && state.dragObj) {
-      const obj = state.dragObj.obj;
-      if (obj.x1 !== undefined) {
-        obj.x1 = pos.x - state.dragObj.offX1; obj.y1 = pos.y - state.dragObj.offY1;
-        obj.x2 = pos.x - state.dragObj.offX2; obj.y2 = pos.y - state.dragObj.offY2;
-      } else {
-        obj.x = pos.x - state.dragObj.offX; obj.y = pos.y - state.dragObj.offY;
-      }
+    if (tool === 'select' && state.marqueeSelect) {
+      // малюємо рамку групового виділення поки тягнемо (додано)
+      const pctx = page.previewCtx;
+      pctx.clearRect(0, 0, page.w, page.h);
+      const x = Math.min(state.dragStart.x, pos.x), y = Math.min(state.dragStart.y, pos.y);
+      const w = Math.abs(pos.x - state.dragStart.x), h = Math.abs(pos.y - state.dragStart.y);
+      pctx.save();
+      pctx.strokeStyle = '#4F6BF4';
+      pctx.lineWidth = 1.5 / state.zoom;
+      pctx.setLineDash([6 / state.zoom, 4 / state.zoom]);
+      pctx.fillStyle = 'rgba(79,107,244,.08)';
+      pctx.fillRect(x, y, w, h);
+      pctx.strokeRect(x, y, w, h);
+      pctx.restore();
+      return;
+    }
+
+    if (tool === 'select' && state.dragGroup) {
+      // рухаємо всі обрані об'єкти одночасно на однакову дельту (додано: групове переміщення)
+      state.dragGroup.forEach(({ obj, offX1, offY1, offX2, offY2, offX, offY }) => {
+        if (obj.x1 !== undefined) {
+          obj.x1 = pos.x - offX1; obj.y1 = pos.y - offY1;
+          obj.x2 = pos.x - offX2; obj.y2 = pos.y - offY2;
+        } else {
+          obj.x = pos.x - offX; obj.y = pos.y - offY;
+        }
+      });
       renderObjects(page);
       return;
     }
@@ -1688,7 +1774,31 @@
 
     if (tool === 'select') {
       const wasResizing = !!state.resizeObj;
-      state.dragObj = null; state.resizeObj = null;
+      state.resizeObj = null;
+
+      if (state.marqueeSelect) {
+        // завершуємо рамку групового виділення — обираємо всі об'єкти, що перетинаються з нею (додано)
+        state.marqueeSelect = false;
+        const pos = getPos(e, page.interactCanvas);
+        const rx = Math.min(state.dragStart.x, pos.x), ry = Math.min(state.dragStart.y, pos.y);
+        const rw = Math.abs(pos.x - state.dragStart.x), rh = Math.abs(pos.y - state.dragStart.y);
+        if (rw > 3 || rh > 3) { // ігноруємо випадковий клік майже без руху
+          const hitIds = page.objects
+            .filter(o => {
+              const b = objectBounds(o);
+              return rx < b.x + b.w && rx + rw > b.x && ry < b.y + b.h && ry + rh > b.y;
+            })
+            .map(o => o.id);
+          const merged = e.shiftKey ? Array.from(new Set([...page.selectedIds, ...hitIds])) : hitIds;
+          page.selectedIds = merged;
+          page.selectedId = merged.length ? merged[merged.length - 1] : null;
+        }
+        page.previewCtx.clearRect(0, 0, page.w, page.h);
+        renderObjects(page);
+        return;
+      }
+
+      state.dragGroup = null;
       if (wasResizing) renderSelectionOutline(page); // одне повне оновлення ручок/тулбара після відпускання
       return;
     }
@@ -1824,7 +1934,7 @@
   function editExistingObject(page, obj) {
     // не видаляємо з масиву — просто ховаємо під час редагування, щоб не загубити при збереженні
     page.editingId = obj.id;
-    page.selectedId = null;
+    page.selectedId = null; page.selectedIds = [];
     renderObjects(page);
     if (obj.type === 'text') openTextEditor(page, { x: obj.x, y: obj.y }, obj);
     else if (obj.type === 'sticky') openStickyEditor(page, { x: obj.x, y: obj.y }, obj);
@@ -1875,7 +1985,7 @@
     const stylePop = document.getElementById('toolsOptionsPop');
     if (tool === 'select' && stylePop) stylePop.classList.remove('show');
     const page = getActivePage();
-    if (page && tool !== 'select') { page.selectedId = null; renderSelectionOutline(page); }
+    if (page && tool !== 'select') { page.selectedId = null; page.selectedIds = []; renderSelectionOutline(page); }
     document.querySelectorAll('.layer-interact').forEach(c => c.classList.toggle('interact-select', tool === 'select'));
     syncPresentTools();
   }
@@ -1919,7 +2029,7 @@
     pushUndo(page);
     page.strokesCtx.clearRect(0, 0, page.w, page.h);
     page.objects = [];
-    page.selectedId = null;
+    page.selectedId = null; page.selectedIds = [];
     page.hasStrokes = false;
     renderObjects(page);
     scheduleThumbRefresh();
@@ -1990,11 +2100,30 @@
     if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setZoom(1); return; }
     if (e.key === 'Delete' || e.key === 'Backspace') {
       const page = getActivePage();
-      if (page && page.selectedId) {
+      const ids = page && page.selectedIds && page.selectedIds.length ? page.selectedIds : (page && page.selectedId ? [page.selectedId] : []);
+      if (page && ids.length) {
         e.preventDefault();
         pushUndo(page);
-        page.objects = page.objects.filter(o => o.id !== page.selectedId);
-        page.selectedId = null;
+        page.objects = page.objects.filter(o => !ids.includes(o.id));
+        page.selectedIds = []; page.selectedId = null;
+        renderObjects(page);
+      }
+      return;
+    }
+    if (e.key === 'Escape' && getActivePage() && getActivePage().selectedIds && getActivePage().selectedIds.length) {
+      // Escape знімає групове/поточне виділення (додано)
+      const page = getActivePage();
+      page.selectedIds = []; page.selectedId = null;
+      renderObjects(page);
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && state.tool === 'select') {
+      // Ctrl/Cmd+A — виділити всі об'єкти на поточній сторінці (додано)
+      const page = getActivePage();
+      if (page && page.objects.length) {
+        e.preventDefault();
+        page.selectedIds = page.objects.map(o => o.id);
+        page.selectedId = page.selectedIds[page.selectedIds.length - 1];
         renderObjects(page);
       }
       return;
