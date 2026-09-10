@@ -31,7 +31,7 @@
     --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
 
     --topbar-h: 64px;
-    --left-panel-w: 232px;
+    --left-panel-w: 64px;
     --strip-h: 66px;
     --canvas-bg: #e4e7ed;
   }
@@ -93,27 +93,42 @@
   .app { height: 100vh; display: flex; flex-direction: column; }
   .main { flex: 1; display: flex; min-height: 0; }
 
-  /* =========== LEFT TOOLS PANEL =========== */
+  /* =========== LEFT TOOLS PANEL (вузька іконкова панель) =========== */
   .tools-panel {
     width: var(--left-panel-w); background: var(--surface); border-right: 1px solid var(--border);
-    flex-shrink: 0; overflow-y: auto; padding: 16px 14px;
+    flex-shrink: 0; overflow-y: auto; overflow-x: hidden; padding: 12px 8px; display: flex; flex-direction: column; align-items: center;
   }
-  .tp-section { margin-bottom: 20px; }
-  .tp-section:last-child { margin-bottom: 0; }
+  .tp-section { margin-bottom: 0; width: 100%; }
+  .tp-divider { width: 100%; height: 1px; background: var(--border); margin: 12px 0; flex-shrink: 0; }
   .tp-label {
     font-size: 10.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
     color: var(--muted); margin-bottom: 10px; padding: 0 2px;
   }
-  .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .tool-grid { display: flex; flex-direction: column; gap: 6px; width: 100%; }
   .tool-btn {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-    padding: 11px 6px; border-radius: 10px; border: 1.5px solid var(--border2); background: var(--surface);
-    color: var(--text2); cursor: pointer; transition: all .13s ease;
+    padding: 10px 2px; border-radius: 10px; border: 1.5px solid transparent; background: transparent;
+    color: var(--text2); cursor: pointer; transition: all .13s ease; width: 100%; position: relative;
   }
-  .tool-btn svg { width: 18px; height: 18px; }
-  .tool-btn span { font-size: 10.5px; font-weight: 700; }
-  .tool-btn:hover { background: var(--surface2); border-color: var(--muted); color: var(--text); }
+  .tool-btn svg { width: 19px; height: 19px; }
+  .tool-btn span { font-size: 10.5px; font-weight: 700; display: none; } /* підпис ховаємо — панель вузька, назва інструмента видна в кастомній підказці при наведенні */
+  .tool-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--text); }
   .tool-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+  .style-trigger-dot {
+    position: absolute; bottom: 5px; right: 9px; width: 9px; height: 9px; border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--surface); background: #1a1d23; display: block !important;
+  }
+
+  /* =========== ПЛАВАЮЧИЙ ПОПАП «Колір і товщина» (додано) — виринає біля вузької панелі,
+     тому сама панель лишається вузькою й ніколи не заважає панорамуванню полотна вліво =========== */
+  .tools-options-pop {
+    position: fixed; z-index: 85; left: calc(var(--left-panel-w) + 10px); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 16px 14px;
+    width: 216px; display: none;
+  }
+  .tools-options-pop.show { display: block; animation: modalIn .13s ease; }
+  .tools-options-pop .tp-section { margin-bottom: 18px; }
+  .tools-options-pop .tp-section:last-child { margin-bottom: 0; }
 
   .swatch-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; margin-bottom: 10px; }
   .swatch {
@@ -153,9 +168,18 @@
     flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative;
   }
   .canvas-viewport {
-    flex: 1; overflow: auto; background: var(--canvas-bg); display: flex; align-items: flex-start;
-    justify-content: center; padding: 32px;
+    flex: 1; overflow: auto; background: var(--canvas-bg); position: relative;
   }
+  /* =========== "СВІТ" ПОЛОТНА (додано): великий контейнер довкола сторінки, щоб завжди було
+     трохи простору для прокрутки/панорамування за межі видимої сторінки в будь-який бік ============ */
+  .canvas-world {
+    display: flex; align-items: center; justify-content: center; min-width: 100%; min-height: 100%;
+  }
+  /* =========== ВІЛЬНЕ ПЕРЕМІЩЕННЯ ПОЛОТНОМ (додано): пробіл+тягнути або середня кнопка миші =========== */
+  .canvas-viewport.pan-ready { cursor: grab; }
+  .canvas-viewport.pan-active { cursor: grabbing; }
+  .canvas-viewport.pan-ready .layer-interact,
+  .canvas-viewport.pan-active .layer-interact { pointer-events: none; }
   .page-stage {
     position: relative; background: #fff; box-shadow: var(--shadow-lg); border-radius: 4px; flex-shrink: 0;
   }
@@ -209,12 +233,17 @@
     display: flex; align-items: center; gap: 10px; padding: 0 16px; flex-shrink: 0; overflow-x: auto;
   }
   .page-pill {
-    display: flex; align-items: center; gap: 8px; padding: 7px 8px 7px 14px; border-radius: 20px;
+    display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 5px; border-radius: 16px;
     border: 1.5px solid var(--border2); background: var(--surface); cursor: pointer; flex-shrink: 0;
     transition: all .13s ease; font-size: 12.5px; font-weight: 700; color: var(--text2);
   }
-  .page-pill:hover { border-color: var(--muted); }
+  .page-pill:hover { border-color: var(--muted); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
   .page-pill.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+  .page-pill-thumb {
+    width: 30px; height: 22px; border-radius: 5px; flex-shrink: 0; display: block;
+    background: #fff; box-shadow: 0 0 0 1px var(--border2); pointer-events: none;
+  }
+  .page-pill.active .page-pill-thumb { box-shadow: 0 0 0 1px var(--accent); }
   .page-pill .pg-del {
     width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
     color: var(--muted); flex-shrink: 0;
@@ -287,6 +316,7 @@
   .presentation-mode .topbar,
   .presentation-mode .page-strip,
   .presentation-mode .tools-panel { display: none; }
+  .presentation-mode .tools-options-pop { display: none !important; }
   .presentation-mode .zoom-controls { bottom: 76px; } /* щоб не перекривалась плаваючим present-bar знизу */
 
   .present-bar {
@@ -351,6 +381,79 @@
   }
   .pt-size-btn:hover { background: rgba(255,255,255,.2); color: #fff; }
   .pt-size-val { color: #d1d5db; font-size: 10.5px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+  /* =========== МІКРОВЗАЄМОДІЇ / ФОКУС / ДОСТУПНІСТЬ (додано) =========== */
+  .btn:active, .btn-icon:active:not(:disabled), .tool-btn:active, .zc-btn:active,
+  .swatch:active, .sticky-swatch:active, .strip-add:active, .page-pill:active { transform: scale(.94); }
+  .tool-btn { transform: scale(1); }
+  .tool-btn:active { transform: scale(.96); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  .swatch:focus-visible, .sticky-swatch:focus-visible { outline-offset: 3px; }
+
+  /* =========== КАСТОМНІ ТУЛТІПИ (додано) =========== */
+  .ui-tooltip {
+    position: fixed; z-index: 200; background: var(--text); color: #fff; font-size: 11.5px; font-weight: 700;
+    padding: 6px 10px; border-radius: 7px; pointer-events: none; opacity: 0; transform: translateY(4px);
+    transition: opacity .12s ease, transform .12s ease; white-space: nowrap; box-shadow: var(--shadow-md);
+  }
+  .ui-tooltip.show { opacity: 1; transform: translateY(0); }
+  .ui-tooltip .ui-tooltip-kbd {
+    margin-left: 6px; background: rgba(255,255,255,.16); padding: 1px 5px; border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  }
+
+  /* =========== ЛІЧИЛЬНИК СТОРІНОК У ШАПЦІ (додано) =========== */
+  .page-count-chip {
+    display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--muted);
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px 4px 8px;
+    flex-shrink: 0;
+  }
+  .page-count-chip svg { width: 12px; height: 12px; }
+
+  /* =========== ТОСТ: ВАРІАНТИ (додано) =========== */
+  .toast { display: flex; align-items: center; gap: 8px; }
+  .toast svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .toast.toast-success { background: #16653e; }
+  .toast.toast-error { background: #b91c1c; }
+
+  /* =========== МОДАЛКА ГАРЯЧИХ КЛАВІШ (додано) =========== */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(17,20,26,.45); backdrop-filter: blur(2px); z-index: 150;
+    display: none; align-items: center; justify-content: center; padding: 24px;
+  }
+  .modal-overlay.show { display: flex; animation: fadeIn .15s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal-panel {
+    background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-lg); width: 100%; max-width: 460px;
+    max-height: 82vh; overflow-y: auto; animation: modalIn .16s ease;
+  }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--surface); border-radius: 16px 16px 0 0;
+  }
+  .modal-head h2 { font-size: 15.5px; font-weight: 800; letter-spacing: -.2px; }
+  .modal-close {
+    width: 30px; height: 30px; border-radius: 8px; border: none; background: var(--surface2); color: var(--text2);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .modal-close:hover { background: var(--border); color: var(--text); }
+  .modal-close svg { width: 15px; height: 15px; }
+  .modal-body { padding: 8px 12px 18px; }
+  .kbd-group-label {
+    font-size: 10.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--muted);
+    padding: 14px 8px 6px;
+  }
+  .kbd-row {
+    display: flex; align-items: center; justify-content: space-between; padding: 8px 8px; border-radius: 8px; font-size: 13px; color: var(--text2);
+  }
+  .kbd-row:hover { background: var(--surface2); }
+  .kbd-keys { display: flex; gap: 4px; }
+  .kbd {
+    min-width: 22px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700;
+    color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-bottom-width: 2px;
+    border-radius: 6px; padding: 3px 7px;
+  }
 </style>
 </head>
 <body>
@@ -365,8 +468,16 @@
         <h1>Вайтборд</h1>
         <p>Edvault</p>
       </div>
+      <div class="page-count-chip" id="pageCountChip" title="Кількість сторінок">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        <span id="pageCountVal">1</span>
+      </div>
     </div>
     <div class="topbar-right">
+      <button class="btn-icon" id="btnShortcuts" title="Гарячі клавіші (?)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
+      <div class="topbar-divider"></div>
       <button class="btn-icon" id="btnUndo" title="Скасувати (Ctrl+Z)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-6.7L3 9"/></svg>
       </button>
@@ -401,7 +512,6 @@
   <div class="main">
     <aside class="tools-panel">
       <div class="tp-section">
-        <div class="tp-label">Інструменти</div>
         <div class="tool-grid" id="toolGrid">
           <button class="tool-btn" data-tool="select" title="Виділити / перемістити">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l7.07 17 2.51-7.39L21 11.07z"/></svg>
@@ -446,6 +556,20 @@
         </div>
       </div>
 
+      <div class="tp-divider"></div>
+
+      <div class="tp-section">
+        <button class="tool-btn style-trigger" id="btnStylePop" title="Колір і товщина">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+          <span>Стиль</span>
+          <span class="style-trigger-dot" id="styleTriggerDot"></span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- поза .tools-panel навмисно (position:fixed) — плаваючий попап з кольором/товщиною,
+         щоб панель зліва лишалась вузькою й не перекривала полотно під час панорамування -->
+    <div class="tools-options-pop" id="toolsOptionsPop">
       <div class="tp-section" id="colorSection">
         <div class="tp-label">Колір</div>
         <div class="swatch-grid" id="swatchGrid"></div>
@@ -468,11 +592,13 @@
         </div>
         <div class="size-preview"><div class="size-preview-dot" id="sizePreviewDot"></div></div>
       </div>
-    </aside>
+    </div>
 
     <div class="canvas-area">
       <div class="canvas-viewport" id="canvasViewport">
-        <!-- сторінки монтуються сюди динамічно -->
+        <div class="canvas-world" id="canvasWorld">
+          <!-- сторінки монтуються сюди динамічно -->
+        </div>
       </div>
       <div class="zoom-controls">
         <button class="zc-btn" id="btnZoomOut" title="Зменшити (Ctrl+−)">
@@ -600,6 +726,44 @@
   </button>
 </div>
 
+<!-- модалка гарячих клавіш (додано) -->
+<div class="modal-overlay" id="shortcutsModal">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2>Гарячі клавіші</h2>
+      <button class="modal-close" id="btnCloseShortcuts" title="Закрити (Esc)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="kbd-group-label">Інструменти</div>
+      <div class="kbd-row"><span>Виділити</span><span class="kbd-keys"><span class="kbd">V</span></span></div>
+      <div class="kbd-row"><span>Олівець</span><span class="kbd-keys"><span class="kbd">P</span></span></div>
+      <div class="kbd-row"><span>Маркер</span><span class="kbd-keys"><span class="kbd">H</span></span></div>
+      <div class="kbd-row"><span>Гумка</span><span class="kbd-keys"><span class="kbd">E</span></span></div>
+      <div class="kbd-row"><span>Текст</span><span class="kbd-keys"><span class="kbd">T</span></span></div>
+      <div class="kbd-row"><span>Стікер</span><span class="kbd-keys"><span class="kbd">S</span></span></div>
+      <div class="kbd-row"><span>Прямокутник</span><span class="kbd-keys"><span class="kbd">R</span></span></div>
+      <div class="kbd-row"><span>Коло</span><span class="kbd-keys"><span class="kbd">C</span></span></div>
+      <div class="kbd-row"><span>Лінія</span><span class="kbd-keys"><span class="kbd">L</span></span></div>
+      <div class="kbd-row"><span>Стрілка</span><span class="kbd-keys"><span class="kbd">A</span></span></div>
+      <div class="kbd-group-label">Дії</div>
+      <div class="kbd-row"><span>Скасувати</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">Z</span></span></div>
+      <div class="kbd-row"><span>Повторити</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">Shift</span><span class="kbd">Z</span></span></div>
+      <div class="kbd-row"><span>Видалити виділене</span><span class="kbd-keys"><span class="kbd">Del</span></span></div>
+      <div class="kbd-group-label">Переміщення полотном</div>
+      <div class="kbd-row"><span>Тягнути в будь-якому напрямку</span><span class="kbd-keys"><span class="kbd">Пробіл</span><span class="kbd">+ тягнути</span></span></div>
+      <div class="kbd-row"><span>Тягнути в будь-якому напрямку</span><span class="kbd-keys"><span class="kbd">Середня кнопка</span></span></div>
+      <div class="kbd-group-label">Масштаб</div>
+      <div class="kbd-row"><span>Збільшити</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">+</span></span></div>
+      <div class="kbd-row"><span>Зменшити</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">−</span></span></div>
+      <div class="kbd-row"><span>Скинути до 100%</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">0</span></span></div>
+    </div>
+  </div>
+</div>
+
+<div class="ui-tooltip" id="uiTooltip"></div>
+
 <script>
 (function () {
   'use strict';
@@ -633,6 +797,7 @@
   };
 
   const viewport = document.getElementById('canvasViewport');
+  const canvasWorldEl = document.getElementById('canvasWorld');
   const stripEl = document.getElementById('pageStrip');
   const stripAddBtn = document.getElementById('stripAdd');
 
@@ -706,7 +871,7 @@
       undoStack: [], redoStack: [],
     };
     state.pages.push(page);
-    viewport.appendChild(stage);
+    canvasWorldEl.appendChild(stage);
     bindPageEvents(page);
     return page;
   }
@@ -735,7 +900,10 @@
     renderPageStrip();
     updateUndoRedoButtons();
     const p = state.pages.find(pg => pg.id === id);
-    if (p) { p.selectedId = null; renderSelectionOutline(p); applyZoom(); }
+    if (p) {
+      p.selectedId = null; renderSelectionOutline(p); applyZoom();
+      sizeWorldForPage(p); centerWorldScroll();
+    }
     updatePresentPageLabel();
   }
 
@@ -748,17 +916,54 @@
     state.pages.forEach((p, i) => {
       const pill = document.createElement('button');
       pill.className = 'page-pill' + (p.id === state.activePageId ? ' active' : '');
-      pill.innerHTML = `<span>Стор. ${i + 1}</span>`;
+      pill.title = `Сторінка ${i + 1}`;
+      pill.setAttribute('aria-label', `Сторінка ${i + 1}`);
+
+      const thumb = document.createElement('canvas');
+      thumb.className = 'page-pill-thumb';
+      thumb.width = 60; thumb.height = 44;
+      drawPageThumbnail(p, thumb);
+      pill.appendChild(thumb);
+
+      const label = document.createElement('span');
+      label.textContent = `Стор. ${i + 1}`;
+      pill.appendChild(label);
+
       if (state.pages.length > 1) {
         const del = document.createElement('span');
         del.className = 'pg-del';
         del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="4" x2="14" y2="14"/><line x1="14" y1="4" x2="4" y2="14"/></svg>';
+        del.title = 'Видалити сторінку';
         del.addEventListener('click', (e) => { e.stopPropagation(); removePage(p.id); });
         pill.appendChild(del);
       }
       pill.addEventListener('click', () => switchToPage(p.id));
       stripEl.insertBefore(pill, stripAddBtn);
     });
+    const countEl = document.getElementById('pageCountVal');
+    if (countEl) countEl.textContent = state.pages.length;
+  }
+
+  // ── мініатюра сторінки для смуги знизу (додано): компонує 3 растрові шари в маленький canvas ──
+  function drawPageThumbnail(page, thumbCanvas) {
+    const tctx = thumbCanvas.getContext('2d');
+    const tw = thumbCanvas.width, th = thumbCanvas.height;
+    tctx.clearRect(0, 0, tw, th);
+    // "cover"-масштаб, щоб мініатюра заповнювала свою рамку без спотворення пропорцій
+    const scale = Math.max(tw / page.w, th / page.h);
+    const dw = page.w * scale, dh = page.h * scale;
+    const dx = (tw - dw) / 2, dy = (th - dh) / 2;
+    try {
+      tctx.drawImage(page.bgCanvas, dx, dy, dw, dh);
+      tctx.drawImage(page.strokesCanvas, dx, dy, dw, dh);
+      tctx.drawImage(page.objectsCanvas, dx, dy, dw, dh);
+    } catch (err) { /* полотно ще не готове — пропускаємо кадр, наступний рендер підхопить */ }
+  }
+
+  let thumbRefreshTimer = null;
+  function scheduleThumbRefresh() {
+    clearTimeout(thumbRefreshTimer);
+    thumbRefreshTimer = setTimeout(renderPageStrip, 180);
   }
 
   // ═══════════════════════ УНДО / РЕДО ═══════════════════════
@@ -777,6 +982,7 @@
     page.selectedId = null;
     page.hasStrokes = !!snap.hasStrokes;
     renderObjects(page);
+    scheduleThumbRefresh();
   }
 
   function pushUndo(page) {
@@ -784,6 +990,7 @@
     if (page.undoStack.length > 40) page.undoStack.shift();
     page.redoStack.length = 0;
     updateUndoRedoButtons();
+    scheduleThumbRefresh();
   }
 
   function undo() {
@@ -1160,6 +1367,8 @@
     const page = getActivePage();
     if (page) onPointerUp(page, e);
   });
+  // оновлюємо мініатюру поточної сторінки в смузі знизу після завершення будь-якого жесту малювання (додано)
+  window.addEventListener('pointerup', scheduleThumbRefresh);
 
   // ═══════════════════════ ЗУМ ═══════════════════════
 
@@ -1176,10 +1385,21 @@
   function setZoom(zoom, opts) {
     state.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom));
     applyZoom();
-    if (opts && opts.resetScroll) {
-      const vp = document.getElementById('canvasViewport');
-      vp.scrollLeft = 0; vp.scrollTop = 0;
-    }
+    if (opts && opts.resetScroll) centerWorldScroll();
+  }
+
+  // ── "світ" полотна (додано): достатньо великий контейнер довкола сторінки, щоб завжди
+  // лишалось трохи простору для прокрутки/панорамування за межі видимої сторінки з усіх боків,
+  // навіть коли сторінка менша за в'юпорт або показана не в максимальному масштабі ──
+  const PAN_MARGIN = 480;
+  function sizeWorldForPage(page) {
+    if (!page) return;
+    canvasWorldEl.style.width = (page.w * ZOOM_MAX + PAN_MARGIN * 2) + 'px';
+    canvasWorldEl.style.height = (page.h * ZOOM_MAX + PAN_MARGIN * 2) + 'px';
+  }
+  function centerWorldScroll() {
+    viewport.scrollLeft = (canvasWorldEl.offsetWidth - viewport.clientWidth) / 2;
+    viewport.scrollTop = (canvasWorldEl.offsetHeight - viewport.clientHeight) / 2;
   }
 
   function zoomFitToScreen() {
@@ -1203,6 +1423,73 @@
     e.preventDefault();
     setZoom(state.zoom + (e.deltaY < 0 ? 0.1 : -0.1));
   }, { passive: false });
+
+  // ═══════════════════════ ВІЛЬНЕ ПЕРЕМІЩЕННЯ ПОЛОТНОМ (додано) ═══════════════════════
+  // Два способи, обидва — як у Figma/Miro/Excalidraw:
+  //  1) утримувати пробіл + тягнути будь-якою кнопкою миші (навіть під час малювання — інструмент не запускається)
+  //  2) тягнути середньою кнопкою миші (колесиком) — завжди, без пробілу
+  // Слухач стоїть у фазі "захоплення" (capture) на самому viewport, тобто спрацьовує РАНІШЕ за
+  // обробники інструментів на interactCanvas і, коли потрібно, зупиняє подію — так малювання ніколи
+  // випадково не почнеться під час панорамування.
+
+  const canvasViewportEl = document.getElementById('canvasViewport');
+  let spaceHeld = false;
+  let panState = null; // { startX, startY, startScrollLeft, startScrollTop }
+
+  function updatePanCursor() {
+    canvasViewportEl.classList.toggle('pan-ready', spaceHeld && !panState);
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space') return;
+    if (document.activeElement && ['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
+    if (!spaceHeld) { spaceHeld = true; updatePanCursor(); }
+    e.preventDefault(); // не даємо сторінці проскролитись пробілом
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code !== 'Space') return;
+    spaceHeld = false;
+    updatePanCursor();
+  });
+  // якщо вікно втратило фокус, поки пробіл був затиснутий — скидаємо стан, інакше він "застрягне"
+  window.addEventListener('blur', () => { spaceHeld = false; updatePanCursor(); });
+
+  function isPanTrigger(e) {
+    return e.button === 1 || (e.button === 0 && spaceHeld);
+  }
+
+  canvasViewportEl.addEventListener('pointerdown', (e) => {
+    if (!isPanTrigger(e)) return;
+    e.preventDefault();
+    e.stopPropagation(); // не пускаємо клік далі до onPointerDown інструмента
+    panState = {
+      startX: e.clientX, startY: e.clientY,
+      startScrollLeft: canvasViewportEl.scrollLeft, startScrollTop: canvasViewportEl.scrollTop,
+    };
+    canvasViewportEl.classList.add('pan-active');
+    canvasViewportEl.classList.remove('pan-ready');
+    canvasViewportEl.setPointerCapture && canvasViewportEl.setPointerCapture(e.pointerId);
+  }, true);
+
+  canvasViewportEl.addEventListener('pointermove', (e) => {
+    if (!panState) return;
+    e.preventDefault();
+    e.stopPropagation();
+    canvasViewportEl.scrollLeft = panState.startScrollLeft - (e.clientX - panState.startX);
+    canvasViewportEl.scrollTop = panState.startScrollTop - (e.clientY - panState.startY);
+  }, true);
+
+  function endPan(e) {
+    if (!panState) return;
+    panState = null;
+    canvasViewportEl.classList.remove('pan-active');
+    updatePanCursor();
+  }
+  canvasViewportEl.addEventListener('pointerup', endPan, true);
+  canvasViewportEl.addEventListener('pointercancel', endPan, true);
+  // додатковий слухач на window — щоб панорамування коректно завершилось, навіть якщо курсор
+  // відпустили поза межами полотна
+  window.addEventListener('pointerup', endPan);
 
   // ═══════════════════════ СКРІНШОТ ОБЛАСТІ ═══════════════════════
 
@@ -1238,7 +1525,7 @@
       ctx.drawImage(layer, x, y, w, h, 0, 0, out.width, out.height);
     });
     out.toBlob((blob) => {
-      if (!blob) { showToast('Не вдалося зберегти скріншот'); return; }
+      if (!blob) { showToast('Не вдалося зберегти скріншот', 'error'); return; }
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1247,7 +1534,7 @@
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 4000);
-      showToast('Скріншот збережено');
+      showToast('Скріншот збережено', 'success');
     }, 'image/png');
   }
 
@@ -1565,7 +1852,7 @@
       const b = document.createElement('button');
       b.className = 'sticky-swatch' + (c === state.stickyColor ? ' active' : '');
       b.style.background = c;
-      b.addEventListener('click', () => { state.stickyColor = c; renderStickySwatches(); });
+      b.addEventListener('click', () => { state.stickyColor = c; renderStickySwatches(); updateSizePreview(); });
       row.appendChild(b);
     });
   }
@@ -1582,6 +1869,11 @@
     document.getElementById('colorSection').style.display = (tool === 'sticky' || tool === 'eraser' || tool === 'select') ? 'none' : 'block';
     document.getElementById('sizeSection').style.display = (tool === 'sticky' || tool === 'select') ? 'none' : 'block';
     document.getElementById('sizeLabel').textContent = tool === 'text' ? 'Розмір шрифту' : 'Товщина';
+    // для "Виділити" налаштовувати нічого — ховаємо кнопку "Стиль" і закриваємо попап, якщо був відкритий (додано)
+    const stylePopBtn = document.getElementById('btnStylePop');
+    if (stylePopBtn) stylePopBtn.style.display = tool === 'select' ? 'none' : 'flex';
+    const stylePop = document.getElementById('toolsOptionsPop');
+    if (tool === 'select' && stylePop) stylePop.classList.remove('show');
     const page = getActivePage();
     if (page && tool !== 'select') { page.selectedId = null; renderSelectionOutline(page); }
     document.querySelectorAll('.layer-interact').forEach(c => c.classList.toggle('interact-select', tool === 'select'));
@@ -1594,6 +1886,8 @@
     dot.style.width = px + 'px';
     dot.style.height = px + 'px';
     dot.style.background = state.tool === 'eraser' ? 'var(--border2)' : state.color;
+    const triggerDot = document.getElementById('styleTriggerDot');
+    if (triggerDot) triggerDot.style.background = state.tool === 'sticky' ? state.stickyColor : state.color;
   }
 
   document.getElementById('toolGrid').addEventListener('click', (e) => {
@@ -1628,6 +1922,7 @@
     page.selectedId = null;
     page.hasStrokes = false;
     renderObjects(page);
+    scheduleThumbRefresh();
   });
 
   function addBlankPage() {
@@ -1643,7 +1938,7 @@
     const file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
-    if (!window.pdfjsLib) { showToast('Не вдалося завантажити модуль PDF'); return; }
+    if (!window.pdfjsLib) { showToast('Не вдалося завантажити модуль PDF', 'error'); return; }
     showToast('Завантаження PDF…');
     try {
       const buf = await file.arrayBuffer();
@@ -1660,18 +1955,24 @@
         if (firstNewId === null) firstNewId = page.id;
       }
       if (firstNewId) switchToPage(firstNewId);
-      showToast(`Завантажено сторінок: ${pdf.numPages}`);
+      showToast(`Завантажено сторінок: ${pdf.numPages}`, 'success');
     } catch (err) {
       console.error(err);
-      showToast('Не вдалося відкрити цей PDF-файл');
+      showToast('Не вдалося відкрити цей PDF-файл', 'error');
     }
   });
 
+  const TOAST_ICONS = {
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+  };
   let toastTimer = null;
-  function showToast(msg) {
+  function showToast(msg, type) {
+    type = TOAST_ICONS[type] ? type : 'info';
     const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
+    t.innerHTML = TOAST_ICONS[type] + '<span>' + msg + '</span>';
+    t.className = 'toast show' + (type !== 'info' ? ' toast-' + type : '');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
   }
@@ -1808,6 +2109,100 @@
   }
   document.getElementById('ptSizePlus').addEventListener('click', () => ptAdjustSize(1));
   document.getElementById('ptSizeMinus').addEventListener('click', () => ptAdjustSize(-1));
+
+  // ═══════════════════════ ДОСТУПНІСТЬ + КАСТОМНІ ТУЛТІПИ (додано) ═══════════════════════
+  // Прохід по всіх елементах з title: дублюємо в aria-label (для скрінрідерів) і вмикаємо
+  // власну стилізовану підказку замість дефолтної браузерної (яка не в стилі інтерфейсу).
+
+  function enhanceTooltipsAndA11y(root) {
+    const tipEl = document.getElementById('uiTooltip');
+    let tipTimer = null;
+    (root || document).querySelectorAll('[title]').forEach(el => {
+      if (el.dataset.tipBound) return;
+      el.dataset.tipBound = '1';
+      const label = el.getAttribute('title');
+      if (!el.hasAttribute('aria-label')) el.setAttribute('aria-label', label);
+      el.addEventListener('mouseenter', () => {
+        const text = el.getAttribute('title');
+        if (!text) return;
+        el.dataset.title = text;
+        el.removeAttribute('title'); // прибираємо, щоб не з'являлась ще й нативна підказка
+        clearTimeout(tipTimer);
+        tipTimer = setTimeout(() => {
+          tipEl.textContent = text;
+          const r = el.getBoundingClientRect();
+          tipEl.classList.add('show');
+          const tw = tipEl.offsetWidth;
+          let left = r.left + r.width / 2 - tw / 2;
+          left = Math.max(6, Math.min(window.innerWidth - tw - 6, left));
+          let top = r.top - tipEl.offsetHeight - 8;
+          if (top < 4) top = r.bottom + 8;
+          tipEl.style.left = left + 'px';
+          tipEl.style.top = top + 'px';
+        }, 350);
+      });
+      const hide = () => {
+        clearTimeout(tipTimer);
+        tipEl.classList.remove('show');
+        if (el.dataset.title) el.setAttribute('title', el.dataset.title);
+      };
+      el.addEventListener('mouseleave', hide);
+      el.addEventListener('mousedown', hide);
+    });
+  }
+  enhanceTooltipsAndA11y(document);
+  // сторінки, панелі презентації та інші елементи, що з'являються пізніше — теж отримують тултіпи/aria
+  const tooltipObserver = new MutationObserver(() => enhanceTooltipsAndA11y(document));
+  tooltipObserver.observe(document.body, { childList: true, subtree: true });
+
+  // ═══════════════════════ ПОПАП «КОЛІР І ТОВЩИНА» (додано) ═══════════════════════
+  // Раніше цей блок був частиною широкої лівої панелі; тепер панель вузька (лише іконки
+  // інструментів), а колір/товщина відкриваються плаваючим попапом біля кнопки "Стиль" —
+  // так ліва панель ніколи не забирає зайвий простір і не заважає панорамувати полотно вліво.
+
+  const stylePopEl = document.getElementById('toolsOptionsPop');
+  const btnStylePopEl = document.getElementById('btnStylePop');
+
+  function positionStylePop() {
+    const r = btnStylePopEl.getBoundingClientRect();
+    let top = r.top;
+    const maxTop = window.innerHeight - stylePopEl.offsetHeight - 12;
+    top = Math.max(12, Math.min(maxTop, top));
+    stylePopEl.style.top = top + 'px';
+  }
+
+  function openStylePop() {
+    stylePopEl.classList.add('show');
+    positionStylePop();
+  }
+  function closeStylePop() { stylePopEl.classList.remove('show'); }
+
+  btnStylePopEl.addEventListener('click', (e) => {
+    e.stopPropagation();
+    stylePopEl.classList.contains('show') ? closeStylePop() : openStylePop();
+  });
+  document.addEventListener('click', (e) => {
+    if (!stylePopEl.classList.contains('show')) return;
+    if (!e.target.closest('.tools-options-pop') && !e.target.closest('#btnStylePop')) closeStylePop();
+  });
+  window.addEventListener('resize', () => { if (stylePopEl.classList.contains('show')) positionStylePop(); });
+
+  // ═══════════════════════ МОДАЛКА ГАРЯЧИХ КЛАВІШ (додано) ═══════════════════════
+
+  const shortcutsModalEl = document.getElementById('shortcutsModal');
+  function openShortcuts() { shortcutsModalEl.classList.add('show'); }
+  function closeShortcuts() { shortcutsModalEl.classList.remove('show'); }
+  document.getElementById('btnShortcuts').addEventListener('click', openShortcuts);
+  document.getElementById('btnCloseShortcuts').addEventListener('click', closeShortcuts);
+  shortcutsModalEl.addEventListener('click', (e) => { if (e.target === shortcutsModalEl) closeShortcuts(); });
+  window.addEventListener('keydown', (e) => {
+    if (document.activeElement && ['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
+    if (shortcutsModalEl.classList.contains('show') && e.key === 'Escape') { closeShortcuts(); return; }
+    if ((e.key === '?' || (e.shiftKey && e.key === '/')) && !appEl.classList.contains('presentation-mode')) {
+      e.preventDefault();
+      shortcutsModalEl.classList.contains('show') ? closeShortcuts() : openShortcuts();
+    }
+  });
 
   // ═══════════════════════ СТАРТ ═══════════════════════
 
