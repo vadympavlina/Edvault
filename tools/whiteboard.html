@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M8 22V10h4l4 6 4-6h4v12h-3v-7l-4 6h-2l-4-6v7H8z' fill='white'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cline x1='22' y1='8' x2='11' y2='23' stroke='white' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='9' cy='25' r='3.6' fill='%23EF4444'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cline x1='22' y1='8' x2='11' y2='23' stroke='white' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='9' cy='25' r='3.6' fill='%23EF4444'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#4F6BF4">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Вайтборд · Edvault</title>
@@ -180,6 +182,12 @@
   .canvas-viewport.pan-active { cursor: grabbing; }
   .canvas-viewport.pan-ready .layer-interact,
   .canvas-viewport.pan-active .layer-interact { pointer-events: none; }
+
+  /* =========== ПЕРЕТЯГУВАННЯ ФАЙЛУ ЗОБРАЖЕННЯ НА ПОЛОТНО (додано) =========== */
+  .canvas-viewport.drop-ready::after {
+    content: ''; position: absolute; inset: 10px; border: 2.5px dashed var(--accent); border-radius: 14px;
+    background: rgba(79,107,244,.06); pointer-events: none; z-index: 6;
+  }
   .page-stage {
     position: relative; background: #fff; box-shadow: var(--shadow-lg); border-radius: 4px; flex-shrink: 0;
   }
@@ -471,7 +479,7 @@
   <div class="topbar">
     <div class="topbar-left">
       <div class="topbar-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20V6h3l3 5 3-5h3v14h-2.5v-9l-3 5h-1l-3-5v9H2z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
       </div>
       <div class="topbar-text">
         <h1>Вайтборд</h1>
@@ -761,6 +769,9 @@
       <div class="kbd-row"><span>Скасувати</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">Z</span></span></div>
       <div class="kbd-row"><span>Повторити</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">Shift</span><span class="kbd">Z</span></span></div>
       <div class="kbd-row"><span>Видалити виділене</span><span class="kbd-keys"><span class="kbd">Del</span></span></div>
+      <div class="kbd-group-label">Зображення</div>
+      <div class="kbd-row"><span>Вставити з буфера обміну</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">V</span></span></div>
+      <div class="kbd-row"><span>Перетягнути файл на полотно</span><span class="kbd-keys"><span class="kbd">Drag & Drop</span></span></div>
       <div class="kbd-group-label">Групове виділення (інструмент "Виділити")</div>
       <div class="kbd-row"><span>Тягнути рамкою по порожньому місцю</span><span class="kbd-keys"><span class="kbd">Тягнути</span></span></div>
       <div class="kbd-row"><span>Додати/прибрати об'єкт із виділення</span><span class="kbd-keys"><span class="kbd">Shift</span><span class="kbd">+ клік</span></span></div>
@@ -770,6 +781,7 @@
       <div class="kbd-row"><span>Тягнути в будь-якому напрямку</span><span class="kbd-keys"><span class="kbd">Пробіл</span><span class="kbd">+ тягнути</span></span></div>
       <div class="kbd-row"><span>Тягнути в будь-якому напрямку</span><span class="kbd-keys"><span class="kbd">Середня кнопка</span></span></div>
       <div class="kbd-group-label">Масштаб</div>
+      <div class="kbd-row"><span>Плавний зум під курсором</span><span class="kbd-keys"><span class="kbd">Колесо миші</span></span></div>
       <div class="kbd-row"><span>Збільшити</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">+</span></span></div>
       <div class="kbd-row"><span>Зменшити</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">−</span></span></div>
       <div class="kbd-row"><span>Скинути до 100%</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">0</span></span></div>
@@ -872,7 +884,7 @@
       emptyHintEl.className = 'empty-state show';
       emptyHintEl.innerHTML = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-        <p>Порожня сторінка — обери інструмент зліва й почни малювати</p>`;
+        <p>Порожня сторінка — обери інструмент зліва й почни малювати, або вставте зображення (Ctrl+V / перетягніть файл)</p>`;
       stage.appendChild(emptyHintEl);
     }
 
@@ -1084,6 +1096,11 @@
       lines.slice(0, Math.floor((obj.h - pad * 2) / lineHeight)).forEach((line, i) => {
         ctx.fillText(line, obj.x + pad, obj.y + pad + i * lineHeight);
       });
+    } else if (obj.type === 'image') {
+      // малюємо зображення, лише коли воно вже завантажене (додано)
+      if (obj._img && obj._img.complete && obj._img.naturalWidth) {
+        ctx.drawImage(obj._img, obj.x, obj.y, obj.w, obj.h);
+      }
     } else {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -1119,14 +1136,14 @@
   }
 
   function objectBounds(obj) {
-    if (obj.type === 'text' || obj.type === 'sticky') return { x: obj.x, y: obj.y, w: obj.w, h: obj.h };
+    if (obj.type === 'text' || obj.type === 'sticky' || obj.type === 'image') return { x: obj.x, y: obj.y, w: obj.w, h: obj.h };
     const x = Math.min(obj.x1, obj.x2), y = Math.min(obj.y1, obj.y2);
     return { x, y, w: Math.abs(obj.x2 - obj.x1), h: Math.abs(obj.y2 - obj.y1) };
   }
 
   function objectHandles(obj) {
-    // текст/стікер — одна ручка в правому нижньому куті; фігури — дві ручки за їхніми ж опорними точками
-    if (obj.type === 'text' || obj.type === 'sticky') {
+    // текст/стікер/зображення — одна ручка в правому нижньому куті; фігури — дві ручки за їхніми ж опорними точками
+    if (obj.type === 'text' || obj.type === 'sticky' || obj.type === 'image') {
       return [{ id: 'br', x: obj.x + obj.w, y: obj.y + obj.h }];
     }
     return [{ id: 'p1', x: obj.x1, y: obj.y1 }, { id: 'p2', x: obj.x2, y: obj.y2 }];
@@ -1164,6 +1181,11 @@
     } else if (obj.type === 'sticky') {
       obj.w = Math.max(70, pos.x - obj.x);
       obj.h = Math.max(60, pos.y - obj.y);
+    } else if (obj.type === 'image') {
+      // тягнемо за кутову ручку, зберігаючи пропорції зображення (додано)
+      const aspect = obj.aspect || (obj.w / obj.h) || 1;
+      obj.w = Math.max(24, pos.x - obj.x);
+      obj.h = Math.max(24, obj.w / aspect);
     } else if (handleId === 'p1') {
       obj.x1 = pos.x; obj.y1 = pos.y;
     } else {
@@ -1294,6 +1316,16 @@
   let sizeSessionStarted = false;
 
   function updateSelToolbarControls(obj, full) {
+    const colorWrap = document.getElementById('selColorWrap');
+    const sizeWrap = document.getElementById('selSizeWrap');
+    if (obj.type === 'image') {
+      // у зображення немає кольору/товщини для редагування — ховаємо ці контроли (додано)
+      colorWrap.style.display = 'none';
+      sizeWrap.style.display = 'none';
+      return;
+    }
+    colorWrap.style.display = 'flex';
+
     const dot = document.getElementById('selColorDot');
     dot.style.background = obj.color;
     document.getElementById('selColorCustom').value = /^#[0-9a-f]{6}$/i.test(obj.color) ? obj.color : '#000000';
@@ -1316,7 +1348,6 @@
       grid.appendChild(b);
     });
 
-    const sizeWrap = document.getElementById('selSizeWrap');
     const hasSize = obj.type !== 'sticky';
     sizeWrap.style.display = hasSize ? 'flex' : 'none';
     if (hasSize) {
@@ -1468,11 +1499,41 @@
   document.getElementById('btnZoomFit').addEventListener('click', zoomFitToScreen);
   document.getElementById('zoomLabel').addEventListener('click', () => setZoom(1));
 
-  // Ctrl/Cmd + колесо миші — зум із наведенням (як у Figma/Miro)
+  // Колесо миші над полотном — плавний зум під курсором, без потреби тримати Ctrl (додано,
+  // за проханням користувача: "безкінечний зум колесом без Ctrl"). Панорамування тепер —
+  // окремими способами (пробіл+тяг або середня кнопка миші), тому колесо повністю віддане під зум.
+  function zoomAtClient(newZoomRaw, clientX, clientY) {
+    const page = getActivePage();
+    const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newZoomRaw));
+    if (!page || newZoom === state.zoom) { setZoom(newZoom); return; }
+    const oldZoom = state.zoom;
+    const vpRect = viewport.getBoundingClientRect();
+    const worldW = canvasWorldEl.offsetWidth, worldH = canvasWorldEl.offsetHeight;
+    const cursorVpX = clientX - vpRect.left, cursorVpY = clientY - vpRect.top;
+    // точка під курсором у координатах "світу" (враховує поточну прокрутку) — та сама точка
+    // має лишитись під курсором і після зміни масштабу
+    const worldX = viewport.scrollLeft + cursorVpX;
+    const worldY = viewport.scrollTop + cursorVpY;
+    const offOldX = (worldW - page.w * oldZoom) / 2;
+    const offOldY = (worldH - page.h * oldZoom) / 2;
+    const pageX = (worldX - offOldX) / oldZoom; // та сама точка в незумленому просторі сторінки
+    const pageY = (worldY - offOldY) / oldZoom;
+
+    state.zoom = newZoom;
+    applyZoom();
+
+    const offNewX = (worldW - page.w * newZoom) / 2;
+    const offNewY = (worldH - page.h * newZoom) / 2;
+    viewport.scrollLeft = offNewX + pageX * newZoom - cursorVpX;
+    viewport.scrollTop = offNewY + pageY * newZoom - cursorVpY;
+  }
+
   document.getElementById('canvasViewport').addEventListener('wheel', (e) => {
-    if (!e.ctrlKey && !e.metaKey) return;
+    if (state.screenshotMode) return; // не заважаємо виділенню області для скріншота
     e.preventDefault();
-    setZoom(state.zoom + (e.deltaY < 0 ? 0.1 : -0.1));
+    // мультиплікативний крок — однаково плавно "нескінченно" зумить і на 20%, і на 300%
+    const factor = e.deltaY < 0 ? 1.08 : 1 / 1.08;
+    zoomAtClient(state.zoom * factor, e.clientX, e.clientY);
   }, { passive: false });
 
   // ═══════════════════════ ВІЛЬНЕ ПЕРЕМІЩЕННЯ ПОЛОТНОМ (додано) ═══════════════════════
@@ -1541,6 +1602,91 @@
   // додатковий слухач на window — щоб панорамування коректно завершилось, навіть якщо курсор
   // відпустили поза межами полотна
   window.addEventListener('pointerup', endPan);
+
+  // ═══════════════════════ ВСТАВКА ЗОБРАЖЕНЬ: paste / drag&drop (додано) ═══════════════════════
+
+  function loadImageObject(page, dataUrl, dropPos) {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 380; // початковий розмір на сторінці — далі можна змінити ручкою
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxDim || h > maxDim) {
+        const scale = maxDim / Math.max(w, h);
+        w *= scale; h *= scale;
+      }
+      let pos = dropPos;
+      if (!pos) {
+        // Ctrl+V без конкретної точки — кладемо в центр видимої області полотна
+        const vpRect = viewport.getBoundingClientRect();
+        pos = getPos({ clientX: vpRect.left + vpRect.width / 2, clientY: vpRect.top + vpRect.height / 2 }, page.interactCanvas);
+      }
+      const x = Math.max(0, Math.min(page.w - w, pos.x - w / 2));
+      const y = Math.max(0, Math.min(page.h - h, pos.y - h / 2));
+      pushUndo(page);
+      state.objSeq += 1;
+      const obj = {
+        id: 'obj' + state.objSeq, type: 'image', x, y, w, h,
+        aspect: img.naturalWidth / img.naturalHeight, src: dataUrl, _img: img,
+      };
+      page.objects.push(obj);
+      page.selectedIds = [obj.id]; page.selectedId = obj.id;
+      setTool('select');
+      renderObjects(page);
+      scheduleThumbRefresh();
+      showToast('Зображення додано', 'success');
+    };
+    img.onerror = () => showToast('Не вдалося завантажити зображення', 'error');
+    img.src = dataUrl;
+  }
+
+  function insertImageFile(page, file, dropPos) {
+    if (!page || !file || !file.type || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => loadImageObject(page, ev.target.result, dropPos);
+    reader.onerror = () => showToast('Не вдалося прочитати файл', 'error');
+    reader.readAsDataURL(file);
+  }
+
+  // вставка через буфер обміну (Ctrl+V) — скрізь, крім полів вводу тексту
+  window.addEventListener('paste', (e) => {
+    if (document.activeElement && ['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
+    const page = getActivePage();
+    const items = page && e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type && item.type.startsWith('image/')) {
+        e.preventDefault();
+        insertImageFile(page, item.getAsFile());
+        break;
+      }
+    }
+  });
+
+  // перетягування файлу зображення просто на полотно
+  function hasFilesInDrag(e) { return !!(e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')); }
+  window.addEventListener('dragover', (e) => { if (hasFilesInDrag(e)) e.preventDefault(); });
+  window.addEventListener('drop', (e) => { if (hasFilesInDrag(e)) e.preventDefault(); });
+
+  canvasViewportEl.addEventListener('dragover', (e) => {
+    if (!hasFilesInDrag(e)) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    canvasViewportEl.classList.add('drop-ready');
+  });
+  canvasViewportEl.addEventListener('dragleave', (e) => {
+    if (e.target === canvasViewportEl) canvasViewportEl.classList.remove('drop-ready');
+  });
+  canvasViewportEl.addEventListener('drop', (e) => {
+    if (!hasFilesInDrag(e)) return;
+    e.preventDefault();
+    canvasViewportEl.classList.remove('drop-ready');
+    const page = getActivePage();
+    if (!page || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+    const pos = getPos(e, page.interactCanvas);
+    Array.from(e.dataTransfer.files).filter(f => f.type && f.type.startsWith('image/')).forEach((f, i) => {
+      insertImageFile(page, f, { x: pos.x + i * 24, y: pos.y + i * 24 }); // невеликий зсув для кожного наступного файлу
+    });
+  });
 
   // ═══════════════════════ СКРІНШОТ ОБЛАСТІ ═══════════════════════
 
