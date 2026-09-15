@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer-when-downgrade">
+<title>TV Display — Онлайн-розклад академії</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============================================================
+     ШАР 1. Сайт розкладу (iframe).
+     src НЕ прописаний у HTML: iframe монтується один раз із JS,
+     після першого запуску TV Mode, і більше не перезавантажується.
+     ============================================================ -->
+<div id="frameLayer" class="frame-layer" aria-hidden="true">
+  <iframe
+    id="scheduleFrame"
+    class="schedule-frame"
+    title="Онлайн-розклад академії"
+    allow="fullscreen"
+    referrerpolicy="no-referrer-when-downgrade"></iframe>
+</div>
+
+<!-- ============================================================
+     ШАР 2. Стартовий екран (ховається у TV Mode)
+     ============================================================ -->
+<main id="launcher" class="launcher">
+
+  <!-- невидима зона для 5 кліків у верхньому лівому кутку -->
+  <div id="cornerTap" class="corner-tap" title=""></div>
+
+  <div class="launcher__inner">
+    <p class="launcher__kicker">Академія IT STEP</p>
+    <h1 class="launcher__title">TV Display</h1>
+    <p class="launcher__subtitle">Онлайн-розклад академії</p>
+
+    <button id="startBtn" class="btn-start" type="button">
+      Запустити TV Mode
+    </button>
+
+    <dl class="meta">
+      <div class="meta__row">
+        <dt>Джерело</dt>
+        <dd id="metaUrl">lb.itstep.org/schedule</dd>
+      </div>
+      <div class="meta__row">
+        <dt>Статус</dt>
+        <dd><span id="statusDot" class="dot dot--ready"></span><span id="statusText">Готово до запуску</span></dd>
+      </div>
+      <div class="meta__row">
+        <dt>Wake Lock</dt>
+        <dd id="metaWakeSupport">перевірка…</dd>
+      </div>
+    </dl>
+
+    <label class="switch">
+      <input type="checkbox" id="autoStartToggle">
+      <span class="switch__track"><span class="switch__thumb"></span></span>
+      <span class="switch__label">Автоматично вмикати TV Mode після перезавантаження сторінки</span>
+    </label>
+
+    <p class="hint-keys">
+      Ctrl + Shift + D — службова панель · Ctrl + Shift + Q — вихід із TV Mode
+    </p>
+  </div>
+</main>
+
+<!-- ============================================================
+     ШАР 3. Підказки поверх TV Mode (fullscreen / помилки)
+     ============================================================ -->
+<div id="resumeOverlay" class="resume" hidden>
+  <div class="resume__box">
+    <p class="resume__title" id="resumeTitle">Повнокранний режим вимкнено</p>
+    <p class="resume__text" id="resumeText">Натисніть кнопку, щоб повернути повний екран і Wake Lock.</p>
+    <button id="resumeBtn" class="btn-start btn-start--small" type="button">Повернутися в TV Mode</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     ШАР 4. Службова панель (Ctrl+Shift+D або 5 кліків у кутку)
+     ============================================================ -->
+<aside id="debugPanel" class="debug" hidden>
+  <header class="debug__head">
+    <h2>Службова панель</h2>
+    <button id="debugClose" class="debug__close" type="button" aria-label="Закрити">×</button>
+  </header>
+
+  <div class="debug__grid">
+    <span>TV Mode</span><b id="dbgTv">INACTIVE</b>
+    <span>Fullscreen</span><b id="dbgFs">INACTIVE</b>
+    <span>Wake Lock</span><b id="dbgWl">—</b>
+    <span>Document visibility</span><b id="dbgVis">—</b>
+    <span>Iframe</span><b id="dbgFrame">NOT MOUNTED</b>
+    <span>Останній request</span><b id="dbgWlReq">—</b>
+    <span>Останній release</span><b id="dbgWlRel">—</b>
+    <span>Аптайм сторінки</span><b id="dbgUptime">—</b>
+    <span>Viewport</span><b id="dbgViewport">—</b>
+    <span>Screen</span><b id="dbgScreen">—</b>
+    <span>Мережа</span><b id="dbgOnline">—</b>
+    <span>Browser</span><b id="dbgUa" class="debug__ua">—</b>
+  </div>
+
+  <div class="debug__actions">
+    <button id="dbgDiag" type="button">Діагностика</button>
+    <button id="dbgWakeNow" type="button">Запросити Wake Lock</button>
+    <button id="dbgReload" type="button">Перезавантажити розклад</button>
+    <button id="dbgExit" type="button">Вийти з TV Mode</button>
+  </div>
+
+  <pre id="debugLog" class="debug__log"></pre>
+</aside>
+
+<script src="script.js"></script>
+</body>
+</html>
