@@ -3,17 +3,29 @@
    Чистий JS. Без збірки, без залежностей, без backend.
 
    Що робить:
-     1. Монтує iframe із розкладом один раз і більше його не чіпає.
+     1. Монтує iframe із розкладом і автоматично повторює спроби
+        (backoff), якщо завантаження не вдалося — без втручання людини.
      2. Тримає Screen Wake Lock із коректним lifecycle і backoff.
      3. Якщо ввімкнено «Утримувати екран активним» — паралельно з Wake
         Lock тримає повноекранне (на весь viewport, схований під
         iframe) відео з canvas.captureStream, без зовнішніх файлів.
         На частині TV-платформ (LG webOS) саме повноекранне відео —
         задокументований виняток зі скрінсейвера, окремий від Wake Lock.
+        Пауза перемальовування, коли вкладка не видима — економія CPU.
      4. О CONFIG.endTime (локальний час) відпускає Wake Lock і
         медіа-резерв, і більше не запитує їх до наступного дня.
-     5. Керує Fullscreen (тільки після жесту користувача).
-     6. Дає приховану службову панель із реальним статусом.
+     5. Раз на добу (CONFIG.dailyReloadTime, рано вранці) сторінка сама
+        себе перезавантажує — проти витоку пам'яті на TV-браузерах, що
+        працюють тижнями без вимкнення. Перед цим записує прапорець і
+        одразу відновлює TV Mode після перезавантаження. Той самий
+        прапорець рятує і після НЕзапланованого перезавантаження
+        (збій живлення/браузера) — не лише запланованого.
+     6. Керує Fullscreen (тільки після жесту користувача — обійти цю
+        вимогу браузера неможливо навіть після автовідновлення).
+     7. Зберігає останні логи в localStorage — видно, що відбувалося
+        ДО того, як сторінка сама перезавантажилась чи впала.
+     8. Дає приховану службову панель і завжди видиму на екрані
+        діагностику (без інспектора).
 
    Чого не робить свідомо:
      - не читає і не змінює DOM сайту розкладу;
@@ -38,6 +50,7 @@ const CONFIG = {
   enableWakeLock: true,
 
   frameLoadTimeoutMs: 20000,           // скільки чекати load від iframe
+  frameRetryBackoff: [3000, 8000, 20000, 45000],  // автоматичні спроби перед тим, як турбувати людину
   wakeLockBackoff: [1000, 3000, 5000, 10000, 30000],
   mediaKeepAliveFps: 15,               // реальний рух кадру, а не поодинокий тик — ближче до "video playing"
   tickMs: 5000,                        // єдиний фоновий таймер (легкий)
@@ -46,10 +59,17 @@ const CONFIG = {
   cornerTapWindowMs: 4000,
   logLimit: 200,
 
+  dailyReloadEnabled: true,            // самостійне перезавантаження сторінки раз на добу
+  dailyReloadTime: '06:00',            // задовго до відкриття — щоб застати ТВ ще сплячим
+
   storageKeys: {
     autoStart: 'tvDisplay.autoStart',
     wakeEnabled: 'tvDisplay.wakeLockEnabled',
-    endTime: 'tvDisplay.endTime'
+    endTime: 'tvDisplay.endTime',
+    logs: 'tvDisplay.logs',
+    wasInTvMode: 'tvDisplay.wasInTvMode',
+    lastDailyReloadDate: 'tvDisplay.lastDailyReloadDate',
+    reloadCount: 'tvDisplay.reloadCount'
   }
 };
 
@@ -88,12 +108,16 @@ const state = {
   },
 
   frameTimeoutTimer: null,
+  frameRetryTimer: null,
+  frameRetryIndex: 0,
   mainTimer: null,
   debugTimer: null,
   cornerTaps: [],
   noticeActions: { primary: null, secondary: null },
   startedAt: Date.now(),
-  logs: []
+  reloadCount: 0,
+  logs: [],
+  logsDirty: false
 };
 
 /* ==================================================================
@@ -109,10 +133,6 @@ const el = {
   cornerTap: $('cornerTap'),
 
   startBtn: $('startBtn'),
-  openBtn: $('openBtn'),
-  fsBtn: $('fsBtn'),
-  wakeBtn: $('wakeBtn'),
-  settingsBtn: $('settingsBtn'),
 
   mediaVideo: $('mediaKeepAlive'),
 
@@ -120,10 +140,16 @@ const el = {
   statusText: $('statusText'),
   metaEnd: $('metaEnd'),
 
-  settings: $('settings'),
-  autoStartToggle: $('autoStartToggle'),
-  wakeEnabledToggle: $('wakeEnabledToggle'),
-  endTimeInput: $('endTimeInput'),
+  capWakeDot: $('capWakeDot'), capWake: $('capWake'),
+  capFsDot: $('capFsDot'), capFs: $('capFs'),
+  capMediaDot: $('capMediaDot'), capMedia: $('capMedia'),
+  capNet: $('capNet'), capClock: $('capClock'), capUa: $('capUa'),
+
+  hud: $('statusHud'),
+  hudFrameDot: $('hudFrameDot'), hudFrameText: $('hudFrameText'),
+  hudWakeDot: $('hudWakeDot'), hudWakeText: $('hudWakeText'),
+  hudMediaDot: $('hudMediaDot'), hudMediaText: $('hudMediaText'),
+  hudEndDot: $('hudEndDot'), hudEndText: $('hudEndText'),
 
   notice: $('noticeOverlay'),
   noticeTitle: $('noticeTitle'),
@@ -150,6 +176,7 @@ const el = {
   dbgWlReq: $('dbgWlReq'),
   dbgWlRel: $('dbgWlRel'),
   dbgUptime: $('dbgUptime'),
+  dbgReloads: $('dbgReloads'),
   dbgViewport: $('dbgViewport'),
   dbgScreen: $('dbgScreen'),
   dbgUa: $('dbgUa'),
@@ -173,7 +200,29 @@ function timeString(date) {
 function log(message) {
   state.logs.push('[' + timeString() + '] ' + message);
   if (state.logs.length > CONFIG.logLimit) state.logs.shift();
+  state.logsDirty = true;
   if (el.debugLog && !el.debug.hidden) renderLog();
+}
+
+/** Раз на tick, а не на кожен виклик log() — щоб не бити по localStorage вручну. */
+function flushLogsIfDirty() {
+  if (!state.logsDirty) return;
+  state.logsDirty = false;
+  storage.set(CONFIG.storageKeys.logs, JSON.stringify(state.logs.slice(-150)));
+}
+
+/** Логи попереднього запуску — читаються один раз при старті, щоб було видно,
+    що сталося ДО того, як телевізор перезавантажив сторінку сам (аварія,
+    втрата живлення, нічне самооновлення). */
+function loadPreviousLogs() {
+  try {
+    const raw = storage.get(CONFIG.storageKeys.logs);
+    if (!raw) return;
+    const previous = JSON.parse(raw);
+    if (Array.isArray(previous) && previous.length) {
+      state.logs = previous.concat(['--- нове завантаження сторінки ---']);
+    }
+  } catch (e) { /* пошкоджений запис — просто починаємо з чистого логу */ }
 }
 
 function renderLog() {
@@ -528,6 +577,16 @@ function syncMediaFallback() {
   else stopMediaKeepAlive();
 }
 
+/** Статична перевірка підтримки — не залежить від поточного стану, лише від можливостей браузера. */
+function mediaKeepAliveSupported() {
+  try {
+    const c = document.createElement('canvas');
+    return typeof c.captureStream === 'function' || typeof c.mozCaptureStream === 'function';
+  } catch (e) {
+    return false;
+  }
+}
+
 /* ==================================================================
    7. FULLSCREEN
    Викликається тільки з обробника реального жесту користувача.
@@ -560,30 +619,55 @@ async function exitFullscreen() {
    ================================================================== */
 function mountFrame() {
   if (state.frameMounted) return;
-
   state.frameMounted = true;
-  state.frameStatus = 'LOADING';
   el.frameLayer.classList.add('is-mounted');
   el.frameLayer.setAttribute('aria-hidden', 'false');
   on(el.frame, 'load', onFrameLoad, 'iframe load');
-  el.frame.src = CONFIG.scheduleUrl;
-  log('iframe змонтовано.');
+  loadFrame();
+}
 
+/** Спільна точка (перше завантаження і автоматичні повтори). */
+function loadFrame() {
+  state.frameStatus = 'LOADING';
+  el.frame.src = CONFIG.scheduleUrl;
+  log('iframe: запит завантаження (спроба ' + (state.frameRetryIndex + 1) + ').');
+
+  window.clearTimeout(state.frameTimeoutTimer);
   state.frameTimeoutTimer = window.setTimeout(safe(function () {
     if (state.frameStatus !== 'LOADING') return;
     state.frameStatus = 'TIMEOUT';
     log('УВАГА: iframe не повідомив про завантаження за ' +
         (CONFIG.frameLoadTimeoutMs / 1000) + ' с.');
+    retryOrGiveUp();
+  }, 'frame timeout'), CONFIG.frameLoadTimeoutMs);
+}
+
+/** Кілька тихих автоматичних спроб перед тим, як турбувати людину повідомленням.
+    Той самий принцип backoff, що і для Wake Lock. */
+function retryOrGiveUp() {
+  const steps = CONFIG.frameRetryBackoff;
+  if (state.frameRetryIndex < steps.length) {
+    const delay = steps[state.frameRetryIndex];
+    state.frameRetryIndex += 1;
+    log('Автоматична повторна спроба завантаження розкладу через ' + (delay / 1000) + ' с.');
+    updateDebug();
+    updateHud();
+    window.clearTimeout(state.frameRetryTimer);
+    state.frameRetryTimer = window.setTimeout(safe(loadFrame, 'frame retry'), delay);
+  } else {
+    log('Автоматичні спроби вичерпано — показую повідомлення.');
     showFrameProblem(
       'Розклад не завантажується',
       'Перевірте мережу. Якщо сайт відкривається в окремій вкладці, але не тут — його заборонено вбудовувати.'
     );
     updateDebug();
-  }, 'frame timeout'), CONFIG.frameLoadTimeoutMs);
+  }
 }
 
 function onFrameLoad() {
   window.clearTimeout(state.frameTimeoutTimer);
+  window.clearTimeout(state.frameRetryTimer);
+  state.frameRetryIndex = 0;
 
   /* Перевірка вбудовуваності — лише читання, без роботи з чужим DOM:
        - cross-origin документ завантажився → contentDocument === null;
@@ -627,13 +711,54 @@ function showFrameProblem(title, text) {
     secondary: {
       label: 'Спробувати ще раз',
       action: function () {
-        state.frameStatus = 'LOADING';
+        state.frameRetryIndex = 0;
         hideNotice();
-        el.frame.src = CONFIG.scheduleUrl;
+        loadFrame();
         log('Повторне завантаження розкладу (вручну).');
       }
     }
   });
+}
+
+/* ==================================================================
+   9b. ЩОДЕННЕ САМООНОВЛЕННЯ + ВІДНОВЛЕННЯ ПІСЛЯ ПЕРЕЗАВАНТАЖЕННЯ
+   Довготривалий (тижні без перезавантаження) TV-браузер накопичує
+   витік пам'яті. Раз на добу, рано вранці (задовго до відкриття),
+   сторінка сама себе перезавантажує — і одразу відновлює TV Mode,
+   бо перед reload() записує прапорець у localStorage.
+   Той самий прапорець рятує і від НЕзапланованих перезавантажень —
+   стрибок живлення, збій самого браузера тощо.
+   ================================================================== */
+function rememberTvModeFlag(active) {
+  storage.set(CONFIG.storageKeys.wasInTvMode, active ? 'true' : 'false');
+}
+
+function bumpReloadCounter() {
+  const raw = storage.get(CONFIG.storageKeys.reloadCount);
+  const count = (raw ? parseInt(raw, 10) : 0) || 0;
+  state.reloadCount = count;
+  return count;
+}
+
+/** Викликається з tick(): раз на добу, у вузькому вікні о dailyReloadTime. */
+function maybeDailyReload(now) {
+  if (!CONFIG.dailyReloadEnabled) return;
+  const target = parseEndTime(CONFIG.dailyReloadTime);
+  if (!target) return;
+
+  const todayKey = now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate();
+  if (storage.get(CONFIG.storageKeys.lastDailyReloadDate) === todayKey) return;
+
+  const withinWindow = now.getHours() === target.hours &&
+    now.getMinutes() >= target.minutes && now.getMinutes() < target.minutes + 2;
+  if (!withinWindow) return;
+
+  storage.set(CONFIG.storageKeys.lastDailyReloadDate, todayKey);
+  storage.set(CONFIG.storageKeys.reloadCount, String((state.reloadCount || 0) + 1));
+  rememberTvModeFlag(state.tvModeActive);
+  log('Заплановане нічне самооновлення сторінки (' + CONFIG.dailyReloadTime + ').');
+  flushLogsIfDirty();
+  window.setTimeout(function () { window.location.reload(); }, 300);
 }
 
 /* ==================================================================
@@ -644,27 +769,20 @@ function setMode(mode) {
   updateDebug();
 }
 
-/** Показати розклад без fullscreen — зручно, щоб спокійно залогінитися. */
-async function openSchedule() {
-  mountFrame();
-  state.frameVisible = true;
-  el.body.classList.add('frame-visible');
-  setMode('PREVIEW');
-  log('Режим перегляду увімкнено.');
-  await requestWakeLock();
-}
-
 async function enterTvMode(withGesture) {
   mountFrame();
   state.frameVisible = true;
   state.tvModeActive = true;
+  rememberTvModeFlag(true);
   el.body.classList.add('frame-visible', 'tv-mode');
   setMode('TV MODE');
   hideNotice();
+  syncHudVisibility();
   log('TV Mode увімкнено.');
 
   if (withGesture) await enterFullscreen();
   await requestWakeLock();
+  syncMediaFallback();
 
   if (!withGesture && !isFullscreen()) {
     showNotice({
@@ -673,6 +791,7 @@ async function enterTvMode(withGesture) {
       primary: { label: 'Увімкнути повний екран', action: function () { hideNotice(); enterFullscreen(); } }
     });
   }
+  updateHud();
   updateDebug();
 }
 
@@ -680,9 +799,11 @@ async function exitTvMode() {
   if (!state.tvModeActive && state.mode === 'IDLE') return;
   state.tvModeActive = false;
   state.frameVisible = false;
+  rememberTvModeFlag(false);
   el.body.classList.remove('frame-visible', 'tv-mode');
   setMode('IDLE');
   hideNotice();
+  syncHudVisibility();
   await releaseWakeLock('вихід із TV Mode');   // сам викличе syncMediaFallback(), яка тепер поверне false (frameVisible=false)
   await exitFullscreen();
   setStatus(state.dayOver ? 'Робочий день завершено' : 'TV Mode вимкнено', 'warn');
@@ -715,6 +836,78 @@ function hideNotice() {
   el.notice.hidden = true;
   state.noticeActions.primary = null;
   state.noticeActions.secondary = null;
+}
+
+/* ==================================================================
+   10b. ВИДИМА ДІАГНОСТИКА НА ГОЛОВНОМУ ЕКРАНІ
+   На відміну від службової панелі (Ctrl+Shift+D), цей блок завжди
+   на видноті на стартовому екрані — саме те, що можна прочитати
+   оком на самому телевізорі, без інспектора.
+   ================================================================== */
+function setCap(dotEl, textEl, ok, okText, badText) {
+  if (!dotEl || !textEl) return;
+  dotEl.className = 'dot ' + (ok ? 'dot--ok' : 'dot--err');
+  textEl.textContent = ok ? okText : badText;
+}
+
+/** Речі, які не змінюються після завантаження сторінки — рахуємо один раз. */
+function renderStaticCapabilities() {
+  setCap(el.capWakeDot, el.capWake, wakeLockSupported(), 'підтримується', 'НЕ підтримується');
+  const fsSupported = Boolean(document.documentElement.requestFullscreen ||
+    document.documentElement.webkitRequestFullscreen);
+  setCap(el.capFsDot, el.capFs, fsSupported, 'підтримується', 'НЕ підтримується');
+  setCap(el.capMediaDot, el.capMedia, mediaKeepAliveSupported(), 'доступний', 'недоступний');
+  if (el.capUa) el.capUa.textContent = navigator.userAgent;
+}
+
+/** Речі, які змінюються з часом — оновлюємо на кожному tick(). */
+function renderLiveCapabilities() {
+  if (el.capNet) el.capNet.textContent = navigator.onLine ? 'online' : 'offline';
+  if (el.capClock) {
+    const now = new Date();
+    el.capClock.textContent = timeString(now) + ' · ' + now.toLocaleDateString('uk-UA');
+  }
+}
+
+/* ==================================================================
+   10c. СТАТУС-HUD (постійно на екрані, поки показано розклад)
+   Легка версія debug-панелі: не потребує Ctrl+Shift+D і зрозуміла
+   з одного погляду на пульт-керований телевізор.
+   ================================================================== */
+function syncHudVisibility() {
+  if (!el.hud) return;
+  el.hud.hidden = !state.frameVisible;
+}
+
+function updateHud() {
+  if (!el.hud || el.hud.hidden) return;
+  const now = new Date();
+
+  const frameKind = state.frameStatus === 'LOADED' ? 'ok' :
+    (state.frameStatus === 'LOADING' ? 'warn' :
+    (state.frameStatus === 'NOT MOUNTED' ? 'ready' : 'err'));
+  const frameLabels = {
+    'NOT MOUNTED': 'не завантажено', 'LOADING': 'завантаження…', 'LOADED': 'завантажено',
+    'BLOCKED': 'заблоковано', 'TIMEOUT': 'не відповідає'
+  };
+  el.hudFrameDot.className = 'hud__dot dot--' + frameKind;
+  el.hudFrameText.textContent = frameLabels[state.frameStatus] || state.frameStatus;
+
+  const wakeKind = state.wakeLock ? 'ok' :
+    (state.wakeLockStatus === 'RETRYING' ? 'warn' :
+    (state.wakeLockStatus === 'DAY ENDED' || state.wakeLockStatus === 'DISABLED' ? 'ready' : 'err'));
+  const wakeLabels = {
+    'RETRYING': 'повтор спроби', 'FAILED': 'не вдалося', 'NOT SUPPORTED': 'не підтримується',
+    'DISABLED': 'вимкнено', 'DAY ENDED': 'день завершено', 'RELEASED': 'відпущено', 'IDLE': 'очікування'
+  };
+  el.hudWakeDot.className = 'hud__dot dot--' + wakeKind;
+  el.hudWakeText.textContent = state.wakeLock ? 'активний' : (wakeLabels[state.wakeLockStatus] || state.wakeLockStatus);
+
+  el.hudMediaDot.className = 'hud__dot dot--' + (state.media.active ? 'ok' : 'ready');
+  el.hudMediaText.textContent = state.media.active ? 'активний' : 'вимкнено';
+
+  el.hudEndDot.className = 'hud__dot dot--' + (state.dayOver ? 'err' : 'ready');
+  el.hudEndText.textContent = state.dayOver ? 'день завершено' : formatDuration(msUntilEnd(now));
 }
 
 /* ==================================================================
@@ -755,6 +948,7 @@ function updateDebug() {
   el.dbgWlReq.textContent = state.lastWakeRequest || '—';
   el.dbgWlRel.textContent = state.lastWakeRelease || '—';
   el.dbgUptime.textContent = formatDuration(Date.now() - state.startedAt);
+  el.dbgReloads.textContent = String(state.reloadCount) + ' (наступне самооновлення о ' + CONFIG.dailyReloadTime + ')';
   el.dbgViewport.textContent = window.innerWidth + '×' + window.innerHeight +
     ' @' + (window.devicePixelRatio || 1) + 'x';
   el.dbgScreen.textContent = screen.width + '×' + screen.height;
@@ -812,18 +1006,14 @@ window.runDiagnostics = runDiagnostics;
 /* ==================================================================
    13. НАЛАШТУВАННЯ (лише параметри wrapper, жодних credentials)
    ================================================================== */
+/** Налаштування тепер без UI: Wake Lock завжди увімкнений, час завершення
+    завжди фіксований (CONFIG.endTime = 17:55). Автозапуск лишається
+    параметром лише в CONFIG — його можна змінити тут, якщо треба. */
 function loadSettings() {
-  const autoStart = storage.get(CONFIG.storageKeys.autoStart);
-  const wakeEnabled = storage.get(CONFIG.storageKeys.wakeEnabled);
-  const endTime = storage.get(CONFIG.storageKeys.endTime);
+  state.settings.autoStart = CONFIG.autoStartTVMode;
+  state.settings.wakeEnabled = true;
+  state.settings.endTime = CONFIG.endTime;
 
-  state.settings.autoStart = autoStart === null ? CONFIG.autoStartTVMode : autoStart === 'true';
-  state.settings.wakeEnabled = wakeEnabled === null ? CONFIG.enableWakeLock : wakeEnabled === 'true';
-  state.settings.endTime = parseEndTime(endTime) ? endTime : CONFIG.endTime;
-
-  el.autoStartToggle.checked = state.settings.autoStart;
-  el.wakeEnabledToggle.checked = state.settings.wakeEnabled;
-  el.endTimeInput.value = state.settings.endTime;
   el.metaEnd.textContent = state.settings.endTime;
 }
 
@@ -834,61 +1024,6 @@ on(el.startBtn, 'click', function () {
   setStatus('TV Mode активний', 'ok');
   return enterTvMode(true);
 }, 'start');
-
-on(el.openBtn, 'click', function () { return openSchedule(); }, 'open');
-
-on(el.fsBtn, 'click', function () { return enterFullscreen(); }, 'fullscreen btn');
-
-on(el.wakeBtn, 'click', function () {
-  state.wakeRetryIndex = 0;
-  if (state.dayOver) {
-    log('Запит Wake Lock проігноровано: робочий день завершено.');
-    setStatus('Робочий день завершено', 'warn');
-    return;
-  }
-  return requestWakeLock().then(function (ok) {
-    setStatus(ok ? 'Екран утримується активним' : 'Wake Lock недоступний', ok ? 'ok' : 'warn');
-  });
-}, 'wake btn');
-
-on(el.settingsBtn, 'click', function () {
-  const show = el.settings.hidden;
-  el.settings.hidden = !show;
-  el.settingsBtn.setAttribute('aria-pressed', show ? 'true' : 'false');
-}, 'settings');
-
-on(el.autoStartToggle, 'change', function () {
-  state.settings.autoStart = el.autoStartToggle.checked;
-  storage.set(CONFIG.storageKeys.autoStart, String(state.settings.autoStart));
-  log('Автозапуск: ' + (state.settings.autoStart ? 'увімкнено' : 'вимкнено'));
-}, 'autostart');
-
-on(el.wakeEnabledToggle, 'change', function () {
-  state.settings.wakeEnabled = el.wakeEnabledToggle.checked;
-  storage.set(CONFIG.storageKeys.wakeEnabled, String(state.settings.wakeEnabled));
-  log('Утримання екрана: ' + (state.settings.wakeEnabled ? 'увімкнено' : 'вимкнено'));
-  if (state.settings.wakeEnabled) {
-    state.wakeRetryIndex = 0;
-    if (state.frameVisible) requestWakeLock();
-    syncMediaFallback();
-  } else {
-    releaseWakeLock('вимкнено в налаштуваннях');   // сам викличе syncMediaFallback()
-  }
-}, 'wake toggle');
-
-on(el.endTimeInput, 'change', function () {
-  const value = el.endTimeInput.value;
-  if (!parseEndTime(value)) {
-    el.endTimeInput.value = state.settings.endTime;
-    return;
-  }
-  state.settings.endTime = value;
-  storage.set(CONFIG.storageKeys.endTime, value);
-  el.metaEnd.textContent = value;
-  log('Час завершення роботи змінено на ' + value + '.');
-  evaluateDay();                       // може одразу закрити або відкрити день
-  updateDebug();
-}, 'endtime');
 
 on(el.noticePrimary, 'click', function () {
   const action = state.noticeActions.primary;
@@ -910,8 +1045,8 @@ on(el.dbgReload, 'click', function () {
   // Ручне перезавантаження лише за явним натисканням.
   // Автоматично цього не робимо: сайт оновлює себе сам.
   if (!state.frameMounted) { mountFrame(); return; }
-  state.frameStatus = 'LOADING';
-  el.frame.src = CONFIG.scheduleUrl;
+  state.frameRetryIndex = 0;
+  loadFrame();
   log('Розклад перезавантажено вручну.');
 }, 'debug reload');
 on(el.dbgExit, 'click', function () {
@@ -969,8 +1104,21 @@ function onFullscreenChange() {
 // Видимість документа — головна точка відновлення Wake Lock
 on(document, 'visibilitychange', function () {
   log('Видимість: ' + document.visibilityState);
-  if (document.visibilityState !== 'visible') { updateDebug(); return; }
+  if (document.visibilityState !== 'visible') {
+    if (state.media.redrawTimer) {
+      window.clearInterval(state.media.redrawTimer);
+      state.media.redrawTimer = null;   // потік лишається активним, просто не витрачаємо CPU на кадри, яких ніхто не бачить
+    }
+    updateDebug();
+    return;
+  }
 
+  if (state.media.active && !state.media.redrawTimer) {
+    state.media.redrawTimer = window.setInterval(
+      safe(drawMediaFrame, 'media redraw'),
+      Math.round(1000 / CONFIG.mediaKeepAliveFps)
+    );
+  }
   evaluateDay();                        // могли повернутися вже після endTime
   if (state.frameVisible && !state.wakeLock && wakeLockAllowed()) {
     state.wakeRetryIndex = 0;
@@ -979,8 +1127,17 @@ on(document, 'visibilitychange', function () {
   updateDebug();
 }, 'visibilitychange');
 
-on(window, 'online', function () { log('Мережа: online'); updateDebug(); }, 'online');
-on(window, 'offline', function () { log('Мережа: offline'); updateDebug(); }, 'offline');
+on(window, 'online', function () {
+  log('Мережа: online');
+  renderLiveCapabilities();
+  if (state.frameStatus === 'TIMEOUT') {
+    log('Мережа повернулась — негайна повторна спроба завантаження розкладу.');
+    window.clearTimeout(state.frameRetryTimer);
+    loadFrame();
+  }
+  updateDebug();
+}, 'online');
+on(window, 'offline', function () { log('Мережа: offline'); renderLiveCapabilities(); updateDebug(); }, 'offline');
 on(window, 'resize', updateDebug, 'resize');
 
 // Деякі ТВ-браузери надійніше сигналізують поверненням фокуса, ніж visibilitychange.
@@ -999,6 +1156,7 @@ on(window, 'pagehide', function () {
   window.clearInterval(state.debugTimer);
   window.clearTimeout(state.wakeRetryTimer);
   window.clearTimeout(state.frameTimeoutTimer);
+  window.clearTimeout(state.frameRetryTimer);
   if (state.wakeLock) { try { state.wakeLock.release(); } catch (e) { /* ігноруємо */ } }
 }, 'pagehide');
 
@@ -1023,6 +1181,10 @@ function tick() {
     requestWakeLock();
   }
   syncMediaFallback();   // страховка: підхоплює стан, якщо якийсь виклик десь пропущено
+  updateHud();
+  renderLiveCapabilities();
+  flushLogsIfDirty();
+  maybeDailyReload(new Date());
 }
 
 /* ==================================================================
@@ -1030,7 +1192,12 @@ function tick() {
    ================================================================== */
 (function init() {
   try {
+    loadPreviousLogs();
+    bumpReloadCounter();
     loadSettings();
+    renderStaticCapabilities();
+    renderLiveCapabilities();
+    syncHudVisibility();
 
     if (!wakeLockSupported()) {
       state.wakeLockStatus = 'NOT SUPPORTED';
@@ -1051,13 +1218,18 @@ function tick() {
     }
 
     state.mainTimer = window.setInterval(safe(tick, 'tick'), CONFIG.tickMs);
-    log('TV Display запущено. Завершення роботи о ' + state.settings.endTime +
-        '. Автозапуск: ' + (state.settings.autoStart ? 'увімкнено' : 'вимкнено') + '.');
 
-    if (state.settings.autoStart) {
+    const wasInTvMode = storage.get(CONFIG.storageKeys.wasInTvMode) === 'true';
+    const shouldResume = state.settings.autoStart || wasInTvMode;
+    log('TV Display запущено (перезавантажень: ' + state.reloadCount + '). Завершення роботи о ' +
+        state.settings.endTime + '. ' +
+        (wasInTvMode ? 'Відновлюю TV Mode після перезавантаження.' : 'Автозапуск: ' +
+        (state.settings.autoStart ? 'увімкнено' : 'вимкнено') + '.'));
+
+    if (shouldResume) {
       /* Після перезавантаження жесту користувача немає. Вмикаємо те, що
-         дозволено без жесту (iframe + спроба Wake Lock), і просимо одне
-         натискання для Fullscreen. Обходів обмежень немає. */
+         дозволено без жесту (iframe + спроба Wake Lock + відео-резерв),
+         і просимо одне натискання для Fullscreen. Обходів обмежень немає. */
       enterTvMode(false);
     }
   } catch (error) {

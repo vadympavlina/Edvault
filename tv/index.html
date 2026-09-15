@@ -35,7 +35,35 @@
 <video id="mediaKeepAlive" class="media-keepalive" muted playsinline aria-hidden="true"></video>
 
 <!-- ============================================================
-     ШАР 2. Панель керування (повністю зникає у TV Mode)
+     ШАР 2. Статус-HUD. Постійно видимий, поки показано розклад
+     (і в PREVIEW, і в TV MODE) — щоб на самому телевізорі було
+     відразу видно, що зараз реально працює, без службової панелі.
+     ============================================================ -->
+<aside id="statusHud" class="hud" hidden aria-live="off">
+  <button id="hudRow-frame" class="hud__row" type="button" disabled>
+    <span id="hudFrameDot" class="hud__dot"></span>
+    <span class="hud__label">Розклад</span>
+    <span id="hudFrameText" class="hud__value">—</span>
+  </button>
+  <button id="hudRow-wake" class="hud__row" type="button" disabled>
+    <span id="hudWakeDot" class="hud__dot"></span>
+    <span class="hud__label">Wake Lock</span>
+    <span id="hudWakeText" class="hud__value">—</span>
+  </button>
+  <button id="hudRow-media" class="hud__row" type="button" disabled>
+    <span id="hudMediaDot" class="hud__dot"></span>
+    <span class="hud__label">Відео-резерв</span>
+    <span id="hudMediaText" class="hud__value">—</span>
+  </button>
+  <div id="hudRow-end" class="hud__row">
+    <span id="hudEndDot" class="hud__dot"></span>
+    <span class="hud__label">До завершення (17:55)</span>
+    <span id="hudEndText" class="hud__value">—</span>
+  </div>
+</aside>
+
+<!-- ============================================================
+     ШАР 3. Панель керування (повністю зникає у TV Mode)
      ============================================================ -->
 <main id="launcher" class="launcher">
   <div id="cornerTap" class="corner-tap"></div>
@@ -45,14 +73,7 @@
     <h1 class="launcher__title">TV Display</h1>
     <p class="launcher__subtitle">Онлайн-розклад академії</p>
 
-    <button id="startBtn" class="btn-start" type="button">Увійти в TV Mode</button>
-
-    <div class="actions">
-      <button id="openBtn" class="btn-ghost" type="button">Відкрити розклад</button>
-      <button id="fsBtn" class="btn-ghost" type="button">Повний екран</button>
-      <button id="wakeBtn" class="btn-ghost" type="button">Wake Lock</button>
-      <button id="settingsBtn" class="btn-ghost" type="button">Налаштування</button>
-    </div>
+    <button id="startBtn" class="btn-start" type="button">Відкрити розклад</button>
 
     <dl class="meta">
       <div class="meta__row">
@@ -65,47 +86,56 @@
       </div>
       <div class="meta__row">
         <dt>Робочий день до</dt>
-        <dd id="metaEnd">—</dd>
+        <dd id="metaEnd">17:55</dd>
       </div>
     </dl>
 
-    <!-- Налаштування wrapper. Жодних credentials тут немає і бути не може. -->
-    <section id="settings" class="settings" hidden>
-      <label class="switch">
-        <input type="checkbox" id="autoStartToggle">
-        <span class="switch__track"><span class="switch__thumb"></span></span>
-        <span class="switch__label">Автоматично вмикати TV Mode після перезавантаження</span>
-      </label>
-
-      <label class="switch">
-        <input type="checkbox" id="wakeEnabledToggle">
-        <span class="switch__track"><span class="switch__thumb"></span></span>
-        <span class="switch__label">Утримувати екран активним (Screen Wake Lock)</span>
-      </label>
-
-      <label class="field">
-        <span class="field__label">Час завершення роботи (локальний час телевізора)</span>
-        <input type="time" id="endTimeInput" class="field__input" step="60">
-      </label>
-
-      <div class="field">
-        <span class="field__label">Розклад просить логін щоразу?</span>
-        <p class="settings__note">
-          Це не через wrapper — Chrome за замовчуванням блокує cookies сесії всередині iframe з іншого сайту (SameSite). Додайте виняток: <code>chrome://settings/content/siteDetails?site=https://lb.itstep.org</code> → Cookies → дозволити, або в <code>chrome://settings/cookies</code> → «Sites that can always use cookies» → додати <code>lb.itstep.org</code> з увімкненим «Including third-party cookies». Далі увійдіть у розклад з галочкою «Запам'ятати мене» — сесія переживе перезавантаження сторінки.
-        </p>
-      </div>
-
-      <p class="settings__note" id="settingsNote">Зберігаються лише ці налаштування. Логін і пароль від lb.itstep.org wrapper не бачить і не зберігає.</p>
+    <!-- Видима діагностика прямо на екрані — без інспектора, без Ctrl+Shift+D.
+         Саме те, що можна перевірити оком на самому телевізорі. -->
+    <section class="capabilities" aria-label="Технічні можливості цього браузера">
+      <p class="capabilities__title">Що підтримує цей телевізор/браузер</p>
+      <dl class="meta capabilities__list">
+        <div class="meta__row">
+          <dt><span id="capWakeDot" class="dot"></span>Wake Lock API</dt>
+          <dd id="capWake">перевірка…</dd>
+        </div>
+        <div class="meta__row">
+          <dt><span id="capFsDot" class="dot"></span>Fullscreen API</dt>
+          <dd id="capFs">перевірка…</dd>
+        </div>
+        <div class="meta__row">
+          <dt><span id="capMediaDot" class="dot"></span>Відео-резерв</dt>
+          <dd id="capMedia">перевірка…</dd>
+        </div>
+        <div class="meta__row">
+          <dt>Мережа</dt>
+          <dd id="capNet">—</dd>
+        </div>
+        <div class="meta__row">
+          <dt>Час пристрою</dt>
+          <dd id="capClock">—</dd>
+        </div>
+        <div class="meta__row">
+          <dt>Браузер</dt>
+          <dd id="capUa" class="capabilities__ua">—</dd>
+        </div>
+      </dl>
     </section>
 
     <p class="hint-keys">
-      Ctrl + Shift + D — службова панель · Ctrl + Shift + F — повний екран · Ctrl + Shift + Q — вихід із TV Mode
+      Один клік по кнопці вмикає все: повний екран, утримання екрана активним і відео-резерв. Час завершення роботи фіксований — 17:55.
+    </p>
+    <p class="hint-keys">
+      Розклад просить логін щоразу? Це не через wrapper — Chrome блокує cookies сесії всередині iframe з іншого сайту (SameSite). Додайте виняток: <code>chrome://settings/content/siteDetails?site=https://lb.itstep.org</code> → Cookies → дозволити, або в <code>chrome://settings/cookies</code> → «Sites that can always use cookies» → додати <code>lb.itstep.org</code> з увімкненим «Including third-party cookies». Увійдіть у розклад з галочкою «Запам'ятати мене» — сесія переживе перезавантаження сторінки.
+    </p>
+    <p class="hint-keys">
+      Ctrl + Shift + D — службова панель · Ctrl + Shift + Q — вихід із TV Mode
     </p>
   </div>
 </main>
 
 <!-- ============================================================
-     ШАР 3. Мінімальне повідомлення поверх TV Mode
+     ШАР 4. Мінімальне повідомлення поверх TV Mode
      ============================================================ -->
 <div id="noticeOverlay" class="notice" hidden>
   <div class="notice__box">
@@ -119,7 +149,7 @@
 </div>
 
 <!-- ============================================================
-     ШАР 4. Службова панель (Ctrl+Shift+D або 5 кліків у кутку)
+     ШАР 5. Службова панель (Ctrl+Shift+D або 5 кліків у кутку)
      ============================================================ -->
 <aside id="debugPanel" class="debug" hidden>
   <header class="debug__head">
@@ -145,6 +175,7 @@
     <span>Останній Wake request</span><b id="dbgWlReq">—</b>
     <span>Останній Wake release</span><b id="dbgWlRel">—</b>
     <span>Аптайм сторінки</span><b id="dbgUptime">—</b>
+    <span>Перезавантажень сторінки</span><b id="dbgReloads">—</b>
     <span>Viewport</span><b id="dbgViewport">—</b>
     <span>Screen</span><b id="dbgScreen">—</b>
     <span>Browser</span><b id="dbgUa" class="debug__ua">—</b>
