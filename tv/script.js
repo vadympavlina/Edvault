@@ -289,11 +289,12 @@ function wakeLockSupported() {
          typeof navigator.wakeLock.request === 'function';
 }
 
-/** Чи дозволено зараз узагалі тримати екран. */
+/** Чи дозволено зараз узагалі тримати екран. Час перевіряється щоразу заново,
+    щоб межа 17:55 спрацьовувала точно, а не з затримкою до наступного tick. */
 function wakeLockAllowed() {
   if (!wakeLockSupported()) { state.wakeLockStatus = 'NOT SUPPORTED'; return false; }
   if (!state.settings.wakeEnabled) { state.wakeLockStatus = 'DISABLED'; return false; }
-  if (state.dayOver) { state.wakeLockStatus = 'DAY ENDED'; return false; }
+  if (isDayOver(new Date())) { state.wakeLockStatus = 'DAY ENDED'; return false; }
   return true;
 }
 
@@ -312,10 +313,10 @@ async function requestWakeLock() {
   try {
     const lock = await navigator.wakeLock.request('screen');
 
-    // Поки чекали на промис, день міг завершитися або режим — вимкнутися.
-    if (state.dayOver || !state.settings.wakeEnabled) {
+    // Поки чекали на промис, могла настати межа 17:55 або вимкнутись налаштування.
+    if (isDayOver(new Date()) || !state.settings.wakeEnabled) {
       try { await lock.release(); } catch (e) { /* ігноруємо */ }
-      state.wakeLockStatus = state.dayOver ? 'DAY ENDED' : 'DISABLED';
+      state.wakeLockStatus = isDayOver(new Date()) ? 'DAY ENDED' : 'DISABLED';
       updateDebug();
       return false;
     }
@@ -824,6 +825,10 @@ function onFullscreenChange() {
     });
   } else if (active && state.tvModeActive) {
     hideNotice();
+    if (!state.wakeLock && wakeLockAllowed()) {
+      state.wakeRetryIndex = 0;
+      requestWakeLock();
+    }
   }
   updateDebug();
 }
@@ -844,6 +849,16 @@ on(document, 'visibilitychange', function () {
 on(window, 'online', function () { log('Мережа: online'); updateDebug(); }, 'online');
 on(window, 'offline', function () { log('Мережа: offline'); updateDebug(); }, 'offline');
 on(window, 'resize', updateDebug, 'resize');
+
+// Деякі ТВ-браузери надійніше сигналізують поверненням фокуса, ніж visibilitychange.
+// Реальна подія браузера — не синтетична активність.
+on(window, 'focus', function () {
+  evaluateDay();
+  if (state.frameVisible && !state.wakeLock && wakeLockAllowed()) {
+    state.wakeRetryIndex = 0;
+    requestWakeLock();
+  }
+}, 'window focus');
 
 on(window, 'pagehide', function () {
   // Акуратно звільняємо ресурси перед закриттям вкладки.
