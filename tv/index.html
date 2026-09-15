@@ -11,8 +11,9 @@
 
 <!-- ============================================================
      ШАР 1. Сайт розкладу (iframe).
-     src НЕ прописаний у HTML: iframe монтується один раз із JS,
-     після першого запуску TV Mode, і більше не перезавантажується.
+     src НЕ прописаний у HTML: iframe монтується один раз із JS
+     і далі не перезавантажується — щоб не ламати власне
+     оновлення сайту приблизно кожні 2 хвилини.
      ============================================================ -->
 <div id="frameLayer" class="frame-layer" aria-hidden="true">
   <iframe
@@ -24,57 +25,86 @@
 </div>
 
 <!-- ============================================================
-     ШАР 2. Стартовий екран (ховається у TV Mode)
+     ШАР 2. Панель керування (повністю зникає у TV Mode)
      ============================================================ -->
 <main id="launcher" class="launcher">
-
-  <!-- невидима зона для 5 кліків у верхньому лівому кутку -->
-  <div id="cornerTap" class="corner-tap" title=""></div>
+  <div id="cornerTap" class="corner-tap"></div>
 
   <div class="launcher__inner">
     <p class="launcher__kicker">Академія IT STEP</p>
     <h1 class="launcher__title">TV Display</h1>
     <p class="launcher__subtitle">Онлайн-розклад академії</p>
 
-    <button id="startBtn" class="btn-start" type="button">
-      Запустити TV Mode
-    </button>
+    <button id="startBtn" class="btn-start" type="button">Увійти в TV Mode</button>
+
+    <div class="actions">
+      <button id="openBtn" class="btn-ghost" type="button">Відкрити розклад</button>
+      <button id="fsBtn" class="btn-ghost" type="button">Повний екран</button>
+      <button id="wakeBtn" class="btn-ghost" type="button">Wake Lock</button>
+      <button id="settingsBtn" class="btn-ghost" type="button">Налаштування</button>
+    </div>
 
     <dl class="meta">
       <div class="meta__row">
         <dt>Джерело</dt>
-        <dd id="metaUrl">lb.itstep.org/schedule</dd>
+        <dd>lb.itstep.org/schedule</dd>
       </div>
       <div class="meta__row">
         <dt>Статус</dt>
         <dd><span id="statusDot" class="dot dot--ready"></span><span id="statusText">Готово до запуску</span></dd>
       </div>
       <div class="meta__row">
-        <dt>Wake Lock</dt>
-        <dd id="metaWakeSupport">перевірка…</dd>
+        <dt>Робочий день до</dt>
+        <dd id="metaEnd">—</dd>
       </div>
     </dl>
 
-    <label class="switch">
-      <input type="checkbox" id="autoStartToggle">
-      <span class="switch__track"><span class="switch__thumb"></span></span>
-      <span class="switch__label">Автоматично вмикати TV Mode після перезавантаження сторінки</span>
-    </label>
+    <!-- Налаштування wrapper. Жодних credentials тут немає і бути не може. -->
+    <section id="settings" class="settings" hidden>
+      <label class="switch">
+        <input type="checkbox" id="autoStartToggle">
+        <span class="switch__track"><span class="switch__thumb"></span></span>
+        <span class="switch__label">Автоматично вмикати TV Mode після перезавантаження</span>
+      </label>
+
+      <label class="switch">
+        <input type="checkbox" id="wakeEnabledToggle">
+        <span class="switch__track"><span class="switch__thumb"></span></span>
+        <span class="switch__label">Утримувати екран активним (Screen Wake Lock)</span>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Час завершення роботи (локальний час телевізора)</span>
+        <input type="time" id="endTimeInput" class="field__input" step="60">
+      </label>
+
+      <div class="field">
+        <span class="field__label">Розклад просить логін щоразу?</span>
+        <p class="settings__note">
+          Це не через wrapper — Chrome за замовчуванням блокує cookies сесії всередині iframe з іншого сайту (SameSite). Додайте виняток: <code>chrome://settings/content/siteDetails?site=https://lb.itstep.org</code> → Cookies → дозволити, або в <code>chrome://settings/cookies</code> → «Sites that can always use cookies» → додати <code>lb.itstep.org</code> з увімкненим «Including third-party cookies». Далі увійдіть у розклад з галочкою «Запам'ятати мене» — сесія переживе перезавантаження сторінки.
+        </p>
+      </div>
+
+      <p class="settings__note" id="settingsNote">Зберігаються лише ці налаштування. Логін і пароль від lb.itstep.org wrapper не бачить і не зберігає.</p>
+    </section>
 
     <p class="hint-keys">
-      Ctrl + Shift + D — службова панель · Ctrl + Shift + Q — вихід із TV Mode
+      Ctrl + Shift + D — службова панель · Ctrl + Shift + F — повний екран · Ctrl + Shift + Q — вихід із TV Mode
     </p>
   </div>
 </main>
 
 <!-- ============================================================
-     ШАР 3. Підказки поверх TV Mode (fullscreen / помилки)
+     ШАР 3. Мінімальне повідомлення поверх TV Mode
      ============================================================ -->
-<div id="resumeOverlay" class="resume" hidden>
-  <div class="resume__box">
-    <p class="resume__title" id="resumeTitle">Повнокранний режим вимкнено</p>
-    <p class="resume__text" id="resumeText">Натисніть кнопку, щоб повернути повний екран і Wake Lock.</p>
-    <button id="resumeBtn" class="btn-start btn-start--small" type="button">Повернутися в TV Mode</button>
+<div id="noticeOverlay" class="notice" hidden>
+  <div class="notice__box">
+    <p class="notice__title" id="noticeTitle"></p>
+    <p class="notice__text" id="noticeText"></p>
+    <div class="notice__actions">
+      <button id="noticePrimary" class="btn-start btn-start--small" type="button"></button>
+      <button id="noticeSecondary" class="btn-ghost" type="button" hidden></button>
+    </div>
   </div>
 </div>
 
@@ -87,18 +117,25 @@
     <button id="debugClose" class="debug__close" type="button" aria-label="Закрити">×</button>
   </header>
 
+  <p id="dbgBanner" class="debug__banner" hidden></p>
+
   <div class="debug__grid">
+    <span>Режим роботи</span><b id="dbgMode">—</b>
     <span>TV Mode</span><b id="dbgTv">INACTIVE</b>
     <span>Fullscreen</span><b id="dbgFs">INACTIVE</b>
     <span>Wake Lock</span><b id="dbgWl">—</b>
-    <span>Document visibility</span><b id="dbgVis">—</b>
+    <span>Page visibility</span><b id="dbgVis">—</b>
+    <span>Online</span><b id="dbgOnline">—</b>
     <span>Iframe</span><b id="dbgFrame">NOT MOUNTED</b>
-    <span>Останній request</span><b id="dbgWlReq">—</b>
-    <span>Останній release</span><b id="dbgWlRel">—</b>
+    <span>Поточний час</span><b id="dbgTime">—</b>
+    <span>Дата</span><b id="dbgDate">—</b>
+    <span>Завершення о</span><b id="dbgEnd">—</b>
+    <span>Лишилось</span><b id="dbgLeft">—</b>
+    <span>Останній Wake request</span><b id="dbgWlReq">—</b>
+    <span>Останній Wake release</span><b id="dbgWlRel">—</b>
     <span>Аптайм сторінки</span><b id="dbgUptime">—</b>
     <span>Viewport</span><b id="dbgViewport">—</b>
     <span>Screen</span><b id="dbgScreen">—</b>
-    <span>Мережа</span><b id="dbgOnline">—</b>
     <span>Browser</span><b id="dbgUa" class="debug__ua">—</b>
   </div>
 
