@@ -53,6 +53,19 @@ html, body {
   background: #000;
 }
 
+/* ---------- Медіа-резерв (прихований, але не display:none —
+   інакше деякі браузери призупиняють відтворення) ---------- */
+.media-keepalive {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  bottom: 0;
+  right: 0;
+  opacity: 0.01;
+  pointer-events: none;
+  z-index: -1;
+}
+
 /* ---------- Панель керування ---------- */
 .launcher {
   position: fixed;

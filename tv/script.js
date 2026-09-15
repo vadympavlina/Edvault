@@ -5,15 +5,21 @@
    Що робить:
      1. Монтує iframe із розкладом один раз і більше його не чіпає.
      2. Тримає Screen Wake Lock із коректним lifecycle і backoff.
-     3. О CONFIG.endTime (локальний час) відпускає Wake Lock і
-        більше не запитує його до наступного дня.
-     4. Керує Fullscreen (тільки після жесту користувача).
-     5. Дає приховану службову панель із реальним статусом.
+     3. Якщо Wake Lock API недоступний або стабільно провалюється —
+        вмикає локальний медіа-резерв (canvas.captureStream, без
+        зовнішніх файлів) як 3-й рівень фолбеку. Вимикається сам,
+        щойно справжній Wake Lock запрацює.
+     4. О CONFIG.endTime (локальний час) відпускає Wake Lock і
+        медіа-резерв, і більше не запитує їх до наступного дня.
+     5. Керує Fullscreen (тільки після жесту користувача).
+     6. Дає приховану службову панель із реальним статусом.
 
    Чого не робить свідомо:
      - не читає і не змінює DOM сайту розкладу;
-     - не імітує активність користувача;
+     - не імітує дії користувача (кліки, дотики, рух миші);
      - не обходить X-Frame-Options, CSP чи вимогу user gesture;
+     - не обходить сон самого телевізора на рівні прошивки —
+       Auto Power Off / Screen Saver ТВ лишаються поза межами JS;
      - не бачить, не зберігає і не передає логін та пароль.
    ============================================================= */
 
@@ -32,6 +38,7 @@ const CONFIG = {
 
   frameLoadTimeoutMs: 20000,           // скільки чекати load від iframe
   wakeLockBackoff: [1000, 3000, 5000, 10000, 30000],
+  mediaKeepAliveFps: 1,                // редрейм раз на секунду — цього достатньо
   tickMs: 5000,                        // єдиний фоновий таймер (легкий)
   debugTickMs: 1000,                   // працює лише поки відкрита панель
   cornerTaps: 5,
@@ -62,6 +69,15 @@ const state = {
   wakeRequestInFlight: false,
   lastWakeRequest: null,
   lastWakeRelease: null,
+
+  media: {
+    active: false,
+    canvas: null,
+    ctx: null,
+    stream: null,
+    redrawTimer: null,
+    frameFlag: false
+  },
 
   dayOver: false,
   settings: {
@@ -97,6 +113,8 @@ const el = {
   wakeBtn: $('wakeBtn'),
   settingsBtn: $('settingsBtn'),
 
+  mediaVideo: $('mediaKeepAlive'),
+
   statusDot: $('statusDot'),
   statusText: $('statusText'),
   metaEnd: $('metaEnd'),
@@ -120,6 +138,7 @@ const el = {
   dbgTv: $('dbgTv'),
   dbgFs: $('dbgFs'),
   dbgWl: $('dbgWl'),
+  dbgMedia: $('dbgMedia'),
   dbgVis: $('dbgVis'),
   dbgOnline: $('dbgOnline'),
   dbgFrame: $('dbgFrame'),
@@ -258,10 +277,12 @@ function evaluateDay(silent) {
     window.clearTimeout(state.wakeRetryTimer);
     state.wakeRetryTimer = null;
     releaseWakeLock('DAY ENDED');
+    stopMediaKeepAlive('робочий день завершено');
     if (!state.tvModeActive) setStatus('Робочий день завершено', 'warn');
   } else {
     log('Новий робочий день. Утримання екрана знову дозволене.');
     if (state.frameVisible) requestWakeLock();
+    syncMediaFallback();
     if (!state.tvModeActive) setStatus('Готово до запуску', 'ready');
   }
   if (!silent) updateBanner();
@@ -299,7 +320,7 @@ function wakeLockAllowed() {
 }
 
 async function requestWakeLock() {
-  if (!wakeLockAllowed()) { updateDebug(); return false; }
+  if (!wakeLockAllowed()) { syncMediaFallback(); updateDebug(); return false; }
   if (state.wakeLock || state.wakeRequestInFlight) return true;
 
   if (document.visibilityState !== 'visible') {
@@ -326,6 +347,7 @@ async function requestWakeLock() {
     state.wakeRetryIndex = 0;
     state.lastWakeRequest = timeString();
     log('Wake Lock отримано.');
+    syncMediaFallback();   // справжній Wake Lock активний — медіа-резерв (якщо був) більше не потрібен
 
     lock.addEventListener('release', safe(function () {
       if (state.wakeLock !== lock) return;      // вже замінений або відпущений нами
@@ -338,6 +360,7 @@ async function requestWakeLock() {
       } else {
         if (!state.dayOver && state.settings.wakeEnabled) state.wakeLockStatus = 'RELEASED';
       }
+      syncMediaFallback();
       updateDebug();
     }, 'wakeLock release'));
 
@@ -349,6 +372,7 @@ async function requestWakeLock() {
     state.lastWakeRequest = timeString();
     log('Wake Lock не вдалося отримати: ' + describe(error));
     if (state.frameVisible) scheduleWakeRetry();
+    syncMediaFallback();
     updateDebug();
     return false;
   } finally {
@@ -394,7 +418,98 @@ async function releaseWakeLock(reason) {
   else if (!state.settings.wakeEnabled) state.wakeLockStatus = 'DISABLED';
   else state.wakeLockStatus = 'RELEASED';
 
+  syncMediaFallback();
   updateDebug();
+}
+
+/* ==================================================================
+   6b. МЕДІА-РЕЗЕРВ (3-й рівень фолбеку для утримання екрана)
+   Джерело — Canvas.captureStream(), тобто локальний потік без
+   жодних зовнішніх файлів. Це не заміна Wake Lock і не підсилення
+   вже активного Wake Lock — це окремий сигнал браузеру «вкладка
+   відтворює медіа», який вмикається ТІЛЬКИ коли справжній Wake Lock
+   реально не тримається (API відсутній або запит провалився), і
+   вимикається разом із ним — тим самим годинником 17:55 та тим
+   самим перемикачем «Утримувати екран активним».
+
+   Свідомо НЕ робить:
+     - не замінює Wake Lock, якщо lock активний — тоді резерв вимкнено;
+     - не обходить сон самого телевізора на рівні прошивки (Auto Power
+       Off / Screen Saver у налаштуваннях ТВ — поза межами JS);
+     - не імітує кліки, дотики чи будь-яку активність користувача.
+   ================================================================== */
+function ensureMediaCanvas() {
+  if (state.media.canvas) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = 2;
+  canvas.height = 2;
+  state.media.canvas = canvas;
+  state.media.ctx = canvas.getContext('2d');
+}
+
+function drawMediaFrame() {
+  const ctx = state.media.ctx;
+  if (!ctx) return;
+  // Змінюємо один піксель — деякі кодеки/браузери оптимізують і
+  // "засинають" на цілком статичному кадрі; невелика зміна тримає потік живим.
+  state.media.frameFlag = !state.media.frameFlag;
+  ctx.fillStyle = state.media.frameFlag ? '#000000' : '#010101';
+  ctx.fillRect(0, 0, 2, 2);
+}
+
+/** Чи потрібен зараз медіа-резерв. Активний лише як фолбек, не паралельно з реальним Wake Lock. */
+function shouldUseMediaFallback() {
+  if (!state.settings.wakeEnabled) return false;
+  if (state.dayOver) return false;
+  if (!state.frameVisible) return false;
+  if (state.wakeLock) return false;                 // справжній Wake Lock тримає — резерв не потрібен
+  if (!wakeLockSupported()) return true;             // API відсутній зовсім — це і є цільовий сценарій
+  if (state.wakeLockStatus === 'FAILED') return true; // API є, але запит стабільно провалюється
+  return false;                                       // RETRYING/IDLE — дамо шанс звичайному Wake Lock
+}
+
+async function startMediaKeepAlive() {
+  if (state.media.active || !el.mediaVideo) return;
+  ensureMediaCanvas();
+  drawMediaFrame();
+  try {
+    const stream = state.media.canvas.captureStream(CONFIG.mediaKeepAliveFps);
+    state.media.stream = stream;
+    el.mediaVideo.srcObject = stream;
+    el.mediaVideo.muted = true;
+    await el.mediaVideo.play();
+    state.media.active = true;
+    state.media.redrawTimer = window.setInterval(
+      safe(drawMediaFrame, 'media redraw'),
+      Math.round(1000 / CONFIG.mediaKeepAliveFps)
+    );
+    log('Медіа-резерв увімкнено (Wake Lock ' +
+        (wakeLockSupported() ? 'недоступний зараз' : 'не підтримується браузером') + ').');
+  } catch (error) {
+    log('Не вдалося увімкнути медіа-резерв: ' + describe(error));
+  }
+  updateDebug();
+}
+
+function stopMediaKeepAlive(reason) {
+  if (!state.media.active) return;
+  window.clearInterval(state.media.redrawTimer);
+  state.media.redrawTimer = null;
+  try { el.mediaVideo.pause(); } catch (e) { /* ігноруємо */ }
+  if (el.mediaVideo) el.mediaVideo.srcObject = null;
+  if (state.media.stream) {
+    state.media.stream.getTracks().forEach(function (track) { track.stop(); });
+    state.media.stream = null;
+  }
+  state.media.active = false;
+  log('Медіа-резерв вимкнено (' + (reason || 'умови більше не виконуються') + ').');
+  updateDebug();
+}
+
+/** Єдина точка виклику: сама вирішує, вмикати чи вимикати резерв. */
+function syncMediaFallback() {
+  if (shouldUseMediaFallback()) startMediaKeepAlive();
+  else stopMediaKeepAlive();
 }
 
 /* ==================================================================
@@ -552,7 +667,7 @@ async function exitTvMode() {
   el.body.classList.remove('frame-visible', 'tv-mode');
   setMode('IDLE');
   hideNotice();
-  await releaseWakeLock('вихід із TV Mode');
+  await releaseWakeLock('вихід із TV Mode');   // сам викличе syncMediaFallback(), яка тепер поверне false (frameVisible=false)
   await exitFullscreen();
   setStatus(state.dayOver ? 'Робочий день завершено' : 'TV Mode вимкнено', 'warn');
   log('TV Mode вимкнено. Розклад лишається завантаженим.');
@@ -613,6 +728,7 @@ function updateDebug() {
   el.dbgTv.textContent = state.tvModeActive ? 'ACTIVE' : 'INACTIVE';
   el.dbgFs.textContent = isFullscreen() ? 'ACTIVE' : 'INACTIVE';
   el.dbgWl.textContent = state.wakeLock ? 'ACTIVE' : state.wakeLockStatus;
+  el.dbgMedia.textContent = state.media.active ? 'ACTIVE' : 'INACTIVE';
   el.dbgVis.textContent = document.visibilityState.toUpperCase();
   el.dbgOnline.textContent = navigator.onLine ? 'ONLINE' : 'OFFLINE';
   el.dbgFrame.textContent = state.frameStatus;
@@ -738,8 +854,9 @@ on(el.wakeEnabledToggle, 'change', function () {
   if (state.settings.wakeEnabled) {
     state.wakeRetryIndex = 0;
     if (state.frameVisible) requestWakeLock();
+    syncMediaFallback();
   } else {
-    releaseWakeLock('вимкнено в налаштуваннях');
+    releaseWakeLock('вимкнено в налаштуваннях');   // сам викличе syncMediaFallback()
   }
 }, 'wake toggle');
 
@@ -889,6 +1006,7 @@ function tick() {
       !state.wakeRetryTimer) {
     requestWakeLock();
   }
+  syncMediaFallback();   // страховка: підхоплює стан, якщо якийсь виклик десь пропущено
 }
 
 /* ==================================================================

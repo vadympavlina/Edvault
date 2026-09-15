@@ -25,6 +25,16 @@
 </div>
 
 <!-- ============================================================
+     Медіа-резерв для утримання екрана (3-й рівень фолбеку).
+     Джерело — canvas.captureStream(), жодних зовнішніх файлів.
+     Вмикається JS лише коли Wake Lock API недоступний або
+     реально не тримається (FAILED) — див. shouldUseMediaFallback().
+     Не імітує дії користувача, лише сигналізує браузеру про
+     активне медіа на вкладці.
+     ============================================================ -->
+<video id="mediaKeepAlive" class="media-keepalive" muted playsinline aria-hidden="true"></video>
+
+<!-- ============================================================
      ШАР 2. Панель керування (повністю зникає у TV Mode)
      ============================================================ -->
 <main id="launcher" class="launcher">
@@ -124,6 +134,7 @@
     <span>TV Mode</span><b id="dbgTv">INACTIVE</b>
     <span>Fullscreen</span><b id="dbgFs">INACTIVE</b>
     <span>Wake Lock</span><b id="dbgWl">—</b>
+    <span>Медіа-резерв</span><b id="dbgMedia">INACTIVE</b>
     <span>Page visibility</span><b id="dbgVis">—</b>
     <span>Online</span><b id="dbgOnline">—</b>
     <span>Iframe</span><b id="dbgFrame">NOT MOUNTED</b>
