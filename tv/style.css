@@ -53,17 +53,22 @@ html, body {
   background: #000;
 }
 
-/* ---------- Медіа-резерв (прихований, але не display:none —
-   інакше деякі браузери призупиняють відтворення) ---------- */
+/* ---------- Медіа-резерв ----------
+   Займає весь viewport і лежить ПІД шаром iframe (нижчий z-index),
+   тому користувач бачить лише розклад — але з точки зору браузера/ОС
+   це справжнє відео на весь екран, а не непомітний 1px у кутку.
+   LG документує виняток зі скрінсейвера саме для "video playing in
+   full screen mode" — тому розмір і безперервний рух кадру тут
+   важливі, а не просто факт виклику .play(). */
 .media-keepalive {
   position: fixed;
-  width: 1px;
-  height: 1px;
-  bottom: 0;
-  right: 0;
-  opacity: 0.01;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  opacity: 1;
   pointer-events: none;
-  z-index: -1;
+  z-index: 0;             /* нижче .frame-layer (z-index: 1) і .launcher (z-index: 10) */
 }
 
 /* ---------- Панель керування ---------- */

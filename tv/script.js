@@ -5,10 +5,11 @@
    Що робить:
      1. Монтує iframe із розкладом один раз і більше його не чіпає.
      2. Тримає Screen Wake Lock із коректним lifecycle і backoff.
-     3. Якщо Wake Lock API недоступний або стабільно провалюється —
-        вмикає локальний медіа-резерв (canvas.captureStream, без
-        зовнішніх файлів) як 3-й рівень фолбеку. Вимикається сам,
-        щойно справжній Wake Lock запрацює.
+     3. Якщо ввімкнено «Утримувати екран активним» — паралельно з Wake
+        Lock тримає повноекранне (на весь viewport, схований під
+        iframe) відео з canvas.captureStream, без зовнішніх файлів.
+        На частині TV-платформ (LG webOS) саме повноекранне відео —
+        задокументований виняток зі скрінсейвера, окремий від Wake Lock.
      4. О CONFIG.endTime (локальний час) відпускає Wake Lock і
         медіа-резерв, і більше не запитує їх до наступного дня.
      5. Керує Fullscreen (тільки після жесту користувача).
@@ -38,7 +39,7 @@ const CONFIG = {
 
   frameLoadTimeoutMs: 20000,           // скільки чекати load від iframe
   wakeLockBackoff: [1000, 3000, 5000, 10000, 30000],
-  mediaKeepAliveFps: 1,                // редрейм раз на секунду — цього достатньо
+  mediaKeepAliveFps: 15,               // реальний рух кадру, а не поодинокий тик — ближче до "video playing"
   tickMs: 5000,                        // єдиний фоновий таймер (легкий)
   debugTickMs: 1000,                   // працює лише поки відкрита панель
   cornerTaps: 5,
@@ -347,7 +348,7 @@ async function requestWakeLock() {
     state.wakeRetryIndex = 0;
     state.lastWakeRequest = timeString();
     log('Wake Lock отримано.');
-    syncMediaFallback();   // справжній Wake Lock активний — медіа-резерв (якщо був) більше не потрібен
+    syncMediaFallback();   // тепер працює паралельно, не залежить від стану Wake Lock
 
     lock.addEventListener('release', safe(function () {
       if (state.wakeLock !== lock) return;      // вже замінений або відпущений нами
@@ -441,31 +442,47 @@ async function releaseWakeLock(reason) {
 function ensureMediaCanvas() {
   if (state.media.canvas) return;
   const canvas = document.createElement('canvas');
-  canvas.width = 2;
-  canvas.height = 2;
+  // Невеликий, але не мікроскопічний кадр: достатньо для "справжнього" відеопотоку,
+  // достатньо малий, щоб не навантажувати слабкий TV-чип.
+  canvas.width = 64;
+  canvas.height = 36;
   state.media.canvas = canvas;
   state.media.ctx = canvas.getContext('2d');
+  state.media.phase = 0;
 }
 
 function drawMediaFrame() {
   const ctx = state.media.ctx;
-  if (!ctx) return;
-  // Змінюємо один піксель — деякі кодеки/браузери оптимізують і
-  // "засинають" на цілком статичному кадрі; невелика зміна тримає потік живим.
-  state.media.frameFlag = !state.media.frameFlag;
-  ctx.fillStyle = state.media.frameFlag ? '#000000' : '#010101';
-  ctx.fillRect(0, 0, 2, 2);
+  const canvas = state.media.canvas;
+  if (!ctx || !canvas) return;
+  // Безперервний, повільний рух — не одна пляма, а справжня зміна кадру,
+  // щоб потік максимально відповідав тому, що система розпізнає як "відео",
+  // а не як застиглу картинку з таймером.
+  state.media.phase = (state.media.phase + 1) % 360;
+  const angle = (state.media.phase * Math.PI) / 180;
+  const gradient = ctx.createLinearGradient(
+    canvas.width / 2 + Math.cos(angle) * canvas.width,
+    canvas.height / 2 + Math.sin(angle) * canvas.height,
+    canvas.width / 2 - Math.cos(angle) * canvas.width,
+    canvas.height / 2 - Math.sin(angle) * canvas.height
+  );
+  gradient.addColorStop(0, '#000000');
+  gradient.addColorStop(1, '#020203');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
-/** Чи потрібен зараз медіа-резерв. Активний лише як фолбек, не паралельно з реальним Wake Lock. */
+/** Чи потрібен зараз медіа-резерв.
+    На частині TV-платформ (підтверджено для LG webOS) скрінсейвер і
+    Wake Lock — це РІЗНІ механізми: навіть активний Wake Lock не завжди
+    запобігає почорнінню екрана скрінсейвером. Тому резерв тепер працює
+    ПАРАЛЕЛЬНО з Wake Lock, поки видно розклад, а не лише коли Wake Lock
+    зламався. */
 function shouldUseMediaFallback() {
   if (!state.settings.wakeEnabled) return false;
   if (state.dayOver) return false;
   if (!state.frameVisible) return false;
-  if (state.wakeLock) return false;                 // справжній Wake Lock тримає — резерв не потрібен
-  if (!wakeLockSupported()) return true;             // API відсутній зовсім — це і є цільовий сценарій
-  if (state.wakeLockStatus === 'FAILED') return true; // API є, але запит стабільно провалюється
-  return false;                                       // RETRYING/IDLE — дамо шанс звичайному Wake Lock
+  return true;
 }
 
 async function startMediaKeepAlive() {
@@ -483,8 +500,7 @@ async function startMediaKeepAlive() {
       safe(drawMediaFrame, 'media redraw'),
       Math.round(1000 / CONFIG.mediaKeepAliveFps)
     );
-    log('Медіа-резерв увімкнено (Wake Lock ' +
-        (wakeLockSupported() ? 'недоступний зараз' : 'не підтримується браузером') + ').');
+    log('Медіа-резерв (повноекранне відео) увімкнено — паралельно з Wake Lock.');
   } catch (error) {
     log('Не вдалося увімкнути медіа-резерв: ' + describe(error));
   }
