@@ -97,7 +97,9 @@ const state = {
     ctx: null,
     stream: null,
     redrawTimer: null,
-    frameFlag: false
+    frameFlag: false,
+    audioCtx: null,
+    audioOscillator: null
   },
 
   dayOver: false,
@@ -553,7 +555,57 @@ async function startMediaKeepAlive() {
   } catch (error) {
     log('Не вдалося увімкнути медіа-резерв: ' + describe(error));
   }
+
+  startMediaSessionSignal();
+  startSilentAudioSignal();
   updateDebug();
+}
+
+/** Додатковий (недоведений, але безкоштовний) сигнал "тут відтворюється медіа" —
+    деякі платформи звіряються з MediaSession, а не лише з фактом <video playing>.
+    Гарантій немає: LG офіційно каже, що орієнтир — саме fullscreen video. */
+function startMediaSessionSignal() {
+  if (!('mediaSession' in navigator) || typeof MediaMetadata !== 'function') return;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({ title: 'TV Display — розклад академії' });
+    navigator.mediaSession.playbackState = 'playing';
+  } catch (e) { /* ігноруємо — це необов'язковий, додатковий сигнал */ }
+}
+
+function stopMediaSessionSignal() {
+  if (!('mediaSession' in navigator)) return;
+  try { navigator.mediaSession.playbackState = 'none'; } catch (e) { /* ігноруємо */ }
+}
+
+/** Другий додатковий сигнал: беззвучний (gain = 0, а не muted!) аудіопотік
+    через Web Audio API. Деякі платформи рахують активним аудіо, а не лише
+    відео — muted-аудіо для таких перевірок часто не рахується "активним",
+    тому тут саме gain 0, а не muted=true. Реального звуку немає. */
+function startSilentAudioSignal() {
+  if (state.media.audioCtx) return;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;
+  try {
+    const ctx = new AudioCtx();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.value = 0;                 // справжня тиша, а не muted-прапорець
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start();
+    state.media.audioCtx = ctx;
+    state.media.audioOscillator = oscillator;
+  } catch (e) {
+    log('Беззвучний аудіосигнал недоступний: ' + describe(e));
+  }
+}
+
+function stopSilentAudioSignal() {
+  if (!state.media.audioCtx) return;
+  try { state.media.audioOscillator.stop(); } catch (e) { /* ігноруємо */ }
+  try { state.media.audioCtx.close(); } catch (e) { /* ігноруємо */ }
+  state.media.audioCtx = null;
+  state.media.audioOscillator = null;
 }
 
 function stopMediaKeepAlive(reason) {
@@ -567,6 +619,8 @@ function stopMediaKeepAlive(reason) {
     state.media.stream = null;
   }
   state.media.active = false;
+  stopMediaSessionSignal();
+  stopSilentAudioSignal();
   log('Медіа-резерв вимкнено (' + (reason || 'умови більше не виконуються') + ').');
   updateDebug();
 }
