@@ -8,8 +8,11 @@
      2. Тримає Screen Wake Lock із коректним lifecycle і backoff.
      3. Якщо ввімкнено «Утримувати екран активним» — паралельно з Wake
         Lock тримає повноекранне (на весь viewport, схований під
-        iframe) відео з canvas.captureStream, без зовнішніх файлів.
-        На частині TV-платформ (LG webOS) саме повноекранне відео —
+        iframe) відео тримає паралельно з Wake Lock — це справжній,
+        а не синтетичний H.264-файл (вбудований data URI, кілька КБ),
+        щоб апаратний відеодекодер ТВ реально його обробляв так само,
+        як сайти з фільмами. На частині TV-платформ (LG webOS) саме
+        повноекранне відео —
         задокументований виняток зі скрінсейвера, окремий від Wake Lock.
         Пауза перемальовування, коли вкладка не видима — економія CPU.
      4. О CONFIG.endTime (локальний час) відпускає Wake Lock і
@@ -38,6 +41,13 @@
 
 'use strict';
 
+/* Справжній (не синтетичний) H.264-файл: 6с, 64×36, чорний з ледь помітним шумом
+   + беззвучна (але справжня, не Web Audio-хак) AAC-доріжка — щоб апаратний
+   відеодекодер ТВ реально його обробляв, а не canvas.captureStream(). Локально,
+   без зовнішніх запитів (свідомо не YouTube — щоб не залежати від мережі/ads). */
+const MEDIA_KEEPALIVE_DATA_URI = "data:video/mp4;base64,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BpvvvrrrrrYjfpre6Kab+1r8ARggBwAAABNBiJ3kxQABBpvvvrrrrrrm/lPgARggBwAAABZBiKHkxQABBpvvvrrrrritjZ/unm7YAAAAE0GIpeTFAAEGm+++uuuuuqU3evABGCAHAAAAF0GIqeTFAAEGm+++uuuuqMpHSdfrX668ARggBwAAABZBiK3kxQABBpvvvrrrrrVaGI9TNPLAAAAAF2WIgR5MUAAQab7766665tDZT1zUVS+AARggBwAAAB1BiIXkxQABBpvvvrrrrm8oWk/1+tV2X1xVtqtfwAEYIAcAAAAUQYiJ5MUAAQab776666660I1WU3gAAAAWQYiN5MUAAQab7766665tupnumrKm3gEYIAcAAAAXQYiR5MUAAQab7766664rr9ap1VEZV4ABGCAHAAAAFUGIleTFAAEGm+++uuuutRfX962yeAAAABVBiJnkxQABBpvvvrrrrq5u03/NI9sBGCAHAAAAGUGIneTFAAEGm+++uuuuuK7f53iutlZenWABGCAHAAAAE0GIoeTFAAEGm+++uuuurrqR14AAAAAWQYil5MUAAQab7766666ubymkY6plwAEYIAcAAAAZQYip5MUAAQab7766664Sm6/Wv6mf1dSIcAAAABRBiK3kxQABBpvvvrrrrrTUiGp68AEYIAcAAAAWZYiCeTFAAEGm+++uuuuuOv+/3vXN2wEYIAcAAAAaQYiF5MUAAQab7766666svVNiPZGsqetlZfAAAAAYQYiJ5MUAAQab7766665tinmq023dM92AARggBwAAABFBiI3kxQABBpvvvrrrrrrrrwEYIAcAAAAVQYiR5MUAAQab7766665v0zaFVPXgAAAAG0GIleTFAAEGm+++uuuutxXr73ipGPXsvM6G2AEYIAcAAAAYQYiZ5MUAAQab77666665qzJm9op21vf4ARggBwAAABlBiJ3kxQABBpvvvrrrrit1/ok0xE43Tf1+AAAAF0GIoeTFAAEGm+++uuuupmydcdfX61/AARggBwAAABNBiKXkxQABBpvvvrrrrrqR1KmvARggBwAAABVBiKnkxQABBpvvvrrrrriv3+yT14AAAAAYQYit5MUAAQab7766665q1TuK67Gvme7AARggBwAAABdliIEeTFAAEGm+++uuuuaVD/N0lc26bAEYIAcAAAAbQYiF5MUAAQab7766665tDJ4zr+hy8dfv97/AAAAAEUGIieTFAAEGm+++uuuuuuuvARggBwAAABxBiI3kxQABBpvvvrrrriu738U0dleh9zNtk1eAARggBwAAABVBiJHkxQABBpvvvrrrrrqRtc07fYAAAAAZQYiV5MUAAQab77666646v7/e83qb9SkUQAEYIAcAAAAWQYiZ5MUAAQab7766666piXXFbGq1/AAAABdBiJ3kxQABBpvvvrrrrripSMr+qGnrwAEYIAcAAAAXQYih5MUAAQab77666664rr2XmeyZ7sABGCAHAAAAFEGIpeTFAAEGm+++uuuuarzSWrrwAAAAFUGIqeTFAAEGm+++uuuub9Tzepn+wAEYIAcAAAAXQYit5MUAAQab776666665tCqM0L7+iwBGCAHAAAAFWWIgnkxQABBpvvvrrrrm7pu9c38wAAAABNBiIXkxQABBpvvvrrrrrqnXVrAARggBwAAABpBiInkxQABBpvvvrrrriutd7zd1cVoasrL8AEYIAcAAAAVQYiN5MUAAQab7766666pNyk5qbqvAAAAFkGIkeTFAAEGm+++uuuubTab1TzadmABGCAHAAAAFEGIleTFAAEGm+++uuuuubL+anrwARggBwAAABZBiJnkxQABBpvvvrrrrriuz+iq5uzAAAAAFUGIneTFAAEGm+++uuuurrm9TRSfYAEYIAcAAAAXQYih5MUAAQab7766665tOqeuK3r93eABGCAHAAAAGkGIpeTFAAEGm+++uuuuKtdf7iX+npDqiNOAAAAAFUGIqeTFAAEGm+++uuuuuuuK/Vqh/AEYIAcAAAAWQYit5MUAAQab7766666kddSxVu7+iwEYIAcAAAAgZYiBHkxQABBpvvvrrrrittd/ivLovqjKQtXX61+v1rAAAAAVQYiF5MUAAQab7766665vVPXNY7SsARggBwAAABxBiInkxQABBpvvvrrrriv1a/FaHW9/GE+oqL6fARggBwAAABZBiI3kxQABBpvvvrrrrrjr/3+91trwAAAAE0GIkeTFAAEGm+++uuuuuuarqfABGCAHAAAAF0GIleTFAAEGm+++uuuuuutDFb70VF+AAAAAGUGImeTFAAEGm+++uuuubsiuq1+rjq/v974BGCAHAAAAGEGIneTFAAEGm+++uuuubzx2/9/vcz2U+AEYIAcAAAAVQYih5MUAAQab7766666ysiakpevAAAAAFkGIpeTFAAEGm+++uuuubeqeK+v61acBGCAHAAAAGEGIqeTFAAEGm+++uuuuqU0r+jmb1+tfXgAAABNBiK3kxQABBpvvvrrrrrrrU/7A";
+
+
 /* ==================================================================
    1. КОНФІГУРАЦІЯ
    ================================================================== */
@@ -52,7 +62,6 @@ const CONFIG = {
   frameLoadTimeoutMs: 20000,           // скільки чекати load від iframe
   frameRetryBackoff: [3000, 8000, 20000, 45000],  // автоматичні спроби перед тим, як турбувати людину
   wakeLockBackoff: [1000, 3000, 5000, 10000, 30000],
-  mediaKeepAliveFps: 15,               // реальний рух кадру, а не поодинокий тик — ближче до "video playing"
   tickMs: 5000,                        // єдиний фоновий таймер (легкий)
   debugTickMs: 1000,                   // працює лише поки відкрита панель
   cornerTaps: 5,
@@ -93,13 +102,9 @@ const state = {
 
   media: {
     active: false,
-    canvas: null,
-    ctx: null,
-    stream: null,
-    redrawTimer: null,
-    frameFlag: false,
     audioCtx: null,
-    audioOscillator: null
+    audioOscillator: null,
+    peekTimer: null
   },
 
   dayOver: false,
@@ -152,6 +157,7 @@ const el = {
   hudWakeDot: $('hudWakeDot'), hudWakeText: $('hudWakeText'),
   hudMediaDot: $('hudMediaDot'), hudMediaText: $('hudMediaText'),
   hudEndDot: $('hudEndDot'), hudEndText: $('hudEndText'),
+  hudOpenDebug: $('hudOpenDebug'),
 
   notice: $('noticeOverlay'),
   noticeTitle: $('noticeTitle'),
@@ -168,6 +174,8 @@ const el = {
   dbgFs: $('dbgFs'),
   dbgWl: $('dbgWl'),
   dbgMedia: $('dbgMedia'),
+  dbgMediaPlaying: $('dbgMediaPlaying'),
+  dbgMediaAudio: $('dbgMediaAudio'),
   dbgVis: $('dbgVis'),
   dbgOnline: $('dbgOnline'),
   dbgFrame: $('dbgFrame'),
@@ -184,6 +192,7 @@ const el = {
   dbgUa: $('dbgUa'),
   dbgDiag: $('dbgDiag'),
   dbgWakeNow: $('dbgWakeNow'),
+  dbgPeekVideo: $('dbgPeekVideo'),
   dbgReload: $('dbgReload'),
   dbgExit: $('dbgExit')
 };
@@ -490,39 +499,6 @@ async function releaseWakeLock(reason) {
        Off / Screen Saver у налаштуваннях ТВ — поза межами JS);
      - не імітує кліки, дотики чи будь-яку активність користувача.
    ================================================================== */
-function ensureMediaCanvas() {
-  if (state.media.canvas) return;
-  const canvas = document.createElement('canvas');
-  // Невеликий, але не мікроскопічний кадр: достатньо для "справжнього" відеопотоку,
-  // достатньо малий, щоб не навантажувати слабкий TV-чип.
-  canvas.width = 64;
-  canvas.height = 36;
-  state.media.canvas = canvas;
-  state.media.ctx = canvas.getContext('2d');
-  state.media.phase = 0;
-}
-
-function drawMediaFrame() {
-  const ctx = state.media.ctx;
-  const canvas = state.media.canvas;
-  if (!ctx || !canvas) return;
-  // Безперервний, повільний рух — не одна пляма, а справжня зміна кадру,
-  // щоб потік максимально відповідав тому, що система розпізнає як "відео",
-  // а не як застиглу картинку з таймером.
-  state.media.phase = (state.media.phase + 1) % 360;
-  const angle = (state.media.phase * Math.PI) / 180;
-  const gradient = ctx.createLinearGradient(
-    canvas.width / 2 + Math.cos(angle) * canvas.width,
-    canvas.height / 2 + Math.sin(angle) * canvas.height,
-    canvas.width / 2 - Math.cos(angle) * canvas.width,
-    canvas.height / 2 - Math.sin(angle) * canvas.height
-  );
-  gradient.addColorStop(0, '#000000');
-  gradient.addColorStop(1, '#020203');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
 /** Чи потрібен зараз медіа-резерв.
     На частині TV-платформ (підтверджено для LG webOS) скрінсейвер і
     Wake Lock — це РІЗНІ механізми: навіть активний Wake Lock не завжди
@@ -538,20 +514,17 @@ function shouldUseMediaFallback() {
 
 async function startMediaKeepAlive() {
   if (state.media.active || !el.mediaVideo) return;
-  ensureMediaCanvas();
-  drawMediaFrame();
   try {
-    const stream = state.media.canvas.captureStream(CONFIG.mediaKeepAliveFps);
-    state.media.stream = stream;
-    el.mediaVideo.srcObject = stream;
+    // Справжній decoded-відеофайл (не canvas.captureStream) — саме так грають
+    // сайти з фільмами, апаратний відеодекодер ТВ реально задіяний.
+    if (el.mediaVideo.src !== MEDIA_KEEPALIVE_DATA_URI) {
+      el.mediaVideo.src = MEDIA_KEEPALIVE_DATA_URI;
+      el.mediaVideo.loop = true;
+    }
     el.mediaVideo.muted = true;
     await el.mediaVideo.play();
     state.media.active = true;
-    state.media.redrawTimer = window.setInterval(
-      safe(drawMediaFrame, 'media redraw'),
-      Math.round(1000 / CONFIG.mediaKeepAliveFps)
-    );
-    log('Медіа-резерв (повноекранне відео) увімкнено — паралельно з Wake Lock.');
+    log('Медіа-резерв (справжній відеофайл, апаратний декодер) увімкнено — паралельно з Wake Lock.');
   } catch (error) {
     log('Не вдалося увімкнути медіа-резерв: ' + describe(error));
   }
@@ -610,14 +583,7 @@ function stopSilentAudioSignal() {
 
 function stopMediaKeepAlive(reason) {
   if (!state.media.active) return;
-  window.clearInterval(state.media.redrawTimer);
-  state.media.redrawTimer = null;
   try { el.mediaVideo.pause(); } catch (e) { /* ігноруємо */ }
-  if (el.mediaVideo) el.mediaVideo.srcObject = null;
-  if (state.media.stream) {
-    state.media.stream.getTracks().forEach(function (track) { track.stop(); });
-    state.media.stream = null;
-  }
   state.media.active = false;
   stopMediaSessionSignal();
   stopSilentAudioSignal();
@@ -631,11 +597,33 @@ function syncMediaFallback() {
   else stopMediaKeepAlive();
 }
 
+/** Жоден єдиний API не працює всюди — комбінуємо все, що є, і чесно кажемо,
+    якщо жоден з них не підтримується цим браузером (тоді факт лишається невідомим,
+    а не "немає"). Звук у файлі — справжня цифрова тиша, тож почути його неможливо
+    навіть без muted; перевірити можна лише так, програмно. */
+function describeAudioTrackPresence(video) {
+  if (video.audioTracks) {  // Safari/WebKit: стандартний AudioTrackList
+    return video.audioTracks.length > 0
+      ? 'ТАК (audioTracks: ' + video.audioTracks.length + ')'
+      : 'НІ (audioTracks: 0)';
+  }
+  if (typeof video.webkitAudioDecodedByteCount === 'number') {  // Chrome/webOS-браузер
+    return video.webkitAudioDecodedByteCount > 0
+      ? 'ТАК (декодовано ' + video.webkitAudioDecodedByteCount + ' байт аудіо)'
+      : (video.readyState < 2 ? 'перевірка…' : 'НІ (0 байт аудіо декодовано)');
+  }
+  if (typeof video.mozHasAudio === 'boolean') {  // Firefox
+    return video.mozHasAudio ? 'ТАК (mozHasAudio)' : 'НІ (mozHasAudio: false)';
+  }
+  return 'невідомо (браузер не дає жодного API для перевірки)';
+}
+
 /** Статична перевірка підтримки — не залежить від поточного стану, лише від можливостей браузера. */
 function mediaKeepAliveSupported() {
   try {
-    const c = document.createElement('canvas');
-    return typeof c.captureStream === 'function' || typeof c.mozCaptureStream === 'function';
+    const v = document.createElement('video');
+    return typeof v.canPlayType === 'function' &&
+      v.canPlayType('video/mp4; codecs="avc1.42E01E"') !== '';
   } catch (e) {
     return false;
   }
@@ -992,6 +980,16 @@ function updateDebug() {
   el.dbgFs.textContent = isFullscreen() ? 'ACTIVE' : 'INACTIVE';
   el.dbgWl.textContent = state.wakeLock ? 'ACTIVE' : state.wakeLockStatus;
   el.dbgMedia.textContent = state.media.active ? 'ACTIVE' : 'INACTIVE';
+  if (el.mediaVideo && state.media.active) {
+    const reallyPlaying = !el.mediaVideo.paused && !el.mediaVideo.ended && el.mediaVideo.readyState >= 2;
+    el.dbgMediaPlaying.textContent = reallyPlaying
+      ? ('ТАК, decoder грає — ' + el.mediaVideo.currentTime.toFixed(1) + ' с (тікає)')
+      : ('НІ — readyState ' + el.mediaVideo.readyState + ', paused=' + el.mediaVideo.paused);
+    el.dbgMediaAudio.textContent = describeAudioTrackPresence(el.mediaVideo);
+  } else {
+    el.dbgMediaPlaying.textContent = '—';
+    el.dbgMediaAudio.textContent = '—';
+  }
   el.dbgVis.textContent = document.visibilityState.toUpperCase();
   el.dbgOnline.textContent = navigator.onLine ? 'ONLINE' : 'OFFLINE';
   el.dbgFrame.textContent = state.frameStatus;
@@ -1090,11 +1088,26 @@ on(el.noticeSecondary, 'click', function () {
 }, 'notice secondary');
 
 on(el.debugClose, 'click', function () { toggleDebug(false); }, 'debug close');
+on(el.hudOpenDebug, 'click', function () { toggleDebug(true); }, 'hud open debug');
 on(el.dbgDiag, 'click', runDiagnostics, 'diag');
 on(el.dbgWakeNow, 'click', function () {
   state.wakeRetryIndex = 0;
   return requestWakeLock();
 }, 'debug wake');
+on(el.dbgPeekVideo, 'click', function () {
+  if (!el.mediaVideo) return;
+  if (!state.media.active) {
+    log('Показ відео-резерву: зараз вимкнений (умови не виконуються), нічого показувати.');
+    return;
+  }
+  window.clearTimeout(state.media.peekTimer);
+  el.mediaVideo.classList.add('media-keepalive--peek');
+  log('Відео-резерв піднято поверх розкладу на 5 секунд для перевірки.');
+  state.media.peekTimer = window.setTimeout(safe(function () {
+    el.mediaVideo.classList.remove('media-keepalive--peek');
+    log('Відео-резерв повернуто під розклад.');
+  }, 'media peek end'), 5000);
+}, 'debug peek video');
 on(el.dbgReload, 'click', function () {
   // Ручне перезавантаження лише за явним натисканням.
   // Автоматично цього не робимо: сайт оновлює себе сам.
@@ -1159,20 +1172,10 @@ function onFullscreenChange() {
 on(document, 'visibilitychange', function () {
   log('Видимість: ' + document.visibilityState);
   if (document.visibilityState !== 'visible') {
-    if (state.media.redrawTimer) {
-      window.clearInterval(state.media.redrawTimer);
-      state.media.redrawTimer = null;   // потік лишається активним, просто не витрачаємо CPU на кадри, яких ніхто не бачить
-    }
     updateDebug();
     return;
   }
 
-  if (state.media.active && !state.media.redrawTimer) {
-    state.media.redrawTimer = window.setInterval(
-      safe(drawMediaFrame, 'media redraw'),
-      Math.round(1000 / CONFIG.mediaKeepAliveFps)
-    );
-  }
   evaluateDay();                        // могли повернутися вже після endTime
   if (state.frameVisible && !state.wakeLock && wakeLockAllowed()) {
     state.wakeRetryIndex = 0;
@@ -1211,6 +1214,7 @@ on(window, 'pagehide', function () {
   window.clearTimeout(state.wakeRetryTimer);
   window.clearTimeout(state.frameTimeoutTimer);
   window.clearTimeout(state.frameRetryTimer);
+  window.clearTimeout(state.media.peekTimer);
   if (state.wakeLock) { try { state.wakeLock.release(); } catch (e) { /* ігноруємо */ } }
 }, 'pagehide');
 

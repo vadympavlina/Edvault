@@ -26,7 +26,8 @@
 
 <!-- ============================================================
      Медіа-резерв для утримання екрана (3-й рівень фолбеку).
-     Джерело — canvas.captureStream(), жодних зовнішніх файлів.
+     Джерело — вбудований data URI (справжній H.264-файл кілька КБ),
+     без зовнішніх файлів і мережевих запитів.
      Вмикається JS лише коли Wake Lock API недоступний або
      реально не тримається (FAILED) — див. shouldUseMediaFallback().
      Не імітує дії користувача, лише сигналізує браузеру про
@@ -60,6 +61,11 @@
     <span class="hud__label">До завершення (17:55)</span>
     <span id="hudEndText" class="hud__value">—</span>
   </div>
+  <button id="hudOpenDebug" class="hud__row hud__row--action" type="button">
+    <span class="hud__dot" aria-hidden="true">⚙</span>
+    <span class="hud__label">Службова панель</span>
+    <span class="hud__value">відкрити</span>
+  </button>
 </aside>
 
 <!-- ============================================================
@@ -165,6 +171,8 @@
     <span>Fullscreen</span><b id="dbgFs">INACTIVE</b>
     <span>Wake Lock</span><b id="dbgWl">—</b>
     <span>Медіа-резерв</span><b id="dbgMedia">INACTIVE</b>
+    <span>Відео: реально грає?</span><b id="dbgMediaPlaying">—</b>
+    <span>Аудіодоріжка у файлі</span><b id="dbgMediaAudio">—</b>
     <span>Page visibility</span><b id="dbgVis">—</b>
     <span>Online</span><b id="dbgOnline">—</b>
     <span>Iframe</span><b id="dbgFrame">NOT MOUNTED</b>
@@ -184,6 +192,7 @@
   <div class="debug__actions">
     <button id="dbgDiag" type="button">Діагностика</button>
     <button id="dbgWakeNow" type="button">Запросити Wake Lock</button>
+    <button id="dbgPeekVideo" type="button">Показати відео-резерв на 5с</button>
     <button id="dbgReload" type="button">Перезавантажити розклад</button>
     <button id="dbgExit" type="button">Вийти з TV Mode</button>
   </div>

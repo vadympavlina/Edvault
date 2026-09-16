@@ -70,6 +70,11 @@ html, body {
   pointer-events: none;
   z-index: 0;             /* нижче .frame-layer (z-index: 1) і .launcher (z-index: 10) */
 }
+/* Тимчасовий режим перевірки: піднімає відео над iframe, щоб його реально було видно. */
+.media-keepalive--peek {
+  z-index: 22;
+  outline: 3px solid var(--warn);
+}
 
 /* ---------- Видима діагностика на головному екрані ---------- */
 .capabilities {
@@ -129,6 +134,14 @@ html, body {
   text-align: left;
   cursor: default;
 }
+.hud__row--action {
+  cursor: pointer;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.hud__row--action:hover,
+.hud__row--action:focus-visible { color: var(--accent); }
 .hud__dot {
   flex: 0 0 auto;
   width: .6em; height: .6em;
