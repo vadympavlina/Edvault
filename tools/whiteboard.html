@@ -471,6 +471,42 @@
     color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-bottom-width: 2px;
     border-radius: 6px; padding: 3px 7px;
   }
+
+  /* =========== КОНТЕКСТНЕ МЕНЮ ПКМ (додано) =========== */
+  .ctx-menu {
+    position: fixed; z-index: 190; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow-lg); padding: 6px; min-width: 190px; display: none;
+  }
+  .ctx-menu.show { display: block; animation: modalIn .1s ease; }
+  .ctx-item {
+    width: 100%; display: flex; align-items: center; gap: 9px; padding: 8px 9px; border-radius: 8px; border: none;
+    background: transparent; color: var(--text2); font-size: 13px; font-weight: 600; cursor: pointer; text-align: left;
+    transition: background .1s ease;
+  }
+  .ctx-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .ctx-item:hover { background: var(--surface2); color: var(--text); }
+  .ctx-item .ctx-hint {
+    margin-left: auto; font-size: 10.5px; font-weight: 700; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .ctx-item.ctx-danger { color: #dc2626; }
+  .ctx-item.ctx-danger:hover { background: #fef2f2; }
+  .ctx-sep { height: 1px; background: var(--border); margin: 5px 2px; }
+
+  /* =========== ЗАГАЛЬНИЙ UI-ПОЛІШ (додано): плавніші переходи, охайніші скролбари, "живіші" панелі =========== */
+  * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 20px; border: 2px solid var(--surface); background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); background-clip: padding-box; }
+
+  .topbar, .tools-panel, .page-strip { transition: background-color .2s ease, border-color .2s ease; }
+  .btn, .btn-icon, .tool-btn, .zc-btn, .page-pill, .swatch, .sticky-swatch {
+    transition: background-color .13s ease, border-color .13s ease, color .13s ease, box-shadow .13s ease, transform .1s ease;
+  }
+  .btn-icon:hover:not(:disabled) { box-shadow: 0 1px 3px rgba(17,20,26,.08); }
+  .topbar { box-shadow: 0 1px 0 rgba(17,20,26,.02); }
+  .tools-options-pop, .modal-panel, .sel-toolbar, .ctx-menu { animation-fill-mode: both; }
 </style>
 </head>
 <body>
@@ -768,7 +804,9 @@
       <div class="kbd-group-label">Дії</div>
       <div class="kbd-row"><span>Скасувати</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">Z</span></span></div>
       <div class="kbd-row"><span>Повторити</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">Shift</span><span class="kbd">Z</span></span></div>
+      <div class="kbd-row"><span>Дублювати виділене</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">D</span></span></div>
       <div class="kbd-row"><span>Видалити виділене</span><span class="kbd-keys"><span class="kbd">Del</span></span></div>
+      <div class="kbd-row"><span>Контекстне меню об'єкта</span><span class="kbd-keys"><span class="kbd">ПКМ</span></span></div>
       <div class="kbd-group-label">Зображення</div>
       <div class="kbd-row"><span>Вставити з буфера обміну</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">V</span></span></div>
       <div class="kbd-row"><span>Перетягнути файл на полотно</span><span class="kbd-keys"><span class="kbd">Drag & Drop</span></span></div>
@@ -790,6 +828,27 @@
 </div>
 
 <div class="ui-tooltip" id="uiTooltip"></div>
+
+<!-- контекстне меню ПКМ по об'єкту (додано) -->
+<div class="ctx-menu" id="objContextMenu">
+  <button class="ctx-item" id="ctxDuplicate">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    <span>Дублювати</span><span class="ctx-hint">Ctrl+D</span>
+  </button>
+  <button class="ctx-item" id="ctxFront">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></svg>
+    <span>На передній план</span>
+  </button>
+  <button class="ctx-item" id="ctxBack">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="2"/><path d="M9 15v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-3"/></svg>
+    <span>На задній план</span>
+  </button>
+  <div class="ctx-sep"></div>
+  <button class="ctx-item ctx-danger" id="ctxDelete">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+    <span>Видалити</span><span class="ctx-hint">Del</span>
+  </button>
+</div>
 
 <script>
 (function () {
@@ -1405,9 +1464,48 @@
   selSizeRangeEl.addEventListener('change', finishSizeDrag);
   selSizeRangeEl.addEventListener('pointerup', finishSizeDrag);
 
+  function selectedIdsOf(page) {
+    return page && page.selectedIds && page.selectedIds.length ? page.selectedIds : (page && page.selectedId ? [page.selectedId] : []);
+  }
+
+  function deleteSelected(page) {
+    const ids = selectedIdsOf(page);
+    if (!page || !ids.length) return;
+    pushUndo(page);
+    page.objects = page.objects.filter(o => !ids.includes(o.id));
+    page.selectedIds = []; page.selectedId = null;
+    renderObjects(page);
+    scheduleThumbRefresh();
+  }
+
+  function duplicateSelected(page) {
+    // дублює виділений об'єкт чи всю групу зі зсувом, щоб копію було одразу видно (додано)
+    const ids = selectedIdsOf(page);
+    if (!page || !ids.length) return;
+    pushUndo(page);
+    const OFFSET = 18;
+    const newIds = [];
+    ids.forEach(id => {
+      const o = page.objects.find(ob => ob.id === id);
+      if (!o) return;
+      state.objSeq += 1;
+      const copy = { ...o, id: 'obj' + state.objSeq };
+      if (copy.x1 !== undefined) { copy.x1 += OFFSET; copy.y1 += OFFSET; copy.x2 += OFFSET; copy.y2 += OFFSET; }
+      else { copy.x += OFFSET; copy.y += OFFSET; }
+      page.objects.push(copy);
+      newIds.push(copy.id);
+    });
+    if (!newIds.length) return;
+    page.selectedIds = newIds;
+    page.selectedId = newIds[newIds.length - 1];
+    renderObjects(page);
+    scheduleThumbRefresh();
+    showToast(newIds.length > 1 ? `Дубльовано об'єктів: ${newIds.length}` : "Об'єкт дубльовано", 'success');
+  }
+
   function sendSelected(dir) {
     const page = getActivePage();
-    const ids = page && page.selectedIds && page.selectedIds.length ? page.selectedIds : (page && page.selectedId ? [page.selectedId] : []);
+    const ids = selectedIdsOf(page);
     if (!page || !ids.length) return;
     pushUndo(page);
     // забираємо обрані об'єкти (зберігаючи їх відносний порядок між собою) і повертаємо групою на новий план (додано: групова дія)
@@ -1418,15 +1516,7 @@
   }
   document.getElementById('btnToBack').addEventListener('click', () => sendSelected('back'));
   document.getElementById('btnToFront').addEventListener('click', () => sendSelected('front'));
-  document.getElementById('btnDeleteSel').addEventListener('click', () => {
-    const page = getActivePage();
-    const ids = page && page.selectedIds && page.selectedIds.length ? page.selectedIds : (page && page.selectedId ? [page.selectedId] : []);
-    if (!page || !ids.length) return;
-    pushUndo(page);
-    page.objects = page.objects.filter(o => !ids.includes(o.id));
-    page.selectedIds = []; page.selectedId = null;
-    renderObjects(page);
-  });
+  document.getElementById('btnDeleteSel').addEventListener('click', () => deleteSelected(getActivePage()));
 
   // ═══════════════════════ ВКАЗІВНИК: down / move / up ═══════════════════════
 
@@ -1442,6 +1532,7 @@
     el.addEventListener('pointerdown', (e) => onPointerDown(page, e));
     el.addEventListener('pointermove', (e) => onPointerMove(page, e));
     el.addEventListener('dblclick', (e) => onDoubleClick(page, e));
+    el.addEventListener('contextmenu', (e) => onContextMenu(page, e)); // ПКМ по об'єкту (додано)
   }
   // один спільний слухач на window (а не по одному на кожну сторінку) — інакше мишка,
   // відпущена деінде, спрацьовувала б одразу для всіх створених сторінок
@@ -1978,6 +2069,43 @@
     editExistingObject(page, hit);
   }
 
+  // ═══════════════════════ КОНТЕКСТНЕ МЕНЮ ПКМ (додано) ═══════════════════════
+
+  const ctxMenuEl = document.getElementById('objContextMenu');
+  let ctxMenuPage = null;
+
+  function onContextMenu(page, e) {
+    if (page.id !== state.activePageId || state.tool !== 'select') return; // за межами select — звичайне контекстне меню браузера
+    const pos = getPos(e, page.interactCanvas);
+    const hit = hitTestObjects(page, pos);
+    if (!hit) return; // по порожньому місцю — не заважаємо стандартному меню браузера
+    e.preventDefault();
+    // клік по об'єкту з наявної групи — лишаємо групу; інакше вибираємо тільки цей об'єкт
+    if (!(page.selectedIds.length > 1 && page.selectedIds.includes(hit.id))) {
+      page.selectedIds = [hit.id]; page.selectedId = hit.id;
+      renderObjects(page);
+    }
+    openContextMenu(page, e.clientX, e.clientY);
+  }
+
+  function openContextMenu(page, clientX, clientY) {
+    ctxMenuPage = page;
+    ctxMenuEl.classList.add('show');
+    const menuW = ctxMenuEl.offsetWidth || 190, menuH = ctxMenuEl.offsetHeight || 160;
+    ctxMenuEl.style.left = Math.min(clientX, window.innerWidth - menuW - 8) + 'px';
+    ctxMenuEl.style.top = Math.min(clientY, window.innerHeight - menuH - 8) + 'px';
+  }
+  function closeContextMenu() { ctxMenuEl.classList.remove('show'); ctxMenuPage = null; }
+
+  document.getElementById('ctxDuplicate').addEventListener('click', () => { if (ctxMenuPage) duplicateSelected(ctxMenuPage); closeContextMenu(); });
+  document.getElementById('ctxFront').addEventListener('click', () => { sendSelected('front'); closeContextMenu(); });
+  document.getElementById('ctxBack').addEventListener('click', () => { sendSelected('back'); closeContextMenu(); });
+  document.getElementById('ctxDelete').addEventListener('click', () => { if (ctxMenuPage) deleteSelected(ctxMenuPage); closeContextMenu(); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.ctx-menu')) closeContextMenu(); });
+  document.addEventListener('contextmenu', (e) => { if (!e.target.closest('.layer-interact')) closeContextMenu(); });
+  window.addEventListener('scroll', closeContextMenu, true);
+  window.addEventListener('resize', closeContextMenu);
+
   // ═══════════════════════ ТЕКСТ ═══════════════════════
 
   function openTextEditor(page, pos, existing) {
@@ -2246,14 +2374,13 @@
     if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setZoom(1); return; }
     if (e.key === 'Delete' || e.key === 'Backspace') {
       const page = getActivePage();
-      const ids = page && page.selectedIds && page.selectedIds.length ? page.selectedIds : (page && page.selectedId ? [page.selectedId] : []);
-      if (page && ids.length) {
-        e.preventDefault();
-        pushUndo(page);
-        page.objects = page.objects.filter(o => !ids.includes(o.id));
-        page.selectedIds = []; page.selectedId = null;
-        renderObjects(page);
-      }
+      if (page && selectedIdsOf(page).length) { e.preventDefault(); deleteSelected(page); }
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+      // Ctrl/Cmd+D — швидко дублювати виділене (додано)
+      const page = getActivePage();
+      if (page && selectedIdsOf(page).length) { e.preventDefault(); duplicateSelected(page); }
       return;
     }
     if (e.key === 'Escape' && getActivePage() && getActivePage().selectedIds && getActivePage().selectedIds.length) {
