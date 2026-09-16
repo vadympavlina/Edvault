@@ -822,8 +822,14 @@ async function enterTvMode(withGesture) {
   syncHudVisibility();
   log('TV Mode увімкнено.');
 
+  // КРИТИЧНО для Wake Lock: він вимагає "transient activation" — запит має
+  // піти в межах того самого кліку, без await перед ним. Якщо спершу чекати
+  // на enterFullscreen(), активація кліку може згаснути до виклику Wake Lock,
+  // і браузер відповість NotAllowedError навіть у відповідь на реальний клік.
+  // Тому обидва запити стартують одночасно, а не послідовно.
+  const wakeLockPromise = requestWakeLock();
   if (withGesture) await enterFullscreen();
-  await requestWakeLock();
+  await wakeLockPromise;
   syncMediaFallback();
 
   if (!withGesture && !isFullscreen()) {
