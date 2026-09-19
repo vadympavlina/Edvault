@@ -1857,9 +1857,12 @@
       const y = Math.max(0, Math.min(page.h - h, pos.y - h / 2));
       pushUndo(page);
       state.objSeq += 1;
+      // "src" (весь dataURL зображення в base64) свідомо НЕ зберігаємо в об'єкті — для малювання
+      // й надалі використовується вже завантажений img._img, а зайва копія рядка в пам'яті
+      // на кожне велике зображення на дошці помітно накопичувалась би без жодної користі (оптимізовано)
       const obj = {
         id: 'obj' + state.objSeq, type: 'image', x, y, w, h,
-        aspect: img.naturalWidth / img.naturalHeight, src: dataUrl, _img: img,
+        aspect: img.naturalWidth / img.naturalHeight, _img: img,
       };
       page.objects.push(obj);
       page.selectedIds = [obj.id]; page.selectedId = obj.id;
@@ -2380,28 +2383,38 @@
   // ═══════════════════════ ІНСТРУМЕНТИ / КОЛІР / РОЗМІР — UI ═══════════════════════
 
   function renderSwatches() {
+    // будуємо DOM свотчів лише один раз, далі — просто перемикаємо клас .active (оптимізовано:
+    // раніше на кожен клік повністю знищували й перестворювали всі 10 кнопок заради однієї зміни класу)
     const grid = document.getElementById('swatchGrid');
-    grid.innerHTML = '';
-    PEN_COLORS.forEach(c => {
-      const b = document.createElement('button');
-      b.className = 'swatch' + (c === state.color ? ' active' : '');
-      b.style.background = c;
-      if (c === '#ffffff') b.style.boxShadow = '0 0 0 1.5px var(--border2), inset 0 0 0 1px var(--border2)';
-      b.addEventListener('click', () => { state.color = c; document.getElementById('customColor').value = c; renderSwatches(); updateSizePreview(); });
-      grid.appendChild(b);
-    });
+    if (!grid.dataset.built) {
+      PEN_COLORS.forEach(c => {
+        const b = document.createElement('button');
+        b.className = 'swatch';
+        b.style.background = c;
+        b.dataset.color = c;
+        if (c === '#ffffff') b.style.boxShadow = '0 0 0 1.5px var(--border2), inset 0 0 0 1px var(--border2)';
+        b.addEventListener('click', () => { state.color = c; document.getElementById('customColor').value = c; renderSwatches(); updateSizePreview(); });
+        grid.appendChild(b);
+      });
+      grid.dataset.built = '1';
+    }
+    Array.from(grid.children).forEach(b => b.classList.toggle('active', b.dataset.color === state.color));
   }
 
   function renderStickySwatches() {
     const row = document.getElementById('stickySwatchRow');
-    row.innerHTML = '';
-    STICKY_COLORS.forEach(c => {
-      const b = document.createElement('button');
-      b.className = 'sticky-swatch' + (c === state.stickyColor ? ' active' : '');
-      b.style.background = c;
-      b.addEventListener('click', () => { state.stickyColor = c; renderStickySwatches(); updateSizePreview(); });
-      row.appendChild(b);
-    });
+    if (!row.dataset.built) {
+      STICKY_COLORS.forEach(c => {
+        const b = document.createElement('button');
+        b.className = 'sticky-swatch';
+        b.style.background = c;
+        b.dataset.color = c;
+        b.addEventListener('click', () => { state.stickyColor = c; renderStickySwatches(); updateSizePreview(); });
+        row.appendChild(b);
+      });
+      row.dataset.built = '1';
+    }
+    Array.from(row.children).forEach(b => b.classList.toggle('active', b.dataset.color === state.stickyColor));
   }
 
   // курсор під кожен інструмент — щоб було видно, чим саме зараз малюєш, ще до кліку (додано)
