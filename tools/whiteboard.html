@@ -171,7 +171,12 @@
     flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative;
   }
   .canvas-viewport {
-    flex: 1; overflow: auto; background: var(--canvas-bg); position: relative;
+    flex: 1; overflow: auto; position: relative;
+    /* тонка крапкова сітка на "світі" довкола сторінки — видно, що це нескінченний пан-простір,
+       а не порожня прогалина; заодно дає візуальний орієнтир під час панорамування (додано) */
+    background-color: var(--canvas-bg);
+    background-image: radial-gradient(circle, rgba(17,20,26,.09) 1.3px, transparent 1.3px);
+    background-size: 24px 24px;
   }
   /* =========== "СВІТ" ПОЛОТНА (додано): великий контейнер довкола сторінки, щоб завжди було
      трохи простору для прокрутки/панорамування за межі видимої сторінки в будь-який бік ============ */
@@ -986,7 +991,10 @@
 
     const page = {
       id, w, h, stage, bgCanvas, strokesCanvas, objectsCanvas, previewCanvas, interactCanvas, emptyHintEl,
-      strokesCtx: strokesCanvas.getContext('2d'),
+      // willReadFrequently: undo/redo знімає getImageData/putImageData саме з цього шару —
+      // підказка браузеру тримати його в пам'яті CPU одразу, а не в GPU, різко пришвидшує
+      // саме ці операції (великий виграш продуктивності для Ctrl+Z на активному малюванні) (додано)
+      strokesCtx: strokesCanvas.getContext('2d', { willReadFrequently: true }),
       objectsCtx: objectsCanvas.getContext('2d'),
       previewCtx: previewCanvas.getContext('2d'),
       objects: [],
@@ -1440,9 +1448,15 @@
     selToolbarEl.classList.add('show');
   }
   // тримаємо панельку прив'язаною до об'єкта і під час скролу полотна
+  // (throttle через rAF — скрол може сипати події набагато частіше, ніж встигає перемальовуватись екран) (додано)
+  let scrollRafId = null;
   document.getElementById('canvasViewport').addEventListener('scroll', () => {
-    const page = getActivePage();
-    if (page && (page.selectedId || (page.selectedIds && page.selectedIds.length))) renderSelectionOutline(page);
+    if (scrollRafId) return;
+    scrollRafId = requestAnimationFrame(() => {
+      scrollRafId = null;
+      const page = getActivePage();
+      if (page && (page.selectedId || (page.selectedIds && page.selectedIds.length))) renderSelectionOutline(page);
+    });
   });
 
   // ── редагування кольору/товщини вже намальованого об'єкта через плаваючу панель ──
@@ -1616,8 +1630,11 @@
     const page = getActivePage();
     if (page) onPointerUp(page, e);
   });
-  // оновлюємо мініатюру поточної сторінки в смузі знизу після завершення будь-якого жесту малювання (додано)
-  window.addEventListener('pointerup', scheduleThumbRefresh);
+  // оновлюємо мініатюру поточної сторінки в смузі знизу після завершення жесту малювання —
+  // лише коли подія стосувалась самого полотна, а не будь-якої кнопки в інтерфейсі (додано: менше зайвої роботи)
+  window.addEventListener('pointerup', (e) => {
+    if (e.target && e.target.closest && e.target.closest('.canvas-viewport')) scheduleThumbRefresh();
+  });
 
   // ═══════════════════════ ЗУМ ═══════════════════════
 
@@ -2650,7 +2667,12 @@
   function enhanceTooltipsAndA11y(root) {
     const tipEl = document.getElementById('uiTooltip');
     let tipTimer = null;
-    (root || document).querySelectorAll('[title]').forEach(el => {
+    const scope = root || document;
+    // querySelectorAll шукає лише НАЩАДКІВ — якщо щойно доданий вузол сам має title
+    // (напр. пігулка сторінки), його теж треба перевірити окремо (виправлено)
+    const targets = scope.querySelectorAll ? Array.from(scope.querySelectorAll('[title]')) : [];
+    if (scope.nodeType === 1 && scope.hasAttribute && scope.hasAttribute('title')) targets.push(scope);
+    targets.forEach(el => {
       if (el.dataset.tipBound) return;
       el.dataset.tipBound = '1';
       const label = el.getAttribute('title');
@@ -2684,8 +2706,16 @@
     });
   }
   enhanceTooltipsAndA11y(document);
-  // сторінки, панелі презентації та інші елементи, що з'являються пізніше — теж отримують тултіпи/aria
-  const tooltipObserver = new MutationObserver(() => enhanceTooltipsAndA11y(document));
+  // сторінки, панелі презентації та інші елементи, що з'являються пізніше — теж отримують тултіпи/aria.
+  // Обробляємо лише щойно додані вузли (а не весь document повторно) — панель сторінок унизу
+  // перебудовується часто під час малювання, і повний рескан щоразу був би зайвою роботою (оптимізовано)
+  const tooltipObserver = new MutationObserver((mutations) => {
+    mutations.forEach(m => {
+      m.addedNodes.forEach(node => {
+        if (node.nodeType === 1) enhanceTooltipsAndA11y(node);
+      });
+    });
+  });
   tooltipObserver.observe(document.body, { childList: true, subtree: true });
 
   // ═══════════════════════ ПОПАП «КОЛІР І ТОВЩИНА» (додано) ═══════════════════════
