@@ -197,6 +197,21 @@
   }
   .size-preview-dot { border-radius: 50%; background: var(--overlay-dark); }
 
+  /* =========== СКИДАННЯ НУМЕРАЦІЇ (додано) =========== */
+  .number-reset-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 12px; color: var(--text2); font-weight: 600;
+  }
+  .number-reset-row b { color: var(--text); font-family: 'JetBrains Mono', monospace; }
+  .number-reset-btn {
+    display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 8px;
+    border: 1.5px solid var(--border2); background: var(--surface); color: var(--text2);
+    font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all .13s ease;
+  }
+  .number-reset-btn svg { width: 13px; height: 13px; }
+  .number-reset-btn:hover { background: var(--surface2); border-color: var(--muted); color: var(--text); }
+  .number-reset-btn:active { transform: scale(.94); }
+
   .sticky-swatch-row { display: flex; gap: 8px; flex-wrap: wrap; }
   .sticky-swatch {
     width: 30px; height: 30px; border-radius: 8px; cursor: pointer; border: 2px solid transparent;
@@ -254,6 +269,24 @@
     display: flex; align-items: center; gap: 2px; background: var(--surface);
     border: 1.5px solid var(--border2); border-radius: 12px; padding: 5px; box-shadow: var(--shadow-md);
   }
+
+  /* =========== ПЛАВАЮЧА ПІДКАЗКА ІНСТРУМЕНТА "НУМЕРАЦІЯ" (притишено за проханням) =========== */
+  .number-hud {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 20;
+    display: none; align-items: center; gap: 8px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 20px; padding: 5px 6px 5px 12px; box-shadow: var(--shadow-sm);
+    font-size: 11.5px; font-weight: 600; color: var(--muted); opacity: .55; transition: opacity .15s ease;
+  }
+  .number-hud:hover { opacity: 1; }
+  .app.tool-number-active .number-hud { display: flex; }
+  .number-hud b { color: var(--text2); font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; }
+  .number-hud-reset {
+    display: flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 16px; border: 1px solid var(--border2);
+    background: var(--surface); color: var(--muted); font-size: 10.5px; font-weight: 700; cursor: pointer; transition: all .13s ease;
+  }
+  .number-hud-reset svg { width: 11px; height: 11px; }
+  .number-hud-reset:hover { background: var(--surface2); color: var(--text); border-color: var(--muted); }
+  .number-hud-reset:active { transform: scale(.94); }
   .zc-btn {
     width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent;
     color: var(--text2); display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -284,6 +317,10 @@
     background: rgba(255,255,255,.55); line-height: 1.35;
   }
   .canvas-edit-box.sticky-box { border-style: solid; border-color: rgba(0,0,0,.12); border-radius: 10px; box-shadow: var(--shadow-md); padding: 12px; }
+  .canvas-edit-box.number-edit-box {
+    /* коротке поле редагування числа бейджа — без відступів, інакше цифра "їде" вбік у маленькому колі (додано) */
+    border: 2px solid rgba(255,255,255,.85); box-shadow: var(--shadow-md); padding: 0;
+  }
 
   /* =========== PAGE STRIP =========== */
   .page-strip {
@@ -327,6 +364,7 @@
   .interact-tool-sticky { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2728%27%20height%3D%2728%27%20viewBox%3D%270%200%2028%2028%27%3E%3Cg%20transform%3D%27translate%282%2C2%29%27%3E%3Cpath%20d%3D%27M1%201h18v13l-6%206H1z%27%20fill%3D%27%23FDE68A%27%20stroke%3D%27%231a1d23%27%20stroke-width%3D%271.6%27%20stroke-linejoin%3D%27round%27%2F%3E%3Cpath%20d%3D%27M19%2014h-6v6z%27%20fill%3D%27%23F3D06B%27%20stroke%3D%27%231a1d23%27%20stroke-width%3D%271.4%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") 3 3, copy; }
   .interact-tool-text { cursor: text; }
   .interact-tool-shape { cursor: crosshair; }
+  .interact-tool-number { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2728%27%20height%3D%2728%27%20viewBox%3D%270%200%2028%2028%27%3E%3Cg%20transform%3D%27translate%282%2C2%29%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%2711%27%20fill%3D%27%234F6BF4%27%20stroke%3D%27%231a1d23%27%20stroke-width%3D%271.6%27%2F%3E%3Ctext%20x%3D%2712%27%20y%3D%2717%27%20font-family%3D%27Arial%2C%20sans-serif%27%20font-size%3D%2714%27%20font-weight%3D%27700%27%20fill%3D%27white%27%20text-anchor%3D%27middle%27%3E1%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E") 14 14, crosshair; }
   .sel-outline { position: absolute; border: 1.5px dashed var(--accent); pointer-events: none; border-radius: 4px; z-index: 6; }
 
   .toast {
@@ -391,6 +429,7 @@
   .presentation-mode .page-strip,
   .presentation-mode .tools-panel { display: none; }
   .presentation-mode .tools-options-pop { display: none !important; }
+  .presentation-mode .number-hud { display: none !important; }
   .presentation-mode .zoom-controls { bottom: 76px; } /* щоб не перекривалась плаваючим present-bar знизу */
 
   .present-bar {
@@ -672,6 +711,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v11l-5 5H4z"/><path d="M15 20v-5h5"/></svg>
             <span>Стікер</span>
           </button>
+          <button class="tool-btn" data-tool="number" title="Нумерація">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><text x="12" y="16.3" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="currentColor" stroke="none" text-anchor="middle">1</text></svg>
+            <span>Нумерація</span>
+          </button>
           <button class="tool-btn" data-tool="rect" title="Прямокутник">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/></svg>
             <span>Прямокутник</span>
@@ -727,6 +770,18 @@
         </div>
         <div class="size-preview"><div class="size-preview-dot" id="sizePreviewDot"></div></div>
       </div>
+
+      <!-- скидання лічильника нумерації (додано) -->
+      <div class="tp-section" id="numberSection" style="display:none;">
+        <div class="tp-label">Нумерація</div>
+        <div class="number-reset-row">
+          <span>Наступне число: <b id="numberNextVal">1</b></span>
+          <button class="number-reset-btn" id="btnResetNumbering" title="Скинути нумерацію до 1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.35"/><path d="M3 5v5h5"/></svg>
+            До 1
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="canvas-area">
@@ -734,6 +789,15 @@
         <div class="canvas-world" id="canvasWorld">
           <!-- сторінки монтуються сюди динамічно -->
         </div>
+      </div>
+      <!-- плаваюча підказка з інструментом "Нумерація" — видно одразу на полотні, без потреби
+           відкривати попап "Стиль" (додано, бо кнопку в попапі важко було знайти) -->
+      <div class="number-hud" id="numberHud">
+        <span>Наступне число: <b id="numberHudVal">1</b></span>
+        <button class="number-hud-reset" id="btnResetNumberingHud" title="Скинути нумерацію до 1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.35"/><path d="M3 5v5h5"/></svg>
+          До 1
+        </button>
       </div>
       <div class="zoom-controls">
         <button class="zc-btn" id="btnZoomOut" title="Зменшити (Ctrl+−)">
@@ -786,6 +850,9 @@
         </button>
         <button class="pt-btn" data-tool="sticky" title="Стікер">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v11l-5 5H4z"/><path d="M15 20v-5h5"/></svg>
+        </button>
+        <button class="pt-btn" data-tool="number" title="Нумерація">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><text x="12" y="16.3" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="currentColor" stroke="none" text-anchor="middle">1</text></svg>
         </button>
         <button class="pt-btn" data-tool="rect" title="Прямокутник">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/></svg>
@@ -888,6 +955,7 @@
       <div class="kbd-row"><span>Гумка</span><span class="kbd-keys"><span class="kbd">E</span></span></div>
       <div class="kbd-row"><span>Текст</span><span class="kbd-keys"><span class="kbd">T</span></span></div>
       <div class="kbd-row"><span>Стікер</span><span class="kbd-keys"><span class="kbd">S</span></span></div>
+      <div class="kbd-row"><span>Нумерація</span><span class="kbd-keys"><span class="kbd">N</span></span></div>
       <div class="kbd-row"><span>Прямокутник</span><span class="kbd-keys"><span class="kbd">R</span></span></div>
       <div class="kbd-row"><span>Коло</span><span class="kbd-keys"><span class="kbd">C</span></span></div>
       <div class="kbd-row"><span>Лінія</span><span class="kbd-keys"><span class="kbd">L</span></span></div>
@@ -952,7 +1020,7 @@
 
   const PEN_COLORS = ['#1a1d23', '#ef4444', '#f5b942', '#16a34a', '#4F6BF4', '#a855f7', '#ec4899', '#0891b2', '#78716c', '#ffffff'];
   const STICKY_COLORS = ['#fef3c7', '#fde2e2', '#dcfce7', '#dbeafe', '#f3e8ff', '#fee2e2'];
-  const TOOL_DEFAULT_SIZE = { pen: 3, highlighter: 18, eraser: 22, rect: 3, circle: 3, line: 3, arrow: 3, text: 22, sticky: 15 };
+  const TOOL_DEFAULT_SIZE = { pen: 3, highlighter: 18, eraser: 22, rect: 3, circle: 3, line: 3, arrow: 3, text: 22, sticky: 15, number: 44 };
   const BLANK_W = 1400, BLANK_H = 900;
   const STICKY_W = 190, STICKY_H = 170;
 
@@ -1086,6 +1154,7 @@
       p.selectedId = null; p.selectedIds = []; renderSelectionOutline(p); applyZoom();
       sizeWorldForPage(p); centerWorldScroll();
     }
+    updateNumberNextLabel(); // лічильник нумерації свій на кожній сторінці — оновлюємо підказку при перемиканні (додано)
     updatePresentPageLabel();
   }
 
@@ -1221,6 +1290,16 @@
     return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
   }
 
+  function contrastTextColor(hex) {
+    // авто-вибір білого чи темного тексту залежно від яскравості фону — щоб число
+    // лишалось читабельним на будь-якому кольорі бейджа (додано)
+    const c = (hex || '#000000').replace('#', '');
+    if (c.length !== 6) return '#ffffff';
+    const r = parseInt(c.substr(0, 2), 16), g = parseInt(c.substr(2, 2), 16), b = parseInt(c.substr(4, 2), 16);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.62 ? '#1a1d23' : '#ffffff';
+  }
+
   function wrapText(ctx, text, maxWidth) {
     const out = [];
     text.split('\n').forEach(paragraph => {
@@ -1282,6 +1361,28 @@
       if (obj._img && obj._img.complete && obj._img.naturalWidth) {
         ctx.drawImage(obj._img, obj.x, obj.y, obj.w, obj.h);
       }
+    } else if (obj.type === 'number') {
+      // бейдж нумерації — коло обраного кольору з числом усередині, розмір числа
+      // масштабується разом з розміром самого кола (додано)
+      const cx = obj.x + obj.w / 2, cy = obj.y + obj.h / 2, r = obj.w / 2;
+      ctx.shadowColor = 'rgba(0,0,0,.22)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = obj.color;
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      // тонке біле кільце — щоб бейдж було видно навіть на фоні схожого кольору
+      ctx.lineWidth = Math.max(1.5, obj.w * 0.035);
+      ctx.strokeStyle = 'rgba(255,255,255,.85)';
+      ctx.stroke();
+      ctx.fillStyle = contrastTextColor(obj.color);
+      ctx.font = `800 ${Math.max(10, obj.w * 0.46)}px Inter, system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(obj.value), cx, cy + obj.w * 0.02);
+      ctx.textAlign = 'left'; // повертаємо дефолт, щоб не зачепити інші типи об'єктів після цього
     } else {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -1317,14 +1418,14 @@
   }
 
   function objectBounds(obj) {
-    if (obj.type === 'text' || obj.type === 'sticky' || obj.type === 'image') return { x: obj.x, y: obj.y, w: obj.w, h: obj.h };
+    if (obj.type === 'text' || obj.type === 'sticky' || obj.type === 'image' || obj.type === 'number') return { x: obj.x, y: obj.y, w: obj.w, h: obj.h };
     const x = Math.min(obj.x1, obj.x2), y = Math.min(obj.y1, obj.y2);
     return { x, y, w: Math.abs(obj.x2 - obj.x1), h: Math.abs(obj.y2 - obj.y1) };
   }
 
   function objectHandles(obj) {
-    // текст/стікер/зображення — одна ручка в правому нижньому куті; фігури — дві ручки за їхніми ж опорними точками
-    if (obj.type === 'text' || obj.type === 'sticky' || obj.type === 'image') {
+    // текст/стікер/зображення/бейдж нумерації — одна ручка в правому нижньому куті; фігури — дві ручки за їхніми ж опорними точками
+    if (obj.type === 'text' || obj.type === 'sticky' || obj.type === 'image' || obj.type === 'number') {
       return [{ id: 'br', x: obj.x + obj.w, y: obj.y + obj.h }];
     }
     return [{ id: 'p1', x: obj.x1, y: obj.y1 }, { id: 'p2', x: obj.x2, y: obj.y2 }];
@@ -1367,6 +1468,10 @@
       const aspect = obj.aspect || (obj.w / obj.h) || 1;
       obj.w = Math.max(24, pos.x - obj.x);
       obj.h = Math.max(24, obj.w / aspect);
+    } else if (obj.type === 'number') {
+      // бейдж нумерації — завжди рівне коло, тягнемо за ручку в будь-яку сторону (додано)
+      const d = Math.max(20, Math.max(pos.x - obj.x, pos.y - obj.y));
+      obj.w = d; obj.h = d; obj.size = d;
     } else if (handleId === 'p1') {
       obj.x1 = pos.x; obj.y1 = pos.y;
     } else {
@@ -1549,7 +1654,9 @@
     const hasSize = obj.type !== 'sticky';
     sizeWrap.style.display = hasSize ? 'flex' : 'none';
     if (hasSize) {
-      if (obj.type === 'text') { range.min = 8; range.max = 140; } else { range.min = 1; range.max = 60; }
+      if (obj.type === 'text') { range.min = 8; range.max = 140; }
+      else if (obj.type === 'number') { range.min = 20; range.max = 140; }
+      else { range.min = 1; range.max = 60; }
     }
   }
 
@@ -1591,6 +1698,11 @@
     if (obj.type === 'text') {
       const dims = measureTextDims(selCtx.page, obj.text, val);
       obj.w = dims.w; obj.h = dims.h;
+    } else if (obj.type === 'number') {
+      // міняємо розмір бейджа навколо його центру, а не від кутка — так звичніше для кола (додано)
+      const cx = obj.x + obj.w / 2, cy = obj.y + obj.h / 2;
+      obj.w = val; obj.h = val;
+      obj.x = cx - val / 2; obj.y = cy - val / 2;
     }
     document.getElementById('selSizeVal').textContent = val;
     redrawObjectsLayerOnly(selCtx.page); // без ручок/тулбара під час руху повзунка — щоб не смикало
@@ -2030,6 +2142,13 @@
     if (tool === 'text') { openTextEditor(page, pos); return; }
     if (tool === 'sticky') { openStickyEditor(page, pos); return; }
 
+    if (tool === 'number') {
+      // ставимо бейдж по кліку одразу, центруючи його на курсорі, і зразу готові до наступного
+      // кліку з наступним числом — інструмент лишається активним (додано)
+      placeNumberBadge(page, pos);
+      return;
+    }
+
     state.drawing = true;
     state.dragStart = pos;
 
@@ -2231,7 +2350,7 @@
     if (state.tool !== 'select') return;
     const pos = getPos(e, page.interactCanvas);
     const hit = hitTestObjects(page, pos);
-    if (!hit || (hit.type !== 'text' && hit.type !== 'sticky')) return;
+    if (!hit || (hit.type !== 'text' && hit.type !== 'sticky' && hit.type !== 'number')) return;
     editExistingObject(page, hit);
   }
 
@@ -2371,6 +2490,96 @@
     });
   }
 
+  // ═══════════════════════ НУМЕРАЦІЯ (додано) ═══════════════════════
+
+  function placeNumberBadge(page, pos) {
+    const d = state.size;
+    // якщо лічильник явно скинутий кнопкою "До 1" — рахуємо просто по порядку від нього,
+    // інакше — від максимального числа, що вже є на сторінці (додано)
+    let value;
+    if (page.numberNext != null) { value = page.numberNext; page.numberNext += 1; }
+    else {
+      const existing = page.objects.filter(o => o.type === 'number').map(o => o.value || 0);
+      value = existing.length ? Math.max(...existing) + 1 : 1;
+    }
+    pushUndo(page);
+    state.objSeq += 1;
+    page.objects.push({
+      id: 'obj' + state.objSeq, type: 'number',
+      x: pos.x - d / 2, y: pos.y - d / 2, w: d, h: d, size: d,
+      color: state.color, value,
+    });
+    renderObjects(page);
+    scheduleThumbRefresh();
+    updateNumberNextLabel();
+  }
+
+  function nextNumberPreview(page) {
+    if (!page) return 1;
+    if (page.numberNext != null) return page.numberNext;
+    const existing = page.objects.filter(o => o.type === 'number').map(o => o.value || 0);
+    return existing.length ? Math.max(...existing) + 1 : 1;
+  }
+  function updateNumberNextLabel() {
+    const val = nextNumberPreview(getActivePage());
+    const el = document.getElementById('numberNextVal');
+    if (el) el.textContent = val;
+    const hudEl = document.getElementById('numberHudVal');
+    if (hudEl) hudEl.textContent = val;
+  }
+  function resetNumbering() {
+    const page = getActivePage();
+    if (!page) return;
+    page.numberNext = 1; // з наступного кліку рахунок піде 1, 2, 3… незалежно від того, що вже на сторінці
+    updateNumberNextLabel();
+    showToast('Нумерацію скинуто до 1', 'success');
+  }
+  document.getElementById('btnResetNumbering').addEventListener('click', resetNumbering);
+  document.getElementById('btnResetNumberingHud').addEventListener('click', resetNumbering);
+
+  function openNumberEditor(page, obj) {
+    // подвійний клік у режимі "Виділити" — виправити число вручну (наприклад, переставити пункти) (додано)
+    const rect = page.interactCanvas.getBoundingClientRect();
+    const scale = rect.width / page.w;
+    const box = document.createElement('input');
+    box.type = 'text';
+    box.inputMode = 'numeric';
+    box.className = 'canvas-edit-box number-edit-box';
+    box.style.left = (obj.x * scale) + 'px';
+    box.style.top = (obj.y * scale) + 'px';
+    box.style.width = (obj.w * scale) + 'px';
+    box.style.height = (obj.h * scale) + 'px';
+    box.style.borderRadius = '50%';
+    box.style.textAlign = 'center';
+    box.style.fontSize = Math.max(10, obj.w * scale * 0.46) + 'px';
+    box.style.fontWeight = '800';
+    box.style.background = obj.color;
+    box.style.color = contrastTextColor(obj.color);
+    box.value = String(obj.value);
+    page.editingId = obj.id;
+    renderObjects(page);
+    page.stage.appendChild(box);
+    setTimeout(() => { box.focus(); box.select(); }, 0);
+
+    function commit() {
+      const parsed = parseInt(box.value, 10);
+      box.remove();
+      page.editingId = null;
+      if (Number.isFinite(parsed)) {
+        pushUndo(page);
+        obj.value = parsed;
+      }
+      renderObjects(page);
+      scheduleThumbRefresh();
+    }
+    box.addEventListener('blur', commit);
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { box.value = String(obj.value); box.blur(); }
+      else if (e.key === 'Enter') { e.preventDefault(); box.blur(); }
+      e.stopPropagation();
+    });
+  }
+
   function editExistingObject(page, obj) {
     // не видаляємо з масиву — просто ховаємо під час редагування, щоб не загубити при збереженні
     page.editingId = obj.id;
@@ -2378,6 +2587,7 @@
     renderObjects(page);
     if (obj.type === 'text') openTextEditor(page, { x: obj.x, y: obj.y }, obj);
     else if (obj.type === 'sticky') openStickyEditor(page, { x: obj.x, y: obj.y }, obj);
+    else if (obj.type === 'number') openNumberEditor(page, obj);
   }
 
   // ═══════════════════════ ІНСТРУМЕНТИ / КОЛІР / РОЗМІР — UI ═══════════════════════
@@ -2421,6 +2631,7 @@
   const TOOL_CURSOR_CLASS = {
     select: 'interact-select', pen: 'interact-tool-pen', highlighter: 'interact-tool-highlighter',
     eraser: 'interact-tool-eraser', text: 'interact-tool-text', sticky: 'interact-tool-sticky',
+    number: 'interact-tool-number',
     rect: 'interact-tool-shape', circle: 'interact-tool-shape', line: 'interact-tool-shape', arrow: 'interact-tool-shape',
   };
   const ALL_CURSOR_CLASSES = Object.values(TOOL_CURSOR_CLASS).filter((v, i, a) => a.indexOf(v) === i);
@@ -2430,13 +2641,23 @@
     state.tool = tool;
     document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
     if (TOOL_DEFAULT_SIZE[tool] != null) state.size = TOOL_DEFAULT_SIZE[tool];
-    document.getElementById('sizeRange').value = state.size;
+    // діапазон повзунка товщини/розміру адаптується під інструмент: бейджу нумерації і тексту
+    // потрібні значно більші числа, ніж товщині лінії (додано)
+    const sizeRangeEl = document.getElementById('sizeRange');
+    if (tool === 'number') { sizeRangeEl.min = 20; sizeRangeEl.max = 140; }
+    else if (tool === 'text') { sizeRangeEl.min = 8; sizeRangeEl.max = 140; }
+    else { sizeRangeEl.min = 1; sizeRangeEl.max = 40; }
+    sizeRangeEl.value = state.size;
     document.getElementById('sizeVal').textContent = state.size;
     updateSizePreview();
     document.getElementById('stickyColorSection').style.display = tool === 'sticky' ? 'block' : 'none';
     document.getElementById('colorSection').style.display = (tool === 'sticky' || tool === 'eraser' || tool === 'select') ? 'none' : 'block';
     document.getElementById('sizeSection').style.display = (tool === 'sticky' || tool === 'select') ? 'none' : 'block';
-    document.getElementById('sizeLabel').textContent = tool === 'text' ? 'Розмір шрифту' : 'Товщина';
+    document.getElementById('numberSection').style.display = tool === 'number' ? 'block' : 'none'; // додано
+    const appElForHud = document.querySelector('.app');
+    if (appElForHud) appElForHud.classList.toggle('tool-number-active', tool === 'number'); // додано: плаваюча підказка на полотні
+    if (tool === 'number') updateNumberNextLabel();
+    document.getElementById('sizeLabel').textContent = tool === 'text' ? 'Розмір шрифту' : (tool === 'number' ? 'Розмір бейджа' : 'Товщина');
     // для "Виділити" налаштовувати нічого — ховаємо кнопку "Стиль" і закриваємо попап, якщо був відкритий (додано)
     const stylePopBtn = document.getElementById('btnStylePop');
     if (stylePopBtn) stylePopBtn.style.display = tool === 'select' ? 'none' : 'flex';
@@ -2611,7 +2832,7 @@
       }
       return;
     }
-    const map = { v: 'select', p: 'pen', h: 'highlighter', e: 'eraser', t: 'text', s: 'sticky', r: 'rect', c: 'circle', l: 'line', a: 'arrow' };
+    const map = { v: 'select', p: 'pen', h: 'highlighter', e: 'eraser', t: 'text', s: 'sticky', n: 'number', r: 'rect', c: 'circle', l: 'line', a: 'arrow' };
     if (map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
   });
 
