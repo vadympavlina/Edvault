@@ -7,6 +7,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Вайтборд · Edvault</title>
+<script>
+  // застосовуємо збережену тему ДО першого рендеру — інакше на мить блимне світла тема,
+  // а потім перемкнеться на темну (додано)
+  try {
+    var __savedTheme = localStorage.getItem('whiteboard-theme');
+    if (!__savedTheme) {
+      __savedTheme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', __savedTheme);
+  } catch (e) {}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
@@ -31,6 +42,9 @@
     --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
     --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
     --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
+    /* завжди-темні "плаваючі" елементи (тост, тулбар виділення, тултіп) — не залежать від теми,
+       щоб не побіліти в темному режимі (додано) */
+    --overlay-dark: #1a1d23;
 
     --topbar-h: 64px;
     --left-panel-w: 64px;
@@ -38,11 +52,36 @@
     --canvas-bg: #e4e7ed;
   }
 
+  /* =========== ТЕМНА ТЕМА (додано): повністю нова палітра для всього UI-хрому.
+     "Папір" сторінки навмисно лишається білим в обох темах — це поверхня для малювання,
+     а не частина інтерфейсу, і кольори пера підібрані саме під білий фон. =========== */
+  :root[data-theme="dark"] {
+    --bg: #15171c;
+    --surface: #1d2028;
+    --surface2: #262a33;
+    --border: #2e323c;
+    --border2: #3a3f4b;
+    --accent: #7c90f8;
+    --accent-light: #262c47;
+    --accent-hover: #93a3ff;
+    --danger: #f87171;
+    --danger-light: #3a2020;
+    --gold: #fbbf24;
+    --text: #eef0f4;
+    --text2: #a8adb8;
+    --muted: #6b7280;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.22);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.28);
+    --shadow-lg: 0 24px 60px rgba(0,0,0,.5), 0 4px 16px rgba(0,0,0,.3);
+    --canvas-bg: #101216;
+  }
+
   html, body { height: 100%; }
   body {
     font-family: 'Inter', system-ui, sans-serif;
     background: var(--bg);
     color: var(--text);
+    transition: background-color .18s ease, color .18s ease; /* плавний перехід між темами (додано) */
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
   }
@@ -156,7 +195,7 @@
     width: 100%; height: 34px; border-radius: 8px; background: var(--surface2); border: 1.5px solid var(--border);
     display: flex; align-items: center; justify-content: center; margin-top: 8px;
   }
-  .size-preview-dot { border-radius: 50%; background: var(--text); }
+  .size-preview-dot { border-radius: 50%; background: var(--overlay-dark); }
 
   .sticky-swatch-row { display: flex; gap: 8px; flex-wrap: wrap; }
   .sticky-swatch {
@@ -177,6 +216,11 @@
     background-color: var(--canvas-bg);
     background-image: radial-gradient(circle, rgba(17,20,26,.09) 1.3px, transparent 1.3px);
     background-size: 24px 24px;
+    transition: background-color .18s ease;
+  }
+  :root[data-theme="dark"] .canvas-viewport {
+    /* у темній темі крапки мають бути світлими, а не темними на темному тлі (додано) */
+    background-image: radial-gradient(circle, rgba(255,255,255,.08) 1.3px, transparent 1.3px);
   }
   /* =========== "СВІТ" ПОЛОТНА (додано): великий контейнер довкола сторінки, щоб завжди було
      трохи простору для прокрутки/панорамування за межі видимої сторінки в будь-який бік ============ */
@@ -287,7 +331,7 @@
 
   .toast {
     position: fixed; bottom: calc(var(--strip-h) + 18px); left: 50%; transform: translateX(-50%) translateY(8px);
-    background: var(--text); color: #fff; font-size: 12.5px; font-weight: 700; padding: 10px 16px;
+    background: var(--overlay-dark); color: #fff; font-size: 12.5px; font-weight: 700; padding: 10px 16px;
     border-radius: 10px; box-shadow: var(--shadow-md); opacity: 0; pointer-events: none; transition: all .2s ease; z-index: 50;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -295,13 +339,13 @@
   /* ── плаваюча міні-панель над виділеним елементом (як тултіп) ── */
   .sel-toolbar {
     position: fixed; z-index: 60; display: none; align-items: center; gap: 2px;
-    background: var(--text); border-radius: 10px; padding: 5px; box-shadow: var(--shadow-md);
+    background: var(--overlay-dark); border-radius: 10px; padding: 5px; box-shadow: var(--shadow-md);
     transform: translate(-50%, -100%); pointer-events: auto;
   }
   .sel-toolbar.show { display: flex; }
   .sel-toolbar::after {
     content: ''; position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%);
-    width: 9px; height: 9px; background: var(--text); border-radius: 2px; rotate: 45deg;
+    width: 9px; height: 9px; background: var(--overlay-dark); border-radius: 2px; rotate: 45deg;
   }
   .sel-tb-btn {
     width: 30px; height: 30px; border-radius: 7px; border: none; background: transparent;
@@ -351,7 +395,7 @@
 
   .present-bar {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 95;
-    display: none; align-items: center; gap: 2px; background: var(--text); border-radius: 14px;
+    display: none; align-items: center; gap: 2px; background: var(--overlay-dark); border-radius: 14px;
     padding: 6px; box-shadow: var(--shadow-lg);
   }
   .presentation-mode .present-bar { display: flex; }
@@ -370,7 +414,7 @@
   .present-tools {
     position: fixed; left: 16px; top: 50%; transform: translateY(-50%); z-index: 95;
     display: none; flex-direction: column; align-items: center; gap: 3px;
-    background: var(--text); border-radius: 14px; padding: 8px 6px; box-shadow: var(--shadow-lg);
+    background: var(--overlay-dark); border-radius: 14px; padding: 8px 6px; box-shadow: var(--shadow-lg);
     max-height: 84vh; overflow-y: auto;
   }
   .presentation-mode .present-tools { display: flex; }
@@ -422,7 +466,7 @@
 
   /* =========== КАСТОМНІ ТУЛТІПИ (додано) =========== */
   .ui-tooltip {
-    position: fixed; z-index: 200; background: var(--text); color: #fff; font-size: 11.5px; font-weight: 700;
+    position: fixed; z-index: 200; background: var(--overlay-dark); color: #fff; font-size: 11.5px; font-weight: 700;
     padding: 6px 10px; border-radius: 7px; pointer-events: none; opacity: 0; transform: translateY(4px);
     transition: opacity .12s ease, transform .12s ease; white-space: nowrap; box-shadow: var(--shadow-md);
   }
@@ -504,6 +548,8 @@
   }
   .ctx-item.ctx-danger { color: #dc2626; }
   .ctx-item.ctx-danger:hover { background: #fef2f2; }
+  :root[data-theme="dark"] .ctx-item.ctx-danger { color: #f87171; }
+  :root[data-theme="dark"] .ctx-item.ctx-danger:hover { background: rgba(248,113,113,.14); }
   .ctx-sep { height: 1px; background: var(--border); margin: 5px 2px; }
 
   /* =========== ОВЕРЛЕЙ ПРОГРЕСУ ЗАВАНТАЖЕННЯ PDF (додано) =========== */
@@ -560,6 +606,9 @@
       </div>
     </div>
     <div class="topbar-right">
+      <button class="btn-icon" id="btnTheme" title="Темна тема">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
       <button class="btn-icon" id="btnShortcuts" title="Гарячі клавіші (?)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       </button>
@@ -2717,6 +2766,32 @@
     });
   });
   tooltipObserver.observe(document.body, { childList: true, subtree: true });
+
+  // ═══════════════════════ ТЕМНА ТЕМА (додано) ═══════════════════════
+
+  const SUN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>';
+  const MOON_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  const THEME_KEY = 'whiteboard-theme';
+  const btnThemeEl = document.getElementById('btnTheme');
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.setAttribute('content', theme === 'dark' ? '#1d2028' : '#4F6BF4');
+    btnThemeEl.innerHTML = theme === 'dark' ? SUN_ICON : MOON_ICON;
+    const label = theme === 'dark' ? 'Світла тема' : 'Темна тема';
+    btnThemeEl.setAttribute('title', label);
+    btnThemeEl.setAttribute('aria-label', label);
+    btnThemeEl.dataset.title = label; // щоб кастомний тултіп теж підхопив нову підказку одразу
+    try { localStorage.setItem(THEME_KEY, theme); } catch (e) { /* приватний режим браузера — просто не зберігаємо */ }
+  }
+  btnThemeEl.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  });
+  // тема вже застосована інлайн-скриптом у <head> (щоб уникнути "спалаху") — тут лише
+  // синхронізуємо іконку/підпис кнопки з тим, що вже на екрані
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
 
   // ═══════════════════════ ПОПАП «КОЛІР І ТОВЩИНА» (додано) ═══════════════════════
   // Раніше цей блок був частиною широкої лівої панелі; тепер панель вузька (лише іконки
