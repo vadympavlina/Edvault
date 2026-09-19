@@ -61,6 +61,7 @@
   .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(79,107,244,.28); }
   .btn-primary:hover { background: var(--accent-hover); }
   .btn-ghost { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border2); }
+  .btn:disabled, .btn-icon:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
   .btn-ghost:hover { background: var(--surface2); color: var(--text); }
   .btn-icon {
     width: 34px; height: 34px; padding: 0; border-radius: 9px; border: 1.5px solid var(--border2);
@@ -493,6 +494,26 @@
   .ctx-item.ctx-danger:hover { background: #fef2f2; }
   .ctx-sep { height: 1px; background: var(--border); margin: 5px 2px; }
 
+  /* =========== ОВЕРЛЕЙ ПРОГРЕСУ ЗАВАНТАЖЕННЯ PDF (додано) =========== */
+  .pdf-load-overlay {
+    position: fixed; inset: 0; background: rgba(17,20,26,.45); backdrop-filter: blur(2px); z-index: 250;
+    display: none; align-items: center; justify-content: center;
+  }
+  .pdf-load-overlay.show { display: flex; animation: fadeIn .12s ease; }
+  .pdf-load-card {
+    background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-lg); padding: 28px 32px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px; min-width: 260px;
+    animation: modalIn .15s ease;
+  }
+  .pdf-load-spinner {
+    width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--border2);
+    border-top-color: var(--accent); animation: pdfSpin .7s linear infinite;
+  }
+  @keyframes pdfSpin { to { transform: rotate(360deg); } }
+  .pdf-load-text { font-size: 13px; font-weight: 700; color: var(--text2); }
+  .pdf-load-bar-track { width: 100%; height: 6px; border-radius: 20px; background: var(--surface2); overflow: hidden; }
+  .pdf-load-bar { height: 100%; width: 0%; background: var(--accent); border-radius: 20px; transition: width .2s ease; }
+
   /* =========== ЗАГАЛЬНИЙ UI-ПОЛІШ (додано): плавніші переходи, охайніші скролбари, "живіші" панелі =========== */
   * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
   ::-webkit-scrollbar { width: 9px; height: 9px; }
@@ -751,6 +772,15 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- оверлей прогресу під час завантаження PDF (додано) -->
+<div class="pdf-load-overlay" id="pdfLoadOverlay">
+  <div class="pdf-load-card">
+    <div class="pdf-load-spinner"></div>
+    <div class="pdf-load-text" id="pdfLoadText">Завантаження PDF…</div>
+    <div class="pdf-load-bar-track"><div class="pdf-load-bar" id="pdfLoadBar"></div></div>
+  </div>
+</div>
 
 <div class="sel-toolbar" id="selToolbar">
   <span class="sel-tb-count" id="selTbCount"></span>
@@ -2323,12 +2353,29 @@
     e.target.value = '';
     if (!file) return;
     if (!window.pdfjsLib) { showToast('Не вдалося завантажити модуль PDF', 'error'); return; }
-    showToast('Завантаження PDF…');
+
+    // оверлей прогресу замість "тихого" завантаження — видно, що саме відбувається, і скільки лишилось (додано)
+    const overlay = document.getElementById('pdfLoadOverlay');
+    const loadText = document.getElementById('pdfLoadText');
+    const loadBar = document.getElementById('pdfLoadBar');
+    const btnOpenPdfEl = document.getElementById('btnOpenPdf');
+    overlay.classList.add('show');
+    loadText.textContent = 'Відкриваємо файл…';
+    loadBar.style.width = '4%';
+    btnOpenPdfEl.disabled = true;
+
+    // якщо зараз єдина сторінка — це ще не займана порожня сторінка (не PDF), приберемо її
+    // після завантаження, щоб PDF не починався з порожнього "аркуша 1" (додано)
+    const staleBlankId = (state.pages.length === 1 && state.pages[0].emptyHintEl
+      && state.pages[0].objects.length === 0 && !state.pages[0].hasStrokes)
+      ? state.pages[0].id : null;
     try {
       const buf = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
       let firstNewId = null;
       for (let i = 1; i <= pdf.numPages; i++) {
+        loadText.textContent = `Сторінка ${i} з ${pdf.numPages}…`;
+        loadBar.style.width = Math.round((i / pdf.numPages) * 100) + '%';
         const pdfPage = await pdf.getPage(i);
         const viewportPdf = pdfPage.getViewport({ scale: 2 });
         const off = document.createElement('canvas');
@@ -2338,11 +2385,16 @@
         const page = createPage(off);
         if (firstNewId === null) firstNewId = page.id;
       }
+      if (staleBlankId && firstNewId) removePage(staleBlankId); // додано: прибираємо зайву порожню сторінку 1
       if (firstNewId) switchToPage(firstNewId);
       showToast(`Завантажено сторінок: ${pdf.numPages}`, 'success');
     } catch (err) {
       console.error(err);
       showToast('Не вдалося відкрити цей PDF-файл', 'error');
+    } finally {
+      overlay.classList.remove('show');
+      loadBar.style.width = '0%';
+      btnOpenPdfEl.disabled = false;
     }
   });
 
