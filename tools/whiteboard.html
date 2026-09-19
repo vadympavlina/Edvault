@@ -271,6 +271,13 @@
   .interact-select { cursor: default; }
   .interact-move { cursor: move; }
   .interact-screenshot { cursor: crosshair !important; }
+  /* =========== КУРСОРИ ПІД КОЖЕН ІНСТРУМЕНТ (додано) =========== */
+  .interact-tool-pen { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2728%27%20height%3D%2728%27%20viewBox%3D%270%200%2028%2028%27%3E%3Cg%20transform%3D%27translate%282%2C1%29%27%3E%3Cpath%20d%3D%27M17.8%202.3a3.2%203.2%200%201%201%204.5%204.5L8.7%2020.4%201.5%2022.5l2.1-7.2L17.8%202.3z%27%20fill%3D%27white%27%20stroke%3D%27%231a1d23%27%20stroke-width%3D%271.6%27%20stroke-linejoin%3D%27round%27%2F%3E%3Ccircle%20cx%3D%273%27%20cy%3D%2721.5%27%20r%3D%271.6%27%20fill%3D%27%23EF4444%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") 3 22, crosshair; }
+  .interact-tool-highlighter { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2728%27%20height%3D%2728%27%20viewBox%3D%270%200%2028%2028%27%3E%3Cg%20transform%3D%27translate%282%2C2%29%27%3E%3Cpath%20d%3D%27M9%2013l7-7%205%205-7%207z%27%20fill%3D%27%23FDE68A%27%20stroke%3D%27%231a1d23%27%20stroke-width%3D%271.6%27%20stroke-linejoin%3D%27round%27%2F%3E%3Cpath%20d%3D%27M2%2024l2-6%209-9%204%204-9%209z%27%20fill%3D%27white%27%20stroke%3D%27%231a1d23%27%20stroke-width%3D%271.6%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") 4 26, crosshair; }
+  .interact-tool-eraser { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2728%27%20height%3D%2728%27%20viewBox%3D%270%200%2028%2028%27%3E%3Cg%20transform%3D%27translate%282%2C3%29%20rotate%28-25%2012%2011%29%27%3E%3Crect%20x%3D%274%27%20y%3D%274%27%20width%3D%2716%27%20height%3D%2711%27%20rx%3D%273%27%20fill%3D%27white%27%20stroke%3D%27%231a1d23%27%20stroke-width%3D%271.6%27%2F%3E%3Crect%20x%3D%274%27%20y%3D%274%27%20width%3D%2716%27%20height%3D%275.5%27%20rx%3D%273%27%20fill%3D%27%23c7cad1%27%20stroke%3D%27%231a1d23%27%20stroke-width%3D%271.6%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") 14 14, crosshair; }
+  .interact-tool-sticky { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2728%27%20height%3D%2728%27%20viewBox%3D%270%200%2028%2028%27%3E%3Cg%20transform%3D%27translate%282%2C2%29%27%3E%3Cpath%20d%3D%27M1%201h18v13l-6%206H1z%27%20fill%3D%27%23FDE68A%27%20stroke%3D%27%231a1d23%27%20stroke-width%3D%271.6%27%20stroke-linejoin%3D%27round%27%2F%3E%3Cpath%20d%3D%27M19%2014h-6v6z%27%20fill%3D%27%23F3D06B%27%20stroke%3D%27%231a1d23%27%20stroke-width%3D%271.4%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") 3 3, copy; }
+  .interact-tool-text { cursor: text; }
+  .interact-tool-shape { cursor: crosshair; }
   .sel-outline { position: absolute; border: 1.5px dashed var(--accent); pointer-events: none; border-radius: 4px; z-index: 6; }
 
   .toast {
@@ -1146,6 +1153,17 @@
     ctx.closePath();
   }
 
+  function shadeColor(hex, percent) {
+    // затемнює (percent < 0) колір для тіні згорнутого кутика стікера (додано)
+    const c = (hex || '#000000').replace('#', '');
+    if (c.length !== 6) return hex;
+    const num = parseInt(c, 16);
+    const amt = Math.round(2.55 * percent);
+    let r = (num >> 16) + amt, g = ((num >> 8) & 0xff) + amt, b = (num & 0xff) + amt;
+    r = Math.max(0, Math.min(255, r)); g = Math.max(0, Math.min(255, g)); b = Math.max(0, Math.min(255, b));
+    return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+  }
+
   function wrapText(ctx, text, maxWidth) {
     const out = [];
     text.split('\n').forEach(paragraph => {
@@ -1177,6 +1195,23 @@
       ctx.fillStyle = obj.color;
       ctx.fill();
       ctx.shadowColor = 'transparent';
+      // згорнутий кутик (dog-ear) — класична деталь паперового стікера, для об'єму (додано)
+      const fold = Math.max(10, Math.min(20, obj.w * 0.16, obj.h * 0.16));
+      ctx.save();
+      roundRectPath(ctx, obj.x, obj.y, obj.w, obj.h, 14);
+      ctx.clip(); // щоб кутик трикутника ніколи не вилазив за заокруглений силует картки
+      ctx.beginPath();
+      ctx.moveTo(obj.x + obj.w - fold, obj.y + obj.h);
+      ctx.lineTo(obj.x + obj.w, obj.y + obj.h - fold);
+      ctx.lineTo(obj.x + obj.w, obj.y + obj.h);
+      ctx.closePath();
+      ctx.fillStyle = shadeColor(obj.color, -14);
+      ctx.shadowColor = 'rgba(0,0,0,.15)';
+      ctx.shadowBlur = 3;
+      ctx.shadowOffsetX = -1;
+      ctx.shadowOffsetY = -1;
+      ctx.fill();
+      ctx.restore();
       ctx.fillStyle = '#3a3220';
       ctx.font = '600 20px Inter, system-ui, sans-serif';
       ctx.textBaseline = 'top';
@@ -1335,24 +1370,35 @@
     const ctx = page.previewCtx;
     ctx.save();
     ctx.strokeStyle = '#4F6BF4';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 1.5 / state.zoom;
+    if (objs.length > 1) ctx.setLineDash([6 / state.zoom, 4 / state.zoom]); // групу лишаємо пунктирною — щоб відрізнялась від одиночного виділення
     objs.forEach(o => {
       const b = objectBounds(o);
-      ctx.strokeRect(b.x - 6, b.y - 6, b.w + 12, b.h + 12);
+      roundRectPath(ctx, b.x - 6, b.y - 6, b.w + 12, b.h + 12, 7 / state.zoom); // заокруглені кутики замість гострих — охайніше (додано)
+      ctx.stroke();
     });
     ctx.setLineDash([]);
 
     if (objs.length === 1) {
-      // єдиний обраний об'єкт — як і раніше, показуємо ручки для зміни розміру
+      // єдиний обраний об'єкт — кругла ручка з м'якою тінню замість квадратика (додано)
       const obj = objs[0];
-      const hs = 9 / state.zoom; // сталий розмір ручки на екрані незалежно від масштабу
-      ctx.fillStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
+      const hr = 5.5 / state.zoom;
+      ctx.save();
+      ctx.shadowColor = 'rgba(17,20,26,.28)';
+      ctx.shadowBlur = 3 / state.zoom;
+      ctx.shadowOffsetY = 1 / state.zoom;
       objectHandles(obj).forEach(h => {
-        ctx.fillRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
-        ctx.strokeRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, hr, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.shadowColor = 'transparent'; // тінь лише під низом кружечка, не під обвідкою
+        ctx.lineWidth = 1.6 / state.zoom;
+        ctx.strokeStyle = '#4F6BF4';
+        ctx.stroke();
+        ctx.shadowColor = 'rgba(17,20,26,.28)';
       });
+      ctx.restore();
     }
     ctx.restore();
 
@@ -1943,6 +1989,26 @@
     // без перетягування не створював зайвий крок історії
   }
 
+  // ── продуктивність при великій кількості об'єктів (додано): під час перетягування/зміни розміру
+  // повний перемальовок шару об'єктів (найдорожча операція, O(n) по всіх об'єктах) виконуємо
+  // не частіше одного разу за кадр — навіть якщо миша чи стилус шлють події набагато частіше ──
+  let rafPending = false, rafId = null, rafPage = null, rafSkipToolbar = false;
+  function scheduleObjectsRender(page, skipToolbar) {
+    rafPage = page; rafSkipToolbar = skipToolbar;
+    if (rafPending) return;
+    rafPending = true;
+    rafId = requestAnimationFrame(() => {
+      rafPending = false;
+      renderObjects(rafPage, rafSkipToolbar);
+    });
+  }
+  function flushObjectsRender() {
+    if (!rafPending) return;
+    cancelAnimationFrame(rafId);
+    rafPending = false;
+    renderObjects(rafPage, rafSkipToolbar);
+  }
+
   function onPointerMove(page, e) {
     if (!state.drawing || page.id !== state.activePageId) return;
     const pos = getPos(e, page.interactCanvas);
@@ -1966,7 +2032,7 @@
 
     if (tool === 'select' && state.resizeObj) {
       resizeObject(page, state.resizeObj.obj, state.resizeObj.handleId, pos);
-      renderObjects(page, true); // ручки/контур живі, але тулбар не смикаємо під час руху
+      scheduleObjectsRender(page, true); // ручки/контур живі, але тулбар не смикаємо під час руху; не частіше за кадр
       return;
     }
 
@@ -1997,7 +2063,7 @@
           obj.x = pos.x - offX; obj.y = pos.y - offY;
         }
       });
-      renderObjects(page);
+      scheduleObjectsRender(page, false); // не частіше за кадр — головний виграш продуктивності при багатьох об'єктах
       return;
     }
 
@@ -2066,6 +2132,7 @@
       }
 
       state.dragGroup = null;
+      flushObjectsRender(); // гарантуємо, що фінальна позиція/розмір промальовані одразу, без затримки на наступний кадр (додано)
       if (wasResizing) renderSelectionOutline(page); // одне повне оновлення ручок/тулбара після відпускання
       return;
     }
@@ -2271,6 +2338,14 @@
     });
   }
 
+  // курсор під кожен інструмент — щоб було видно, чим саме зараз малюєш, ще до кліку (додано)
+  const TOOL_CURSOR_CLASS = {
+    select: 'interact-select', pen: 'interact-tool-pen', highlighter: 'interact-tool-highlighter',
+    eraser: 'interact-tool-eraser', text: 'interact-tool-text', sticky: 'interact-tool-sticky',
+    rect: 'interact-tool-shape', circle: 'interact-tool-shape', line: 'interact-tool-shape', arrow: 'interact-tool-shape',
+  };
+  const ALL_CURSOR_CLASSES = Object.values(TOOL_CURSOR_CLASS).filter((v, i, a) => a.indexOf(v) === i);
+
   function setTool(tool) {
     if (state.screenshotMode) exitScreenshotMode();
     state.tool = tool;
@@ -2290,7 +2365,11 @@
     if (tool === 'select' && stylePop) stylePop.classList.remove('show');
     const page = getActivePage();
     if (page && tool !== 'select') { page.selectedId = null; page.selectedIds = []; renderSelectionOutline(page); }
-    document.querySelectorAll('.layer-interact').forEach(c => c.classList.toggle('interact-select', tool === 'select'));
+    document.querySelectorAll('.layer-interact').forEach(c => {
+      c.classList.remove(...ALL_CURSOR_CLASSES);
+      const cls = TOOL_CURSOR_CLASS[tool];
+      if (cls) c.classList.add(cls);
+    });
     syncPresentTools();
   }
 
