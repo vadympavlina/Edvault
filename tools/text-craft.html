@@ -2597,6 +2597,27 @@ function exec(cmd, val = null) {
 /* ══ BLOCK STYLE ══ */
 function applyBlock(tag) {
   editor.focus();
+
+  // If the selection is inside a list item, calling formatBlock directly
+  // (the old behavior) left the browser trying to "preserve" the list
+  // context — the result was a blockquote/heading/code block stuck inside
+  // a <li>, sometimes with stray empty list items left behind that
+  // couldn't be cleanly deleted. Exit the list first, the same native way
+  // the list toolbar buttons themselves toggle a list off, THEN apply the
+  // requested block style to the now-plain paragraph.
+  const sel0 = window.getSelection();
+  if (sel0 && sel0.rangeCount) {
+    const startNode = sel0.getRangeAt(0).startContainer;
+    const startEl = startNode.nodeType === 3 ? startNode.parentElement : startNode;
+    const li = startEl ? startEl.closest('li') : null;
+    if (li && editor.contains(li)) {
+      const list = li.closest('ol, ul');
+      if (list) {
+        document.execCommand(list.tagName === 'OL' ? 'insertOrderedList' : 'insertUnorderedList', false, null);
+      }
+    }
+  }
+
   // Firefox requires the tag wrapped in angle brackets ('<pre>'), Chrome/Safari
   // accept both — passing the bracketed form makes formatBlock reliable everywhere,
   // which is what was breaking "Цитата"/"Код" formatting in some browsers.
@@ -2613,6 +2634,7 @@ function applyBlock(tag) {
     }
   }
   // When switching back to p/blockquote/pre — nothing to clean
+  tick();
   syncState();
 }
 
@@ -5914,6 +5936,40 @@ editor.addEventListener('keydown', e => {
         document.execCommand('insertHTML', false, '<p><br></p>');
         tick();
         return;
+      }
+    }
+  }
+
+  // Backspace at the very start of an empty list item — letting the browser
+  // handle this natively on a list produced by the bug above (or any
+  // otherwise-malformed list) was the source of the "перекидує на перший
+  // рядок" symptom: an invalid selection after a failed native merge made
+  // some browsers reset the caret to the very start of the editor. Toggle
+  // the list off explicitly instead — the same reliable native command the
+  // list button itself uses — which cleanly turns this one empty item back
+  // into a normal paragraph without touching anything else.
+  if (e.key === 'Backspace') {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount && sel.isCollapsed) {
+      const range0 = sel.getRangeAt(0);
+      const node = range0.startContainer;
+      const el = node.nodeType === 3 ? node.parentElement : node;
+      const li = el ? el.closest('li') : null;
+      if (li && editor.contains(li)) {
+        const preRange = document.createRange();
+        preRange.selectNodeContents(li);
+        preRange.setEnd(range0.startContainer, range0.startOffset);
+        const nothingBefore = preRange.toString().length === 0;
+        const liIsEmpty = (li.textContent || '').trim().length === 0;
+        if (nothingBefore && liIsEmpty) {
+          e.preventDefault();
+          const list = li.closest('ol, ul');
+          if (list) {
+            document.execCommand(list.tagName === 'OL' ? 'insertOrderedList' : 'insertUnorderedList', false, null);
+            tick();
+          }
+          return;
+        }
       }
     }
   }
