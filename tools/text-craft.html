@@ -2,12 +2,11 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TextCraft</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M8 10h16M8 14h12M8 18h14M8 22h10' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M20 20l4-4 2 2-4 4-2-2z' fill='white' opacity='0.9'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
 <style>
 /* ═══════════ DESIGN TOKENS ═══════════ */
 :root {
@@ -265,6 +264,18 @@ body {
 }
 .toolbar > .tb:hover{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.08);border-color:var(--border2)}
 .toolbar > .tb.on{background:var(--accent-bg);border-color:var(--accent-lt);color:var(--accent)}
+
+/* Touch devices — 28px buttons are below the ~34-44px comfortable tap-target
+   size, so taps next to a toolbar button often land on its neighbor instead.
+   Bump sizes and spacing a bit on coarse pointers, still fitting the
+   existing 44px toolbar height. */
+@media (pointer:coarse){
+  .tb{ width:34px; height:34px; }
+  .toolbar > .tb{ width:36px; height:36px; }
+  .tb svg{ width:16px; height:16px; }
+  .toolbar{ gap:5px; }
+  .tb-group{ gap:2px; }
+}
 
 /* Style select */
 .tb-select{
@@ -978,7 +989,12 @@ figure { margin:1em 0; text-align:center; }
 .sb-dot{
   width:5px;height:5px;border-radius:50%;
   background:#22c55e;display:inline-block;margin-right:4px;
+  transition:background .15s;
 }
+.sb-dot.saving{background:#f59e0b}
+.sb-dot.error{background:#ef4444}
+.sb-save-label{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;display:inline-block}
+.sb-save-label.error{color:#ef4444;font-weight:600}
 .sb-right{margin-left:auto}
 
 /* ═══════════ FOCUS MODE ═══════════ */
@@ -1407,6 +1423,10 @@ body{animation:fadeUp .3s ease}
 .sel-btn-color{
   width:auto;padding:0 8px;gap:5px;font-size:11.5px;font-weight:500;
 }
+@media (pointer:coarse){
+  .sel-btn{ width:34px; height:32px; }
+  .sel-btn svg{ width:16px; height:16px; }
+}
 .sel-color-dot{
   width:10px;height:10px;border-radius:50%;flex-shrink:0;
   border:1.5px solid rgba(255,255,255,.3);
@@ -1577,266 +1597,181 @@ body{animation:fadeUp .3s ease}
 .crop-preset-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
 
 /* ════════════════════════════════════════════════════════════════
-   LIQUID GLASS THEME — iOS 26 style overlay
+   MINIMAL THEME — flat, airy, no blur/glass
    Pure visual layer. No structural/functional rules touched above.
    ════════════════════════════════════════════════════════════════ */
 
 :root{
-  --glass-fill:      rgba(255,255,255,.46);
-  --glass-fill-2:    rgba(255,255,255,.32);
-  --glass-fill-deep: rgba(255,255,255,.62);
-  --glass-edge:      rgba(255,255,255,.85);
-  --glass-edge-dim:  rgba(255,255,255,.35);
-  --glass-shadow:    0 8px 32px rgba(31,38,80,.16), 0 1px 1px rgba(255,255,255,.6) inset, 0 -1px 1px rgba(31,38,80,.05) inset;
-  --glass-shadow-lg: 0 22px 60px rgba(31,38,80,.22), 0 1px 1px rgba(255,255,255,.7) inset;
-  --glass-blur:      blur(22px) saturate(190%);
-  --glass-blur-sm:   blur(14px) saturate(170%);
-  --accent-glow:     0 4px 18px rgba(79,107,244,.45), 0 1px 0 rgba(255,255,255,.5) inset;
+  --hairline: #e7e9ee;
 }
 
-/* Plain white backdrop (gradient mesh removed per request) */
-html, body{ background:#ffffff; }
-body{ position:relative; }
+html, body{ background:#fbfbfc; }
 
-/* ── Top bar: frosted glass plate ── */
+/* ── Top bar: flat, thin hairline, no gradient ── */
 .topbar{
-  background:linear-gradient(180deg, #ffffff, #f5f6fa);
-  border-bottom:1px solid rgba(31,38,80,.1);
-  box-shadow:0 1px 0 #fff inset, 0 4px 16px rgba(31,38,80,.06);
+  background:#fff;
+  border-bottom:1px solid var(--hairline);
+  box-shadow:none;
 }
 .brand-mark{
-  background:linear-gradient(155deg,#6f86ff, #4F6BF4 55%, #3552d9);
-  box-shadow:0 3px 10px rgba(79,107,244,.45), 0 1px 0 rgba(255,255,255,.55) inset;
+  background:var(--accent);
+  box-shadow:none;
 }
-.topbar-div{background:rgba(31,38,80,.12)}
+.topbar-div{background:var(--hairline)}
 
-/* ── Buttons: glassy pills with specular sheen ── */
-.btn, .topbar-menu-btn, .tb-select, .size-ctrl, .col-btn, .toc-toggle{
-  position:relative; overflow:hidden;
-}
-.btn-ghost{
-  background:rgba(255,255,255,.18);
-  border:1px solid transparent;
-}
-.btn-ghost:hover{
-  background:linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.4));
-  border-color:var(--glass-edge-dim);
-  box-shadow:var(--glass-shadow);
-}
-.btn-outline{
-  background:linear-gradient(180deg, rgba(255,255,255,.55), rgba(199,208,252,.45));
-  backdrop-filter:var(--glass-blur-sm); -webkit-backdrop-filter:var(--glass-blur-sm);
-  border:1px solid rgba(79,107,244,.28);
-  box-shadow:0 4px 14px rgba(79,107,244,.14), 0 1px 0 rgba(255,255,255,.7) inset;
-}
-.btn-outline:hover{ background:linear-gradient(180deg, rgba(255,255,255,.7), rgba(199,208,252,.55)); box-shadow:0 6px 18px rgba(79,107,244,.2), 0 1px 0 rgba(255,255,255,.8) inset; }
-.btn-solid{
-  background:linear-gradient(160deg, #7a8eff 0%, #4F6BF4 55%, #3a52e0 100%);
-  border:1px solid rgba(255,255,255,.25);
-  box-shadow:var(--accent-glow);
-}
-.btn-solid::before{
-  content:'';
-  position:absolute; inset:0 0 50% 0;
-  background:linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0));
-  border-radius:inherit; pointer-events:none;
-}
-.btn-solid:hover{ background:linear-gradient(160deg, #8b9dff 0%, #5d76f5 55%, #4259e6 100%); box-shadow:0 6px 22px rgba(79,107,244,.55), 0 1px 0 rgba(255,255,255,.5) inset; }
-.btn-danger{
-  background:linear-gradient(160deg,#ff7a7a,#ef4444 60%,#d23636);
-  box-shadow:0 4px 18px rgba(239,68,68,.45), 0 1px 0 rgba(255,255,255,.5) inset;
-}
+/* ── Buttons: flat surfaces, no sheen ── */
+.btn-ghost{background:transparent;border:1px solid transparent}
+.btn-ghost:hover{background:#f4f5f7;border-color:transparent}
+.btn-outline{background:var(--accent-bg);border:1px solid var(--accent-lt);box-shadow:none}
+.btn-outline:hover{background:#e3e7fd}
+.btn-solid{background:var(--accent);border:1px solid var(--accent);box-shadow:none}
+.btn-solid:hover{background:var(--accent-h);border-color:var(--accent-h)}
+.btn-danger{background:#ef4444;border:1px solid #ef4444;box-shadow:none}
 
-.topbar-menu-btn{
-  background:rgba(255,255,255,.35); border:1px solid var(--glass-edge-dim);
-  backdrop-filter:var(--glass-blur-sm); -webkit-backdrop-filter:var(--glass-blur-sm);
-}
-.topbar-menu-btn:hover{ background:rgba(255,255,255,.6); }
+.topbar-menu-btn{background:#fff;border:1px solid var(--hairline)}
+.topbar-menu-btn:hover{background:#f4f5f7}
 
-.doc-name:hover, .doc-name:focus{ background:rgba(255,255,255,.4); }
+.doc-name:hover, .doc-name:focus{background:#f4f5f7}
 
-/* ── Dropdown / popovers: deep frosted cards ── */
+/* ── Dropdown / popovers: crisp flat cards ── */
 .topbar-dropdown, .table-picker, .tbl-palette, .img-picker, .align-picker, .callout-picker{
-  background:linear-gradient(165deg, var(--glass-fill-deep), var(--glass-fill));
-  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
-  border:1px solid var(--glass-edge-dim);
-  box-shadow:var(--glass-shadow-lg);
+  background:#fff;
+  border:1px solid var(--hairline);
+  box-shadow:0 8px 24px rgba(20,22,38,.09);
 }
-.topbar-dropdown .btn:hover{ background:rgba(255,255,255,.55); }
-.topbar-dd-sep, .img-pick-sep{ background:rgba(31,38,80,.1); }
+.topbar-dropdown .btn:hover{background:#f4f5f7}
+.topbar-dd-sep, .img-pick-sep{background:var(--hairline)}
 
-/* ── Toolbar: floating glass strip ── */
+/* ── Toolbar: flat strip, thin bottom line ── */
 .toolbar-wrap{
-  background:linear-gradient(180deg, #f7f8fc, #eef0f7);
-  border-bottom:1px solid rgba(31,38,80,.1);
-  box-shadow:0 1px 0 rgba(255,255,255,.8) inset;
+  background:#fff;
+  border-bottom:1px solid var(--hairline);
+  box-shadow:none;
 }
-.tb-scroll-btn.left{ background:linear-gradient(to right, rgba(255,255,255,.55) 55%, transparent); }
-.tb-scroll-btn.right{ background:linear-gradient(to left, rgba(255,255,255,.55) 55%, transparent); }
-.tb-sep{ background:rgba(31,38,80,.16); }
+.tb-scroll-btn.left{background:linear-gradient(to right, #fff 60%, transparent)}
+.tb-scroll-btn.right{background:linear-gradient(to left, #fff 60%, transparent)}
+.tb-sep{background:var(--hairline)}
 .tb-group{
-  background:rgba(241,243,250,.9);
-  border:1px solid rgba(31,38,80,.12);
-  box-shadow:0 1px 2px rgba(31,38,80,.06), 0 1px 0 rgba(255,255,255,.8) inset;
+  background:#f6f7f9;
+  border:1px solid var(--hairline);
+  box-shadow:none;
 }
-.tb{ color:var(--muted); }
-.tb:hover{ background:#fff; box-shadow:0 2px 6px rgba(31,38,80,.16), 0 0 0 1px rgba(31,38,80,.08) inset; }
-.tb.on{ background:linear-gradient(160deg,#fff,#dfe6ff); color:var(--accent); box-shadow:0 2px 8px rgba(79,107,244,.3), 0 0 0 1px rgba(79,107,244,.25) inset; }
-.toolbar > .tb{ background:rgba(241,243,250,.9); border:1px solid rgba(31,38,80,.14); }
-.toolbar > .tb:hover{ background:#fff; border-color:rgba(31,38,80,.22); }
-.toolbar > .tb.on{ background:linear-gradient(160deg,#eef0fe,#cdd6fd); border-color:rgba(79,107,244,.4); }
+.tb{color:var(--muted)}
+.tb:hover{background:#fff;box-shadow:none;border:1px solid var(--hairline)}
+.tb.on{background:#fff;color:var(--accent);box-shadow:none;border:1px solid var(--accent-lt)}
+.toolbar > .tb{background:#f6f7f9;border:1px solid var(--hairline)}
+.toolbar > .tb:hover{background:#fff;border-color:var(--border2)}
+.toolbar > .tb.on{background:var(--accent-bg);border-color:var(--accent-lt)}
 .tb-select, .size-ctrl, .col-btn{
-  background:rgba(241,243,250,.9);
-  border:1px solid rgba(31,38,80,.14);
+  background:#f6f7f9;
+  border:1px solid var(--hairline);
 }
-.tb-select:hover, .tb-select:focus, .size-ctrl:focus-within{ background:#fff; border-color:rgba(31,38,80,.25); }
-.size-inp{ background:#fff; }
-.col-btn:hover{ background:#fff; box-shadow:0 1px 3px rgba(31,38,80,.12); }
-.col-btn svg{ color:var(--muted); }
+.tb-select:hover, .tb-select:focus, .size-ctrl:focus-within{background:#fff;border-color:var(--border2)}
+.size-inp{background:#fff}
+.col-btn:hover{background:#fff;box-shadow:none;border-color:var(--border2)}
+.col-btn svg{color:var(--muted)}
 
-/* ── TOC sidebar: glass panel ── */
+/* ── TOC sidebar: flat panel, single hairline edge ── */
 .toc-sidebar{
-  background:linear-gradient(180deg, var(--glass-fill), var(--glass-fill-2));
-  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
-  border-right:1px solid var(--glass-edge-dim);
+  background:#fbfbfc;
+  border-right:1px solid var(--hairline);
 }
-.toc-header{ border-bottom:1px solid rgba(31,38,80,.08); }
-.toc-item:hover{ background:rgba(255,255,255,.5); }
-.toc-item.active{ background:linear-gradient(90deg, rgba(79,107,244,.18), rgba(79,107,244,.06)); }
+.toc-header{border-bottom:1px solid var(--hairline)}
+.toc-item:hover{background:#f0f1f4}
+.toc-item.active{background:var(--accent-bg);color:var(--accent)}
 .toc-open-btn{
-  background:rgba(255,255,255,.5); backdrop-filter:var(--glass-blur-sm); -webkit-backdrop-filter:var(--glass-blur-sm);
-  border:1px solid var(--glass-edge-dim); border-left:none;
+  background:#fff;
+  border:1px solid var(--hairline); border-left:none;
 }
 
-/* ── Scroll area + page: keep paper crisp, float it like glass over mesh ── */
+/* ── Scroll area + page: plain surface, no dotted mesh ── */
 .scroll-area{
-  background:transparent;
-  background-image:radial-gradient(circle, rgba(120,130,180,.16) 1px, transparent 1px);
-  background-size:22px 22px;
+  background:#f2f3f5;
+  background-image:none;
 }
 .page{
-  background:linear-gradient(180deg, rgba(255,255,255,.97), rgba(255,255,255,.92));
-  box-shadow:0 30px 70px rgba(31,38,80,.18), 0 0 0 1px rgba(255,255,255,.6) inset, 0 1px 0 rgba(255,255,255,.9) inset;
+  background:#fff;
+  box-shadow:0 1px 2px rgba(20,22,38,.04), 0 0 0 1px var(--hairline);
 }
 
 /* ── Status bar ── */
 .statusbar{
-  background:linear-gradient(180deg, var(--glass-fill), var(--glass-fill-2));
-  backdrop-filter:var(--glass-blur-sm); -webkit-backdrop-filter:var(--glass-blur-sm);
-  border-top:1px solid var(--glass-edge-dim);
+  background:#fff;
+  border-top:1px solid var(--hairline);
 }
 
 /* ── Floating contextual toolbars (image/table/beside) ── */
 .img-toolbar, .table-ctx-bar, .beside-ctx-bar, .code-lang-bar, .crop-actions{
-  background:linear-gradient(165deg, var(--glass-fill-deep), var(--glass-fill));
-  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
-  border:1px solid var(--glass-edge-dim);
-  box-shadow:var(--glass-shadow-lg);
+  background:#fff;
+  border:1px solid var(--hairline);
+  box-shadow:0 8px 24px rgba(20,22,38,.1);
 }
-.img-tb-btn:hover, .tbl-btn:hover, .cbar-btn:hover, .code-copy-btn:hover{ background:rgba(255,255,255,.6); }
-.img-tb-btn.active{ background:linear-gradient(160deg,#eef0fe,#d7defc); }
+.img-tb-btn:hover, .tbl-btn:hover, .cbar-btn:hover, .code-copy-btn:hover{background:#f4f5f7}
+.img-tb-btn.active{background:var(--accent-bg)}
 
-/* ── Selection bubble toolbar (dark glass, like iOS context menu) ── */
+/* ── Selection bubble toolbar: solid dark, no blur ── */
 .sel-toolbar{
-  background:linear-gradient(165deg, rgba(28,30,42,.78), rgba(28,30,42,.62));
-  backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%);
-  border:1px solid rgba(255,255,255,.14);
-  box-shadow:0 14px 40px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.18) inset;
+  background:#22242e;
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 10px 28px rgba(0,0,0,.22);
 }
 
 /* ── Find bar ── */
 .find-bar{
-  background:linear-gradient(165deg, var(--glass-fill-deep), var(--glass-fill));
-  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
-  border:1px solid var(--glass-edge-dim);
-  box-shadow:var(--glass-shadow-lg);
+  background:#fff;
+  border:1px solid var(--hairline);
+  box-shadow:0 8px 24px rgba(20,22,38,.1);
 }
-.find-inp{ background:rgba(255,255,255,.55); }
-.find-nav-btn:hover, .find-close:hover{ background:rgba(255,255,255,.6); }
-.find-replace-btn{ background:rgba(255,255,255,.4); }
-.find-replace-btn.primary{ background:linear-gradient(160deg,#eef0fe,#d7defc); }
+.find-inp{background:#f6f7f9}
+.find-nav-btn:hover, .find-close:hover{background:#f4f5f7}
+.find-replace-btn{background:#fff}
+.find-replace-btn.primary{background:var(--accent-bg)}
 
-/* ── Modals / overlays: glass dialogs over blurred backdrop ── */
+/* ── Modals / overlays: flat dialog, plain scrim (no blur) ── */
 .overlay, .modal-overlay{
-  background:rgba(20,22,38,.28);
-  backdrop-filter:blur(10px) saturate(140%); -webkit-backdrop-filter:blur(10px) saturate(140%);
+  background:rgba(20,22,38,.35);
+  backdrop-filter:none; -webkit-backdrop-filter:none;
 }
 .ov-card, .modal-card{
-  background:linear-gradient(165deg, rgba(255,255,255,.88), rgba(255,255,255,.7));
-  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
-  border:1px solid var(--glass-edge);
-  box-shadow:0 30px 80px rgba(20,22,38,.35), 0 1px 0 rgba(255,255,255,.8) inset;
+  background:#fff;
+  border:1px solid var(--hairline);
+  box-shadow:0 20px 48px rgba(20,22,38,.18);
 }
-.modal-inp, .pw-ctrl{ background:rgba(255,255,255,.55); }
+.modal-inp, .pw-ctrl{background:#f6f7f9}
 
 /* ── Image placeholder slots ── */
 .img-slot-ph{
-  background:rgba(255,255,255,.3);
-  backdrop-filter:var(--glass-blur-sm); -webkit-backdrop-filter:var(--glass-blur-sm);
+  background:#f4f5f7;
 }
-.img-slot-ph:hover{ background:rgba(79,107,244,.12); }
+.img-slot-ph:hover{background:var(--accent-bg)}
 
 /* ── Crop modal canvas wrap ── */
-.crop-canvas-wrap{ background:rgba(20,22,38,.85); }
+.crop-canvas-wrap{background:#1c1e28}
 
-/* ── Scrollbars: subtle glassy thumb ── */
-*::-webkit-scrollbar{width:9px;height:9px}
+/* ── Scrollbars: thin, unobtrusive ── */
+*::-webkit-scrollbar{width:8px;height:8px}
 *::-webkit-scrollbar-track{background:transparent}
 *::-webkit-scrollbar-thumb{
-  background:linear-gradient(180deg, rgba(120,130,180,.45), rgba(120,130,180,.3));
+  background:#d3d6dd;
   border-radius:10px;
   border:2px solid transparent;
   background-clip:content-box;
 }
-*::-webkit-scrollbar-thumb:hover{background:rgba(79,107,244,.5);background-clip:content-box}
-
-/* ── Reduce the dotted-grid harshness on mesh bg, soften focus mode ── */
-body.focus-mode .scroll-area{ background-image:none; }
+*::-webkit-scrollbar-thumb:hover{background:#b7bbc6;background-clip:content-box}
 
 /* ════════════════════════════════════════════════════════════════
-   WOW PASS — document page, topbar typography, selection, motion
+   REFINEMENTS — document page, topbar typography, selection, motion
+   Kept from the previous pass, minus the gradient/glow flourishes.
    ════════════════════════════════════════════════════════════════ */
 
-/* ── 1. Документ-сторінка: глибша тінь, м'якший верх, акцентні заголовки ── */
-.page{
-  box-shadow:
-    0 1px 0 rgba(255,255,255,.9) inset,
-    0 40px 90px -20px rgba(31,38,80,.22),
-    0 14px 36px -10px rgba(31,38,80,.14),
-    0 0 0 1px rgba(31,38,80,.045);
-  transition:box-shadow .3s ease, transform .3s ease;
-}
-.page::before{
-  height:4px;
-  background:linear-gradient(90deg,#7a8eff,var(--accent) 35%,#60a5fa 70%,#67e8f9);
-  box-shadow:0 1px 6px rgba(79,107,244,.35);
-}
-.editor h1{
-  position:relative;
-  background:linear-gradient(95deg,#0f172a 0%, #1f2a4d 60%, #3a4d8f 100%);
-  -webkit-background-clip:text; background-clip:text; color:transparent;
-}
-.editor h2{
-  color:#16213d; letter-spacing:-.2px;
-}
-.editor h3{ color:#222c4a; }
+.editor h1, .editor h2, .editor h3{ color:var(--text); }
 .editor blockquote{
   border-left:3px solid var(--accent);
-  background:linear-gradient(95deg, var(--accent-bg), rgba(238,240,254,.35));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
-  position:relative;
+  background:var(--accent-bg);
 }
-.editor blockquote::before{
-  content:'"';
-  position:absolute; left:10px; top:-6px;
-  font-family:'Lora',serif; font-size:2.2em; font-weight:700;
-  color:rgba(79,107,244,.25);
-  line-height:1;
-}
-.editor blockquote{ padding-left:30px; }
 .editor hr{
   height:1px; border:none;
-  background:linear-gradient(90deg, transparent, var(--border2) 20%, var(--border2) 80%, transparent);
+  background:var(--hairline);
   margin:1.8em 0;
 }
 .editor a{
@@ -1847,51 +1782,24 @@ body.focus-mode .scroll-area{ background-image:none; }
 }
 .editor a:hover{ text-decoration-color:var(--accent); color:var(--accent-h); }
 
-/* ── 2. Топбар: іконки і типографіка ── */
-.brand-name{
-  letter-spacing:-.4px;
-  background:linear-gradient(95deg,#1a1d23,#3a4d8f);
-  -webkit-background-clip:text; background-clip:text; color:transparent;
-}
 .doc-name{ letter-spacing:-.1px; }
-.brand-mark svg{ filter:drop-shadow(0 1px 1px rgba(0,0,0,.15)); }
-.topbar .btn svg, .toolbar-wrap .tb svg, .toolbar-wrap .col-btn svg{
-  transition:transform .18s cubic-bezier(.34,1.56,.64,1);
-}
-.topbar .btn:hover svg, .tb:hover svg{ transform:scale(1.1); }
-.btn-solid svg{ filter:drop-shadow(0 1px 1px rgba(0,0,0,.18)); }
 
-/* ── 3. Курсор / виділення тексту ── */
+/* ── Курсор / виділення тексту ── */
 .editor{ caret-color:var(--accent); }
 .editor::selection, .editor *::selection{
-  background:rgba(79,107,244,.28);
+  background:rgba(79,107,244,.22);
   color:inherit;
 }
 .editor::-moz-selection, .editor *::-moz-selection{
-  background:rgba(79,107,244,.28);
+  background:rgba(79,107,244,.22);
 }
-.doc-name::selection{ background:rgba(79,107,244,.3); }
-@keyframes caretPulse{ 0%,100%{ opacity:1 } 50%{ opacity:.35 } }
+.doc-name::selection{ background:rgba(79,107,244,.25); }
 
-/* ── 4. Плавні переходи / поява елементів ── */
-.topbar, .toolbar-wrap, .toc-sidebar{
-  animation:glassFadeIn .35s ease both;
-}
-@keyframes glassFadeIn{
-  from{ opacity:0; }
-  to{ opacity:1; }
-}
-.scroll-area .page{
-  animation:pageFadeIn .4s .05s ease both;
-}
-@keyframes pageFadeIn{
-  from{ opacity:0; }
-  to{ opacity:1; }
-}
+/* ── Плавні, тихі переходи (без ефектних появ) ── */
 .btn, .tb, .toolbar > .tb, .tb-group, .tb-select, .size-ctrl, .col-btn, .toc-item{
-  transition:background .18s ease, color .18s ease, box-shadow .2s ease, border-color .18s ease, transform .12s ease;
+  transition:background .15s ease, color .15s ease, border-color .15s ease;
 }
-.btn-solid:active, .tb:active, .toolbar > .tb:active{ transform:scale(.96); }
+.btn-solid:active, .tb:active, .toolbar > .tb:active{ transform:scale(.97); }
 </style>
 </head>
 <body>
@@ -2029,6 +1937,13 @@ body.focus-mode .scroll-area{ background-image:none; }
   <button class="sel-btn" onclick="selFormat('h1')" title="Заголовок H1" style="font-size:11px;width:auto;padding:0 6px">H1</button>
   <button class="sel-btn" onclick="selFormat('h2')" title="Заголовок H2" style="font-size:11px;width:auto;padding:0 6px">H2</button>
   <button class="sel-btn" onclick="selFormat('h3')" title="Заголовок H3" style="font-size:11px;width:auto;padding:0 6px">H3</button>
+  <div class="sel-sep"></div>
+  <button class="sel-btn" id="selQuote" onclick="selFormat('blockquote')" title="Цитата">
+    <svg viewBox="0 0 14 14" fill="currentColor"><path d="M3 3.5c-1.4 0-2.5 1.1-2.5 2.5S1.6 8.5 3 8.5c.2 0 .4 0 .6-.1C3.2 9.8 2.3 10.7 1 11l.3 1c2-.4 3.7-2 3.7-4.5 0-2.2-1-4-2-4zm7 0c-1.4 0-2.5 1.1-2.5 2.5S8.6 8.5 10 8.5c.2 0 .4 0 .6-.1-.4 1.4-1.3 2.3-2.6 2.6l.3 1c2-.4 3.7-2 3.7-4.5 0-2.2-1-4-2-4z"/></svg>
+  </button>
+  <button class="sel-btn" id="selCode" onclick="selCode()" title="Inline код">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3.5L1.7 7 5 10.5M9 3.5L12.3 7 9 10.5" /></svg>
+  </button>
   <div class="sel-sep"></div>
   <button class="sel-btn" onclick="selClearFormat()" title="Очистити форматування">
     <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4m0 0L2 2h9l-3 6"/><line x1="10" y1="9" x2="13" y2="12"/><line x1="13" y1="9" x2="10" y2="12"/></svg>
@@ -2265,10 +2180,10 @@ body.focus-mode .scroll-area{ background-image:none; }
 
     <!-- Code -->
     <div class="tb-group">
-      <button class="tb" onclick="insertInlineCode()" data-tip="Inline код">
+      <button class="tb" id="btn-inlineCode" onclick="insertInlineCode()" data-tip="Inline код">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5.5 5L2 8l3.5 3M10.5 5L14 8l-3.5 3"/><line x1="9" y1="4" x2="7" y2="12" stroke-width="1.4"/></svg>
       </button>
-      <button class="tb" onclick="insertCodeBlock()" data-tip="Блок коду">
+      <button class="tb" id="btn-codeBlock" onclick="insertCodeBlock()" data-tip="Блок коду">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="2.5" width="14" height="11" rx="2"/><path d="M5.5 6L3 8l2.5 2M10.5 6L13 8l-2.5 2" stroke-width="1.6"/><line x1="8.5" y1="5" x2="7.5" y2="11" stroke-width="1.3"/></svg>
       </button>
     </div>
@@ -2560,7 +2475,7 @@ body.focus-mode .scroll-area{ background-image:none; }
 
 <!-- STATUS BAR -->
 <footer class="statusbar">
-  <span><span class="sb-dot"></span>Збережено</span>
+  <span><span class="sb-dot" id="sbDot"></span><span id="sbSaveLabel" class="sb-save-label">Збережено</span></span>
   <span id="sb-w">Слів: 0</span>
   <span id="sb-c">Символів: 0</span>
   <span id="sb-read" class="sb-reading">Час читання: &lt;1 хв</span>
@@ -2608,7 +2523,10 @@ function exec(cmd, val = null) {
 /* ══ BLOCK STYLE ══ */
 function applyBlock(tag) {
   editor.focus();
-  document.execCommand('formatBlock', false, tag);
+  // Firefox requires the tag wrapped in angle brackets ('<pre>'), Chrome/Safari
+  // accept both — passing the bracketed form makes formatBlock reliable everywhere,
+  // which is what was breaking "Цитата"/"Код" formatting in some browsers.
+  document.execCommand('formatBlock', false, '<' + tag + '>');
 
   // After converting to heading — strip inline font-size/font-family that fight the heading CSS
   if (['h1','h2','h3'].includes(tag)) {
@@ -2679,28 +2597,46 @@ function applyTxtColor(c) {
 function applyHL(c) {
   document.getElementById('barHL').style.background = c;
   editor.focus();
-  document.execCommand('hiliteColor', false, c);
+  // Safari doesn't implement 'hiliteColor' (silently does nothing), so text
+  // highlighting used to be completely broken there. Fall back to 'backColor',
+  // which Safari does support, whenever hiliteColor isn't recognized.
+  try {
+    const ok = document.execCommand('hiliteColor', false, c);
+    if (!ok) document.execCommand('backColor', false, c);
+  } catch(e) {
+    document.execCommand('backColor', false, c);
+  }
 }
 
 /* ══ WRAP SELECTION WITH SPAN STYLE ══ */
+let wrapStyleSeq = 0;
 function wrapStyle(prop, val) {
   const sel = window.getSelection();
   if (!sel || !sel.rangeCount) return;
   const range = sel.getRangeAt(0);
   if (range.collapsed) return;
-  const span = document.createElement('span');
-  span.style[prop] = val;
-  try {
-    range.surroundContents(span);
-  } catch(e) {
-    const frag = range.extractContents();
-    span.appendChild(frag);
-    range.insertNode(span);
+  // Build the replacement HTML from the selection's own markup (so nested
+  // bold/italic/etc. survive) and insert it via execCommand — the previous
+  // range.insertNode()/surroundContents() approach bypassed the undo stack,
+  // so Ctrl+Z right after changing font/size did nothing in most browsers.
+  const frag = range.cloneContents();
+  const tmp = document.createElement('div');
+  tmp.appendChild(frag);
+  const cssProp = prop.replace(/[A-Z]/g, m => '-' + m.toLowerCase());
+  const marker = 'ws' + (++wrapStyleSeq);
+  const html = '<span style="' + cssProp + ':' + val + '" data-wrap-marker="' + marker + '">' + tmp.innerHTML + '</span>';
+  document.execCommand('insertHTML', false, html);
+  // Re-select the inserted span (via the temp marker) so repeated actions —
+  // clicking font-size +/- several times, switching fonts again — keep
+  // applying to the same text instead of losing the selection.
+  const span = editor.querySelector('[data-wrap-marker="' + marker + '"]');
+  if (span) {
+    span.removeAttribute('data-wrap-marker');
+    const r2 = document.createRange();
+    r2.selectNodeContents(span);
+    sel.removeAllRanges();
+    sel.addRange(r2);
   }
-  sel.removeAllRanges();
-  const r2 = document.createRange();
-  r2.selectNodeContents(span);
-  sel.addRange(r2);
   tick();
 }
 
@@ -2710,32 +2646,65 @@ function insertInlineCode() {
   if (!sel || !sel.rangeCount) return;
   editor.focus();
   const range = sel.getRangeAt(0);
-  if (range.collapsed) {
-    // No selection — insert empty code element and place cursor inside
-    const code = document.createElement('code');
-    code.textContent = '\u200b'; // zero-width space to allow cursor
-    range.insertNode(code);
-    const r2 = document.createRange();
-    r2.setStart(code.firstChild, 1);
-    r2.collapse(true);
-    sel.removeAllRanges(); sel.addRange(r2);
-  } else {
-    // Wrap selection in <code>
-    const text = range.toString();
-    const code = document.createElement('code');
-    code.textContent = text;
-    range.deleteContents();
-    range.insertNode(code);
-    const r2 = document.createRange();
-    r2.selectNodeContents(code);
-    sel.removeAllRanges(); sel.addRange(r2);
+  const node = range.commonAncestorContainer;
+  const el = node.nodeType === 3 ? node.parentElement : node;
+  const existingCode = el ? el.closest('code') : null;
+
+  // Toggle off — cursor/selection is already inside inline code, so unwrap it
+  if (existingCode && editor.contains(existingCode) && !existingCode.closest('pre')) {
+    const parent = existingCode.parentNode;
+    const frag = document.createDocumentFragment();
+    let first = existingCode.firstChild, last = existingCode.lastChild;
+    while (existingCode.firstChild) frag.appendChild(existingCode.firstChild);
+    parent.replaceChild(frag, existingCode);
+    if (first && last) {
+      const r = document.createRange();
+      r.setStartBefore(first); r.setEndAfter(last);
+      sel.removeAllRanges(); sel.addRange(r);
+    }
+    tick(); syncState();
+    return;
   }
-  tick();
+
+  // Wrap selection (or insert an empty code span) — routed through execCommand
+  // so it lands on the browser's native undo stack like every other format action.
+  if (range.collapsed) {
+    document.execCommand('insertHTML', false, '<code>\u200b</code>');
+    // Place the caret inside the freshly inserted <code>
+    const sel2 = window.getSelection();
+    if (sel2 && sel2.rangeCount) {
+      const n = sel2.getRangeAt(0).startContainer;
+      const codeEl = (n.nodeType === 3 ? n.parentElement : n)?.closest('code');
+      if (codeEl && codeEl.firstChild) {
+        const r2 = document.createRange();
+        r2.setStart(codeEl.firstChild, 1); r2.collapse(true);
+        sel2.removeAllRanges(); sel2.addRange(r2);
+      }
+    }
+  } else {
+    const text = range.toString();
+    const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    document.execCommand('insertHTML', false, '<code>' + escaped + '</code>');
+  }
+  tick(); syncState();
 }
 
 /* ══ CODE BLOCK ══ */
 function insertCodeBlock() {
   editor.focus();
+  // Guard against creating a <pre> nested inside another <pre> when the
+  // button is clicked while the caret is already inside a code block —
+  // just focus the existing block instead of corrupting the structure.
+  const sel0 = window.getSelection();
+  if (sel0 && sel0.rangeCount) {
+    const n0 = sel0.getRangeAt(0).commonAncestorContainer;
+    const el0 = n0.nodeType === 3 ? n0.parentElement : n0;
+    const existingPre = el0 ? el0.closest('pre') : null;
+    if (existingPre && editor.contains(existingPre)) {
+      showCodeBar(existingPre);
+      return;
+    }
+  }
   const pre = document.createElement('pre');
   pre.innerHTML = '<br>';
   const tmp = document.createElement('div');
@@ -3029,40 +2998,44 @@ function saveCursor() {
   }
 }
 
-function insertWrapAtCursor(wrap) {
-  const p = document.createElement('p');
-  p.style.textAlign = 'center';
-  p.appendChild(wrap);
-
-  // Empty paragraph after the image so user can type below it
-  const after_p = document.createElement('p');
-  after_p.appendChild(document.createElement('br'));
-
-  let range = savedRange;
-  if (!range) {
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount && editor.contains(sel.getRangeAt(0).commonAncestorContainer)) {
-      range = sel.getRangeAt(0);
-    }
-  }
-
+let imgInsertSeq = 0;
+/* Insert an image at a given range (or the current selection) routed through
+   execCommand so it lands on the browser's native undo stack. Direct
+   range.insertNode() — the previous approach — is invisible to most
+   browsers' undo history, so Ctrl+Z right after inserting a photo either did
+   nothing or left the document in a half-undone state. We insert a plain
+   <img> via insertHTML (undo-safe), then upgrade it in place to the full
+   interactive wrapper (handles, mini toolbar) the same way pasted/loaded
+   bare <img> tags are already upgraded elsewhere (attachAllImgListeners). */
+function insertImageAtRange(dataUrl, range) {
+  editor.focus();
+  const sel = window.getSelection();
   if (range) {
-    range.collapse(false);
-    range.insertNode(after_p);
-    range.insertNode(p);
-    // Place cursor in the empty paragraph below the image
-    const cur = document.createRange();
-    cur.setStart(after_p, 0);
-    cur.collapse(true);
-    const sel = window.getSelection();
     sel.removeAllRanges();
-    sel.addRange(cur);
-  } else {
-    editor.appendChild(p);
-    editor.appendChild(after_p);
+    sel.addRange(range);
+  } else if (!sel || !sel.rangeCount || !editor.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+    const r = document.createRange();
+    r.selectNodeContents(editor);
+    r.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(r);
   }
 
-  savedRange = null;
+  const marker = 'p' + (++imgInsertSeq);
+  const html = '<p style="text-align:center"><img src="' + dataUrl + '" data-pending-img="' + marker + '"></p><p><br></p>';
+  document.execCommand('insertHTML', false, html);
+
+  let wrap = null;
+  const bareImg = editor.querySelector('img[data-pending-img="' + marker + '"]');
+  if (bareImg) {
+    bareImg.removeAttribute('data-pending-img');
+    wrap = createImgWrap(bareImg.src, '100%', 'img-center');
+    bareImg.replaceWith(wrap);
+  }
+
+  const sel2 = window.getSelection();
+  const newRange = (sel2 && sel2.rangeCount) ? sel2.getRangeAt(0).cloneRange() : null;
+  return { wrap, range: newRange };
 }
 
 function triggerImageInsert() {
@@ -3075,9 +3048,9 @@ function insertImageFromFile(input) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    const wrap = createImgWrap(e.target.result, '100%', 'img-center');
-    insertWrapAtCursor(wrap);
-    selectWrap(wrap);
+    const { wrap } = insertImageAtRange(e.target.result, savedRange);
+    savedRange = null;
+    if (wrap) selectWrap(wrap);
     tick();
   };
   reader.readAsDataURL(file);
@@ -3850,13 +3823,29 @@ function syncState() {
           const fs = parseInt(getComputedStyle(el).fontSize);
           if (fs > 0) document.getElementById('fontSize').value = fs;
         }
+        // Highlight inline-code / code-block buttons when the caret is inside one
+        const inPre = !!el.closest('pre');
+        const inCode = !inPre && !!el.closest('code');
+        document.getElementById('btn-inlineCode')?.classList.toggle('on', inCode);
+        document.getElementById('btn-codeBlock')?.classList.toggle('on', inPre);
       }
     }
   } catch(e) {}
 }
 
 /* ══ STATUS ══ */
+// tick() used to read editor.innerText synchronously on every single keystroke,
+// which forces a full layout reflow — the bigger the document, the slower typing
+// felt. Save/TOC scheduling stays instant (they're cheap timers); the actual
+// word/char count — the reflow-heavy part — is now debounced.
+let statsTimer = null;
 function tick() {
+  scheduleSave();
+  scheduleToc();
+  clearTimeout(statsTimer);
+  statsTimer = setTimeout(updateStats, 150);
+}
+function updateStats() {
   const t = editor.innerText || '';
   const w = t.trim() === '' ? 0 : t.trim().split(/\s+/).length;
   const c = t.replace(/\n/g,'').length;
@@ -3864,20 +3853,59 @@ function tick() {
   document.getElementById('sb-c').textContent = 'Символів: ' + c;
   document.getElementById('sb-p').textContent = 'Стор. ~' + Math.max(1, Math.ceil(w / 500));
   updateReading(w);
-  scheduleSave();
-  scheduleToc();
 }
 
 /* ══ AUTO SAVE ══ */
 function scheduleSave() {
   clearTimeout(saveTimer);
+  setSaveState('saving');
   saveTimer = setTimeout(() => {
     try {
       localStorage.setItem(STORE_KEY, editor.innerHTML);
       localStorage.setItem(STORE_NAME, document.getElementById('docTitle').value);
-    } catch(e) {}
+      setSaveState('saved');
+    } catch(e) {
+      // Most likely a QuotaExceededError — typically hit once embedded images
+      // push the document past localStorage's ~5-10MB limit. This used to fail
+      // completely silently while the status bar kept claiming "Збережено",
+      // so people could lose work with zero warning.
+      setSaveState('error');
+    }
   }, 900);
 }
+
+let hasUnsavedChanges = false;
+function setSaveState(state) {
+  const dot = document.getElementById('sbDot');
+  const label = document.getElementById('sbSaveLabel');
+  hasUnsavedChanges = (state === 'saving' || state === 'error');
+  if (!dot || !label) return;
+  dot.classList.remove('saving','error');
+  label.classList.remove('error');
+  label.removeAttribute('title');
+  if (state === 'saving') {
+    dot.classList.add('saving');
+    label.textContent = 'Збереження…';
+  } else if (state === 'error') {
+    dot.classList.add('error');
+    label.classList.add('error');
+    label.textContent = 'Не збережено — забагато даних';
+    label.title = 'Локальне сховище браузера переповнене (ймовірно, через вставлені зображення). Спробуйте зменшити їхній розмір або експортувати документ як файл.';
+  } else {
+    label.textContent = 'Збережено';
+  }
+}
+
+// Warn before closing/reloading the tab while an edit hasn't made it into
+// localStorage yet — either still debouncing (typed in the last ~900ms) or
+// permanently failed to save (quota exceeded). Previously there was no
+// warning at all, so a stray Cmd+W right after typing could lose it.
+window.addEventListener('beforeunload', e => {
+  if (hasUnsavedChanges) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
 
 function loadSaved() {
   try {
@@ -4268,8 +4296,7 @@ function exportHTML() {
   .lightbox-overlay {
     display: none;
     position: fixed; inset: 0;
-    background: rgba(0,0,0,.82);
-    backdrop-filter: blur(6px);
+    background: rgba(0,0,0,.88);
     z-index: 9999;
     align-items: center;
     justify-content: center;
@@ -4786,6 +4813,9 @@ function _doUpdateSelToolbar() {
   document.getElementById('selItalic').classList.toggle('active', document.queryCommandState('italic'));
   document.getElementById('selUnderline').classList.toggle('active', document.queryCommandState('underline'));
   document.getElementById('selStrike').classList.toggle('active', document.queryCommandState('strikeThrough'));
+  const inPre = !!el.closest('pre');
+  document.getElementById('selQuote')?.classList.toggle('active', !!el.closest('blockquote'));
+  document.getElementById('selCode')?.classList.toggle('active', !inPre && !!el.closest('code'));
 
   // Position above selection
   const rect = range.getBoundingClientRect();
@@ -4822,6 +4852,11 @@ function selExec(cmd) {
 function selLink() {
   hideSelToolbar();
   insertLink();
+}
+
+function selCode() {
+  insertInlineCode();
+  hideSelToolbar();
 }
 
 function selFormat(tag) {
@@ -5407,27 +5442,9 @@ function tblDelete() {
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = ev => {
-        const wrap = createImgWrap(ev.target.result, '100%', 'img-center');
-        const p = document.createElement('p');
-        p.style.textAlign = 'center';
-        p.appendChild(wrap);
-        const after = document.createElement('p');
-        after.appendChild(document.createElement('br'));
-
-        if (dropRange) {
-          dropRange.collapse(false);
-          dropRange.insertNode(after);
-          dropRange.insertNode(p);
-          const cur = document.createRange();
-          cur.setStart(after, 0); cur.collapse(true);
-          const s = window.getSelection();
-          s.removeAllRanges(); s.addRange(cur);
-          dropRange = cur.cloneRange(); // move insertion point down for next file
-        } else {
-          editor.appendChild(p);
-          editor.appendChild(after);
-        }
-        selectWrap(wrap);
+        const { wrap, range: nextRange } = insertImageAtRange(ev.target.result, dropRange);
+        dropRange = nextRange; // move insertion point down for next file
+        if (wrap) selectWrap(wrap);
         tick();
       };
       reader.readAsDataURL(file);
@@ -5517,16 +5534,22 @@ function copyCodeBlock() {
 editor.addEventListener('input', () => {
   if (!isMarking) {
     editorSnapshot = '';
-    // Normalize <pre> blocks — flatten any divs/spans injected by browser
-    editor.querySelectorAll('pre').forEach(pre => {
-      // Check if browser injected block-level children
-      const children = [...pre.childNodes];
-      const hasBlocks = children.some(n => n.nodeType === 1 && /^(DIV|P|BR)$/.test(n.tagName));
-      if (hasBlocks) {
-        const text = pre.innerText; // innerText respects \n from block elements
-        pre.textContent = text;
+    // Normalize the <pre> block at the caret only — flatten any divs/spans the
+    // browser injected. Scanning every <pre> in the whole document on every
+    // keystroke (the old approach) forced a reflow per block and was the main
+    // cause of typing feeling sluggish in longer documents.
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount) {
+      const node = sel.getRangeAt(0).commonAncestorContainer;
+      const startEl = node.nodeType === 3 ? node.parentElement : node;
+      const pre = startEl ? startEl.closest('pre') : null;
+      if (pre && editor.contains(pre)) {
+        const hasBlocks = [...pre.childNodes].some(n => n.nodeType === 1 && /^(DIV|P|BR)$/.test(n.tagName));
+        if (hasBlocks) {
+          pre.textContent = pre.innerText; // innerText respects \n from block elements
+        }
       }
-    });
+    }
     tick();
     scheduleAutoTitle();
   }
@@ -5701,25 +5724,8 @@ editor.addEventListener('paste', e => {
       const file = item.getAsFile();
       const reader = new FileReader();
       reader.onload = ev => {
-        const wrap = createImgWrap(ev.target.result, '100%', 'img-center');
-        const p = document.createElement('p');
-        p.style.textAlign = 'center';
-        p.appendChild(wrap);
-        const after_p = document.createElement('p');
-        after_p.appendChild(document.createElement('br'));
-        if (pasteRange) {
-          pasteRange.collapse(false);
-          pasteRange.insertNode(after_p);
-          pasteRange.insertNode(p);
-          const cur = document.createRange();
-          cur.setStart(after_p, 0); cur.collapse(true);
-          const s = window.getSelection();
-          s.removeAllRanges(); s.addRange(cur);
-        } else {
-          editor.appendChild(p);
-          editor.appendChild(after_p);
-        }
-        selectWrap(wrap);
+        const { wrap } = insertImageAtRange(ev.target.result, pasteRange);
+        if (wrap) selectWrap(wrap);
         tick();
       };
       reader.readAsDataURL(file);
