@@ -2337,7 +2337,7 @@ html, body{ background:#fbfbfc; }
     </div>
     <!-- Callout dropdown -->
     <div class="tb-table-wrap" id="tbCalloutWrap">
-      <button class="tb" onclick="toggleCalloutPicker(event)" data-tip="Callout-блок">
+      <button class="tb" onmousedown="event.preventDefault()" onclick="toggleCalloutPicker(event)" data-tip="Callout-блок">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
           <rect x="1.5" y="2.5" width="13" height="11" rx="2"/>
           <line x1="4.5" y1="2.5" x2="4.5" y2="13.5" stroke-width="2.5" stroke="currentColor" opacity=".5"/>
@@ -2345,25 +2345,25 @@ html, body{ background:#fbfbfc; }
         </svg>
       </button>
       <div class="table-picker callout-picker" id="calloutPicker">
-        <button class="callout-pick-item" onclick="insertCallout('info');closeCalloutPicker()">
+        <button class="callout-pick-item" onmousedown="event.preventDefault()" onclick="insertCallout('info');closeCalloutPicker()">
           <span class="callout-pick-icon ci">💡</span>Порада
         </button>
-        <button class="callout-pick-item" onclick="insertCallout('tip');closeCalloutPicker()">
+        <button class="callout-pick-item" onmousedown="event.preventDefault()" onclick="insertCallout('tip');closeCalloutPicker()">
           <span class="callout-pick-icon ct">✅</span>Результат / Добре знати
         </button>
-        <button class="callout-pick-item" onclick="insertCallout('warn');closeCalloutPicker()">
+        <button class="callout-pick-item" onmousedown="event.preventDefault()" onclick="insertCallout('warn');closeCalloutPicker()">
           <span class="callout-pick-icon cw">⚠️</span>Увага
         </button>
-        <button class="callout-pick-item" onclick="insertCallout('error');closeCalloutPicker()">
+        <button class="callout-pick-item" onmousedown="event.preventDefault()" onclick="insertCallout('error');closeCalloutPicker()">
           <span class="callout-pick-icon ce">❌</span>Помилка / Не робити
         </button>
-        <button class="callout-pick-item" onclick="insertCallout('note');closeCalloutPicker()">
+        <button class="callout-pick-item" onmousedown="event.preventDefault()" onclick="insertCallout('note');closeCalloutPicker()">
           <span class="callout-pick-icon cn">📌</span>Нотатка
         </button>
       </div>
     </div>
     <!-- Prompt block -->
-    <button class="tb" onclick="insertPromptBlock()" data-tip="Блок промпту (з кнопкою копіювання)">
+    <button class="tb" onmousedown="event.preventDefault()" onclick="insertPromptBlock()" data-tip="Блок промпту (з кнопкою копіювання)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M2 3.5h12v7H6.5L3.5 13v-2.5H2v-7z" stroke-linejoin="round" stroke-linecap="round"/>
         <line x1="4.5" y1="6" x2="11.5" y2="6" stroke-width="1.3"/>
@@ -3900,6 +3900,19 @@ function insertBlockElement(el) {
     const s = window.getSelection();
     s.removeAllRanges(); s.addRange(savedRange);
     savedRange = null;
+  }
+
+  // Fallback: if there's still no valid selection inside the editor at all
+  // (e.g. a dropdown click briefly stole it), insert at the end of the
+  // document instead of leaving the browser to pick an unpredictable spot —
+  // this is what could make a block land somewhere random, including
+  // inside unrelated content like a leftover list elsewhere in the doc.
+  const selCheck = window.getSelection();
+  if (!selCheck || !selCheck.rangeCount || !editor.contains(selCheck.getRangeAt(0).commonAncestorContainer)) {
+    const rFallback = document.createRange();
+    rFallback.selectNodeContents(editor);
+    rFallback.collapse(false);
+    if (selCheck) { selCheck.removeAllRanges(); selCheck.addRange(rFallback); }
   }
 
   breakOutOfNestedContainer('ul, ol, table, .callout, .prompt-block');
