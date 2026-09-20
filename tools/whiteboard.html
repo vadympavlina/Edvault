@@ -1306,6 +1306,20 @@
       const words = paragraph.split(/\s+/).filter(Boolean);
       let current = '';
       words.forEach(word => {
+        // якщо навіть ОДНЕ слово (без пробілів) довше за всю ширину поля — раніше воно просто
+        // вилазило за межі стікера; тепер розбиваємо його по символах, як у звичайних текстових
+        // редакторах (виправлено)
+        if (ctx.measureText(word).width > maxWidth) {
+          if (current) { out.push(current); current = ''; }
+          let chunk = '';
+          for (const ch of word) {
+            const testChunk = chunk + ch;
+            if (ctx.measureText(testChunk).width > maxWidth && chunk) { out.push(chunk); chunk = ch; }
+            else { chunk = testChunk; }
+          }
+          current = chunk;
+          return;
+        }
         const test = current ? current + ' ' + word : word;
         if (ctx.measureText(test).width > maxWidth && current) { out.push(current); current = word; }
         else { current = test; }
@@ -1349,9 +1363,12 @@
       ctx.fill();
       ctx.restore();
       ctx.fillStyle = '#3a3220';
-      ctx.font = '600 20px Inter, system-ui, sans-serif';
+      // розмір шрифту тепер пропорційний ширині стікера — росте/зменшується разом з
+      // перетягуванням кутової ручки, а не лишається завжди фіксованим 20px (виправлено)
+      const fontSize = Math.max(11, Math.min(60, obj.w * 0.105));
+      ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
       ctx.textBaseline = 'top';
-      const pad = 16, lineHeight = 26;
+      const pad = Math.max(10, Math.min(16, obj.w * 0.08)), lineHeight = fontSize * 1.3;
       const lines = wrapText(ctx, obj.text, obj.w - pad * 2);
       lines.slice(0, Math.floor((obj.h - pad * 2) / lineHeight)).forEach((line, i) => {
         ctx.fillText(line, obj.x + pad, obj.y + pad + i * lineHeight);
@@ -2498,18 +2515,23 @@
     const scale = rect.width / page.w;
     const anchorX = existing ? existing.x : Math.min(pos.x, page.w - STICKY_W - 4);
     const anchorY = existing ? existing.y : Math.min(pos.y, page.h - STICKY_H - 4);
+    const boxW = existing ? existing.w : STICKY_W; // виправлено: раніше поле редагування завжди
+    const boxH = existing ? existing.h : STICKY_H; // скидалось до дефолтного розміру, ігноруючи ручне змінення розміру
     const color = existing ? existing.color : state.stickyColor;
 
     const box = document.createElement('textarea');
     box.className = 'canvas-edit-box sticky-box';
     box.style.left = (anchorX * scale) + 'px';
     box.style.top = (anchorY * scale) + 'px';
-    box.style.width = (STICKY_W * scale) + 'px';
-    box.style.height = (STICKY_H * scale) + 'px';
+    box.style.width = (boxW * scale) + 'px';
+    box.style.height = (boxH * scale) + 'px';
     box.style.background = color;
     box.style.color = '#3a3220';
-    box.style.fontSize = '14px';
+    // той самий пропорційний розрахунок розміру шрифту, що й при малюванні на canvas —
+    // щоб поле редагування виглядало так само, як і готовий стікер (виправлено)
+    box.style.fontSize = Math.max(11, Math.min(60, boxW * 0.105)) * scale + 'px';
     box.style.fontWeight = '600';
+    box.style.wordBreak = 'break-word'; // довге слово без пробілів теж переноситься, а не вилазить за межі (виправлено)
     box.placeholder = 'Нотатка…';
     if (existing) box.value = existing.text;
     page.stage.appendChild(box);
