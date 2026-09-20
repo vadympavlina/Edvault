@@ -1358,7 +1358,7 @@
       });
     } else if (obj.type === 'image') {
       // малюємо зображення, лише коли воно вже завантажене (додано)
-      if (obj._img && obj._img.complete && obj._img.naturalWidth) {
+      if (isImageSourceReady(obj._img)) {
         ctx.drawImage(obj._img, obj.x, obj.y, obj.w, obj.h);
       }
     } else if (obj.type === 'number') {
@@ -1948,13 +1948,36 @@
   // відпустили поза межами полотна
   window.addEventListener('pointerup', endPan);
 
-  // ═══════════════════════ ВСТАВКА ЗОБРАЖЕНЬ: paste / drag&drop (додано) ═══════════════════════
+  // ═══════════════════════ ВСТАВКА ЗОБРАЖЕНЬ: paste / drag&drop (покращено) ═══════════════════════
+
+  const IMAGE_MAX_SRC_DIM = 2200; // не тримаємо в пам'яті/на GPU растр більший, ніж може реально знадобитись (додано)
+
+  function isImageSourceReady(el) {
+    // джерело для ctx.drawImage може бути або <img>, або офскрін-<canvas> (після стиснення великого фото) — обидва
+    // перевіряються по-різному: канвас готовий одразу, картинці треба дочекатись повного завантаження (додано)
+    if (!el) return false;
+    return el.tagName === 'CANVAS' || (el.complete && el.naturalWidth > 0);
+  }
 
   function loadImageObject(page, dataUrl, dropPos) {
     const img = new Image();
     img.onload = () => {
+      // якщо фото завелике (типовий знімок з телефону — 3000-4000px) — стискаємо його ОДИН РАЗ у
+      // офскрін-canvas до розумного максимуму: рендер лишається чітким на екрані, але без зайвого
+      // навантаження на пам'ять і відеокарту від зберігання оригінального растру (додано)
+      let source = img;
+      const nw = img.naturalWidth, nh = img.naturalHeight;
+      if (nw > IMAGE_MAX_SRC_DIM || nh > IMAGE_MAX_SRC_DIM) {
+        const scale = IMAGE_MAX_SRC_DIM / Math.max(nw, nh);
+        const off = document.createElement('canvas');
+        off.width = Math.max(1, Math.round(nw * scale));
+        off.height = Math.max(1, Math.round(nh * scale));
+        off.getContext('2d').drawImage(img, 0, 0, off.width, off.height);
+        source = off;
+      }
+
       const maxDim = 380; // початковий розмір на сторінці — далі можна змінити ручкою
-      let w = img.naturalWidth, h = img.naturalHeight;
+      let w = nw, h = nh;
       if (w > maxDim || h > maxDim) {
         const scale = maxDim / Math.max(w, h);
         w *= scale; h *= scale;
@@ -1970,11 +1993,11 @@
       pushUndo(page);
       state.objSeq += 1;
       // "src" (весь dataURL зображення в base64) свідомо НЕ зберігаємо в об'єкті — для малювання
-      // й надалі використовується вже завантажений img._img, а зайва копія рядка в пам'яті
+      // й надалі використовується вже завантажений об'єкт-джерело, а зайва копія рядка в пам'яті
       // на кожне велике зображення на дошці помітно накопичувалась би без жодної користі (оптимізовано)
       const obj = {
         id: 'obj' + state.objSeq, type: 'image', x, y, w, h,
-        aspect: img.naturalWidth / img.naturalHeight, _img: img,
+        aspect: nw / nh, _img: source,
       };
       page.objects.push(obj);
       page.selectedIds = [obj.id]; page.selectedId = obj.id;
@@ -1995,45 +2018,72 @@
     reader.readAsDataURL(file);
   }
 
-  // вставка через буфер обміну (Ctrl+V) — скрізь, крім полів вводу тексту
+  // вставка через буфер обміну (Ctrl+V) — скрізь, крім полів вводу тексту; підтримує кілька
+  // зображень одразу, якщо їх скопійовано разом (раніше вставлялось тільки перше) (покращено)
   window.addEventListener('paste', (e) => {
     if (document.activeElement && ['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
     const page = getActivePage();
     const items = page && e.clipboardData && e.clipboardData.items;
     if (!items) return;
-    for (const item of items) {
-      if (item.type && item.type.startsWith('image/')) {
-        e.preventDefault();
-        insertImageFile(page, item.getAsFile());
-        break;
-      }
-    }
+    const imageItems = Array.from(items).filter(it => it.type && it.type.startsWith('image/'));
+    if (!imageItems.length) return;
+    e.preventDefault();
+    imageItems.forEach((it, i) => {
+      const vpRect = viewport.getBoundingClientRect();
+      const center = getPos({ clientX: vpRect.left + vpRect.width / 2, clientY: vpRect.top + vpRect.height / 2 }, page.interactCanvas);
+      // якщо вставляємо кілька одразу — трохи розсипаємо їх, інакше вони лягли б рівно одне на одне
+      insertImageFile(page, it.getAsFile(), imageItems.length > 1 ? { x: center.x + i * 24, y: center.y + i * 24 } : null);
+    });
   });
 
   // перетягування файлу зображення просто на полотно
   function hasFilesInDrag(e) { return !!(e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')); }
   window.addEventListener('dragover', (e) => { if (hasFilesInDrag(e)) e.preventDefault(); });
-  window.addEventListener('drop', (e) => { if (hasFilesInDrag(e)) e.preventDefault(); });
+  window.addEventListener('drop', (e) => {
+    if (!hasFilesInDrag(e)) return;
+    e.preventDefault();
+    if (e.target.closest && e.target.closest('.canvas-viewport')) return; // цей випадок уже обробляє окремий слухач нижче
+    // страхуємось: якщо файл кинули повз саме полотно (наприклад, трохи зачепили бічну панель) —
+    // все одно додаємо його на активну сторінку, а не мовчки губимо (додано)
+    const page = getActivePage();
+    if (page && e.dataTransfer.files && e.dataTransfer.files.length) {
+      const imgFiles = Array.from(e.dataTransfer.files).filter(f => f.type && f.type.startsWith('image/'));
+      imgFiles.forEach((f, i) => insertImageFile(page, f, null));
+      if (e.dataTransfer.files.length > imgFiles.length) showToast('Пропущено файли, що не є зображеннями', 'error');
+    }
+  });
 
+  // dragenter/dragleave з лічильником глибини — щоб рамка-підсвітка не блимала, коли курсор
+  // проходить над вкладеними canvas-шарами всередині полотна (виправлено)
+  let dragDepth = 0;
+  canvasViewportEl.addEventListener('dragenter', (e) => {
+    if (!hasFilesInDrag(e)) return;
+    dragDepth++;
+    canvasViewportEl.classList.add('drop-ready');
+  });
   canvasViewportEl.addEventListener('dragover', (e) => {
     if (!hasFilesInDrag(e)) return;
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-    canvasViewportEl.classList.add('drop-ready');
   });
   canvasViewportEl.addEventListener('dragleave', (e) => {
-    if (e.target === canvasViewportEl) canvasViewportEl.classList.remove('drop-ready');
+    if (!hasFilesInDrag(e)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) canvasViewportEl.classList.remove('drop-ready');
   });
   canvasViewportEl.addEventListener('drop', (e) => {
     if (!hasFilesInDrag(e)) return;
     e.preventDefault();
+    dragDepth = 0;
     canvasViewportEl.classList.remove('drop-ready');
     const page = getActivePage();
     if (!page || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
     const pos = getPos(e, page.interactCanvas);
-    Array.from(e.dataTransfer.files).filter(f => f.type && f.type.startsWith('image/')).forEach((f, i) => {
+    const imgFiles = Array.from(e.dataTransfer.files).filter(f => f.type && f.type.startsWith('image/'));
+    imgFiles.forEach((f, i) => {
       insertImageFile(page, f, { x: pos.x + i * 24, y: pos.y + i * 24 }); // невеликий зсув для кожного наступного файлу
     });
+    if (e.dataTransfer.files.length > imgFiles.length) showToast('Пропущено файли, що не є зображеннями', 'error');
   });
 
   // ═══════════════════════ СКРІНШОТ ОБЛАСТІ ═══════════════════════
