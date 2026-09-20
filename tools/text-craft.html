@@ -2801,6 +2801,7 @@ function insertCodeBlock() {
       return;
     }
   }
+  breakOutOfNestedContainer('ul, ol, table, .callout, .prompt-block');
   const pre = document.createElement('pre');
   pre.innerHTML = '<br>';
   const tmp = document.createElement('div');
@@ -3244,6 +3245,7 @@ function insertImageAtRange(dataUrl, range) {
     sel.removeAllRanges();
     sel.addRange(r);
   }
+  breakOutOfNestedContainer('ul, ol, table, .callout, .prompt-block');
 
   const marker = 'p' + (++imgInsertSeq);
   const html = '<p style="text-align:center"><img src="' + dataUrl + '" data-pending-img="' + marker + '"></p><p><br></p>';
@@ -3869,6 +3871,27 @@ function insertImgBeside(side) {
   tick();
 }
 
+// Shared guard: if the selection sits inside a list, a table, or another
+// callout/prompt block, move the (collapsed) insertion point to just after
+// that whole container first. Calling execCommand('insertHTML'/'formatBlock')
+// directly while nested inside one of these is what caused blockquotes,
+// callouts, code blocks and tables to end up wrapped in list numbering, or
+// nested inside each other, instead of landing as their own element.
+function breakOutOfNestedContainer(selectors) {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const startNode = sel.getRangeAt(0).startContainer;
+  const startEl = startNode.nodeType === 3 ? startNode.parentElement : startNode;
+  const container = startEl ? startEl.closest(selectors) : null;
+  if (container && editor.contains(container)) {
+    let top = container;
+    while (top.parentElement && top.parentElement !== editor) top = top.parentElement;
+    const r = document.createRange();
+    r.setStartAfter(top); r.collapse(true);
+    sel.removeAllRanges(); sel.addRange(r);
+  }
+}
+
 function insertBlockElement(el) {
   editor.focus();
 
@@ -3879,29 +3902,7 @@ function insertBlockElement(el) {
     savedRange = null;
   }
 
-  // If the cursor is inside a list, a table, or another callout/prompt
-  // block, execCommand('insertHTML') tries to "preserve the surrounding
-  // context" and ends up wrapping the inserted block oddly — that's the
-  // "чомусь ставить нумерацію" bug: marking a line as a callout/prompt
-  // while it (or a neighboring line) is part of a list could silently turn
-  // the new block into a numbered/bulleted item, and inserting a second
-  // callout while the selection is inside an existing one's body would
-  // nest a contenteditable=false block inside another instead of placing
-  // it after. Break out of whichever container we're in first — insert
-  // right after it — so the new block always lands as its own element.
-  const sel0 = window.getSelection();
-  if (sel0 && sel0.rangeCount) {
-    const startNode = sel0.getRangeAt(0).startContainer;
-    const startEl = startNode.nodeType === 3 ? startNode.parentElement : startNode;
-    const container = startEl ? startEl.closest('ul, ol, table, .callout, .prompt-block') : null;
-    if (container && editor.contains(container)) {
-      let top = container;
-      while (top.parentElement && top.parentElement !== editor) top = top.parentElement;
-      const r = document.createRange();
-      r.setStartAfter(top); r.collapse(true);
-      sel0.removeAllRanges(); sel0.addRange(r);
-    }
-  }
+  breakOutOfNestedContainer('ul, ol, table, .callout, .prompt-block');
 
   // Serialize element + trailing paragraph to HTML string
   const tmp = document.createElement('div');
@@ -5484,6 +5485,8 @@ function insertTable(rows, cols) {
     savedRange = null;
   }
 
+  breakOutOfNestedContainer('ul, ol, table, .callout, .prompt-block');
+
   // Build table HTML
   let html = '<table>';
   for (let r = 0; r < rows; r++) {
@@ -5921,21 +5924,27 @@ editor.addEventListener('keydown', e => {
       const nonEditable = (nearestCE && nearestCE.getAttribute('contenteditable') === 'false')
         ? nearestCE : null;
       if (nonEditable && editor.contains(nonEditable)) {
-        e.preventDefault();
         // Find the block-level parent inside editor and insert after it
         let target = nonEditable;
         while (target.parentElement && target.parentElement !== editor) {
           target = target.parentElement;
         }
-        // Routed through execCommand so this lands on the undo stack too —
-        // the previous target.after(newP) direct-DOM version didn't.
-        const sel2 = window.getSelection();
-        const r = document.createRange();
-        r.setStartAfter(target); r.collapse(true);
-        sel2.removeAllRanges(); sel2.addRange(r);
-        document.execCommand('insertHTML', false, '<p><br></p>');
-        tick();
-        return;
+        // Safety net: only proceed if we actually landed on a direct child
+        // of #editor. If the structure is unusual enough that we didn't,
+        // fall through to default Enter behavior instead of risking an
+        // insertion at an invalid position.
+        if (target.parentElement === editor) {
+          e.preventDefault();
+          // Routed through execCommand so this lands on the undo stack too —
+          // the previous target.after(newP) direct-DOM version didn't.
+          const sel2 = window.getSelection();
+          const r = document.createRange();
+          r.setStartAfter(target); r.collapse(true);
+          sel2.removeAllRanges(); sel2.addRange(r);
+          document.execCommand('insertHTML', false, '<p><br></p>');
+          tick();
+          return;
+        }
       }
     }
   }
