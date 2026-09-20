@@ -1275,6 +1275,7 @@ body{animation:fadeUp .3s ease}
 }
 .code-copy-btn:hover{background:var(--bg);color:var(--text)}
 .code-copy-btn.copied{color:#16a34a;border-color:#86efac;background:#f0fdf4}
+.code-copy-btn.copy-failed{color:#d97706;border-color:#fcd34d;background:#fffbeb}
 .code-copy-btn svg{width:11px;height:11px;flex-shrink:0}
 .code-bar-sep{width:1px;height:14px;background:var(--border);margin:0 1px;flex-shrink:0}
 
@@ -1568,6 +1569,7 @@ body{animation:fadeUp .3s ease}
 .editor .prompt-copy-btn svg{width:11px;height:11px;flex-shrink:0}
 .editor .prompt-copy-btn:hover{background:var(--bg);color:var(--text);border-color:var(--accent-lt)}
 .editor .prompt-copy-btn.copied{color:#16a34a;border-color:#86efac;background:#f0fdf4}
+.editor .prompt-copy-btn.copy-failed{color:#d97706;border-color:#fcd34d;background:#fffbeb}
 .editor .prompt-block-body{
   padding:13px 15px;
   font-family:'Inter',system-ui,sans-serif;
@@ -2856,6 +2858,7 @@ function placeCursorAtEnd(el) {
 const PROMPT_ICON_SVG = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5h12v7H6.5L3.5 13v-2.5H2v-7z" stroke-linejoin="round" stroke-linecap="round"/><line x1="4.5" y1="6" x2="11.5" y2="6" stroke-width="1.3"/><line x1="4.5" y1="8.3" x2="9" y2="8.3" stroke-width="1.3"/></svg>';
 const PROMPT_COPY_SVG = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="7" height="8" rx="1"/><path d="M3 3V2a1 1 0 011-1h5a1 1 0 011 1v6a1 1 0 01-1 1H8"/></svg>';
 const PROMPT_CHECK_SVG = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6l3 3 5-5"/></svg>';
+const PROMPT_FAIL_SVG = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="5"/><line x1="6" y1="3.5" x2="6" y2="6.5"/><circle cx="6" cy="8.5" r=".6" fill="currentColor" stroke="none"/></svg>';
 
 function insertPromptBlock() {
   editor.focus();
@@ -2911,24 +2914,49 @@ function copyPromptBlock(btn) {
   const body = block ? block.querySelector('.prompt-block-body') : null;
   if (!body) return;
   const text = body.innerText || body.textContent || '';
+  copyTextWithFeedback(text, btn, {
+    copiedHTML: PROMPT_CHECK_SVG + 'Скопійовано',
+    defaultHTML: PROMPT_COPY_SVG + 'Копіювати',
+    failedHTML: PROMPT_FAIL_SVG + 'Виділено — Ctrl+C',
+    selectFallbackEl: body
+  });
+}
 
-  const showCopied = () => {
-    btn.classList.add('copied');
-    btn.innerHTML = PROMPT_CHECK_SVG + 'Скопійовано';
-    setTimeout(() => {
-      btn.classList.remove('copied');
-      btn.innerHTML = PROMPT_COPY_SVG + 'Копіювати';
-    }, 1800);
+/* ══ SHARED "COPY TO CLIPBOARD" HELPER ══ */
+// Used by both the prompt-block and code-block copy buttons. Previously
+// each showed "Скопійовано" (Copied) unconditionally, even when the actual
+// clipboard write silently failed — which happens fairly often in embedded/
+// sandboxed contexts where the Clipboard API and even execCommand('copy')
+// can be blocked. Now the "copied" state only shows after a *confirmed*
+// success; on failure we select the text in place so the person can still
+// copy it themselves with a plain Ctrl+C (a real user keystroke, which
+// always works, unlike a scripted copy call).
+function copyTextWithFeedback(text, btn, opts) {
+  let resetTimer = null;
+  const setState = (html, cls, autoResetMs) => {
+    clearTimeout(resetTimer);
+    btn.classList.remove('copied', 'copy-failed');
+    if (cls) btn.classList.add(cls);
+    btn.innerHTML = html;
+    if (autoResetMs) {
+      resetTimer = setTimeout(() => {
+        btn.classList.remove(cls);
+        btn.innerHTML = opts.defaultHTML;
+      }, autoResetMs);
+    }
+  };
+  const onSuccess = () => setState(opts.copiedHTML, 'copied', 1800);
+  const onFail = () => {
+    setState(opts.failedHTML, 'copy-failed', 2800);
+    if (opts.selectFallbackEl) selectElementText(opts.selectFallbackEl);
   };
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(showCopied).catch(() => {
-      copyViaFallback(text);
-      showCopied();
+    navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+      if (copyViaFallback(text)) onSuccess(); else onFail();
     });
   } else {
-    copyViaFallback(text);
-    showCopied();
+    if (copyViaFallback(text)) onSuccess(); else onFail();
   }
 }
 
@@ -2938,8 +2966,20 @@ function copyViaFallback(text) {
   ta.style.cssText = 'position:fixed;opacity:0';
   document.body.appendChild(ta);
   ta.select();
-  document.execCommand('copy');
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) { ok = false; }
   ta.remove();
+  return ok;
+}
+
+function selectElementText(el) {
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch(e) {}
 }
 
 /* ══ TEXT DIVIDER ══ */
@@ -3817,6 +3857,30 @@ function insertBlockElement(el) {
     savedRange = null;
   }
 
+  // If the cursor is inside a list, a table, or another callout/prompt
+  // block, execCommand('insertHTML') tries to "preserve the surrounding
+  // context" and ends up wrapping the inserted block oddly — that's the
+  // "чомусь ставить нумерацію" bug: marking a line as a callout/prompt
+  // while it (or a neighboring line) is part of a list could silently turn
+  // the new block into a numbered/bulleted item, and inserting a second
+  // callout while the selection is inside an existing one's body would
+  // nest a contenteditable=false block inside another instead of placing
+  // it after. Break out of whichever container we're in first — insert
+  // right after it — so the new block always lands as its own element.
+  const sel0 = window.getSelection();
+  if (sel0 && sel0.rangeCount) {
+    const startNode = sel0.getRangeAt(0).startContainer;
+    const startEl = startNode.nodeType === 3 ? startNode.parentElement : startNode;
+    const container = startEl ? startEl.closest('ul, ol, table, .callout, .prompt-block') : null;
+    if (container && editor.contains(container)) {
+      let top = container;
+      while (top.parentElement && top.parentElement !== editor) top = top.parentElement;
+      const r = document.createRange();
+      r.setStartAfter(top); r.collapse(true);
+      sel0.removeAllRanges(); sel0.addRange(r);
+    }
+  }
+
   // Serialize element + trailing paragraph to HTML string
   const tmp = document.createElement('div');
   tmp.appendChild(el);
@@ -4374,6 +4438,7 @@ function exportHTML() {
   .prompt-copy-btn svg { width:11px; height:11px; flex-shrink:0; }
   .prompt-copy-btn:hover { background:#f0f2f5; color:#1a1d23; }
   .prompt-copy-btn.copied { color:#16a34a; border-color:#86efac; background:#f0fdf4; }
+  .prompt-copy-btn.copy-failed { color:#d97706; border-color:#fcd34d; background:#fffbeb; }
   .prompt-block-body { padding:13px 15px; font-family:'Inter',system-ui,sans-serif; font-size:14.5px; line-height:1.65; color:#1a1d23; white-space:pre-wrap; }
   /* Text divider */
   .text-divider { display:flex; align-items:center; gap:10px; margin:1.4em 0; color:#9ca3af; font-family:'Inter',system-ui,sans-serif; font-size:12px; font-weight:500; letter-spacing:.4px; }
@@ -4640,28 +4705,48 @@ window.copyPromptBlock = function(btn) {
   var body = block ? block.querySelector('.prompt-block-body') : null;
   if (!body) return;
   var text = body.innerText || body.textContent || '';
+  var defaultHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="7" height="8" rx="1"/><path d="M3 3V2a1 1 0 011-1h5a1 1 0 011 1v6a1 1 0 01-1 1H8"/></svg>Копіювати';
   var showCopied = function() {
+    btn.classList.remove('copy-failed');
     btn.classList.add('copied');
     btn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6l3 3 5-5"/></svg>Скопійовано';
     setTimeout(function() {
       btn.classList.remove('copied');
-      btn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="7" height="8" rx="1"/><path d="M3 3V2a1 1 0 011-1h5a1 1 0 011 1v6a1 1 0 01-1 1H8"/></svg>Копіювати';
+      btn.innerHTML = defaultHTML;
     }, 1800);
   };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(showCopied).catch(function() {
-      var ta = document.createElement('textarea');
-      ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
-      document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); ta.remove();
-      showCopied();
-    });
-  } else {
+  // Only claim success after a *confirmed* copy — otherwise select the text
+  // in place so the person can still copy it themselves with Ctrl+C.
+  var showFailed = function() {
+    btn.classList.remove('copied');
+    btn.classList.add('copy-failed');
+    btn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="5"/><line x1="6" y1="3.5" x2="6" y2="6.5"/><circle cx="6" cy="8.5" r=".6" fill="currentColor" stroke="none"/></svg>Виділено — Ctrl+C';
+    setTimeout(function() {
+      btn.classList.remove('copy-failed');
+      btn.innerHTML = defaultHTML;
+    }, 2800);
+    try {
+      var range = document.createRange();
+      range.selectNodeContents(body);
+      var s = window.getSelection();
+      s.removeAllRanges(); s.addRange(range);
+    } catch(e) {}
+  };
+  var fallbackCopy = function() {
     var ta = document.createElement('textarea');
     ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
     document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); ta.remove();
-    showCopied();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch(e) { ok = false; }
+    ta.remove();
+    return ok;
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(showCopied).catch(function() {
+      if (fallbackCopy()) showCopied(); else showFailed();
+    });
+  } else {
+    if (fallbackCopy()) showCopied(); else showFailed();
   }
 };
 </scr` + `ipt>
@@ -5064,6 +5149,19 @@ function selCode() {
 }
 
 function selFormat(tag) {
+  // Toggle off — selecting text already inside that block style switches it
+  // back to a normal paragraph instead of re-applying (or stacking) it.
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount) {
+    const node = sel.getRangeAt(0).commonAncestorContainer;
+    const el = node.nodeType === 3 ? node.parentElement : node;
+    if (el && el.closest(tag)) {
+      applyBlock('p');
+      hideSelToolbar();
+      scheduleToc();
+      return;
+    }
+  }
   applyBlock(tag);
   hideSelToolbar();
   scheduleToc();
@@ -5715,22 +5813,11 @@ function copyCodeBlock() {
   if (!currentCodePre) return;
   const text = currentCodePre.innerText || currentCodePre.textContent;
   const btn = document.getElementById('codeCopyBtn');
-  navigator.clipboard.writeText(text).then(() => {
-    btn.classList.add('copied');
-    btn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6l3 3 5-5"/></svg>Скопійовано';
-    setTimeout(() => {
-      btn.classList.remove('copied');
-      btn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="7" height="8" rx="1"/><path d="M3 3V2a1 1 0 011-1h5a1 1 0 011 1v6a1 1 0 01-1 1H8"/></svg>Копіювати';
-    }, 1800);
-  }).catch(() => {
-    // fallback
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.cssText = 'position:fixed;opacity:0';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    ta.remove();
+  copyTextWithFeedback(text, btn, {
+    copiedHTML: PROMPT_CHECK_SVG + 'Скопійовано',
+    defaultHTML: PROMPT_COPY_SVG + 'Копіювати',
+    failedHTML: PROMPT_FAIL_SVG + 'Виділено — Ctrl+C',
+    selectFallbackEl: currentCodePre
   });
 }
 
@@ -5792,14 +5879,25 @@ editor.addEventListener('keyup', e => {
   }
 });
 editor.addEventListener('keydown', e => {
-  // Enter near a contentEditable=false block — insert paragraph below it
+  // Enter near a contentEditable=false block — insert paragraph below it.
+  // Bug fix: closest('[contenteditable="false"]') used to match the OUTER
+  // wrapper even when the caret was actually inside a nested editable
+  // region (a callout's or prompt-block's body, both contenteditable=true
+  // children of a contenteditable=false wrapper) — because closest() walks
+  // ancestors regardless of what's in between. That made Enter always kick
+  // you OUT of a callout/prompt block instead of adding a line inside it,
+  // via a raw DOM insert that also bypassed the undo stack. Now we check
+  // the *nearest* [contenteditable] ancestor specifically, so this only
+  // fires when that nearest one is actually "false" (i.e. the caret isn't
+  // inside an editable island at all — e.g. it landed on the callout icon).
   if (e.key === 'Enter' && !e.shiftKey) {
     const sel = window.getSelection();
     if (sel && sel.rangeCount) {
       const node = sel.getRangeAt(0).commonAncestorContainer;
       const el = node.nodeType === 3 ? node.parentElement : node;
-      // Check if we're inside or directly next to a non-editable block
-      const nonEditable = el.closest('[contenteditable="false"]');
+      const nearestCE = el ? el.closest('[contenteditable]') : null;
+      const nonEditable = (nearestCE && nearestCE.getAttribute('contenteditable') === 'false')
+        ? nearestCE : null;
       if (nonEditable && editor.contains(nonEditable)) {
         e.preventDefault();
         // Find the block-level parent inside editor and insert after it
@@ -5807,13 +5905,88 @@ editor.addEventListener('keydown', e => {
         while (target.parentElement && target.parentElement !== editor) {
           target = target.parentElement;
         }
-        const newP = document.createElement('p');
-        newP.appendChild(document.createElement('br'));
-        target.after(newP);
-        const cur = document.createRange();
-        cur.setStart(newP, 0); cur.collapse(true);
-        sel.removeAllRanges(); sel.addRange(cur);
+        // Routed through execCommand so this lands on the undo stack too —
+        // the previous target.after(newP) direct-DOM version didn't.
+        const sel2 = window.getSelection();
+        const r = document.createRange();
+        r.setStartAfter(target); r.collapse(true);
+        sel2.removeAllRanges(); sel2.addRange(r);
+        document.execCommand('insertHTML', false, '<p><br></p>');
+        tick();
         return;
+      }
+    }
+  }
+
+  // Backspace at the very start of a blockquote or code block used to just
+  // do nothing in most browsers (a well-known contenteditable limitation),
+  // making these blocks feel impossible to get rid of. First Backspace now
+  // converts it back to a normal paragraph — same convention as Notion/
+  // Google Docs — while keeping the text; a second Backspace after that
+  // behaves like normal text deletion.
+  if (e.key === 'Backspace') {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount && sel.isCollapsed) {
+      const range0 = sel.getRangeAt(0);
+      const node = range0.startContainer;
+      const el = node.nodeType === 3 ? node.parentElement : node;
+      const block = el ? el.closest('blockquote, pre') : null;
+      if (block && editor.contains(block) && block.parentElement === editor) {
+        const preRange = document.createRange();
+        preRange.selectNodeContents(block);
+        preRange.setEnd(range0.startContainer, range0.startOffset);
+        const isAtStart = preRange.toString().length === 0;
+        if (isAtStart) {
+          e.preventDefault();
+          const r = document.createRange();
+          r.selectNodeContents(block);
+          sel.removeAllRanges();
+          sel.addRange(r);
+          document.execCommand('formatBlock', false, '<p>');
+          tick();
+          return;
+        }
+      }
+    }
+  }
+
+  // Backspace at the very start of an empty callout/prompt-block body used
+  // to fall through to the browser's default behavior at a nested
+  // contenteditable=true-inside-false boundary, which is inconsistent
+  // across browsers (stuck caret, or the block corrupted instead of
+  // cleanly removed). Detect that spot explicitly and remove the whole
+  // block via execCommand so it's a single, predictable, undo-safe step.
+  // Important: this only fires when the body has NO content at all — not
+  // just "nothing before the cursor". Checking only what's before the
+  // cursor would delete a callout's whole text (data loss) the moment
+  // someone pressed Home then Backspace at the start of a line they'd
+  // already typed into it.
+  if (e.key === 'Backspace') {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount && sel.isCollapsed) {
+      const range0 = sel.getRangeAt(0);
+      const node = range0.startContainer;
+      const el = node.nodeType === 3 ? node.parentElement : node;
+      const body = el ? el.closest('.callout-body, .prompt-block-body') : null;
+      if (body && editor.contains(body)) {
+        const preRange = document.createRange();
+        preRange.selectNodeContents(body);
+        preRange.setEnd(range0.startContainer, range0.startOffset);
+        const nothingBefore = preRange.toString().length === 0;
+        const bodyIsEmpty = (body.textContent || '').trim().length === 0;
+        if (nothingBefore && bodyIsEmpty) {
+          e.preventDefault();
+          const block = body.closest('.callout, .prompt-block');
+          if (block) {
+            const r2 = document.createRange();
+            r2.selectNode(block);
+            sel.removeAllRanges();
+            sel.addRange(r2);
+            document.execCommand('delete');
+            tick();
+          }
+          return;
+        }
       }
     }
   }
