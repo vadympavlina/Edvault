@@ -710,27 +710,6 @@ function exec(cmd, val) {
   syncState();
 }
 
-// Shared guard: if the selection sits inside a list, a table, or another
-// callout/prompt/code block, move the (collapsed) insertion point to just
-// after that whole container first. Calling execCommand('insertHTML' /
-// 'formatBlock') directly while nested inside one of these is what makes a
-// browser try to "preserve the context" and wrap the new block in list
-// numbering, or nest it inside the thing it should sit beside.
-function breakOutOfNestedContainer(selectors) {
-  const sel = window.getSelection();
-  if (!sel || !sel.rangeCount) return;
-  const startNode = sel.getRangeAt(0).startContainer;
-  const startEl = startNode.nodeType === 3 ? startNode.parentElement : startNode;
-  const container = startEl ? startEl.closest(selectors) : null;
-  if (container && editor.contains(container)) {
-    let top = container;
-    while (top.parentElement && top.parentElement !== editor) top = top.parentElement;
-    const r = document.createRange();
-    r.setStartAfter(top); r.collapse(true);
-    sel.removeAllRanges(); sel.addRange(r);
-  }
-}
-
 // Ensures there is always a usable selection inside #editor before an
 // execCommand call. If a click (e.g. on a toolbar dropdown) briefly stole
 // focus/selection, falls back to the end of the document instead of an
@@ -880,31 +859,57 @@ function doInlineCodeToggle() {
 function insertHR() {
   editor.focus();
   ensureSelectionInEditor();
-  breakOutOfNestedContainer('ul, ol, table, .callout, .card-block');
-  document.execCommand('insertHTML', false, '<hr><p><br></p>');
+  const anchor = findTopLevelAnchor();
+  const hr = document.createElement('hr');
+  const afterP = document.createElement('p');
+  afterP.innerHTML = '<br>';
+  if (anchor) anchor.after(hr, afterP);
+  else { editor.appendChild(hr); editor.appendChild(afterP); }
   tick();
 }
 
+// Finds the direct child of #editor that contains the current caret,
+// however deeply nested (inside a list, table, callout...) it actually is.
+// Used as a guaranteed-correct anchor to insert new top-level blocks next
+// to, sidestepping execCommand's browser-dependent "preserve context"
+// behavior near lists/tables/callouts.
+function findTopLevelAnchor() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  const startNode = sel.getRangeAt(0).startContainer;
+  let top = startNode.nodeType === 3 ? startNode.parentElement : startNode;
+  while (top && top.parentElement && top.parentElement !== editor) top = top.parentElement;
+  return (top && top.parentElement === editor) ? top : null;
+}
+
 /* ═══════════════════════════ SHARED BLOCK INSERTION ═══════════════════════════
-   Used by callout / prompt-block / code-block. Always:
-   1) restores a saved selection if there is one, else falls back to the end
-      of the document rather than an unpredictable spot,
-   2) breaks out of any list / table / other card block first,
-   3) goes through execCommand('insertHTML') so Ctrl+Z works,
-   4) leaves interactive controls (copy button) wired via inline onclick=""
-      attributes rather than addEventListener — those survive being
-      serialized to an HTML string and re-parsed by execCommand; JS closures
-      would not.
-   ═══════════════════════════════════════════════════════════════════════ */
+   Used by callout / prompt-block / code-block. Finds the top-level element
+   (a direct child of #editor) that contains the current caret — however
+   deeply nested inside a list, table, or another callout/card that caret
+   actually is — and inserts the new block as a plain DOM sibling right
+   after it.
+
+   This used to go through execCommand('insertHTML') after trying to
+   pre-detect and break out of list/table/callout containers. That worked
+   for the simple case, but a selection that starts *inside* content that's
+   already nested two or three levels deep (e.g. selecting text that begins
+   inside an existing callout's own numbered list) could still end up with
+   the browser "preserving context" and wrapping the whole new block in
+   list numbering — because execCommand decides that on its own, based on
+   where the browser thinks editing is happening, not where we've told it
+   to break out to. Walking the DOM ourselves and inserting directly sides
+   steps that guesswork entirely: it is always correct, for any nesting
+   depth. Trade-off: this insertion step itself isn't on the undo stack
+   (same trade-off already made for other structural operations here). */
 function insertBlockElement(el) {
   editor.focus();
   restoreCursor();
   ensureSelectionInEditor();
-  breakOutOfNestedContainer('ul, ol, table, .callout, .card-block');
-
-  const tmp = document.createElement('div');
-  tmp.appendChild(el);
-  document.execCommand('insertHTML', false, tmp.innerHTML + '<p><br></p>');
+  const anchor = findTopLevelAnchor();
+  const afterP = document.createElement('p');
+  afterP.innerHTML = '<br>';
+  if (anchor) anchor.after(el, afterP);
+  else { editor.appendChild(el); editor.appendChild(afterP); }
   tick();
 }
 
@@ -1246,16 +1251,24 @@ function insertTableGrid(rows, cols) {
   editor.focus();
   restoreCursor();
   ensureSelectionInEditor();
-  breakOutOfNestedContainer('ul, ol, table, .callout, .card-block');
+  const anchor = findTopLevelAnchor();
 
-  let html = '<table><tbody>';
+  const table = document.createElement('table');
+  const tbody = document.createElement('tbody');
   for (let r = 0; r < rows; r++) {
-    html += '<tr>';
-    for (let c = 0; c < cols; c++) html += '<td><br></td>';
-    html += '</tr>';
+    const tr = document.createElement('tr');
+    for (let c = 0; c < cols; c++) {
+      const td = document.createElement('td');
+      td.innerHTML = '<br>';
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
   }
-  html += '</tbody></table><p><br></p>';
-  document.execCommand('insertHTML', false, html);
+  table.appendChild(tbody);
+  const afterP = document.createElement('p');
+  afterP.innerHTML = '<br>';
+  if (anchor) anchor.after(table, afterP);
+  else { editor.appendChild(table); editor.appendChild(afterP); }
   tick();
 }
 
@@ -1348,7 +1361,6 @@ editor.addEventListener('keydown', e => {
 });
 
 /* ═══════════════════════════ IMAGE ═══════════════════════════ */
-let imgInsertSeq = 0;
 function triggerImageInsert() {
   saveCursor();
   document.getElementById('imgFileInput').click();
@@ -1422,14 +1434,24 @@ function insertImageAtRange(dataUrl, range) {
   const sel = window.getSelection();
   if (range) { sel.removeAllRanges(); sel.addRange(range); }
   else ensureSelectionInEditor();
-  breakOutOfNestedContainer('ul, ol, table, .callout, .card-block');
+  const anchor = findTopLevelAnchor();
 
-  const marker = 'p' + (++imgInsertSeq);
-  const html = '<p style="text-align:center"><div class="img-wrap" data-pending-img="' + marker + '"><img src="' + dataUrl + '"><div class="img-cap" contenteditable="true"></div></div></p><p><br></p>';
-  document.execCommand('insertHTML', false, html);
-
-  const wrap = editor.querySelector('[data-pending-img="' + marker + '"]');
-  if (wrap) wrap.removeAttribute('data-pending-img');
+  const p = document.createElement('p');
+  p.style.textAlign = 'center';
+  const wrap = document.createElement('div');
+  wrap.className = 'img-wrap';
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  const cap = document.createElement('div');
+  cap.className = 'img-cap';
+  cap.contentEditable = 'true';
+  wrap.appendChild(img);
+  wrap.appendChild(cap);
+  p.appendChild(wrap);
+  const afterP = document.createElement('p');
+  afterP.innerHTML = '<br>';
+  if (anchor) anchor.after(p, afterP);
+  else { editor.appendChild(p); editor.appendChild(afterP); }
   return wrap;
 }
 
