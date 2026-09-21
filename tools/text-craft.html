@@ -504,6 +504,14 @@ input,select,textarea{font-family:inherit}
     </button>
     <div class="tb-sep"></div>
 
+    <button class="tb" id="btn-ul" onmousedown="event.preventDefault()" onclick="exec('insertUnorderedList')" data-tip="Маркований список">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="2.5" cy="4" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="8" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="12" r="1" fill="currentColor" stroke="none"/><line x1="6" y1="4" x2="14" y2="4" stroke-linecap="round"/><line x1="6" y1="8" x2="14" y2="8" stroke-linecap="round"/><line x1="6" y1="12" x2="14" y2="12" stroke-linecap="round"/></svg>
+    </button>
+    <button class="tb" id="btn-ol" onmousedown="event.preventDefault()" onclick="exec('insertOrderedList')" data-tip="Нумерований список">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><text x="0.5" y="5.5" font-size="4.5" fill="currentColor" stroke="none" font-family="Inter">1</text><text x="0.5" y="9.5" font-size="4.5" fill="currentColor" stroke="none" font-family="Inter">2</text><text x="0.5" y="13.5" font-size="4.5" fill="currentColor" stroke="none" font-family="Inter">3</text><line x1="6" y1="4" x2="14" y2="4" stroke-linecap="round"/><line x1="6" y1="8" x2="14" y2="8" stroke-linecap="round"/><line x1="6" y1="12" x2="14" y2="12" stroke-linecap="round"/></svg>
+    </button>
+    <div class="tb-sep"></div>
+
     <button class="tb" id="btn-align-left" onmousedown="event.preventDefault()" onclick="exec('justifyLeft')" data-tip="Ліворуч">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><line x1="2" y1="4" x2="14" y2="4" stroke-linecap="round"/><line x1="2" y1="8" x2="9" y2="8" stroke-linecap="round"/><line x1="2" y1="12" x2="12" y2="12" stroke-linecap="round"/></svg>
     </button>
@@ -1689,6 +1697,8 @@ function syncState() {
       const map = {bold:'btn-bold',italic:'btn-italic',underline:'btn-underline',strikeThrough:'btn-strike'};
       document.getElementById(map[cmd])?.classList.toggle('on', document.queryCommandState(cmd));
     });
+    document.getElementById('btn-ul')?.classList.toggle('on', document.queryCommandState('insertUnorderedList'));
+    document.getElementById('btn-ol')?.classList.toggle('on', document.queryCommandState('insertOrderedList'));
     document.getElementById('btn-align-left')?.classList.toggle('on', document.queryCommandState('justifyLeft'));
     document.getElementById('btn-align-center')?.classList.toggle('on', document.queryCommandState('justifyCenter'));
     document.getElementById('btn-align-right')?.classList.toggle('on', document.queryCommandState('justifyRight'));
@@ -1858,7 +1868,6 @@ function loadSaved() {
     if (html) editor.innerHTML = html;
     if (title) document.getElementById('docTitle').value = title;
   } catch(e) {}
-  stripLists(); // clean up any lists left over from before this feature was removed
   updateStats();
   buildToc();
 }
@@ -1920,26 +1929,8 @@ editor.addEventListener('paste', e => {
   }
   // Plain/HTML text — let the browser handle it natively (keeps basic
   // formatting), then just refresh stats/state.
-  setTimeout(() => { stripLists(); tick(); syncState(); }, 0);
+  setTimeout(() => { tick(); syncState(); }, 0);
 });
-
-// Lists were removed as a feature entirely (no toolbar way to create one
-// anymore), but content pasted from Word/Google Docs/websites can still
-// bring real <ul>/<ol> markup along with it. Unwrap any that show up into
-// plain paragraphs so they never actually appear in the document.
-function stripLists() {
-  const lists = editor.querySelectorAll('ul, ol');
-  if (!lists.length) return;
-  lists.forEach(list => {
-    const frag = document.createDocumentFragment();
-    list.querySelectorAll(':scope > li').forEach(li => {
-      const p = document.createElement('p');
-      p.innerHTML = li.innerHTML.trim() ? li.innerHTML : '<br>';
-      frag.appendChild(p);
-    });
-    list.replaceWith(frag);
-  });
-}
 
 /* ═══════════════════════════ EXPORT ═══════════════════════════ */
 // Used only for the exported file's name and <title> — the topbar name
