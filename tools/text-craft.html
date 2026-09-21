@@ -307,7 +307,7 @@ input,select,textarea{font-family:inherit}
 /* ═══════════ IMAGE ═══════════ */
 .editor .img-wrap{position:relative;display:inline-block;max-width:100%}
 .editor p:has(> .img-wrap){text-align:center}
-.editor .img-wrap img{max-width:100%;border-radius:var(--r);display:block;margin:0 auto}
+.editor .img-wrap img{max-width:100%;border:1px solid #000;border-radius:var(--r);display:block;margin:0 auto}
 .editor .img-wrap.selected img{outline:2px solid var(--accent);outline-offset:2px}
 .editor .img-wrap .img-cap{
   text-align:center;font-family:'Inter',sans-serif;font-size:12.5px;color:var(--subtle);
@@ -2033,9 +2033,24 @@ body{margin:0;background:var(--bg);font-family:'Inter',system-ui,sans-serif;colo
 .content td,.content th{border:1px solid var(--border2);padding:8px 10px}
 .content tr:first-child td{background:var(--bg);font-weight:600}
 .content .img-wrap{display:inline-block;max-width:100%}
-.content .img-wrap img{max-width:100%;border-radius:var(--r);display:block;margin:0 auto}
+.content .img-wrap img{max-width:100%;border:1px solid #000;border-radius:var(--r);display:block;margin:0 auto;cursor:zoom-in;transition:opacity .12s}
+.content .img-wrap img:hover{opacity:.92}
 .content .img-cap{text-align:center;font-family:'Inter',sans-serif;font-size:12.5px;color:var(--subtle);margin-top:6px}
 .content .img-cap:empty{display:none}
+
+/* Image preview / lightbox */
+.lightbox-overlay{display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,16,20,.92);align-items:center;justify-content:center;flex-direction:column}
+.lightbox-overlay.open{display:flex}
+.lightbox-stage{flex:1;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
+.lightbox-stage img{max-width:92vw;max-height:80vh;transition:transform .08s;cursor:grab;user-select:none;border-radius:4px}
+.lightbox-bar{display:flex;align-items:center;gap:6px;padding:10px;flex-shrink:0}
+.lightbox-btn{
+  display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:18px;line-height:1;
+}
+.lightbox-btn:hover{background:rgba(255,255,255,.16)}
+.lightbox-close{position:absolute;top:16px;right:16px}
+.lightbox-pct{color:rgba(255,255,255,.75);font-family:'Inter',sans-serif;font-size:12.5px;width:44px;text-align:center;user-select:none}
 </style>
 </head>
 <body>
@@ -2048,6 +2063,18 @@ body{margin:0;background:var(--bg);font-family:'Inter',system-ui,sans-serif;colo
     <div class="page-wrap"><div class="page"><div class="content">
     ${clone.innerHTML}
     </div></div></div>
+  </div>
+</div>
+<div class="lightbox-overlay" id="lightboxOverlay">
+  <button class="lightbox-btn lightbox-close" id="lightboxClose">✕</button>
+  <div class="lightbox-stage" id="lightboxStage">
+    <img id="lightboxImg" src="" alt="">
+  </div>
+  <div class="lightbox-bar">
+    <button class="lightbox-btn" id="lightboxOut">−</button>
+    <span class="lightbox-pct" id="lightboxPct">100%</span>
+    <button class="lightbox-btn" id="lightboxIn">+</button>
+    <button class="lightbox-btn" id="lightboxReset" style="width:auto;padding:0 14px;border-radius:19px;font-size:12.5px">Скинути</button>
   </div>
 </div>
 <script>
@@ -2082,6 +2109,64 @@ window.copyCardBlock = function(btn) {
     navigator.clipboard.writeText(text).then(showCopied).catch(function(){ if (fallback()) showCopied(); else showFailed(); });
   } else { if (fallback()) showCopied(); else showFailed(); }
 };
+
+// ── Image preview / lightbox ──
+(function() {
+  var overlay = document.getElementById('lightboxOverlay');
+  var stage = document.getElementById('lightboxStage');
+  var img = document.getElementById('lightboxImg');
+  var pct = document.getElementById('lightboxPct');
+  var scale = 1, panX = 0, panY = 0, dragging = false, dragStartX = 0, dragStartY = 0;
+
+  function applyTransform() {
+    img.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + scale + ')';
+    pct.textContent = Math.round(scale * 100) + '%';
+  }
+  function setScale(s) {
+    scale = Math.max(0.25, Math.min(6, s));
+    applyTransform();
+  }
+  function reset() { scale = 1; panX = 0; panY = 0; applyTransform(); }
+  function open(src, alt) {
+    img.src = src; img.alt = alt || '';
+    reset();
+    overlay.classList.add('open');
+  }
+  function close() { overlay.classList.remove('open'); img.src = ''; }
+
+  document.querySelectorAll('.content .img-wrap img').forEach(function(el) {
+    el.addEventListener('click', function() { open(el.src, el.alt); });
+  });
+  document.getElementById('lightboxClose').addEventListener('click', close);
+  document.getElementById('lightboxIn').addEventListener('click', function() { setScale(scale + 0.25); });
+  document.getElementById('lightboxOut').addEventListener('click', function() { setScale(scale - 0.25); });
+  document.getElementById('lightboxReset').addEventListener('click', reset);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay || e.target === stage) close(); });
+  document.addEventListener('keydown', function(e) {
+    if (!overlay.classList.contains('open')) return;
+    if (e.key === 'Escape') close();
+    else if (e.key === '+' || e.key === '=') setScale(scale + 0.25);
+    else if (e.key === '-') setScale(scale - 0.25);
+  });
+  stage.addEventListener('wheel', function(e) {
+    if (!overlay.classList.contains('open')) return;
+    e.preventDefault();
+    setScale(scale + (e.deltaY < 0 ? 0.15 : -0.15));
+  }, { passive: false });
+  // Drag to pan once zoomed in
+  img.addEventListener('mousedown', function(e) {
+    if (scale <= 1) return;
+    dragging = true; dragStartX = e.clientX - panX; dragStartY = e.clientY - panY;
+    img.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    panX = e.clientX - dragStartX; panY = e.clientY - dragStartY;
+    applyTransform();
+  });
+  window.addEventListener('mouseup', function() { dragging = false; img.style.cursor = 'grab'; });
+})();
 <\/script>
 </body>
 </html>`;
