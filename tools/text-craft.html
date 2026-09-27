@@ -188,26 +188,46 @@ input,select,textarea{font-family:inherit}
 .toc-list{flex:1;overflow-y:auto;padding:0 8px 16px}
 .toc-empty{padding:8px;font-size:12.5px;color:var(--subtle);line-height:1.5}
 .toc-item{
-  display:block;width:100%;text-align:left;
+  display:flex;align-items:center;width:100%;text-align:left;
   padding:6px 10px;margin-bottom:1px;border-radius:6px;border:none;background:transparent;
   font-size:13px;color:var(--muted);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   border-left:2px solid transparent;
   transition:background .12s,color .12s,border-color .12s;
 }
+.toc-item-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.toc-chevron{
+  width:14px;height:14px;flex-shrink:0;margin-right:2px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--subtle);
+}
+.toc-chevron:hover{background:var(--border)}
+.toc-chevron::before{content:'▾';display:block;transition:transform .12s}
+.toc-item.collapsed .toc-chevron::before{transform:rotate(-90deg)}
 .toc-item:hover{background:var(--bg);color:var(--text)}
 .toc-item.active{background:var(--accent-bg);color:var(--accent-h);border-left-color:var(--accent)}
 .toc-item.toc-h1{font-weight:600;color:var(--text)}
 .toc-item.toc-h1.active{color:var(--accent-h)}
 .toc-item.toc-h2{padding-left:20px}
 .toc-item.toc-h3{padding-left:32px;font-size:12.5px}
-.toc-item.filtered-out{display:none}
+.toc-item.filtered-out,.toc-item.toc-collapsed-child{display:none}
 @media(max-width:820px){
   .toc-sidebar{position:fixed;top:var(--topbar-h);bottom:0;left:0;z-index:400;transform:translateX(-100%);transition:transform .18s;box-shadow:4px 0 20px rgba(20,22,38,.12)}
   .toc-sidebar.open{transform:translateX(0)}
 }
 .toc-toggle-btn{display:none}
 @media(max-width:820px){.toc-toggle-btn{display:flex}}
+
+.back-to-top{
+  position:fixed;right:28px;bottom:28px;z-index:300;
+  width:38px;height:38px;border-radius:50%;border:1px solid var(--border2);
+  background:var(--surface);color:var(--muted);box-shadow:0 6px 18px rgba(20,22,38,.14);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transform:translateY(8px);
+  transition:opacity .15s,transform .15s,background .12s,color .12s;
+}
+.back-to-top.visible{opacity:1;pointer-events:auto;transform:translateY(0)}
+.back-to-top:hover{background:var(--accent-bg);color:var(--accent-h);border-color:var(--accent-lt)}
+.back-to-top svg{width:16px;height:16px}
+@media(max-width:820px){.back-to-top{right:16px;bottom:16px}}
 
 /* ═══════════ EDITOR ═══════════ */
 .scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;background:var(--bg)}
@@ -239,6 +259,9 @@ input,select,textarea{font-family:inherit}
     radial-gradient(circle at 68% 96%,rgba(255,255,255,.14) 0 66px,transparent 68px);
 }
 .doc-header.pattern-grid::before{background-image:linear-gradient(rgba(255,255,255,.14) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.14) 1px,transparent 1px);background-size:22px 22px}
+.doc-header.pattern-waves::before{
+  background-image:repeating-radial-gradient(circle at 50% 180%,transparent 0,transparent 26px,rgba(255,255,255,.14) 27px,rgba(255,255,255,.14) 29px);
+}
 .doc-header-bg{position:relative;z-index:1;padding:40px 56px 60px}
 .doc-header-tag{
   display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;
@@ -250,12 +273,17 @@ input,select,textarea{font-family:inherit}
   font-family:'Inter',sans-serif;font-size:2.1em;font-weight:700;line-height:1.25;
   margin:0;letter-spacing:-.01em;max-width:78%;color:#fff;
 }
+.doc-header-subtitle{
+  font-family:'Inter',sans-serif;font-size:14.5px;font-weight:500;line-height:1.5;
+  margin:10px 0 0;max-width:70%;color:rgba(255,255,255,.85);
+}
 .doc-header-logo{position:absolute;z-index:1;top:22px;right:28px;height:34px;max-width:130px;object-fit:contain}
 .doc-header-wave{position:absolute;left:0;right:0;bottom:-1px;line-height:0;z-index:1}
 .doc-header-wave svg{width:100%;height:34px;display:block}
 @media(max-width:680px){
   .doc-header-bg{padding:28px 24px 44px}
   .doc-header-title{font-size:1.5em;max-width:100%}
+  .doc-header-subtitle{max-width:100%}
   .doc-header-logo{height:26px;top:14px;right:16px}
 }
 
@@ -365,6 +393,11 @@ input,select,textarea{font-family:inherit}
 }
 .editor .img-wrap .img-cap:empty::before{content:'Підпис до зображення (необов’язково)';color:var(--subtle);pointer-events:none}
 
+/* Empty-document placeholders — same pattern as the block-level ones above,
+   just scoped to the two starter elements the editor ships with. */
+.editor > h1:first-child:empty::before{content:'Назва документа';color:var(--subtle);pointer-events:none}
+.editor > p:only-child:has(> br:only-child)::before{content:'Почніть писати документ…';color:var(--subtle);pointer-events:none}
+
 .img-toolbar{
   display:none;position:fixed;z-index:600;
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
@@ -449,6 +482,14 @@ input,select,textarea{font-family:inherit}
 .hdr-toggle-row{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--text);margin-bottom:14px;cursor:pointer}
 .hdr-toggle-row input{width:15px;height:15px;accent-color:var(--accent);flex-shrink:0}
 .hdr-field-label{font-size:11.5px;font-weight:600;color:var(--muted);margin:2px 0 8px;letter-spacing:.2px}
+.hdr-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.hdr-preset{
+  display:flex;align-items:center;gap:6px;height:28px;padding:0 11px 0 8px;border-radius:999px;
+  border:1px solid var(--border2);background:var(--surface);font-size:12px;font-weight:500;color:var(--text);
+}
+.hdr-preset:hover{background:var(--bg)}
+.hdr-preset.on{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-h)}
+.hdr-preset-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
 .hdr-color-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .hdr-swatches{display:flex;gap:7px;flex-wrap:wrap}
 .hdr-swatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
@@ -665,6 +706,9 @@ input,select,textarea{font-family:inherit}
         </div>
       </div>
     </div>
+    <button type="button" class="back-to-top" id="backToTop" onclick="scrollToTop()" data-tip="Догори">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 12.5V3.5M4 7l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
   </div>
 </div>
 
@@ -773,8 +817,11 @@ input,select,textarea{font-family:inherit}
       <input type="checkbox" id="hdrEnabled">
       <span>Показувати шапку на початку документа</span>
     </label>
+    <div class="hdr-field-label">Швидкі шаблони</div>
+    <div class="hdr-presets" id="hdrPresets"></div>
     <input type="text" class="modal-inp" id="hdrTag" placeholder="Мітка (напр. «Урок 3», «Lessons»)">
     <input type="text" class="modal-inp" id="hdrTitle" placeholder="Назва документа">
+    <input type="text" class="modal-inp" id="hdrSubtitle" placeholder="Підзаголовок (необов'язково)">
     <div class="hdr-field-label">Колір</div>
     <div class="hdr-color-row">
       <div class="hdr-swatches" id="hdrSwatches"></div>
@@ -784,6 +831,7 @@ input,select,textarea{font-family:inherit}
     <select class="modal-inp" id="hdrPattern">
       <option value="none">Без візерунка</option>
       <option value="bubbles">Кола</option>
+      <option value="waves">Хвилі</option>
       <option value="dots">Крапки</option>
       <option value="diagonal">Діагональні лінії</option>
       <option value="grid">Сітка</option>
@@ -1894,7 +1942,15 @@ function tick() {
 /* ═══════════════════════════ DOCUMENT HEADER (COVER BANNER) ═══════════════════════════ */
 const STORE_HEADER = 'textcraft2_header';
 const HEADER_COLORS = ['#4f6bf4','#f5a623','#16a34a','#e0454f','#7c3aed','#0891b2','#1b1e24'];
-let headerState = { enabled:false, tag:'', title:'', color:'#4f6bf4', pattern:'bubbles', logo:'' };
+// One-click starting points for the camp's common document types — each
+// just pre-fills color/pattern/tag; title and subtitle are left to the user.
+const HEADER_PRESETS = [
+  { name: 'Заняття',   color: '#4f6bf4', pattern: 'bubbles',  tag: 'Заняття' },
+  { name: 'Проєкт',    color: '#f5a623', pattern: 'dots',     tag: 'Проєкт' },
+  { name: 'Дом. завдання', color: '#16a34a', pattern: 'diagonal', tag: 'Домашнє завдання' },
+  { name: 'Оголошення', color: '#7c3aed', pattern: 'grid',    tag: 'Оголошення' },
+];
+let headerState = { enabled:false, tag:'', title:'', subtitle:'', color:'#4f6bf4', pattern:'bubbles', logo:'' };
 
 function loadHeaderState() {
   try {
@@ -1921,9 +1977,10 @@ function shadeColor(hex, percent) {
 function headerBannerInnerHTML(state, effectiveTitle) {
   const tagHtml = state.tag ? '<div class="doc-header-tag">' + escapeHTML(state.tag) + '</div>' : '';
   const logoHtml = state.logo ? '<img class="doc-header-logo" src="' + state.logo + '" alt="">' : '';
+  const subHtml = state.subtitle ? '<p class="doc-header-subtitle">' + escapeHTML(state.subtitle) + '</p>' : '';
   return logoHtml +
     '<div class="doc-header-bg">' + tagHtml +
-    '<h1 class="doc-header-title">' + escapeHTML(effectiveTitle || 'Без назви') + '</h1>' +
+    '<h1 class="doc-header-title">' + escapeHTML(effectiveTitle || 'Без назви') + '</h1>' + subHtml +
     '</div>' +
     '<div class="doc-header-wave"><svg viewBox="0 0 500 40" preserveAspectRatio="none"><path d="M0 38 Q125 6 250 22 T500 14 L500 40 L0 40 Z" style="fill:var(--surface)"></path></svg></div>';
 }
@@ -1948,14 +2005,35 @@ function openHeaderModal() {
   document.getElementById('hdrTag').value = headerState.tag;
   document.getElementById('hdrTitle').value = headerState.title;
   document.getElementById('hdrTitle').placeholder = document.getElementById('docTitle').value || 'Назва документа';
+  document.getElementById('hdrSubtitle').value = headerState.subtitle;
   document.getElementById('hdrPattern').value = headerState.pattern;
   document.getElementById('hdrCustomColor').value = headerState.color;
+  renderHeaderPresets();
   renderHeaderSwatches();
   renderHeaderLogoPreview();
   document.getElementById('headerOverlay').classList.add('open');
 }
 function closeHeaderModal() {
   document.getElementById('headerOverlay').classList.remove('open');
+}
+function renderHeaderPresets() {
+  const wrap = document.getElementById('hdrPresets');
+  wrap.innerHTML = HEADER_PRESETS.map((p, i) =>
+    '<button type="button" class="hdr-preset" onmousedown="event.preventDefault()" onclick="applyHeaderPreset(' + i + ')">' +
+    '<span class="hdr-preset-dot" style="background:' + p.color + '"></span>' + escapeHTML(p.name) + '</button>'
+  ).join('');
+}
+// Presets only set color/pattern/tag — title and subtitle stay whatever
+// the person already typed, since those are specific to this document.
+function applyHeaderPreset(i) {
+  const p = HEADER_PRESETS[i];
+  if (!p) return;
+  headerState.color = p.color;
+  headerState.pattern = p.pattern;
+  document.getElementById('hdrTag').value = p.tag;
+  document.getElementById('hdrPattern').value = p.pattern;
+  document.getElementById('hdrCustomColor').value = p.color;
+  renderHeaderSwatches();
 }
 function renderHeaderSwatches() {
   const wrap = document.getElementById('hdrSwatches');
@@ -1997,6 +2075,7 @@ function applyHeaderSettings() {
   headerState.enabled = document.getElementById('hdrEnabled').checked;
   headerState.tag = document.getElementById('hdrTag').value.trim();
   headerState.title = document.getElementById('hdrTitle').value.trim();
+  headerState.subtitle = document.getElementById('hdrSubtitle').value.trim();
   headerState.pattern = document.getElementById('hdrPattern').value;
   saveHeaderState();
   renderDocHeader();
@@ -2026,23 +2105,49 @@ function buildToc() {
     list.innerHTML = '<div class="toc-empty">Заголовки з\u2019являться тут</div>';
     return;
   }
+  let lastH1Item = null;
   headings.forEach(h => {
     const text = (h.textContent || '').trim();
     if (!h.id) h.id = 'toc-h-' + tocSessionId + '-' + (++tocSeq);
     const item = document.createElement('button');
     item.type = 'button';
     item.className = 'toc-item toc-' + h.tagName.toLowerCase();
-    item.textContent = text || '(без назви розділу)';
     item.dataset.hid = h.id;
+    if (h.tagName === 'H1') {
+      const chev = document.createElement('span');
+      chev.className = 'toc-chevron';
+      item.appendChild(chev);
+      lastH1Item = item;
+    } else if (lastH1Item) {
+      item.dataset.parent = lastH1Item.dataset.hid;
+      lastH1Item.dataset.hasChildren = '1';
+    }
+    const label = document.createElement('span');
+    label.className = 'toc-item-label';
+    label.textContent = text || '(без назви розділу)';
+    item.appendChild(label);
     item.onmousedown = e => e.preventDefault();
-    item.onclick = () => {
+    item.onclick = e => {
+      if (e.target.closest('.toc-chevron')) { toggleTocSection(item); return; }
       h.scrollIntoView({ behavior: 'smooth', block: 'start' });
       if (window.innerWidth <= 820) document.getElementById('tocSidebar').classList.remove('open');
     };
     list.appendChild(item);
   });
+  // An H1 with no h2/h3 underneath has nothing to collapse — drop its chevron.
+  list.querySelectorAll('.toc-item.toc-h1').forEach(btn => {
+    if (btn.dataset.hasChildren !== '1') { const c = btn.querySelector('.toc-chevron'); if (c) c.remove(); }
+  });
   filterToc(document.getElementById('tocFilter').value);
   updateActiveToc();
+}
+// Collapses/expands the h2/h3 items that sit under one H1 section, so long
+// documents don't force the reader to scroll through the whole sidebar.
+function toggleTocSection(h1Item) {
+  const collapsed = h1Item.classList.toggle('collapsed');
+  document.querySelectorAll('#tocList .toc-item[data-parent="' + h1Item.dataset.hid + '"]').forEach(el => {
+    el.classList.toggle('toc-collapsed-child', collapsed);
+  });
 }
 function toggleTocSidebar() {
   document.getElementById('tocSidebar').classList.toggle('open');
@@ -2061,6 +2166,7 @@ function filterToc(query) {
 let tocScrollScheduled = false;
 function updateActiveToc() {
   const scrollArea = document.getElementById('scrollArea');
+  updateBackToTop(scrollArea);
   const headings = [...editor.querySelectorAll('h1, h2, h3')];
   if (!headings.length) return;
   const areaTop = scrollArea.getBoundingClientRect().top;
@@ -2078,6 +2184,14 @@ document.getElementById('scrollArea').addEventListener('scroll', () => {
   tocScrollScheduled = true;
   requestAnimationFrame(() => { updateActiveToc(); tocScrollScheduled = false; });
 });
+function updateBackToTop(scrollArea) {
+  const btn = document.getElementById('backToTop');
+  if (!btn) return;
+  btn.classList.toggle('visible', scrollArea.scrollTop > 480);
+}
+function scrollToTop() {
+  document.getElementById('scrollArea').scrollTo({ top: 0, behavior: 'smooth' });
+}
 function updateStats() {
   const t = editor.innerText || '';
   const w = t.trim() === '' ? 0 : t.trim().split(/\s+/).length;
@@ -2272,13 +2386,15 @@ body{margin:0;background:var(--bg);font-family:'Inter',system-ui,sans-serif;colo
 .doc-header.pattern-diagonal::before{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.16) 0 2px,transparent 2px 14px)}
 .doc-header.pattern-bubbles::before{background-image:radial-gradient(circle at 88% 18%,rgba(255,255,255,.30) 0 58px,transparent 60px),radial-gradient(circle at 97% 68%,rgba(255,255,255,.18) 0 85px,transparent 87px),radial-gradient(circle at 68% 96%,rgba(255,255,255,.14) 0 66px,transparent 68px)}
 .doc-header.pattern-grid::before{background-image:linear-gradient(rgba(255,255,255,.14) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.14) 1px,transparent 1px);background-size:22px 22px}
+.doc-header.pattern-waves::before{background-image:repeating-radial-gradient(circle at 50% 180%,transparent 0,transparent 26px,rgba(255,255,255,.14) 27px,rgba(255,255,255,.14) 29px)}
 .doc-header-bg{position:relative;z-index:1;padding:40px 56px 60px}
 .doc-header-tag{display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,.22);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px;margin-bottom:16px;max-width:calc(100% - 90px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .doc-header-title{font-family:'Inter',sans-serif;font-size:2.1em;font-weight:700;line-height:1.25;margin:0;letter-spacing:-.01em;max-width:78%;color:#fff}
+.doc-header-subtitle{font-family:'Inter',sans-serif;font-size:14.5px;font-weight:500;line-height:1.5;margin:10px 0 0;max-width:70%;color:rgba(255,255,255,.85)}
 .doc-header-logo{position:absolute;z-index:1;top:22px;right:28px;height:34px;max-width:130px;object-fit:contain}
 .doc-header-wave{position:absolute;left:0;right:0;bottom:-1px;line-height:0;z-index:1}
 .doc-header-wave svg{width:100%;height:34px;display:block}
-@media(max-width:680px){.doc-header-bg{padding:28px 24px 44px}.doc-header-title{font-size:1.5em;max-width:100%}.doc-header-logo{height:26px;top:14px;right:16px}}
+@media(max-width:680px){.doc-header-bg{padding:28px 24px 44px}.doc-header-title{font-size:1.5em;max-width:100%}.doc-header-subtitle{max-width:100%}.doc-header-logo{height:26px;top:14px;right:16px}}
 .content{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.7}
 .content h1{font-family:'Inter',sans-serif;font-size:2em;font-weight:700;line-height:1.25;margin:0 0 .5em;letter-spacing:-.01em}
 .content h2{font-family:'Inter',sans-serif;font-size:1.5em;font-weight:700;margin:1.1em 0 .5em}
@@ -2334,9 +2450,16 @@ body{margin:0;background:var(--bg);font-family:'Inter',system-ui,sans-serif;colo
 .lightbox-btn:hover{background:rgba(255,255,255,.16)}
 .lightbox-close{position:absolute;top:16px;right:16px}
 .lightbox-pct{color:rgba(255,255,255,.75);font-family:'Inter',sans-serif;font-size:12.5px;width:44px;text-align:center;user-select:none}
+.reading-progress{position:fixed;top:0;left:0;height:3px;width:0%;background:var(--accent);z-index:9500;transition:width .1s linear}
+.back-to-top{position:fixed;right:28px;bottom:28px;z-index:300;width:38px;height:38px;border-radius:50%;border:1px solid var(--border2);background:var(--surface);color:var(--muted);box-shadow:0 6px 18px rgba(20,22,38,.14);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity .15s,transform .15s,background .12s,color .12s;cursor:pointer}
+.back-to-top.visible{opacity:1;pointer-events:auto;transform:translateY(0)}
+.back-to-top:hover{background:var(--accent-bg);color:#3d56d6;border-color:var(--accent-lt)}
+.back-to-top svg{width:16px;height:16px}
+@media(max-width:820px){.back-to-top{right:16px;bottom:16px}}
 </style>
 </head>
 <body>
+<div class="reading-progress" id="readingProgress"></div>
 <div class="app-body">
   <aside class="toc-sidebar">
     <div class="toc-header">Зміст</div>
@@ -2348,6 +2471,9 @@ body{margin:0;background:var(--bg);font-family:'Inter',system-ui,sans-serif;colo
     </div></div></div>
   </div>
 </div>
+<button type="button" class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 12.5V3.5M4 7l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
 <div class="lightbox-overlay" id="lightboxOverlay">
   <button class="lightbox-btn lightbox-close" id="lightboxClose">✕</button>
   <div class="lightbox-stage" id="lightboxStage">
@@ -2476,6 +2602,26 @@ window.copyCardBlock = function(btn) {
       a.classList.toggle('filtered-out', q !== '' && a.textContent.toLowerCase().indexOf(q) === -1);
     });
   };
+})();
+// Reading progress bar + "back to top" button.
+(function() {
+  var bar = document.getElementById('readingProgress');
+  var btn = document.getElementById('backToTop');
+  if (!bar && !btn) return;
+  var scheduled = false;
+  function update() {
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? Math.min(100, (doc.scrollTop / max) * 100) : 0;
+    if (bar) bar.style.width = pct + '%';
+    if (btn) btn.classList.toggle('visible', doc.scrollTop > 480);
+  }
+  window.addEventListener('scroll', function() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(function() { update(); scheduled = false; });
+  }, { passive: true });
+  update();
 })();
 <\/script>
 </body>
