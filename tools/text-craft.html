@@ -178,6 +178,13 @@ input,select,textarea{font-family:inherit}
   padding:14px 16px 10px;font-size:11px;font-weight:700;letter-spacing:.6px;
   text-transform:uppercase;color:var(--subtle);flex-shrink:0;
 }
+.toc-search{position:relative;margin:0 8px 8px;flex-shrink:0}
+.toc-search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--subtle);pointer-events:none}
+.toc-search input{
+  width:100%;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--bg);
+  padding:0 10px 0 28px;font-size:12.5px;outline:none;color:var(--text);
+}
+.toc-search input:focus{border-color:var(--accent-lt);background:var(--surface)}
 .toc-list{flex:1;overflow-y:auto;padding:0 8px 16px}
 .toc-empty{padding:8px;font-size:12.5px;color:var(--subtle);line-height:1.5}
 .toc-item{
@@ -185,11 +192,16 @@ input,select,textarea{font-family:inherit}
   padding:6px 10px;margin-bottom:1px;border-radius:6px;border:none;background:transparent;
   font-size:13px;color:var(--muted);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  border-left:2px solid transparent;
+  transition:background .12s,color .12s,border-color .12s;
 }
 .toc-item:hover{background:var(--bg);color:var(--text)}
+.toc-item.active{background:var(--accent-bg);color:var(--accent-h);border-left-color:var(--accent)}
 .toc-item.toc-h1{font-weight:600;color:var(--text)}
+.toc-item.toc-h1.active{color:var(--accent-h)}
 .toc-item.toc-h2{padding-left:20px}
 .toc-item.toc-h3{padding-left:32px;font-size:12.5px}
+.toc-item.filtered-out{display:none}
 @media(max-width:820px){
   .toc-sidebar{position:fixed;top:var(--topbar-h);bottom:0;left:0;z-index:400;transform:translateX(-100%);transition:transform .18s;box-shadow:4px 0 20px rgba(20,22,38,.12)}
   .toc-sidebar.open{transform:translateX(0)}
@@ -201,13 +213,51 @@ input,select,textarea{font-family:inherit}
 .scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;background:var(--bg)}
 .page-wrap{width:88%;max-width:1400px;margin:0 auto;padding:40px 0 200px}
 .page{
+  --page-pad-x:64px;--page-pad-y:56px;
   background:var(--surface);
   border:1px solid var(--border);
   border-radius:var(--r-lg);
   box-shadow:0 1px 2px rgba(20,22,38,.04);
-  padding:56px 64px;
+  padding:var(--page-pad-y) var(--page-pad-x);
+  overflow:hidden;
 }
-@media(max-width:680px){.page{padding:32px 22px}.page-wrap{width:100%;padding:16px 10px 160px}}
+@media(max-width:680px){.page{--page-pad-x:22px;--page-pad-y:32px}.page-wrap{width:100%;padding:16px 10px 160px}}
+
+/* ═══════════ DOCUMENT HEADER (COVER BANNER) ═══════════ */
+.doc-header{
+  position:relative;overflow:hidden;color:#fff;
+  margin:calc(-1 * var(--page-pad-y)) calc(-1 * var(--page-pad-x)) 32px;
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+}
+.doc-header::before{content:'';position:absolute;inset:0;pointer-events:none}
+.doc-header.pattern-dots::before{background-image:radial-gradient(rgba(255,255,255,.35) 1.6px,transparent 1.7px);background-size:16px 16px}
+.doc-header.pattern-diagonal::before{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.16) 0 2px,transparent 2px 14px)}
+.doc-header.pattern-bubbles::before{
+  background-image:
+    radial-gradient(circle at 88% 18%,rgba(255,255,255,.30) 0 58px,transparent 60px),
+    radial-gradient(circle at 97% 68%,rgba(255,255,255,.18) 0 85px,transparent 87px),
+    radial-gradient(circle at 68% 96%,rgba(255,255,255,.14) 0 66px,transparent 68px);
+}
+.doc-header.pattern-grid::before{background-image:linear-gradient(rgba(255,255,255,.14) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.14) 1px,transparent 1px);background-size:22px 22px}
+.doc-header-bg{position:relative;z-index:1;padding:40px 56px 60px}
+.doc-header-tag{
+  display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;
+  background:rgba(255,255,255,.22);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;
+  letter-spacing:.3px;margin-bottom:16px;max-width:calc(100% - 90px);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.doc-header-title{
+  font-family:'Inter',sans-serif;font-size:2.1em;font-weight:700;line-height:1.25;
+  margin:0;letter-spacing:-.01em;max-width:78%;color:#fff;
+}
+.doc-header-logo{position:absolute;z-index:1;top:22px;right:28px;height:34px;max-width:130px;object-fit:contain}
+.doc-header-wave{position:absolute;left:0;right:0;bottom:-1px;line-height:0;z-index:1}
+.doc-header-wave svg{width:100%;height:34px;display:block}
+@media(max-width:680px){
+  .doc-header-bg{padding:28px 24px 44px}
+  .doc-header-title{font-size:1.5em;max-width:100%}
+  .doc-header-logo{height:26px;top:14px;right:16px}
+}
 
 .editor{
   outline:none;
@@ -395,6 +445,20 @@ input,select,textarea{font-family:inherit}
 .modal-btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
 .modal-btn.danger:hover{background:#c73139}
 .modal-btn:hover{background:var(--bg)}
+.modal-wide{max-width:460px}
+.hdr-toggle-row{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--text);margin-bottom:14px;cursor:pointer}
+.hdr-toggle-row input{width:15px;height:15px;accent-color:var(--accent);flex-shrink:0}
+.hdr-field-label{font-size:11.5px;font-weight:600;color:var(--muted);margin:2px 0 8px;letter-spacing:.2px}
+.hdr-color-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.hdr-swatches{display:flex;gap:7px;flex-wrap:wrap}
+.hdr-swatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.hdr-swatch.on{border-color:var(--text)}
+.hdr-color-custom{width:30px;height:30px;padding:0;border:1px solid var(--border2);border-radius:7px;background:none;flex-shrink:0}
+.hdr-logo-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.hdr-logo-preview{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--subtle);flex:1;min-width:0}
+.hdr-logo-preview img{height:32px;max-width:100px;object-fit:contain;border-radius:4px;border:1px solid var(--border)}
+.hdr-logo-remove{border:none;background:none;color:var(--danger);font-size:12px;font-weight:500;padding:0;flex-shrink:0}
+.hdr-logo-btn{display:inline-flex;flex-shrink:0}
 
 /* ═══════════ STATUS BAR ═══════════ */
 .statusbar{
@@ -454,6 +518,9 @@ input,select,textarea{font-family:inherit}
     <span class="save-label" id="saveLabel"><span class="save-dot" id="saveDot"></span><span id="saveText">Збережено</span></span>
     <button class="btn btn-danger btn-icon" onclick="clearAll()" data-tip="Очистити весь документ">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 011-1h1a1 1 0 011 1v1.5M4.5 4.5l.6 8a1 1 0 001 .9h3.8a1 1 0 001-.9l.6-8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="btn btn-ghost btn-icon" onclick="openHeaderModal()" data-tip="Шапка документа">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="3" width="12" height="5.5" rx="1.3"/><path d="M2 11.5h12M2 14h7" stroke-linecap="round"/></svg>
     </button>
     <button class="btn btn-outline btn-icon" onclick="exportHTML()" data-tip="Експорт у HTML">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8m0 0l-3-3m3 3l3-3M3 12v1.5A1.5 1.5 0 004.5 15h7a1.5 1.5 0 001.5-1.5V12" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -580,6 +647,10 @@ input,select,textarea{font-family:inherit}
 <div class="app-body">
   <aside class="toc-sidebar" id="tocSidebar">
     <div class="toc-header">Зміст</div>
+    <div class="toc-search">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5" stroke-linecap="round"/></svg>
+      <input type="text" id="tocFilter" placeholder="Пошук у змісті…" oninput="filterToc(this.value)">
+    </div>
     <div class="toc-list" id="tocList">
       <div class="toc-empty">Заголовки з'являться тут</div>
     </div>
@@ -587,6 +658,7 @@ input,select,textarea{font-family:inherit}
   <div class="scroll-area" id="scrollArea">
     <div class="page-wrap">
       <div class="page">
+        <div class="doc-header" id="docHeader" style="display:none"></div>
         <div class="editor" id="editor" contenteditable="true" spellcheck="true">
           <h1></h1>
           <p><br></p>
@@ -689,6 +761,44 @@ input,select,textarea{font-family:inherit}
     <div class="modal-actions">
       <button class="modal-btn" onmousedown="event.preventDefault()" onclick="closeConfirmModal(false)">Скасувати</button>
       <button class="modal-btn primary" id="confirmOkBtn" onmousedown="event.preventDefault()" onclick="closeConfirmModal(true)">Так, очистити</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ HEADER (COVER BANNER) MODAL ═══════ -->
+<div class="overlay" id="headerOverlay">
+  <div class="modal modal-wide">
+    <h3>Шапка документа</h3>
+    <label class="hdr-toggle-row">
+      <input type="checkbox" id="hdrEnabled">
+      <span>Показувати шапку на початку документа</span>
+    </label>
+    <input type="text" class="modal-inp" id="hdrTag" placeholder="Мітка (напр. «Урок 3», «Lessons»)">
+    <input type="text" class="modal-inp" id="hdrTitle" placeholder="Назва документа">
+    <div class="hdr-field-label">Колір</div>
+    <div class="hdr-color-row">
+      <div class="hdr-swatches" id="hdrSwatches"></div>
+      <input type="color" id="hdrCustomColor" class="hdr-color-custom" onchange="onHeaderCustomColor(this)" data-tip="Свій колір">
+    </div>
+    <div class="hdr-field-label">Візерунок фону</div>
+    <select class="modal-inp" id="hdrPattern">
+      <option value="none">Без візерунка</option>
+      <option value="bubbles">Кола</option>
+      <option value="dots">Крапки</option>
+      <option value="diagonal">Діагональні лінії</option>
+      <option value="grid">Сітка</option>
+    </select>
+    <div class="hdr-field-label">Логотип (необов'язково)</div>
+    <div class="hdr-logo-row">
+      <div class="hdr-logo-preview" id="hdrLogoPreview"></div>
+      <label class="modal-btn hdr-logo-btn">
+        Завантажити
+        <input type="file" accept="image/*" style="display:none" onchange="uploadHeaderLogo(this)">
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeHeaderModal()">Скасувати</button>
+      <button class="modal-btn primary" onclick="applyHeaderSettings()">Застосувати</button>
     </div>
   </div>
 </div>
@@ -1213,6 +1323,7 @@ document.addEventListener('keydown', e => {
     closeDropdowns();
     closeLinkModal();
     if (document.getElementById('confirmOverlay').classList.contains('open')) closeConfirmModal(false);
+    closeHeaderModal();
   }
 });
 // Clicking the dark backdrop (not the modal card itself) cancels
@@ -1221,6 +1332,7 @@ document.querySelectorAll('.overlay').forEach(ov => {
     if (e.target !== ov) return;
     if (ov.id === 'linkOverlay') closeLinkModal();
     else if (ov.id === 'confirmOverlay' && ov.classList.contains('open')) closeConfirmModal(false);
+    else if (ov.id === 'headerOverlay') closeHeaderModal();
   });
 });
 
@@ -1779,6 +1891,118 @@ function tick() {
   scheduleToc();
 }
 
+/* ═══════════════════════════ DOCUMENT HEADER (COVER BANNER) ═══════════════════════════ */
+const STORE_HEADER = 'textcraft2_header';
+const HEADER_COLORS = ['#4f6bf4','#f5a623','#16a34a','#e0454f','#7c3aed','#0891b2','#1b1e24'];
+let headerState = { enabled:false, tag:'', title:'', color:'#4f6bf4', pattern:'bubbles', logo:'' };
+
+function loadHeaderState() {
+  try {
+    const raw = localStorage.getItem(STORE_HEADER);
+    if (raw) headerState = Object.assign({}, headerState, JSON.parse(raw));
+  } catch(e) {}
+}
+function saveHeaderState() {
+  try { localStorage.setItem(STORE_HEADER, JSON.stringify(headerState)); } catch(e) {}
+}
+// Darkens (negative percent) or lightens (positive) a #rrggbb color by
+// blending each channel toward black/white — used to turn the single
+// chosen accent color into a two-tone gradient for the banner.
+function shadeColor(hex, percent) {
+  const n = (hex || '#4f6bf4').replace('#', '');
+  const full = n.length === 3 ? n.split('').map(c => c + c).join('') : n;
+  const num = parseInt(full, 16) || 0;
+  let r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+  const target = percent < 0 ? 0 : 255, p = Math.abs(percent);
+  r = Math.round((target - r) * p) + r; g = Math.round((target - g) * p) + g; b = Math.round((target - b) * p) + b;
+  const clamp = v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0');
+  return '#' + clamp(r) + clamp(g) + clamp(b);
+}
+function headerBannerInnerHTML(state, effectiveTitle) {
+  const tagHtml = state.tag ? '<div class="doc-header-tag">' + escapeHTML(state.tag) + '</div>' : '';
+  const logoHtml = state.logo ? '<img class="doc-header-logo" src="' + state.logo + '" alt="">' : '';
+  return logoHtml +
+    '<div class="doc-header-bg">' + tagHtml +
+    '<h1 class="doc-header-title">' + escapeHTML(effectiveTitle || 'Без назви') + '</h1>' +
+    '</div>' +
+    '<div class="doc-header-wave"><svg viewBox="0 0 500 40" preserveAspectRatio="none"><path d="M0 38 Q125 6 250 22 T500 14 L500 40 L0 40 Z" style="fill:var(--surface)"></path></svg></div>';
+}
+function renderDocHeader() {
+  const el = document.getElementById('docHeader');
+  if (!headerState.enabled) { el.style.display = 'none'; el.removeAttribute('style'); el.style.display = 'none'; el.innerHTML = ''; return; }
+  const title = (headerState.title || document.getElementById('docTitle').value || '').trim();
+  el.className = 'doc-header pattern-' + headerState.pattern;
+  el.style.background = 'linear-gradient(135deg, ' + headerState.color + ', ' + shadeColor(headerState.color, -0.35) + ')';
+  el.style.display = 'block';
+  el.innerHTML = headerBannerInnerHTML(headerState, title);
+}
+function buildHeaderExportHTML(fallbackTitle) {
+  if (!headerState.enabled) return '';
+  const title = (headerState.title || fallbackTitle || '').trim();
+  const bg = 'linear-gradient(135deg, ' + headerState.color + ', ' + shadeColor(headerState.color, -0.35) + ')';
+  return '<div class="doc-header pattern-' + headerState.pattern + '" style="background:' + bg + '">' +
+    headerBannerInnerHTML(headerState, title) + '</div>';
+}
+function openHeaderModal() {
+  document.getElementById('hdrEnabled').checked = headerState.enabled;
+  document.getElementById('hdrTag').value = headerState.tag;
+  document.getElementById('hdrTitle').value = headerState.title;
+  document.getElementById('hdrTitle').placeholder = document.getElementById('docTitle').value || 'Назва документа';
+  document.getElementById('hdrPattern').value = headerState.pattern;
+  document.getElementById('hdrCustomColor').value = headerState.color;
+  renderHeaderSwatches();
+  renderHeaderLogoPreview();
+  document.getElementById('headerOverlay').classList.add('open');
+}
+function closeHeaderModal() {
+  document.getElementById('headerOverlay').classList.remove('open');
+}
+function renderHeaderSwatches() {
+  const wrap = document.getElementById('hdrSwatches');
+  wrap.innerHTML = HEADER_COLORS.map(c =>
+    '<button type="button" class="hdr-swatch' + (c.toLowerCase() === headerState.color.toLowerCase() ? ' on' : '') +
+    '" style="background:' + c + '" onmousedown="event.preventDefault()" onclick="pickHeaderColor(\'' + c + '\')"></button>'
+  ).join('');
+}
+function pickHeaderColor(c) {
+  headerState.color = c;
+  document.getElementById('hdrCustomColor').value = c;
+  renderHeaderSwatches();
+}
+function onHeaderCustomColor(input) {
+  headerState.color = input.value;
+  renderHeaderSwatches();
+}
+function renderHeaderLogoPreview() {
+  const wrap = document.getElementById('hdrLogoPreview');
+  wrap.innerHTML = headerState.logo
+    ? '<img src="' + headerState.logo + '" alt=""><button type="button" class="hdr-logo-remove" onmousedown="event.preventDefault()" onclick="removeHeaderLogo()">Прибрати</button>'
+    : '<span>Логотип не додано</span>';
+}
+function removeHeaderLogo() {
+  headerState.logo = '';
+  renderHeaderLogoPreview();
+}
+function uploadHeaderLogo(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  downscaleImageFile(file).then(dataUrl => {
+    if (!dataUrl) return;
+    headerState.logo = dataUrl;
+    renderHeaderLogoPreview();
+  });
+}
+function applyHeaderSettings() {
+  headerState.enabled = document.getElementById('hdrEnabled').checked;
+  headerState.tag = document.getElementById('hdrTag').value.trim();
+  headerState.title = document.getElementById('hdrTitle').value.trim();
+  headerState.pattern = document.getElementById('hdrPattern').value;
+  saveHeaderState();
+  renderDocHeader();
+  closeHeaderModal();
+}
+
 /* ═══════════════════════════ TABLE OF CONTENTS ═══════════════════════════ */
 let tocTimer = null;
 let tocSeq = 0;
@@ -1809,6 +2033,7 @@ function buildToc() {
     item.type = 'button';
     item.className = 'toc-item toc-' + h.tagName.toLowerCase();
     item.textContent = text || '(без назви розділу)';
+    item.dataset.hid = h.id;
     item.onmousedown = e => e.preventDefault();
     item.onclick = () => {
       h.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1816,10 +2041,43 @@ function buildToc() {
     };
     list.appendChild(item);
   });
+  filterToc(document.getElementById('tocFilter').value);
+  updateActiveToc();
 }
 function toggleTocSidebar() {
   document.getElementById('tocSidebar').classList.toggle('open');
 }
+// Filters the TOC list by substring match on heading text (case-insensitive,
+// diacritic-agnostic isn't needed here since it's a plain contains check).
+function filterToc(query) {
+  const q = query.trim().toLowerCase();
+  document.querySelectorAll('#tocList .toc-item').forEach(btn => {
+    btn.classList.toggle('filtered-out', q !== '' && !btn.textContent.toLowerCase().includes(q));
+  });
+}
+// Highlights whichever heading is currently at (or just above) the top of
+// the visible scroll area, so the sidebar always shows "you are here"
+// instead of just being a list of jump-links.
+let tocScrollScheduled = false;
+function updateActiveToc() {
+  const scrollArea = document.getElementById('scrollArea');
+  const headings = [...editor.querySelectorAll('h1, h2, h3')];
+  if (!headings.length) return;
+  const areaTop = scrollArea.getBoundingClientRect().top;
+  let activeId = headings[0].id;
+  for (const h of headings) {
+    if (h.getBoundingClientRect().top - areaTop <= 96) activeId = h.id;
+    else break;
+  }
+  document.querySelectorAll('#tocList .toc-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.hid === activeId);
+  });
+}
+document.getElementById('scrollArea').addEventListener('scroll', () => {
+  if (tocScrollScheduled) return;
+  tocScrollScheduled = true;
+  requestAnimationFrame(() => { updateActiveToc(); tocScrollScheduled = false; });
+});
 function updateStats() {
   const t = editor.innerText || '';
   const w = t.trim() === '' ? 0 : t.trim().split(/\s+/).length;
@@ -1868,6 +2126,8 @@ function loadSaved() {
     if (html) editor.innerHTML = html;
     if (title) document.getElementById('docTitle').value = title;
   } catch(e) {}
+  loadHeaderState();
+  renderDocHeader();
   updateStats();
   buildToc();
 }
@@ -1961,14 +2221,17 @@ function exportHTML() {
   const headings = [...clone.querySelectorAll('h1, h2, h3')];
   let tocHtml;
   if (headings.length) {
-    tocHtml = headings.map((h, i) => {
-      if (!h.id) h.id = 'toc-h-export-' + i;
-      const text = (h.textContent || '').trim() || '(без назви розділу)';
-      return '<a href="#' + h.id + '" class="toc-item toc-' + h.tagName.toLowerCase() + '">' + escapeHTML(text) + '</a>';
-    }).join('');
+    tocHtml = '<div class="toc-search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5" stroke-linecap="round"/></svg>' +
+      '<input type="text" id="tocFilter" placeholder="Пошук у змісті…" oninput="filterToc(this.value)"></div>' +
+      '<div id="tocList">' + headings.map((h, i) => {
+        if (!h.id) h.id = 'toc-h-export-' + i;
+        const text = (h.textContent || '').trim() || '(без назви розділу)';
+        return '<a href="#' + h.id + '" data-hid="' + h.id + '" class="toc-item toc-' + h.tagName.toLowerCase() + '">' + escapeHTML(text) + '</a>';
+      }).join('') + '</div>';
   } else {
     tocHtml = '<div class="toc-empty">Немає заголовків</div>';
   }
+  const headerHtml = buildHeaderExportHTML(title);
 
   const html = `<!DOCTYPE html>
 <html lang="uk">
@@ -1986,16 +2249,36 @@ body{margin:0;background:var(--bg);font-family:'Inter',system-ui,sans-serif;colo
 .toc-sidebar{width:240px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);padding:0 8px 16px}
 .toc-header{padding:16px 12px 10px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--subtle)}
 .toc-empty{padding:8px 12px;font-size:12.5px;color:var(--subtle);line-height:1.5}
-.toc-item{display:block;padding:6px 10px;margin-bottom:1px;border-radius:6px;font-size:13px;color:var(--muted);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toc-item{display:block;padding:6px 10px;margin-bottom:1px;border-radius:6px;font-size:13px;color:var(--muted);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:2px solid transparent}
 .toc-item:hover{background:var(--bg);color:var(--text)}
+.toc-item.active{background:var(--accent-bg);color:#3d56d6;border-left-color:var(--accent)}
 .toc-item.toc-h1{font-weight:600;color:var(--text)}
+.toc-item.toc-h1.active{color:#3d56d6}
 .toc-item.toc-h2{padding-left:20px}
 .toc-item.toc-h3{padding-left:32px;font-size:12.5px}
+.toc-item.filtered-out{display:none}
+.toc-search{position:relative;margin:0 4px 8px}
+.toc-search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--subtle);pointer-events:none}
+.toc-search input{width:100%;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--bg);padding:0 10px 0 28px;font-size:12.5px;outline:none;color:var(--text);box-sizing:border-box}
+.toc-search input:focus{border-color:var(--accent-lt);background:var(--surface)}
 .scroll-area{flex:1;min-width:0}
 .page-wrap{width:88%;max-width:1400px;margin:0 auto;padding:48px 0 100px}
-.page{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 1px 2px rgba(20,22,38,.04);padding:56px 64px}
+.page{--page-pad-x:64px;--page-pad-y:56px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 1px 2px rgba(20,22,38,.04);padding:var(--page-pad-y) var(--page-pad-x);overflow:hidden}
 @media(max-width:820px){.app-body{flex-direction:column}.toc-sidebar{position:static;width:100%;height:auto;max-height:240px;border-right:none;border-bottom:1px solid var(--border)}}
-@media(max-width:680px){.page{padding:28px 20px}.page-wrap{width:100%;padding:16px 10px 60px}}
+@media(max-width:680px){.page{--page-pad-x:20px;--page-pad-y:28px}.page-wrap{width:100%;padding:16px 10px 60px}}
+.doc-header{position:relative;overflow:hidden;color:#fff;margin:calc(-1 * var(--page-pad-y)) calc(-1 * var(--page-pad-x)) 32px;border-radius:var(--r-lg) var(--r-lg) 0 0}
+.doc-header::before{content:'';position:absolute;inset:0;pointer-events:none}
+.doc-header.pattern-dots::before{background-image:radial-gradient(rgba(255,255,255,.35) 1.6px,transparent 1.7px);background-size:16px 16px}
+.doc-header.pattern-diagonal::before{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.16) 0 2px,transparent 2px 14px)}
+.doc-header.pattern-bubbles::before{background-image:radial-gradient(circle at 88% 18%,rgba(255,255,255,.30) 0 58px,transparent 60px),radial-gradient(circle at 97% 68%,rgba(255,255,255,.18) 0 85px,transparent 87px),radial-gradient(circle at 68% 96%,rgba(255,255,255,.14) 0 66px,transparent 68px)}
+.doc-header.pattern-grid::before{background-image:linear-gradient(rgba(255,255,255,.14) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.14) 1px,transparent 1px);background-size:22px 22px}
+.doc-header-bg{position:relative;z-index:1;padding:40px 56px 60px}
+.doc-header-tag{display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,.22);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px;margin-bottom:16px;max-width:calc(100% - 90px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-header-title{font-family:'Inter',sans-serif;font-size:2.1em;font-weight:700;line-height:1.25;margin:0;letter-spacing:-.01em;max-width:78%;color:#fff}
+.doc-header-logo{position:absolute;z-index:1;top:22px;right:28px;height:34px;max-width:130px;object-fit:contain}
+.doc-header-wave{position:absolute;left:0;right:0;bottom:-1px;line-height:0;z-index:1}
+.doc-header-wave svg{width:100%;height:34px;display:block}
+@media(max-width:680px){.doc-header-bg{padding:28px 24px 44px}.doc-header-title{font-size:1.5em;max-width:100%}.doc-header-logo{height:26px;top:14px;right:16px}}
 .content{font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:1.7}
 .content h1{font-family:'Inter',sans-serif;font-size:2em;font-weight:700;line-height:1.25;margin:0 0 .5em;letter-spacing:-.01em}
 .content h2{font-family:'Inter',sans-serif;font-size:1.5em;font-weight:700;margin:1.1em 0 .5em}
@@ -2060,7 +2343,7 @@ body{margin:0;background:var(--bg);font-family:'Inter',system-ui,sans-serif;colo
     ${tocHtml}
   </aside>
   <div class="scroll-area">
-    <div class="page-wrap"><div class="page"><div class="content">
+    <div class="page-wrap"><div class="page">${headerHtml}<div class="content">
     ${clone.innerHTML}
     </div></div></div>
   </div>
@@ -2166,6 +2449,33 @@ window.copyCardBlock = function(btn) {
     applyTransform();
   });
   window.addEventListener('mouseup', function() { dragging = false; img.style.cursor = 'grab'; });
+})();
+// Sidebar "you are here" highlighting + search filter — same behavior as
+// the live editor, reimplemented standalone since this file has no build step.
+(function() {
+  var links = Array.prototype.slice.call(document.querySelectorAll('#tocList .toc-item'));
+  if (!links.length) return;
+  var headings = links.map(function(a) { return document.getElementById(a.dataset.hid); }).filter(Boolean);
+  var scheduled = false;
+  function updateActive() {
+    var activeId = headings.length ? headings[0].id : null;
+    for (var i = 0; i < headings.length; i++) {
+      if (headings[i].getBoundingClientRect().top <= 96) activeId = headings[i].id; else break;
+    }
+    links.forEach(function(a) { a.classList.toggle('active', a.dataset.hid === activeId); });
+  }
+  window.addEventListener('scroll', function() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(function() { updateActive(); scheduled = false; });
+  }, { passive: true });
+  updateActive();
+  window.filterToc = function(query) {
+    var q = query.trim().toLowerCase();
+    links.forEach(function(a) {
+      a.classList.toggle('filtered-out', q !== '' && a.textContent.toLowerCase().indexOf(q) === -1);
+    });
+  };
 })();
 <\/script>
 </body>
