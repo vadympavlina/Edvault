@@ -225,7 +225,7 @@
     flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative;
   }
   .canvas-viewport {
-    flex: 1; overflow: auto; position: relative;
+    flex: 1; overflow: auto; position: relative; touch-action: none; overscroll-behavior: contain;
     /* тонка крапкова сітка на "світі" довкола сторінки — видно, що це нескінченний пан-простір,
        а не порожня прогалина; заодно дає візуальний орієнтир під час панорамування (додано) */
     background-color: var(--canvas-bg);
@@ -261,7 +261,21 @@
   .page-stage canvas.layer-strokes { z-index: 2; }
   .page-stage canvas.layer-objects { z-index: 3; }
   .page-stage canvas.layer-preview { z-index: 4; pointer-events: none; }
-  .page-stage canvas.layer-interact { z-index: 5; }
+  .page-stage canvas.layer-interact { z-index: 5; touch-action: none; }
+  .page-stage canvas.layer-interact.interact-tool-laser { cursor: none; }
+  .wb-back { display: flex; align-items: center; justify-content: center; text-decoration: none; color: inherit; }
+  .strip-clear { flex-shrink: 0; height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font: 600 12px 'Inter', sans-serif; cursor: pointer; margin-left: 8px; }
+  .strip-clear:hover { color: var(--danger); border-color: var(--danger); }
+  .export-menu { min-width: 250px; }
+  #printArea { display: none; }
+  @media print {
+    @page { margin: 8mm; }
+    body.printing { height: auto !important; overflow: visible !important; background: #fff !important; }
+    body.printing > *:not(#printArea) { display: none !important; }
+    body.printing #printArea { display: block; }
+    #printArea img { display: block; width: 100%; height: auto; break-after: page; page-break-after: always; }
+    #printArea img:last-child { break-after: auto; page-break-after: auto; }
+  }
 
   /* ── зум-панель, плаває над полотном ── */
   .zoom-controls {
@@ -632,6 +646,9 @@
 <div class="app">
   <div class="topbar">
     <div class="topbar-left">
+      <a class="btn-icon wb-back" href="../tools.html" title="До всіх інструментів Edvault" aria-label="До інструментів">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+      </a>
       <div class="topbar-logo">
         <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
       </div>
@@ -661,6 +678,9 @@
       <div class="topbar-divider"></div>
       <button class="btn-icon" id="btnClearPage" title="Очистити малюнки на сторінці">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button>
+      <button class="btn-icon" id="btnExport" title="Зберегти дошку: PNG сторінки або PDF усіх сторінок">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
       </button>
       <button class="btn-icon" id="btnScreenshot" title="Виділити область і зберегти як зображення">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3M6 18v3M3 6h3M18 6h3M3 18h3M18 18h3M9 3h6M9 21h6M21 9v6M3 9v6"/></svg>
@@ -730,6 +750,10 @@
           <button class="tool-btn" data-tool="arrow" title="Стрілка">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="9 5 19 5 19 15"/></svg>
             <span>Стрілка</span>
+          </button>
+          <button class="tool-btn" data-tool="laser" title="Лазерна указка (K)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
+            <span>Указка</span>
           </button>
         </div>
       </div>
@@ -866,6 +890,9 @@
         <button class="pt-btn" data-tool="arrow" title="Стрілка">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="9 5 19 5 19 15"/></svg>
         </button>
+        <button class="pt-btn" data-tool="laser" title="Лазерна указка (K)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        </button>
         <div class="pt-sep"></div>
         <div class="pt-color-wrap">
           <button class="pt-btn" id="ptColorBtn" title="Колір">
@@ -895,7 +922,8 @@
     <button class="strip-add" id="stripAdd" title="Додати сторінку">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
-    <span class="strip-hint">Прогрес не зберігається між сеансами</span>
+    <span class="strip-hint" id="stripHint">Дошка зберігається автоматично в цьому браузері</span>
+    <button class="strip-clear" id="btnNewBoard" title="Прибрати всі сторінки й почати з чистої дошки">Нова дошка</button>
   </div>
 </div>
 
@@ -960,6 +988,7 @@
       <div class="kbd-row"><span>Коло</span><span class="kbd-keys"><span class="kbd">C</span></span></div>
       <div class="kbd-row"><span>Лінія</span><span class="kbd-keys"><span class="kbd">L</span></span></div>
       <div class="kbd-row"><span>Стрілка</span><span class="kbd-keys"><span class="kbd">A</span></span></div>
+      <div class="kbd-row"><span>Лазерна указка</span><span class="kbd-keys"><span class="kbd">K</span></span></div>
       <div class="kbd-group-label">Дії</div>
       <div class="kbd-row"><span>Скасувати</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">Z</span></span></div>
       <div class="kbd-row"><span>Повторити</span><span class="kbd-keys"><span class="kbd">Ctrl</span><span class="kbd">Shift</span><span class="kbd">Z</span></span></div>
@@ -987,6 +1016,30 @@
 </div>
 
 <div class="ui-tooltip" id="uiTooltip"></div>
+
+<div class="ctx-menu export-menu" id="exportMenu">
+  <button class="ctx-item" data-export="png">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
+    <span>PNG — поточна сторінка</span>
+  </button>
+  <button class="ctx-item" data-export="pdf">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+    <span>PDF — усі сторінки (друк)</span>
+  </button>
+</div>
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-panel" style="max-width:420px">
+    <div class="modal-head"><h2 id="confirmTitle">Підтвердження</h2></div>
+    <div class="modal-body">
+      <p id="confirmMsg" style="margin:0 0 18px;font-size:14px;line-height:1.55;color:var(--text2)"></p>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-ghost" id="confirmNo">Скасувати</button>
+        <button class="btn btn-primary" id="confirmYes">Так</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- контекстне меню ПКМ по об'єкту (додано) -->
 <div class="ctx-menu" id="objContextMenu">
@@ -1020,7 +1073,7 @@
 
   const PEN_COLORS = ['#1a1d23', '#ef4444', '#f5b942', '#16a34a', '#4F6BF4', '#a855f7', '#ec4899', '#0891b2', '#78716c', '#ffffff'];
   const STICKY_COLORS = ['#fef3c7', '#fde2e2', '#dcfce7', '#dbeafe', '#f3e8ff', '#fee2e2'];
-  const TOOL_DEFAULT_SIZE = { pen: 3, highlighter: 18, eraser: 22, rect: 3, circle: 3, line: 3, arrow: 3, text: 22, sticky: 15, number: 44 };
+  const TOOL_DEFAULT_SIZE = { laser: 6, pen: 3, highlighter: 18, eraser: 22, rect: 3, circle: 3, line: 3, arrow: 3, text: 22, sticky: 15, number: 44 };
   const BLANK_W = 1400, BLANK_H = 900;
   const STICKY_W = 190, STICKY_H = 170;
 
@@ -1053,11 +1106,12 @@
   //  - objects[] (вектор): текст, стікери, фігури — зберігаються як об'єкти й перемальовуються щоразу,
   //    тому їх можна виділити та перетягнути інструментом "Виділити"
 
-  function createPage(bgImage) {
+  function createPage(bgImage, opts) {
+    opts = opts || {};
     state.pageSeq += 1;
     const id = 'pg' + state.pageSeq;
-    const w = bgImage ? bgImage.width : BLANK_W;
-    const h = bgImage ? bgImage.height : BLANK_H;
+    const w = bgImage ? bgImage.width : (opts.w || BLANK_W);
+    const h = bgImage ? bgImage.height : (opts.h || BLANK_H);
 
     const stage = document.createElement('div');
     stage.className = 'page-stage';
@@ -1111,7 +1165,9 @@
       // willReadFrequently: undo/redo знімає getImageData/putImageData саме з цього шару —
       // підказка браузеру тримати його в пам'яті CPU одразу, а не в GPU, різко пришвидшує
       // саме ці операції (великий виграш продуктивності для Ctrl+Z на активному малюванні) (додано)
-      strokesCtx: strokesCanvas.getContext('2d', { willReadFrequently: true }),
+      strokesCtx: strokesCanvas.getContext('2d'),
+      strokes: [],      // вільне малювання як вектор: { tool, color, w, pts:[x,y,x,y…] } — легкий undo і збереження
+      bgKey: opts.bgKey || null,
       objectsCtx: objectsCanvas.getContext('2d'),
       previewCtx: previewCanvas.getContext('2d'),
       objects: [],
@@ -1123,6 +1179,11 @@
     state.pages.push(page);
     canvasWorldEl.appendChild(stage);
     bindPageEvents(page);
+    if (bgImage && !page.bgKey) {
+      // фон (сторінка PDF) зберігаємо один раз окремим файлом, щоб дошка відновлювалась після перезавантаження
+      page.bgKey = 'bg-' + id + '-' + Date.now().toString(36);
+      bgCanvas.toBlob(blob => { if (blob) Persist.putBlob(page.bgKey, blob); }, 'image/jpeg', 0.9);
+    }
     return page;
   }
 
@@ -1193,6 +1254,7 @@
     });
     const countEl = document.getElementById('pageCountVal');
     if (countEl) countEl.textContent = state.pages.length;
+    Persist.schedule();
   }
 
   // ── мініатюра сторінки для смуги знизу (додано): компонує 3 растрові шари в маленький canvas ──
@@ -1222,23 +1284,55 @@
   // текст, стікер, переміщення) завжди відкочується єдиним кроком.
 
   function cloneObjects(arr) { return arr.map(o => ({ ...o })); }
+  const objectsKey = arr => JSON.stringify(arr, (k, v) => (k === '_img' ? undefined : v));
 
+  // Знімок стану сторінки. Штрихи незмінні після завершення, тож копіюємо лише масив посилань —
+  // це кілобайти замість мегабайтів піксельних копій полотна (раніше до 8 МБ на кожен крок).
   function snapshot(page) {
-    return { strokes: page.strokesCtx.getImageData(0, 0, page.w, page.h), objects: cloneObjects(page.objects), hasStrokes: !!page.hasStrokes };
+    return { strokes: page.strokes.slice(), objects: cloneObjects(page.objects), key: objectsKey(page.objects) };
+  }
+  function sameAsCurrent(page, snap) {
+    return snap && snap.strokes.length === page.strokes.length && snap.strokes.every((s, i) => s === page.strokes[i]) && snap.key === objectsKey(page.objects);
+  }
+
+  function drawStroke(ctx, s, fromIdx) {
+    const p = s.pts;
+    if (!p || p.length < 2) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = s.w;
+    if (s.tool === 'eraser') { ctx.globalCompositeOperation = 'destination-out'; ctx.strokeStyle = '#000'; }
+    else { ctx.strokeStyle = s.color; ctx.globalAlpha = s.tool === 'highlighter' ? 0.35 : 1; }
+    ctx.beginPath();
+    let i = Math.max(0, (fromIdx || 0) - 2);
+    ctx.moveTo(p[i], p[i + 1]);
+    if (p.length === 2) ctx.lineTo(p[0] + 0.01, p[1] + 0.01);
+    for (i += 2; i < p.length; i += 2) ctx.lineTo(p[i], p[i + 1]);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function redrawStrokes(page) {
+    page.strokesCtx.clearRect(0, 0, page.w, page.h);
+    page.strokes.forEach(s => drawStroke(page.strokesCtx, s));
+    page.hasStrokes = page.strokes.some(s => s.tool !== 'eraser');
   }
 
   function applySnapshot(page, snap) {
-    page.strokesCtx.putImageData(snap.strokes, 0, 0);
+    page.strokes = snap.strokes.slice();
+    redrawStrokes(page);
     page.objects = cloneObjects(snap.objects);
     page.selectedId = null; page.selectedIds = [];
-    page.hasStrokes = !!snap.hasStrokes;
     renderObjects(page);
     scheduleThumbRefresh();
   }
 
   function pushUndo(page) {
-    page.undoStack.push(snapshot(page));
-    if (page.undoStack.length > 40) page.undoStack.shift();
+    const top = page.undoStack[page.undoStack.length - 1];
+    if (!sameAsCurrent(page, top)) {
+      page.undoStack.push(snapshot(page));
+      if (page.undoStack.length > 120) page.undoStack.shift();
+    }
     page.redoStack.length = 0;
     updateUndoRedoButtons();
     scheduleThumbRefresh();
@@ -1246,7 +1340,10 @@
 
   function undo() {
     const page = getActivePage();
-    if (!page || !page.undoStack.length) return;
+    if (!page) return;
+    // пропускаємо «порожні» кроки (напр. клік по об'єкту без переміщення)
+    while (page.undoStack.length && sameAsCurrent(page, page.undoStack[page.undoStack.length - 1])) page.undoStack.pop();
+    if (!page.undoStack.length) { updateUndoRedoButtons(); return; }
     page.redoStack.push(snapshot(page));
     applySnapshot(page, page.undoStack.pop());
     updateUndoRedoButtons();
@@ -1798,7 +1895,8 @@
   function bindPageEvents(page) {
     const el = page.interactCanvas;
     el.addEventListener('pointerdown', (e) => onPointerDown(page, e));
-    el.addEventListener('pointermove', (e) => onPointerMove(page, e));
+    el.addEventListener('pointermove', (e) => { if (state.tool === 'laser' && page.id === state.activePageId) { laserAdd(page, getPos(e, el)); return; } onPointerMove(page, e); });
+    el.addEventListener('pointerleave', () => { if (state.tool === 'laser') laser.pts.push(null); });
     el.addEventListener('dblclick', (e) => onDoubleClick(page, e));
     el.addEventListener('contextmenu', (e) => onContextMenu(page, e)); // ПКМ по об'єкту (додано)
   }
@@ -2015,7 +2113,11 @@
       const obj = {
         id: 'obj' + state.objSeq, type: 'image', x, y, w, h,
         aspect: nw / nh, _img: source,
+        imgKey: 'img-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       };
+      // зберігаємо саме зображення окремо — щоб воно відновилось після перезавантаження
+      if (source.tagName === 'CANVAS') source.toBlob(b => { if (b) Persist.putBlob(obj.imgKey, b); }, 'image/jpeg', 0.9);
+      else Persist.putBlob(obj.imgKey, dataUrlToBlob(dataUrl));
       page.objects.push(obj);
       page.selectedIds = [obj.id]; page.selectedId = obj.id;
       setTool('select');
@@ -2206,6 +2308,7 @@
       return;
     }
 
+    if (tool === 'laser') { laserAdd(page, pos); return; }
     if (tool === 'text') { openTextEditor(page, pos); return; }
     if (tool === 'sticky') { openStickyEditor(page, pos); return; }
 
@@ -2221,24 +2324,11 @@
 
     if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
       pushUndo(page);
-      if (page.emptyHintEl) { page.hasStrokes = true; page.emptyHintEl.classList.remove('show'); }
-      const ctx = page.strokesCtx;
-      ctx.save();
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      if (tool === 'eraser') {
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.lineWidth = state.size;
-      } else {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.strokeStyle = state.color;
-        ctx.globalAlpha = tool === 'highlighter' ? 0.35 : 1;
-        ctx.lineWidth = state.size;
-      }
-      ctx.beginPath();
-      ctx.moveTo(pos.x, pos.y);
-      ctx.lineTo(pos.x + 0.01, pos.y + 0.01);
-      ctx.stroke();
+      if (page.emptyHintEl && tool !== 'eraser') page.emptyHintEl.classList.remove('show');
+      const s = { tool, color: state.color, w: state.size, pts: [Math.round(pos.x * 10) / 10, Math.round(pos.y * 10) / 10] };
+      state.curStroke = s;
+      if (tool === 'highlighter') { page.previewCtx.clearRect(0, 0, page.w, page.h); drawStroke(page.previewCtx, s); }
+      else drawStroke(page.strokesCtx, s);
     }
     // для фігур (rect/circle/line/arrow) undo відкладаємо до pointerup — щоб порожній клік
     // без перетягування не створював зайвий крок історії
@@ -2322,10 +2412,14 @@
       return;
     }
 
-    if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
-      const ctx = page.strokesCtx;
-      ctx.lineTo(pos.x, pos.y);
-      ctx.stroke();
+    if ((tool === 'pen' || tool === 'highlighter' || tool === 'eraser') && state.curStroke) {
+      const s = state.curStroke;
+      const from = s.pts.length;
+      // проміжні точки руху (стилус/тачпад шлють їх частіше за кадр) — плавніші лінії
+      const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
+      evs.forEach(ev => { const p = getPos(ev, page.interactCanvas); s.pts.push(Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10); });
+      if (tool === 'highlighter') { page.previewCtx.clearRect(0, 0, page.w, page.h); drawStroke(page.previewCtx, s); }
+      else drawStroke(page.strokesCtx, s, from);
       return;
     }
 
@@ -2392,8 +2486,14 @@
       return;
     }
 
-    if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
-      page.strokesCtx.restore();
+    if ((tool === 'pen' || tool === 'highlighter' || tool === 'eraser') && state.curStroke) {
+      const s = state.curStroke;
+      state.curStroke = null;
+      if (tool === 'highlighter') { page.previewCtx.clearRect(0, 0, page.w, page.h); drawStroke(page.strokesCtx, s); }
+      page.strokes.push(s);
+      page.hasStrokes = page.strokes.some(x => x.tool !== 'eraser');
+      updateEmptyHint(page);
+      scheduleThumbRefresh();
       return;
     }
 
@@ -2476,11 +2576,11 @@
     box.style.width = Math.max(180, page.w * scale - anchorX * scale - 20) + 'px';
     box.style.height = estBoxH + 'px';
     box.style.color = color;
-    box.style.fontSize = size + 'px';
+    box.style.fontSize = (size * scale) + 'px';
     box.style.fontWeight = '700';
     if (existing) box.value = existing.text;
     page.stage.appendChild(box);
-    setTimeout(() => { box.focus(); if (existing) box.select(); }, 0);
+    box.focus(); if (existing) box.select();
 
     function commit() {
       const value = box.value;
@@ -2535,7 +2635,7 @@
     box.placeholder = 'Нотатка…';
     if (existing) box.value = existing.text;
     page.stage.appendChild(box);
-    setTimeout(() => { box.focus(); if (existing) box.select(); }, 0);
+    box.focus(); if (existing) box.select();
 
     function commit() {
       const value = box.value;
@@ -2631,7 +2731,7 @@
     page.editingId = obj.id;
     renderObjects(page);
     page.stage.appendChild(box);
-    setTimeout(() => { box.focus(); box.select(); }, 0);
+    box.focus(); box.select();
 
     function commit() {
       const parsed = parseInt(box.value, 10);
@@ -2703,7 +2803,7 @@
   const TOOL_CURSOR_CLASS = {
     select: 'interact-select', pen: 'interact-tool-pen', highlighter: 'interact-tool-highlighter',
     eraser: 'interact-tool-eraser', text: 'interact-tool-text', sticky: 'interact-tool-sticky',
-    number: 'interact-tool-number',
+    number: 'interact-tool-number', laser: 'interact-tool-laser',
     rect: 'interact-tool-shape', circle: 'interact-tool-shape', line: 'interact-tool-shape', arrow: 'interact-tool-shape',
   };
   const ALL_CURSOR_CLASSES = Object.values(TOOL_CURSOR_CLASS).filter((v, i, a) => a.indexOf(v) === i);
@@ -2723,8 +2823,8 @@
     document.getElementById('sizeVal').textContent = state.size;
     updateSizePreview();
     document.getElementById('stickyColorSection').style.display = tool === 'sticky' ? 'block' : 'none';
-    document.getElementById('colorSection').style.display = (tool === 'sticky' || tool === 'eraser' || tool === 'select') ? 'none' : 'block';
-    document.getElementById('sizeSection').style.display = (tool === 'sticky' || tool === 'select') ? 'none' : 'block';
+    document.getElementById('colorSection').style.display = (tool === 'sticky' || tool === 'eraser' || tool === 'select' || tool === 'laser') ? 'none' : 'block';
+    document.getElementById('sizeSection').style.display = (tool === 'sticky' || tool === 'select' || tool === 'laser') ? 'none' : 'block';
     document.getElementById('numberSection').style.display = tool === 'number' ? 'block' : 'none'; // додано
     const appElForHud = document.querySelector('.app');
     if (appElForHud) appElForHud.classList.toggle('tool-number-active', tool === 'number'); // додано: плаваюча підказка на полотні
@@ -2732,9 +2832,10 @@
     document.getElementById('sizeLabel').textContent = tool === 'text' ? 'Розмір шрифту' : (tool === 'number' ? 'Розмір бейджа' : 'Товщина');
     // для "Виділити" налаштовувати нічого — ховаємо кнопку "Стиль" і закриваємо попап, якщо був відкритий (додано)
     const stylePopBtn = document.getElementById('btnStylePop');
-    if (stylePopBtn) stylePopBtn.style.display = tool === 'select' ? 'none' : 'flex';
+    if (stylePopBtn) stylePopBtn.style.display = (tool === 'select' || tool === 'laser') ? 'none' : 'flex';
     const stylePop = document.getElementById('toolsOptionsPop');
-    if (tool === 'select' && stylePop) stylePop.classList.remove('show');
+    if ((tool === 'select' || tool === 'laser') && stylePop) stylePop.classList.remove('show');
+    if (tool !== 'laser') laserClear();
     const page = getActivePage();
     if (page && tool !== 'select') { page.selectedId = null; page.selectedIds = []; renderSelectionOutline(page); }
     document.querySelectorAll('.layer-interact').forEach(c => {
@@ -2777,11 +2878,12 @@
   document.getElementById('btnUndo').addEventListener('click', undo);
   document.getElementById('btnRedo').addEventListener('click', redo);
 
-  document.getElementById('btnClearPage').addEventListener('click', () => {
+  document.getElementById('btnClearPage').addEventListener('click', async () => {
     const page = getActivePage();
     if (!page) return;
-    if (!confirm('Очистити всі малюнки на цій сторінці?')) return;
+    if (!(await confirmDialog('Очистити сторінку?', 'Усі малюнки, текст і стікери на цій сторінці буде прибрано. Це можна скасувати через Ctrl+Z.', 'Очистити'))) return;
     pushUndo(page);
+    page.strokes = [];
     page.strokesCtx.clearRect(0, 0, page.w, page.h);
     page.objects = [];
     page.selectedId = null; page.selectedIds = [];
@@ -2828,7 +2930,9 @@
         loadText.textContent = `Сторінка ${i} з ${pdf.numPages}…`;
         loadBar.style.width = Math.round((i / pdf.numPages) * 100) + '%';
         const pdfPage = await pdf.getPage(i);
-        const viewportPdf = pdfPage.getViewport({ scale: 2 });
+        // адаптивний масштаб: чітко, але без гігантських полотен (довша сторона ≤ ~2000 px)
+        const base = pdfPage.getViewport({ scale: 1 });
+        const viewportPdf = pdfPage.getViewport({ scale: Math.min(2, 2000 / Math.max(base.width, base.height)) });
         const off = document.createElement('canvas');
         off.width = viewportPdf.width;
         off.height = viewportPdf.height;
@@ -2866,35 +2970,35 @@
 
   // ═══════════════════════ ГАРЯЧІ КЛАВІШІ ═══════════════════════
 
+  // Гарячі клавіші за фізичною клавішею (e.code) — працюють і на українській розкладці
   window.addEventListener('keydown', (e) => {
     if (document.activeElement && ['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.shiftKey) { e.preventDefault(); redo(); return; }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
+    if (document.querySelector('.modal-overlay.show')) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.code === 'KeyZ') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+    if (mod && e.code === 'KeyY') { e.preventDefault(); redo(); return; }
     if (e.key === 'Escape' && state.screenshotMode) { exitScreenshotMode(); return; }
     if (e.key === 'Escape' && appEl.classList.contains('presentation-mode')) { exitPresentation(); return; }
-    if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) { e.preventDefault(); setZoom(state.zoom + 0.15); return; }
-    if ((e.ctrlKey || e.metaKey) && e.key === '-') { e.preventDefault(); setZoom(state.zoom - 0.15); return; }
-    if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setZoom(1); return; }
+    if (mod && (e.code === 'Equal' || e.code === 'NumpadAdd')) { e.preventDefault(); setZoom(state.zoom + 0.15); return; }
+    if (mod && (e.code === 'Minus' || e.code === 'NumpadSubtract')) { e.preventDefault(); setZoom(state.zoom - 0.15); return; }
+    if (mod && (e.code === 'Digit0' || e.code === 'Numpad0')) { e.preventDefault(); setZoom(1); return; }
     if (e.key === 'Delete' || e.key === 'Backspace') {
       const page = getActivePage();
       if (page && selectedIdsOf(page).length) { e.preventDefault(); deleteSelected(page); }
       return;
     }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
-      // Ctrl/Cmd+D — швидко дублювати виділене (додано)
+    if (mod && e.code === 'KeyD') {
       const page = getActivePage();
       if (page && selectedIdsOf(page).length) { e.preventDefault(); duplicateSelected(page); }
       return;
     }
     if (e.key === 'Escape' && getActivePage() && getActivePage().selectedIds && getActivePage().selectedIds.length) {
-      // Escape знімає групове/поточне виділення (додано)
       const page = getActivePage();
       page.selectedIds = []; page.selectedId = null;
       renderObjects(page);
       return;
     }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && state.tool === 'select') {
-      // Ctrl/Cmd+A — виділити всі об'єкти на поточній сторінці (додано)
+    if (mod && e.code === 'KeyA' && state.tool === 'select') {
       const page = getActivePage();
       if (page && page.objects.length) {
         e.preventDefault();
@@ -2904,8 +3008,15 @@
       }
       return;
     }
-    const map = { v: 'select', p: 'pen', h: 'highlighter', e: 'eraser', t: 'text', s: 'sticky', n: 'number', r: 'rect', c: 'circle', l: 'line', a: 'arrow' };
-    if (map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
+    if (mod || e.altKey) return;
+    // у презентації — гортання сторінок стрілками / PageUp / PageDown
+    if (appEl.classList.contains('presentation-mode') && ['ArrowRight', 'ArrowDown', 'PageDown', 'ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+      e.preventDefault();
+      gotoAdjacentPage(['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key) ? 1 : -1);
+      return;
+    }
+    const map = { KeyV: 'select', KeyP: 'pen', KeyH: 'highlighter', KeyE: 'eraser', KeyT: 'text', KeyS: 'sticky', KeyN: 'number', KeyR: 'rect', KeyC: 'circle', KeyL: 'line', KeyA: 'arrow', KeyK: 'laser' };
+    if (map[e.code]) setTool(map[e.code]);
   });
 
   // ═══════════════════════ РЕЖИМ ПРЕЗЕНТАЦІЇ ═══════════════════════
@@ -3148,13 +3259,309 @@
     }
   });
 
+  // ═══════════════════════ СЕНСОРНИЙ ЕКРАН: щипок — масштаб, два пальці — переміщення ═══════════════════════
+  const touchPts = new Map();
+  let pinchState = null;
+  function abortCurrentGesture() {
+    const page = getActivePage();
+    if (!page || !state.drawing) return;
+    state.drawing = false;
+    if (state.curStroke || state.dragGroup || state.resizeObj) {
+      state.curStroke = null; state.dragGroup = null; state.resizeObj = null;
+      const snap = page.undoStack.pop();
+      if (snap) applySnapshot(page, snap);
+    }
+    state.marqueeSelect = false;
+    page.previewCtx.clearRect(0, 0, page.w, page.h);
+  }
+  canvasViewportEl.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return;
+    touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touchPts.size === 2) {
+      e.preventDefault(); e.stopPropagation();
+      abortCurrentGesture();
+      const [a, b] = Array.from(touchPts.values());
+      pinchState = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: state.zoom, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+    } else if (touchPts.size > 2) { e.stopPropagation(); }
+  }, true);
+  canvasViewportEl.addEventListener('pointermove', (e) => {
+    if (!touchPts.has(e.pointerId)) return;
+    touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!pinchState || touchPts.size < 2) return;
+    e.preventDefault(); e.stopPropagation();
+    const [a, b] = Array.from(touchPts.values());
+    const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    zoomAtClient(pinchState.zoom * d / pinchState.d, mx, my);
+    viewport.scrollLeft -= mx - pinchState.mx;
+    viewport.scrollTop -= my - pinchState.my;
+    pinchState.mx = mx; pinchState.my = my;
+  }, true);
+  const touchEnd = (e) => {
+    if (!touchPts.has(e.pointerId)) return;
+    touchPts.delete(e.pointerId);
+    if (pinchState) { e.stopPropagation(); if (touchPts.size < 2) pinchState = null; }
+  };
+  canvasViewportEl.addEventListener('pointerup', touchEnd, true);
+  canvasViewportEl.addEventListener('pointercancel', touchEnd, true);
+  // якщо браузер перервав жест (системний свайп тощо) — коректно завершуємо штрих, а не «залипаємо»
+  window.addEventListener('pointercancel', (e) => { const page = getActivePage(); if (page && state.drawing && !pinchState) onPointerUp(page, e); });
+
+  // ═══════════════════════ ЛАЗЕРНА УКАЗКА ═══════════════════════
+  const laser = { pts: [], page: null, raf: null };
+  function laserAdd(page, pos) {
+    laser.page = page;
+    laser.pts.push({ x: pos.x, y: pos.y, t: performance.now() });
+    if (!laser.raf) laser.raf = requestAnimationFrame(laserTick);
+  }
+  function laserClear() {
+    if (laser.page) laser.page.previewCtx.clearRect(0, 0, laser.page.w, laser.page.h);
+    laser.pts = [];
+  }
+  function laserTick() {
+    const page = laser.page;
+    const now = performance.now();
+    laser.pts = laser.pts.filter(p => p === null || now - p.t < 650);
+    while (laser.pts.length && laser.pts[0] === null) laser.pts.shift();
+    if (!page || state.tool !== 'laser') { laser.raf = null; return; }
+    const c = page.previewCtx;
+    c.clearRect(0, 0, page.w, page.h);
+    const pts = laser.pts;
+    if (!pts.length) { laser.raf = null; return; }
+    const r = Math.max(5, 7 / state.zoom);
+    c.save();
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    c.shadowColor = 'rgba(239,68,68,.75)'; c.shadowBlur = r * 2;
+    for (let i = 1; i < pts.length; i++) {
+      const p0 = pts[i - 1], p1 = pts[i];
+      if (!p0 || !p1) continue;
+      const age = (now - p1.t) / 650;
+      c.strokeStyle = 'rgba(239,68,68,' + (0.85 * (1 - age)).toFixed(3) + ')';
+      c.lineWidth = r * (1.2 - age * 0.8);
+      c.beginPath(); c.moveTo(p0.x, p0.y); c.lineTo(p1.x, p1.y); c.stroke();
+    }
+    const last = pts[pts.length - 1];
+    if (last) { c.fillStyle = '#ff3b3b'; c.beginPath(); c.arc(last.x, last.y, r, 0, Math.PI * 2); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(last.x, last.y, r * 0.35, 0, Math.PI * 2); c.fill(); }
+    c.restore();
+    laser.raf = requestAnimationFrame(laserTick);
+  }
+
+  // ═══════════════════════ ПІДТВЕРДЖЕННЯ ═══════════════════════
+  let confirmResolve = null;
+  function confirmDialog(title, msg, okLabel) {
+    return new Promise(res => {
+      confirmResolve = res;
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMsg').textContent = msg;
+      document.getElementById('confirmYes').textContent = okLabel || 'Так';
+      document.getElementById('confirmModal').classList.add('show');
+      setTimeout(() => document.getElementById('confirmYes').focus(), 30);
+    });
+  }
+  function closeConfirm(v) {
+    document.getElementById('confirmModal').classList.remove('show');
+    if (confirmResolve) { const r = confirmResolve; confirmResolve = null; r(v); }
+  }
+  document.getElementById('confirmYes').addEventListener('click', () => closeConfirm(true));
+  document.getElementById('confirmNo').addEventListener('click', () => closeConfirm(false));
+  document.getElementById('confirmModal').addEventListener('click', (e) => { if (e.target.id === 'confirmModal') closeConfirm(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('confirmModal').classList.contains('show')) closeConfirm(false); });
+
+  // ═══════════════════════ ЕКСПОРТ ДОШКИ ═══════════════════════
+  function composePage(page) {
+    const c = document.createElement('canvas');
+    c.width = page.w; c.height = page.h;
+    const x = c.getContext('2d');
+    x.drawImage(page.bgCanvas, 0, 0);
+    x.drawImage(page.strokesCanvas, 0, 0);
+    page.objects.forEach(o => drawObject(x, o));
+    return c;
+  }
+  function fileStamp() {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+  }
+  function exportPng() {
+    const page = getActivePage();
+    if (!page) return;
+    const idx = state.pages.indexOf(page) + 1;
+    composePage(page).toBlob(blob => {
+      if (!blob) { showToast('Не вдалося зберегти зображення', 'error'); return; }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'doshka-storinka-' + idx + '-' + fileStamp() + '.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      showToast('Сторінку збережено як PNG', 'success');
+    }, 'image/png');
+  }
+  async function exportPdf() {
+    showToast('Готуємо сторінки до друку…');
+    const area = document.createElement('div');
+    area.id = 'printArea';
+    const imgs = state.pages.map(p => { const img = new Image(); img.src = composePage(p).toDataURL('image/jpeg', 0.92); area.appendChild(img); return img; });
+    document.body.appendChild(area);
+    await Promise.all(imgs.map(i => (i.decode ? i.decode().catch(() => {}) : Promise.resolve())));
+    document.body.classList.add('printing');
+    const cleanup = () => { document.body.classList.remove('printing'); area.remove(); window.removeEventListener('afterprint', cleanup); };
+    window.addEventListener('afterprint', cleanup);
+    setTimeout(() => { window.print(); setTimeout(cleanup, 1500); }, 50);
+    showToast('У вікні друку оберіть «Зберегти як PDF»', 'success');
+  }
+  const exportMenuEl = document.getElementById('exportMenu');
+  document.getElementById('btnExport').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (exportMenuEl.classList.contains('show')) { exportMenuEl.classList.remove('show'); return; }
+    exportMenuEl.classList.add('show');
+    const r = e.currentTarget.getBoundingClientRect();
+    exportMenuEl.style.top = (r.bottom + 6) + 'px';
+    exportMenuEl.style.left = Math.max(8, Math.min(r.right - exportMenuEl.offsetWidth, window.innerWidth - exportMenuEl.offsetWidth - 8)) + 'px';
+  });
+  exportMenuEl.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-export]');
+    if (!b) return;
+    exportMenuEl.classList.remove('show');
+    if (b.dataset.export === 'png') exportPng(); else exportPdf();
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#exportMenu') && !e.target.closest('#btnExport')) exportMenuEl.classList.remove('show'); });
+
+  // ═══════════════════════ АВТОЗБЕРЕЖЕННЯ (IndexedDB) ═══════════════════════
+  function dataUrlToBlob(d) {
+    const i = d.indexOf(',');
+    const mime = (d.slice(0, i).match(/^data:([^;,]+)/) || [])[1] || 'application/octet-stream';
+    const bin = atob(d.slice(i + 1));
+    const u8 = new Uint8Array(bin.length);
+    for (let k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
+    return new Blob([u8], { type: mime });
+  }
+  const Persist = {
+    db: null, timer: null, restoring: false, lastGc: 0,
+    open() {
+      return new Promise(res => {
+        if (!window.indexedDB) { res(false); return; }
+        let rq;
+        try { rq = indexedDB.open('edvault-whiteboard', 1); } catch (e) { res(false); return; }
+        rq.onupgradeneeded = () => { const db = rq.result; db.createObjectStore('kv'); db.createObjectStore('blobs'); };
+        rq.onsuccess = () => { this.db = rq.result; res(true); };
+        rq.onerror = rq.onblocked = () => res(false);
+      });
+    },
+    req(store, mode, fn) {
+      return new Promise((res, rej) => {
+        if (!this.db) { res(null); return; }
+        const tx = this.db.transaction(store, mode);
+        const r = fn(tx.objectStore(store));
+        tx.oncomplete = () => res(r && r.result);
+        tx.onerror = () => rej(tx.error);
+      });
+    },
+    putBlob(key, blob) { return this.req('blobs', 'readwrite', st => st.put(blob, key)).catch(() => {}); },
+    getBlob(key) { return this.req('blobs', 'readonly', st => st.get(key)).catch(() => null); },
+    schedule() {
+      if (this.restoring || !this.db) return;
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => this.save(), 700);
+    },
+    usedKeys() {
+      const used = new Set();
+      state.pages.forEach(p => { if (p.bgKey) used.add(p.bgKey); p.objects.forEach(o => { if (o.imgKey) used.add(o.imgKey); }); });
+      return used;
+    },
+    async save() {
+      if (!this.db || this.restoring || !state.pages.length) return;
+      clearTimeout(this.timer);
+      const pages = state.pages.map(p => ({
+        w: p.w, h: p.h, bgKey: p.bgKey || null, strokes: p.strokes,
+        objects: JSON.parse(objectsKey(p.objects)), numberNext: p.numberNext == null ? null : p.numberNext,
+      }));
+      const board = { v: 1, pages, active: Math.max(0, state.pages.findIndex(p => p.id === state.activePageId)), t: Date.now() };
+      try {
+        await this.req('kv', 'readwrite', st => st.put(board, 'board'));
+        // зрідка прибираємо файли, на які вже ніщо не посилається (видалені фото, сторінки)
+        if (Date.now() - this.lastGc > 30000) {
+          this.lastGc = Date.now();
+          const keys = await this.req('blobs', 'readonly', st => st.getAllKeys());
+          const used = this.usedKeys();
+          // undo може повернути видалене фото — тому не чіпаємо ключі, що є в історії змін
+          state.pages.forEach(p => p.undoStack.concat(p.redoStack).forEach(sn => sn.objects.forEach(o => { if (o.imgKey) used.add(o.imgKey); })));
+          const stale = (keys || []).filter(k => !used.has(k));
+          if (stale.length) await this.req('blobs', 'readwrite', st => { stale.forEach(k => st.delete(k)); return null; });
+        }
+      } catch (e) { console.warn('Whiteboard autosave failed', e); }
+    },
+    load() { return this.req('kv', 'readonly', st => st.get('board')).catch(() => null); },
+    clear() { return Promise.all([this.req('kv', 'readwrite', st => st.clear()), this.req('blobs', 'readwrite', st => st.clear())]).catch(() => {}); },
+  };
+  async function blobToCanvas(blob, w, h) {
+    const bmp = await createImageBitmap(blob);
+    const c = document.createElement('canvas');
+    c.width = w || bmp.width; c.height = h || bmp.height;
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    if (bmp.close) bmp.close();
+    return c;
+  }
+  async function restoreBoard() {
+    const board = await Persist.load();
+    if (!board || !Array.isArray(board.pages) || !board.pages.length) return false;
+    Persist.restoring = true;
+    try {
+      let maxSeq = 0;
+      for (const pr of board.pages) {
+        let bg = null;
+        if (pr.bgKey) { const blob = await Persist.getBlob(pr.bgKey); if (blob) bg = await blobToCanvas(blob, pr.w, pr.h).catch(() => null); }
+        const page = createPage(bg, { w: pr.w, h: pr.h, bgKey: bg ? pr.bgKey : null });
+        page.strokes = Array.isArray(pr.strokes) ? pr.strokes : [];
+        redrawStrokes(page);
+        const objs = Array.isArray(pr.objects) ? pr.objects : [];
+        for (const o of objs) {
+          const m = String(o.id || '').match(/^obj(\d+)$/);
+          if (m) maxSeq = Math.max(maxSeq, +m[1]);
+          if (o.type === 'image' && o.imgKey) { const blob = await Persist.getBlob(o.imgKey); if (blob) o._img = await blobToCanvas(blob).catch(() => null); }
+        }
+        page.objects = objs.filter(o => o.type !== 'image' || o._img);
+        if (pr.numberNext != null) page.numberNext = pr.numberNext;
+        renderObjects(page);
+        updateEmptyHint(page);
+      }
+      state.objSeq = Math.max(state.objSeq, maxSeq);
+      const act = state.pages[board.active] || state.pages[0];
+      switchToPage(act.id);
+      return true;
+    } finally {
+      Persist.restoring = false;
+    }
+  }
+  document.getElementById('btnNewBoard').addEventListener('click', async () => {
+    if (!(await confirmDialog('Почати нову дошку?', 'Усі сторінки поточної дошки (малюнки, PDF, стікери) буде видалено з цього браузера. Якщо щось потрібно — спершу збережіть через кнопку експорту.', 'Нова дошка'))) return;
+    state.pages.forEach(p => p.stage.remove());
+    state.pages = [];
+    await Persist.clear();
+    const first = createPage(null);
+    switchToPage(first.id);
+    showToast('Створено нову дошку', 'success');
+  });
+  window.addEventListener('beforeunload', () => { Persist.save(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') Persist.save(); });
+
   // ═══════════════════════ СТАРТ ═══════════════════════
 
   renderSwatches();
   renderStickySwatches();
   setTool('pen');
-  const first = createPage(null);
-  switchToPage(first.id);
+  (async () => {
+    await Persist.open();
+    let restored = false;
+    try { restored = await restoreBoard(); } catch (e) { console.warn('Whiteboard restore failed', e); }
+    if (!restored) {
+      state.pages.forEach(p => p.stage.remove());
+      state.pages = [];
+      const first = createPage(null);
+      switchToPage(first.id);
+    } else {
+      showToast('Дошку відновлено', 'success');
+    }
+    window.Whiteboard = { state, Persist, undo, redo, getActivePage, composePage };
+  })();
 })();
 </script>
 </body>
