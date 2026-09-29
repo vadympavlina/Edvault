@@ -375,11 +375,11 @@ body.recording .rec-chip{display:inline-flex}
             <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
             Новий запис
           </button>
+          <button class="btn btn-outline btn-xl" id="btnEdit">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>
+            Обрізати у відеоредакторі
+          </button>
         </div>
-        <a class="link" href="videocut.html" target="_blank" rel="noopener">
-          Обрізати зайве у VideoCut
-          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-        </a>
         <p class="small-note">Запис існує лише в цій вкладці, доки ви його не завантажите.</p>
       </aside>
     </div>
@@ -1001,6 +1001,37 @@ body.recording .rec-chip{display:inline-flex}
   $('btnStop').addEventListener('click', stopRecording);
   $('btnDownload').addEventListener('click', download);
   $('btnNew').addEventListener('click', newRecording);
+  $('btnEdit').addEventListener('click', openInEditor);
+
+  // Передаємо запис у відеоредактор через IndexedDB — без завантаження файлу
+  function handoffPut(key, value) {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('edvault-handoff', 1);
+      r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('files')) r.result.createObjectStore('files'); };
+      r.onerror = () => rej(r.error);
+      r.onsuccess = () => {
+        const t = r.result.transaction('files', 'readwrite');
+        t.objectStore('files').put(value, key);
+        t.oncomplete = () => res();
+        t.onerror = () => rej(t.error);
+      };
+    });
+  }
+  async function openInEditor() {
+    if (!result || !result.blob) return;
+    const url = 'videocut.html?import=recording';
+    const w = window.open('about:blank', '_blank'); // відкриваємо одразу, інакше браузер заблокує вікно
+    try {
+      let name = $('fileName').value.trim().replace(/[\\/:*?"<>|]+/g, '-') || defaultName();
+      if (!name.toLowerCase().endsWith(result.ext)) name += result.ext;
+      await handoffPut('recording', { blob: result.blob, name });
+      if (w) w.location.href = url;
+      else { result.saved = true; location.href = url; }
+    } catch (e) {
+      if (w) w.close();
+      toast('Не вдалося передати запис у редактор — завантажте файл і відкрийте його там', 'err', 6000);
+    }
+  }
   $('fileName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); download(); } });
 
   // ═════════ Клавіші (за фізичною клавішею — працює й на українській розкладці) ═════════
