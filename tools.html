@@ -110,7 +110,6 @@ input{font-family:inherit;font-size:inherit;color:inherit}
 .recent-card .ic{width:30px;height:30px;border-radius:8px}
 .recent-card .ic svg{width:15px;height:15px}
 .recent-card span{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.recent-card .ext{width:13px;height:13px;color:var(--muted);flex:none}
 
 /* ── Cards ── */
 .ic{display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--al);border:1px solid var(--ab);color:var(--a)}
@@ -126,15 +125,12 @@ input{font-family:inherit;font-size:inherit;color:inherit}
 .card .ic{width:46px;height:46px;border-radius:13px}
 .card .ic svg{width:22px;height:22px}
 .tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);white-space:nowrap}
-.tag.ext{display:inline-flex;align-items:center;gap:4px}
-.tag.ext svg{width:10px;height:10px}
 .card-name{font-size:16px;font-weight:700;letter-spacing:-.01em;margin:0 0 5px}
 .card-desc{font-size:13.5px;color:var(--text2);line-height:1.55;margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .card-body{flex:1}
 .card-foot{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--a)}
 .card-foot svg{width:14px;height:14px;transition:transform .15s}
 .card:hover .card-foot svg{transform:translateX(3px)}
-.card.external{border-style:dashed}
 mark{background:color-mix(in srgb,var(--accent) 22%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 
 /* list view */
@@ -270,7 +266,7 @@ const DEFAULT_TOOLS = {
   'class-manager': { order: 7, name: 'Менеджер класу', desc: 'Учні, розклад, відвідуваність і оцінки в одному місці.', type: 'internal', file: 'class-manager.html', tag: 'Клас', category: 'class', accent: '#10b981', accentLight: 'rgba(16,185,129,.1)', accentBorder: '#a7f3d0', icon: I('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
 };
 
-const CATEGORY_LABELS = { media: 'Медіа', class: 'Клас', creative: 'Творчість', external: 'Зовнішні' };
+const CATEGORY_LABELS = { media: 'Медіа', class: 'Клас', creative: 'Творчість' };
 const catLabel = c => CATEGORY_LABELS[c] || (c ? c.charAt(0).toUpperCase() + c.slice(1) : '');
 const CACHE_KEY = 'ev_tools_cache', RECENT_KEY = 'ev_recent_tools', VIEW_KEY = 'ev_tools_view';
 const $ = id => document.getElementById(id);
@@ -313,28 +309,25 @@ function cardVars(t) {
   const a = safeColor(t.accent) || '#4F6BF4';
   return `--a:${a};--al:${safeColor(t.accentLight) || 'rgba(79,107,244,.1)'};--ab:${safeColor(t.accentBorder) || '#d6dcfd'}`;
 }
-const hrefOf = t => t.type === 'external' ? t.url : 'tools/' + t.file;
-const EXT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>';
+const hrefOf = t => 'tools/' + t.file;
 const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
-const linkAttrs = t => t.type === 'external' ? ' target="_blank" rel="noopener noreferrer"' : '';
 
 function cardHtml(t, i) {
-  const ext = t.type === 'external';
-  return `<a class="card${ext ? ' external' : ''}" href="${esc(hrefOf(t))}"${linkAttrs(t)} data-id="${esc(t.id)}" style="${cardVars(t)};animation-delay:${Math.min(i, 12) * 35}ms">
+  return `<a class="card" href="${esc(hrefOf(t))}" data-id="${esc(t.id)}" style="${cardVars(t)};animation-delay:${Math.min(i, 12) * 35}ms">
     <div class="card-top">
       <div class="ic">${t.icon || ''}</div>
-      ${ext ? `<span class="tag ext">${EXT_ICON}Зовнішній</span>` : (t.tag ? `<span class="tag">${esc(t.tag)}</span>` : '')}
+      ${t.tag ? `<span class="tag">${esc(t.tag)}</span>` : ''}
     </div>
     <div class="card-body">
       <h2 class="card-name">${highlight(t.name, state.q)}</h2>
       <p class="card-desc">${highlight(t.desc, state.q)}</p>
     </div>
-    <div class="card-foot"><span>${ext ? 'Перейти' : 'Відкрити'}</span>${ext ? EXT_ICON : ARROW}</div>
+    <div class="card-foot"><span>Відкрити</span>${ARROW}</div>
   </a>`;
 }
 function recentHtml(t) {
-  return `<a class="recent-card" href="${esc(hrefOf(t))}"${linkAttrs(t)} data-id="${esc(t.id)}" style="${cardVars(t)}">
-    <div class="ic">${t.icon || ''}</div><span>${esc(t.name)}</span>${t.type === 'external' ? `<span class="ext">${EXT_ICON}</span>` : ''}
+  return `<a class="recent-card" href="${esc(hrefOf(t))}" data-id="${esc(t.id)}" style="${cardVars(t)}">
+    <div class="ic">${t.icon || ''}</div><span>${esc(t.name)}</span>
   </a>`;
 }
 
@@ -342,7 +335,8 @@ function recentHtml(t) {
 function setTools(data) {
   state.tools = Object.entries(data || {})
     .map(([id, v]) => ({ id, ...v }))
-    .filter(t => t && t.name && (t.type === 'external' ? t.url : t.file) && t.hidden !== true)
+    // зовнішні посилання більше не підтримуються — показуємо лише інструменти з папки tools/
+    .filter(t => t && t.name && t.file && t.type !== 'external' && t.category !== 'external' && t.hidden !== true)
     .sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || String(a.name).localeCompare(String(b.name), 'uk'));
   const cats = new Set(state.tools.map(t => t.category));
   if (state.filter !== 'all' && !cats.has(state.filter)) state.filter = 'all';
@@ -381,7 +375,7 @@ async function load() {
 function visibleTools() {
   const q = state.q;
   return state.tools.filter(t => {
-    const inCat = state.filter === 'all' ? (t.category !== 'external' || !!q) : t.category === state.filter;
+    const inCat = state.filter === 'all' || t.category === state.filter;
     if (!inCat) return false;
     if (!q) return true;
     return [t.name, t.desc, t.tag, catLabel(t.category)].some(s => norm(s).includes(q));
@@ -391,7 +385,7 @@ function visibleTools() {
 function renderTabs() {
   const cats = [];
   state.tools.forEach(t => { if (t.category && !cats.includes(t.category)) cats.push(t.category); });
-  const allN = state.tools.filter(t => t.category !== 'external').length;
+  const allN = state.tools.length;
   const tab = (key, label, n) => `<button class="tab${state.filter === key ? ' on' : ''}" role="tab" aria-selected="${state.filter === key}" data-f="${esc(key)}">${esc(label)}<span class="n">${n}</span></button>`;
   $('tabs').innerHTML = [tab('all', 'Всі', allN)]
     .concat(cats.map(c => tab(c, catLabel(c), state.tools.filter(t => t.category === c).length))).join('');
