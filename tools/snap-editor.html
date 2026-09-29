@@ -2,1040 +2,1725 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SnapEdit</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Crect x='6' y='9' width='13' height='9' rx='2' fill='white' opacity='0.95'/%3E%3Crect x='13' y='14' width='13' height='9' rx='2' fill='white' opacity='0.6'/%3E%3Ccircle cx='8.5' cy='22.5' r='2' fill='%2300D4AA'/%3E%3Ccircle cx='23.5' cy='9.5' r='2' fill='%23FF6B8A'/%3E%3Cline x1='10.5' y1='22.5' x2='21.5' y2='9.5' stroke='%23a0aec0' stroke-width='1.5' stroke-dasharray='2,2'/%3E%3C/svg%3E">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SnapEdit · Edvault</title>
+<meta name="theme-color" content="#4F6BF4">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Crect x='6' y='9' width='13' height='9' rx='2' fill='white' opacity='0.95'/%3E%3Crect x='13' y='14' width='13' height='9' rx='2' fill='white' opacity='0.6'/%3E%3Ccircle cx='8.5' cy='22.5' r='2' fill='%2300D4AA'/%3E%3Ccircle cx='23.5' cy='9.5' r='2' fill='%23FF6B8A'/%3E%3C/svg%3E">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('edvault-theme') || 'auto';
+      var dark = t === 'dark' || (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:#f0f2f5; --surface:#ffffff; --surface2:#f7f8fa;
-  --border:#e2e5ea; --border2:#d0d5dd;
-  --accent:#4F6BF4; --accent-light:#eef0fe; --accent-hover:#3d57e0;
-  --danger:#ef4444; --danger-light:#fef2f2;
-  --text:#1a1d23; --text2:#4b5563; --muted:#9ca3af;
-  --success:#10b981;
-  --shadow-sm:0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
-  --shadow-md:0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;user-select:none;-webkit-font-smoothing:antialiased}
-
-/* SPLASH */
-#splash{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:1000;transition:opacity .35s,transform .35s}
-#splash.hide{opacity:0;pointer-events:none;transform:scale(.98)}
-.splash-logo{font-size:2rem;font-weight:700;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:10px;letter-spacing:-0.03em}
-.splash-logo-icon{width:36px;height:36px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.splash-logo-icon svg{width:20px;height:20px;color:white}
-.splash-sub{font-size:.75rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:36px;margin-left:46px}
-.splash-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px 28px;max-width:460px;width:90%;display:flex;flex-direction:column;gap:14px;margin-bottom:20px;box-shadow:var(--shadow-md)}
-.splash-card h2{font-size:.7rem;font-weight:600;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
-.step{display:flex;gap:12px;align-items:flex-start}
-.step-num{background:var(--accent-light);border-radius:8px;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:var(--accent);flex-shrink:0}
-.step-text{font-size:.8rem;color:var(--text2);line-height:1.55;padding-top:4px}
-.step-text b{color:var(--text);font-weight:600}
-.kbd{display:inline-flex;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-bottom:2px solid var(--border2);border-radius:5px;padding:1px 7px;font-size:.68rem;color:var(--text);font-family:inherit;font-weight:500}
-.splash-btns{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
-.splash-hint{font-size:.72rem;color:var(--muted);animation:pulse 2.2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
-.btn-new{font-family:'Inter',sans-serif;font-size:.8rem;font-weight:600;padding:9px 22px;border-radius:9px;background:var(--accent);color:#fff;border:none;cursor:pointer;transition:background .15s,box-shadow .15s;box-shadow:0 2px 8px rgba(79,107,244,.3)}
-.btn-new:hover{background:var(--accent-hover);box-shadow:0 4px 12px rgba(79,107,244,.4)}
-
-/* TOOLBAR */
-#toolbar{height:52px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:4px;padding:0 12px;flex-shrink:0;z-index:10;overflow-x:auto;box-shadow:var(--shadow-sm)}
-.logo-sm{font-size:.95rem;font-weight:700;color:var(--text);margin-right:10px;flex-shrink:0;letter-spacing:-0.02em;display:flex;align-items:center;gap:7px}
-.logo-sm-icon{width:26px;height:26px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.logo-sm-icon svg{width:14px;height:14px;color:white}
-.div{width:1px;height:22px;background:var(--border);margin:0 4px;flex-shrink:0}
-.tbtn{position:relative;width:34px;height:34px;border-radius:8px;background:transparent;border:1px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .13s;flex-shrink:0}
-.tbtn:hover{background:var(--surface2);color:var(--text2);border-color:var(--border)}
-.tbtn.active{background:var(--accent-light);color:var(--accent);border-color:transparent}
-.tbtn svg{width:16px;height:16px}
-.tbtn[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:-32px;left:50%;transform:translateX(-50%);background:var(--text);border-radius:6px;padding:4px 9px;font-size:.63rem;white-space:nowrap;color:#fff;pointer-events:none;z-index:100;font-weight:500}
-#colorPicker{-webkit-appearance:none;appearance:none;width:30px;height:30px;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:none;padding:0;overflow:hidden;flex-shrink:0}
-#colorPicker::-webkit-color-swatch-wrapper{padding:0}
-#colorPicker::-webkit-color-swatch{border:none;border-radius:6px}
-.size-wrap{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0 10px;height:34px;flex-shrink:0}
-.size-wrap label{font-size:.62rem;color:var(--muted);font-weight:500}
-#sizeRange{-webkit-appearance:none;width:70px;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer}
-#sizeRange::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 2px var(--accent-light)}
-#sizeVal{font-size:.68rem;color:var(--accent);min-width:16px;font-weight:600}
-.spacer{flex:1}
-.abtn{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;cursor:pointer;transition:all .13s;flex-shrink:0;white-space:nowrap}
-.abtn:hover{border-color:var(--border2);background:var(--surface);color:var(--text)}
-.abtn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;box-shadow:0 2px 6px rgba(79,107,244,.25)}
-.abtn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
-.abtn svg{width:13px;height:13px}
-
-/* zoom indicator */
-#zoomBadge{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0 9px;height:32px;font-size:.72rem;color:var(--muted);flex-shrink:0}
-#zoomLabel{color:var(--text2);min-width:38px;text-align:center;font-weight:600}
-.zbtn{width:22px;height:22px;border-radius:5px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;line-height:1;transition:all .13s;flex-shrink:0}
-.zbtn:hover{background:var(--surface);color:var(--text);border-color:var(--border2)}
-
-/* VIEWPORT */
-#viewport{flex:1;overflow:hidden;background-color:#e8ebf0;background-image:radial-gradient(circle,#c8cdd8 1px,transparent 1px);background-size:20px 20px;position:relative;cursor:default}
-#viewport.panning{cursor:grab}
-#viewport.panning:active{cursor:grabbing}
-#scene{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
-#canvas{display:block;box-shadow:0 8px 40px rgba(0,0,0,.15),0 2px 8px rgba(0,0,0,.08);border-radius:3px}
-#canvas.cur-crosshair{cursor:crosshair}
-#canvas.cur-text{cursor:text}
-#canvas.cur-grab{cursor:grab}
-#canvas.cur-grabbing{cursor:grabbing}
-
-/* EMPTY OVERLAY */
-#empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;pointer-events:none;z-index:5}
-#empty.hidden{display:none}
-.e-icon{opacity:.18}
-.e-icon svg{width:64px;height:64px;color:var(--text2)}
-.e-label{font-size:.75rem;color:var(--muted);letter-spacing:.06em;font-weight:500}
-.e-hint{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 16px;font-size:.73rem;color:var(--text2);pointer-events:all;box-shadow:var(--shadow-sm)}
-
-/* TOAST */
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--text);border-radius:10px;padding:8px 20px;font-size:.75rem;color:#fff;opacity:0;transition:all .28s;pointer-events:none;z-index:999;white-space:nowrap;font-weight:500}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-#toast.ok{background:var(--success)}
-#toast.err{background:var(--danger)}
-
-/* MODAL */
-#modalOverlay{position:fixed;inset:0;background:rgba(15,18,25,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}
-#modalOverlay.open{opacity:1;pointer-events:all}
-#modalBox{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 28px 24px;width:420px;max-width:94vw;box-shadow:0 24px 60px rgba(0,0,0,.18),0 4px 16px rgba(0,0,0,.1);transform:translateY(10px) scale(.97);transition:transform .22s,opacity .22s;opacity:0}
-#modalOverlay.open #modalBox{transform:translateY(0) scale(1);opacity:1}
-.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.modal-title{font-size:.95rem;font-weight:700;color:var(--text);letter-spacing:-0.01em}
-.modal-close{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .13s;font-size:1rem;line-height:1}
-.modal-close:hover{background:var(--border);color:var(--text)}
-.modal-presets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
-.preset-btn{border:1.5px solid var(--border);background:var(--surface2);border-radius:10px;padding:11px 14px;cursor:pointer;text-align:left;transition:all .13s;display:flex;flex-direction:column;gap:3px}
-.preset-btn:hover{border-color:var(--accent);background:var(--accent-light)}
-.preset-btn.sel{border-color:var(--accent);background:var(--accent-light)}
-.preset-name{font-size:.78rem;font-weight:600;color:var(--text)}
-.preset-dim{font-size:.68rem;color:var(--muted)}
-.modal-divider{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:var(--muted);font-size:.7rem;font-weight:500}
-.modal-divider::before,.modal-divider::after{content:'';flex:1;height:1px;background:var(--border)}
-.custom-size{display:flex;gap:8px;align-items:center;margin-bottom:20px}
-.custom-input{flex:1;height:36px;background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:0 12px;font-family:'Inter',sans-serif;font-size:.8rem;color:var(--text);outline:none;transition:border-color .13s;text-align:center}
-.custom-input:focus{border-color:var(--accent)}
-.custom-sep{font-size:.85rem;color:var(--muted);font-weight:500;flex-shrink:0}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end}
-.mbtn{font-family:'Inter',sans-serif;height:36px;padding:0 18px;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .13s;border:1px solid var(--border)}
-.mbtn.cancel{background:var(--surface2);color:var(--text2)}
-.mbtn.cancel:hover{background:var(--border)}
-.mbtn.confirm{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(79,107,244,.25)}
-.mbtn.confirm:hover{background:var(--accent-hover)}
-
-/* RESPONSIVE TOOLBAR */
-@media (max-width:900px){.abtn .btn-label{display:none}.abtn{padding:0 9px}}
-@media (max-width:720px){.logo-sm .logo-text{display:none}.logo-sm{margin-right:4px}#sizeRange{width:50px}}
-@media (max-width:600px){#sizeRange{display:none}#sizeVal{display:none}}
-
-/* ════════════════════════════════════════════════════════════════
-   LIQUID GLASS THEME — iOS 26 style overlay (SnapEdit)
-   Pure visual layer. No structural/functional rules touched above.
-   ════════════════════════════════════════════════════════════════ */
-
 :root{
-  --glass-fill:      rgba(255,255,255,.55);
-  --glass-fill-2:    rgba(255,255,255,.4);
-  --glass-fill-deep: rgba(255,255,255,.7);
-  --glass-edge:      rgba(255,255,255,.9);
-  --glass-edge-dim:  rgba(31,38,80,.08);
-  --glass-shadow-lg: 0 22px 60px rgba(31,38,80,.2), 0 1px 1px rgba(255,255,255,.7) inset;
-  --glass-blur:      blur(22px) saturate(190%);
-  --glass-blur-sm:   blur(14px) saturate(170%);
+  color-scheme:light;
+  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f7f8fa;--surface3:#eef0f4;
+  --border:#e2e5ea;--border2:#d0d5dd;
+  --text:#1a1d23;--text2:#4b5563;--muted:#8a919e;
+  --accent:#4F6BF4;--accent-hover:#3d57e0;--accent-light:#eef0fe;--accent-border:#c7d0fc;--on-accent:#ffffff;
+  --danger:#ef4444;--danger-light:#fef2f2;--success:#10b981;
+  --shadow-sm:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.04);
+  --shadow-md:0 4px 16px rgba(16,24,40,.10),0 2px 6px rgba(16,24,40,.06);
+  --shadow-lg:0 24px 60px rgba(16,24,40,.16),0 4px 16px rgba(16,24,40,.08);
+  --r:8px;--r-lg:12px;
+  --float-bg:#1f2230;--float-text:#e9ebf2;
+  --canvas-bg:#e6e9ef;--canvas-dot:#cfd4de;
 }
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1117;--surface:#171a22;--surface2:#1d212b;--surface3:#252a35;
+  --border:#2a2f3b;--border2:#394050;
+  --text:#e7e9ef;--text2:#b3b9c6;--muted:#7f8797;
+  --accent:#7189ff;--accent-hover:#8a9dff;--accent-light:rgba(113,137,255,.14);--accent-border:rgba(113,137,255,.38);--on-accent:#0f1117;
+  --danger:#f87171;--danger-light:rgba(248,113,113,.12);--success:#34d399;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.4);--shadow-md:0 6px 20px rgba(0,0,0,.45);--shadow-lg:0 24px 60px rgba(0,0,0,.6);
+  --float-bg:#262a38;
+  --canvas-bg:#0b0d12;--canvas-dot:#1f2430;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;background:var(--bg);color:var(--text);
+  display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+button:disabled{cursor:default;opacity:.4}
+input{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ico{width:18px;height:18px;display:block;flex-shrink:0}
 
-body{ background:#ffffff; }
+/* ── Topbar ── */
+.topbar{height:56px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px;background:var(--surface);border-bottom:1px solid var(--border);z-index:30}
+.back-link{display:flex;align-items:center;gap:6px;height:34px;padding:0 10px 0 8px;border-radius:var(--r);color:var(--text2);text-decoration:none;font-size:13px;font-weight:500;flex-shrink:0}
+.back-link:hover{background:var(--surface2);color:var(--text)}
+.back-link .ico{width:16px;height:16px}
+.sep{width:1px;height:22px;background:var(--border);margin:0 4px;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:9px;flex-shrink:0;margin-right:6px}
+.brand-mark{width:30px;height:30px;border-radius:9px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(79,107,244,.35)}
+.brand-mark .ico{width:17px;height:17px}
+.brand-name{font-weight:700;font-size:15px;letter-spacing:-.01em}
+.grow{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 12px;border-radius:var(--r);border:1px solid transparent;font-size:13px;font-weight:500;white-space:nowrap;color:var(--text2);transition:background .12s,border-color .12s,color .12s}
+.btn:hover:not(:disabled){background:var(--surface2);color:var(--text)}
+.btn .ico{width:16px;height:16px}
+.btn-icon{width:34px;padding:0}
+.btn-outline{border-color:var(--border);background:var(--surface)}
+.btn-outline:hover:not(:disabled){border-color:var(--border2)}
+.btn-primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:600;box-shadow:0 2px 8px rgba(79,107,244,.28)}
+.btn-primary:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover);color:var(--on-accent)}
+.btn-danger{color:var(--danger)}
+.btn-danger:hover:not(:disabled){background:var(--danger-light);color:var(--danger)}
+.btn.done{background:var(--success);border-color:var(--success);color:#fff}
+.split{display:flex}
+.split .btn-primary:first-child{border-radius:var(--r) 0 0 var(--r)}
+.split .btn-primary:last-child{border-radius:0 var(--r) var(--r) 0;width:30px;padding:0;border-left:1px solid rgba(255,255,255,.25)}
+.zoom{display:flex;align-items:center;height:34px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);flex-shrink:0}
+.zoom .btn{height:32px;width:30px;padding:0;border:0}
+.zoom .zval{min-width:52px;height:32px;font-size:12.5px;font-weight:600;color:var(--text);border-radius:6px}
+.zoom .zval:hover{background:var(--surface2)}
 
-/* ── Toolbar: glass strip ── */
-#toolbar{
-  background:linear-gradient(180deg, #ffffff, #f5f6fa);
-  border-bottom:1px solid rgba(31,38,80,.1);
-  box-shadow:0 1px 0 #fff inset, 0 4px 16px rgba(31,38,80,.06);
-}
-.logo-sm-icon{
-  background:linear-gradient(155deg,#6f86ff,#4F6BF4 55%,#3552d9);
-  box-shadow:0 3px 10px rgba(79,107,244,.45), 0 1px 0 rgba(255,255,255,.55) inset;
-}
-.logo-sm{ letter-spacing:-.3px; }
-.div{ background:rgba(31,38,80,.14); }
+/* ── Props bar ── */
+.propbar{height:50px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 14px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;z-index:20}
+.propbar::-webkit-scrollbar{display:none}
+.pb-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text);flex-shrink:0;margin-right:6px}
+.pb-title .ico{width:16px;height:16px;color:var(--accent)}
+.pb-hint{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.pb-group{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.pb-label{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.sw{width:24px;height:24px;border-radius:50%;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(128,128,128,.35);transition:transform .1s}
+.sw:hover{transform:scale(1.1)}
+.sw.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
+.sw-custom{position:relative;background:conic-gradient(#ef4444,#f59e0b,#eab308,#16a34a,#0891b2,#4F6BF4,#8b5cf6,#ec4899,#ef4444)}
+.sw-custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+.seg{display:flex;gap:2px;padding:2px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;flex-shrink:0}
+.seg button{height:28px;min-width:30px;padding:0 9px;border-radius:7px;font-size:12.5px;font-weight:500;color:var(--text2);display:flex;align-items:center;justify-content:center;gap:5px}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm)}
+.seg .dotw{border-radius:50%;background:currentColor}
+.pb-btn{height:32px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--text2);flex-shrink:0}
+.pb-btn:hover{background:var(--surface2);color:var(--text)}
+.pb-btn .ico{width:16px;height:16px}
+.pb-btn.danger:hover{background:var(--danger-light);color:var(--danger)}
+.pb-btn.primary{background:var(--accent);color:var(--on-accent);font-weight:600}
+.pb-btn.primary:hover{background:var(--accent-hover)}
+.range{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.range input{width:110px;accent-color:var(--accent)}
+.range span{font-size:12px;font-weight:600;color:var(--text2);min-width:26px}
 
-/* ── Tool buttons ── */
-.tbtn{ position:relative; overflow:hidden; }
-.tbtn:hover{
-  background:linear-gradient(180deg,#fff,#f1f3fa);
-  border-color:rgba(31,38,80,.1);
-  box-shadow:0 2px 8px rgba(31,38,80,.08);
-}
-.tbtn.active{
-  background:linear-gradient(160deg,#eef0fe,#d7defc);
-  color:var(--accent);
-  box-shadow:0 2px 8px rgba(79,107,244,.28), 0 0 0 1px rgba(79,107,244,.18) inset;
-}
-.tbtn[data-tip]:hover::after{
-  background:rgba(20,22,38,.92);
-  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-  box-shadow:0 6px 18px rgba(0,0,0,.25);
-}
+/* ── Main ── */
+.main{flex:1;display:flex;min-height:0;position:relative}
+.rail{width:62px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0;overflow-y:auto;scrollbar-width:none;z-index:20}
+.rail::-webkit-scrollbar{display:none}
+.tool{width:44px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--text2);position:relative;flex-shrink:0;transition:background .1s,color .1s}
+.tool:hover{background:var(--surface2);color:var(--text)}
+.tool.on{background:var(--accent-light);color:var(--accent)}
+.tool .ico{width:20px;height:20px}
+.tool .key{position:absolute;right:4px;bottom:3px;font-size:9px;font-weight:700;opacity:.45}
+.rail-sep{width:28px;height:1px;background:var(--border);margin:5px 0;flex-shrink:0}
 
-#colorPicker{ box-shadow:0 1px 3px rgba(31,38,80,.1); }
-.size-wrap{
-  background:rgba(241,243,250,.9);
-  border:1px solid rgba(31,38,80,.1);
-  box-shadow:0 1px 0 rgba(255,255,255,.8) inset;
-}
+#viewport{flex:1;position:relative;overflow:hidden;background-color:var(--canvas-bg);background-image:radial-gradient(circle,var(--canvas-dot) 1px,transparent 1px);background-size:22px 22px;touch-action:none;user-select:none;-webkit-user-select:none}
+#scene{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+#canvas{display:block;box-shadow:0 30px 70px rgba(16,24,40,.18),0 6px 20px rgba(16,24,40,.1),0 0 0 1px rgba(16,24,40,.06);image-rendering:auto}
+#viewport.px #canvas{image-rendering:pixelated}
+#viewport[data-cursor="crosshair"]{cursor:crosshair}
+#viewport[data-cursor="text"]{cursor:text}
+#viewport[data-cursor="move"]{cursor:move}
+#viewport[data-cursor="grab"]{cursor:grab}
+#viewport[data-cursor="grabbing"]{cursor:grabbing}
+#viewport[data-cursor="eraser"]{cursor:cell}
+#viewport[data-cursor="nwse"]{cursor:nwse-resize}
+#viewport[data-cursor="nesw"]{cursor:nesw-resize}
+#viewport[data-cursor="ns"]{cursor:ns-resize}
+#viewport[data-cursor="ew"]{cursor:ew-resize}
+#viewport[data-cursor="pointer"]{cursor:pointer}
+.text-edit{position:absolute;z-index:40;margin:0;border:2px dashed var(--accent);border-radius:6px;outline:none;resize:none;overflow:hidden;
+  background:rgba(255,255,255,.08);font-family:'Inter',system-ui,sans-serif;font-weight:700;line-height:1.25;white-space:pre;padding:0;min-width:40px;transform-origin:0 0}
 
-/* ── Action buttons ── */
-.abtn{
-  background:rgba(241,243,250,.9);
-  border:1px solid rgba(31,38,80,.12);
-  box-shadow:0 1px 0 rgba(255,255,255,.7) inset;
-}
-.abtn:hover{
-  background:#fff;
-  border-color:rgba(31,38,80,.2);
-  box-shadow:0 2px 8px rgba(31,38,80,.08), 0 1px 0 #fff inset;
-}
-.abtn.primary{
-  background:linear-gradient(160deg,#7a8eff 0%,#4F6BF4 55%,#3a52e0 100%);
-  border:1px solid rgba(255,255,255,.25);
-  box-shadow:0 4px 16px rgba(79,107,244,.4), 0 1px 0 rgba(255,255,255,.5) inset;
-}
-.abtn.primary:hover{
-  background:linear-gradient(160deg,#8b9dff 0%,#5d76f5 55%,#4259e6 100%);
-  box-shadow:0 6px 20px rgba(79,107,244,.5), 0 1px 0 rgba(255,255,255,.5) inset;
-}
+/* ── Empty state ── */
+.empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;z-index:5}
+.empty.hidden{display:none}
+.empty-card{width:100%;max-width:560px;background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-lg);padding:30px 30px 24px;text-align:center}
+.empty-ico{width:64px;height:64px;margin:0 auto 16px;border-radius:18px;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center}
+.empty-ico .ico{width:30px;height:30px}
+.empty h2{margin:0 0 6px;font-size:20px;font-weight:800;letter-spacing:-.02em}
+.empty p{margin:0 0 20px;color:var(--text2);font-size:14px;line-height:1.55}
+.empty-drop{border:2px dashed var(--border2);border-radius:14px;padding:22px 16px;margin-bottom:16px;transition:border-color .12s,background .12s}
+.empty-drop .big{font-size:15px;font-weight:600;margin-bottom:6px}
+.empty-drop .small{font-size:13px;color:var(--muted)}
+.empty-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 7px;border-radius:6px;border:1px solid var(--border2);border-bottom-width:2px;background:var(--surface2);font-size:11.5px;font-weight:600;color:var(--text2);margin:0 2px;font-family:'Inter',sans-serif}
+.empty-tips{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-top:18px;font-size:12px;color:var(--muted)}
+.drop-hint{position:absolute;inset:10px;z-index:60;border:3px dashed var(--accent);border-radius:16px;background:color-mix(in srgb,var(--accent) 10%,transparent);display:none;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--accent);pointer-events:none}
+.drop-hint.show{display:flex}
 
-#zoomBadge{
-  background:rgba(241,243,250,.9);
-  border:1px solid rgba(31,38,80,.1);
-  box-shadow:0 1px 0 rgba(255,255,255,.8) inset;
-}
-.zbtn:hover{ background:#fff; border-color:rgba(31,38,80,.2); }
+/* ── Statusbar ── */
+.statusbar{height:30px;flex-shrink:0;display:flex;align-items:center;gap:18px;padding:0 16px;background:var(--surface);border-top:1px solid var(--border);font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden}
+.statusbar b{color:var(--text2);font-weight:600}
 
-/* ── Viewport / canvas: keep crisp, add depth ── */
-#viewport{
-  background-color:#f4f5f8;
-  background-image:radial-gradient(circle,#d6dae3 1px,transparent 1px);
-}
-#canvas{
-  box-shadow:0 30px 70px rgba(31,38,80,.18), 0 6px 20px rgba(31,38,80,.1), 0 0 0 1px rgba(31,38,80,.05);
-}
+/* ── Popover / Modal / Toast / Tip ── */
+.pop{position:fixed;z-index:300;display:none;min-width:220px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px}
+.pop.open{display:block}
+.mi{display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:6px 10px;border-radius:8px;text-align:left;font-size:13.5px;color:var(--text)}
+.mi:hover{background:var(--surface2)}
+.mi .ico{width:16px;height:16px;color:var(--text2)}
+.mi .sub{display:block;font-size:11.5px;color:var(--muted)}
+.mi .k{margin-left:auto;font-size:11px;color:var(--muted)}
+.overlay{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,18,25,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.overlay.open{display:flex}
+.modal{width:100%;max-width:460px;max-height:calc(100vh - 40px);overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-lg);padding:22px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-head h3{margin:0;font-size:16px;font-weight:700}
+.modal p.msg{margin:0 0 18px;font-size:13.5px;line-height:1.55;color:var(--text2)}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;flex-wrap:wrap}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.preset{border:1.5px solid var(--border);border-radius:11px;padding:11px 13px;text-align:left;display:flex;flex-direction:column;gap:3px;background:var(--surface2)}
+.preset:hover{border-color:var(--border2)}
+.preset.on{border-color:var(--accent);background:var(--accent-light)}
+.preset b{font-size:13px}
+.preset span{font-size:12px;color:var(--muted)}
+.custom-size{display:flex;align-items:center;gap:8px}
+.custom-size input{flex:1;min-width:0;height:38px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);padding:0 12px;text-align:center;font-size:14px;outline:none}
+.custom-size input:focus{border-color:var(--accent);background:var(--surface)}
+.field-label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin:0 0 8px}
+.kgrid{display:grid;grid-template-columns:1fr auto;gap:8px 16px;font-size:13px;align-items:center}
+.kgrid .grp{grid-column:1/-1;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.toast{position:fixed;left:50%;bottom:46px;z-index:500;transform:translate(-50%,12px);opacity:0;pointer-events:none;display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;border-radius:12px;background:var(--float-bg);color:var(--float-text);font-size:13px;font-weight:500;box-shadow:0 12px 32px rgba(0,0,0,.28);transition:opacity .18s,transform .18s;max-width:calc(100vw - 24px)}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast.ok{background:#0f8a62}
+.toast.err{background:#c73b3b}
+.toast .t-act{height:28px;padding:0 10px;border-radius:7px;background:rgba(255,255,255,.16);color:#fff;font-weight:600;font-size:12.5px}
+#tip{position:fixed;z-index:600;display:none;pointer-events:none;max-width:260px;padding:6px 9px;border-radius:7px;background:var(--float-bg);color:#fff;font-size:12px;font-weight:500;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+#tip.show{display:block}
+#tip .k{opacity:.6;margin-left:6px}
 
-/* ── Empty state hint ── */
-.e-hint{
-  background:linear-gradient(165deg, var(--glass-fill-deep), var(--glass-fill));
-  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
-  border:1px solid var(--glass-edge-dim);
-  box-shadow:var(--glass-shadow-lg);
+@media(max-width:900px){.hide-md{display:none !important}}
+@media(max-width:640px){
+  .hide-sm{display:none !important}
+  .topbar{padding:0 6px;gap:2px}
+  .brand-name{display:none}
+  .main{flex-direction:column-reverse}
+  .rail{width:auto;height:58px;flex-direction:row;border-right:0;border-top:1px solid var(--border);padding:0 8px;overflow-x:auto;overflow-y:hidden}
+  .rail-sep{width:1px;height:26px;margin:0 4px}
+  .tool .key{display:none}
+  .statusbar{display:none}
+  .propbar{padding:0 8px}
 }
-
-/* ── Toast: dark glass ── */
-#toast{
-  background:linear-gradient(165deg, rgba(28,30,42,.9), rgba(28,30,42,.78));
-  backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%);
-  border:1px solid rgba(255,255,255,.12);
-  box-shadow:0 14px 40px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.16) inset;
-}
-#toast.ok{ background:linear-gradient(165deg, rgba(16,185,129,.92), rgba(16,150,110,.85)); }
-#toast.err{ background:linear-gradient(165deg, rgba(239,68,68,.92), rgba(210,54,54,.85)); }
-
-/* ── Modal: glass dialog ── */
-#modalOverlay{
-  background:rgba(20,22,38,.32);
-  backdrop-filter:blur(10px) saturate(140%); -webkit-backdrop-filter:blur(10px) saturate(140%);
-}
-#modalBox{
-  background:linear-gradient(165deg, rgba(255,255,255,.92), rgba(255,255,255,.78));
-  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
-  border:1px solid var(--glass-edge);
-  box-shadow:0 30px 80px rgba(20,22,38,.35), 0 1px 0 rgba(255,255,255,.85) inset;
-}
-.modal-close:hover{ background:rgba(31,38,80,.1); }
-.preset-btn{
-  background:rgba(241,243,250,.8);
-  border:1.5px solid rgba(31,38,80,.1);
-}
-.preset-btn:hover, .preset-btn.sel{
-  border-color:var(--accent);
-  background:linear-gradient(160deg,#eef0fe,#dfe6ff);
-}
-.custom-input{
-  background:rgba(241,243,250,.85);
-  border:1.5px solid rgba(31,38,80,.12);
-}
-.custom-input:focus{ background:#fff; }
-.mbtn.cancel{ background:rgba(241,243,250,.9); border-color:rgba(31,38,80,.12); }
-.mbtn.cancel:hover{ background:#fff; }
-.mbtn.confirm{
-  background:linear-gradient(160deg,#7a8eff 0%,#4F6BF4 55%,#3a52e0 100%);
-  box-shadow:0 4px 16px rgba(79,107,244,.4), 0 1px 0 rgba(255,255,255,.5) inset;
-}
-.mbtn.confirm:hover{ background:linear-gradient(160deg,#8b9dff 0%,#5d76f5 55%,#4259e6 100%); }
-
-/* ── Splash screen: glass card on mesh-free white ── */
-#splash{ background:#ffffff; }
-.splash-logo-icon{
-  background:linear-gradient(155deg,#6f86ff,#4F6BF4 55%,#3552d9);
-  box-shadow:0 4px 14px rgba(79,107,244,.4), 0 1px 0 rgba(255,255,255,.5) inset;
-}
-.splash-card{
-  background:linear-gradient(165deg, var(--glass-fill-deep), var(--glass-fill));
-  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
-  border:1px solid var(--glass-edge-dim);
-  box-shadow:0 24px 60px rgba(31,38,80,.14), 0 1px 0 rgba(255,255,255,.8) inset;
-}
-.step-num{
-  background:linear-gradient(160deg,#eef0fe,#d7defc);
-  box-shadow:0 1px 0 rgba(255,255,255,.7) inset;
-}
-.kbd{
-  background:rgba(255,255,255,.7);
-  box-shadow:0 1px 0 rgba(255,255,255,.8) inset;
-}
-.btn-new{
-  background:linear-gradient(160deg,#7a8eff 0%,#4F6BF4 55%,#3a52e0 100%);
-  box-shadow:0 4px 16px rgba(79,107,244,.4), 0 1px 0 rgba(255,255,255,.5) inset;
-}
-.btn-new:hover{
-  background:linear-gradient(160deg,#8b9dff 0%,#5d76f5 55%,#4259e6 100%);
-  box-shadow:0 6px 20px rgba(79,107,244,.5), 0 1px 0 rgba(255,255,255,.5) inset;
-}
-
-/* ── Selection / caret colors, smooth entrance ── */
-::selection{ background:rgba(79,107,244,.28); }
-#toolbar, .splash-card{ animation:glassFadeIn .35s ease both; }
-@keyframes glassFadeIn{ from{opacity:0} to{opacity:1} }
-
-/* ── Scrollbars ── */
-*::-webkit-scrollbar{width:9px;height:9px}
-*::-webkit-scrollbar-track{background:transparent}
-*::-webkit-scrollbar-thumb{
-  background:linear-gradient(180deg, rgba(120,130,180,.45), rgba(120,130,180,.3));
-  border-radius:10px; border:2px solid transparent; background-clip:content-box;
-}
-*::-webkit-scrollbar-thumb:hover{background:rgba(79,107,244,.5);background-clip:content-box}
 </style>
 </head>
 <body>
+<header class="topbar">
+  <a class="back-link" href="../tools.html" data-tip="До всіх інструментів Edvault"><span data-icon="back"></span><span class="hide-sm">Інструменти</span></a>
+  <div class="sep hide-sm"></div>
+  <div class="brand"><div class="brand-mark"><span data-icon="logo"></span></div><span class="brand-name">SnapEdit</span></div>
+  <button class="btn" data-act="open" data-tip="Відкрити зображення" data-kbd="Ctrl+O"><span data-icon="folder"></span><span class="hide-md">Відкрити</span></button>
+  <button class="btn" data-act="new" data-tip="Нове порожнє полотно"><span data-icon="plus"></span><span class="hide-md">Нове</span></button>
+  <div class="grow"></div>
+  <button class="btn btn-icon" data-act="undo" id="btnUndo" data-tip="Скасувати" data-kbd="Ctrl+Z"><span data-icon="undo"></span></button>
+  <button class="btn btn-icon" data-act="redo" id="btnRedo" data-tip="Повторити" data-kbd="Ctrl+Shift+Z"><span data-icon="redo"></span></button>
+  <div class="sep hide-sm"></div>
+  <div class="zoom hide-sm">
+    <button class="btn" data-act="zoomOut" data-tip="Зменшити" data-kbd="Ctrl+−"><span data-icon="minus"></span></button>
+    <button class="zval" data-act="zoomMenu" id="zoomLabel" data-tip="Масштаб">100%</button>
+    <button class="btn" data-act="zoomIn" data-tip="Збільшити" data-kbd="Ctrl++"><span data-icon="plus"></span></button>
+  </div>
+  <button class="btn btn-icon hide-sm" data-act="theme" data-tip="Світла / темна тема"><span data-icon="moon" id="themeIco"></span></button>
+  <button class="btn btn-icon hide-sm" data-act="help" data-tip="Гарячі клавіші"><span data-icon="help"></span></button>
+  <div class="sep hide-sm"></div>
+  <button class="btn btn-outline" data-act="copy" id="btnCopy" data-tip="Копіювати зображення в буфер" data-kbd="Ctrl+Shift+C"><span data-icon="copy"></span><span class="hide-md">Копіювати</span></button>
+  <div class="split">
+    <button class="btn btn-primary" data-act="download" id="btnDownload" data-tip="Завантажити PNG" data-kbd="Ctrl+S"><span data-icon="download"></span><span class="hide-sm">Зберегти</span></button>
+    <button class="btn btn-primary" data-act="saveMenu" data-tip="Формат файлу"><span data-icon="chevron"></span></button>
+  </div>
+</header>
 
-<!-- SPLASH -->
-<div id="splash">
-  <div class="splash-logo">
-    <div class="splash-logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
-    SnapEdit
-  </div>
-  <div class="splash-sub">редактор скріншотів</div>
-  <div class="splash-card">
-    <h2>Як користуватись</h2>
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-text">Зроби скріншот (<b>Win+Shift+S</b> / <b>⌘+Ctrl+4</b>) або натисни «Новий аркуш».</div>
+<div class="propbar" id="propbar"></div>
+
+<div class="main">
+  <aside class="rail" id="rail">
+    <button class="tool" data-tool="select" data-tip="Вибрати й перемістити" data-kbd="V"><span data-icon="cursor"></span><span class="key">V</span></button>
+    <button class="tool" data-tool="crop" data-tip="Обрізати" data-kbd="C"><span data-icon="crop"></span><span class="key">C</span></button>
+    <div class="rail-sep"></div>
+    <button class="tool" data-tool="arrow" data-tip="Стрілка" data-kbd="A"><span data-icon="arrow"></span><span class="key">A</span></button>
+    <button class="tool" data-tool="rect" data-tip="Прямокутник" data-kbd="R"><span data-icon="rect"></span><span class="key">R</span></button>
+    <button class="tool" data-tool="ellipse" data-tip="Еліпс" data-kbd="E"><span data-icon="ellipse"></span><span class="key">E</span></button>
+    <button class="tool" data-tool="line" data-tip="Лінія" data-kbd="L"><span data-icon="line"></span><span class="key">L</span></button>
+    <button class="tool" data-tool="pen" data-tip="Олівець" data-kbd="P"><span data-icon="pen"></span><span class="key">P</span></button>
+    <button class="tool" data-tool="highlighter" data-tip="Маркер-виділювач" data-kbd="H"><span data-icon="marker"></span><span class="key">H</span></button>
+    <button class="tool" data-tool="text" data-tip="Текст" data-kbd="T"><span data-icon="text"></span><span class="key">T</span></button>
+    <button class="tool" data-tool="step" data-tip="Нумерація кроків" data-kbd="N"><span data-icon="step"></span><span class="key">N</span></button>
+    <button class="tool" data-tool="blur" data-tip="Приховати (мозаїка / розмиття)" data-kbd="B"><span data-icon="blur"></span><span class="key">B</span></button>
+    <div class="rail-sep"></div>
+    <button class="tool" data-tool="eraser" data-tip="Гумка — видаляє позначки, не зачіпаючи скріншот" data-kbd="X"><span data-icon="eraser"></span><span class="key">X</span></button>
+  </aside>
+  <div id="viewport" data-cursor="crosshair">
+    <div id="scene"><canvas id="canvas" width="0" height="0"></canvas></div>
+    <div class="empty" id="empty">
+      <div class="empty-card">
+        <div class="empty-ico"><span data-icon="logo"></span></div>
+        <h2>Редактор скріншотів</h2>
+        <p>Додайте стрілки, рамки, текст, нумерацію та приховайте зайве — і збережіть або скопіюйте результат.</p>
+        <div class="empty-drop">
+          <div class="big">Вставте скріншот <span class="kbd">Ctrl</span>+<span class="kbd">V</span></div>
+          <div class="small">або перетягніть файл зображення сюди</div>
+        </div>
+        <div class="empty-actions">
+          <button class="btn btn-primary" data-act="open"><span data-icon="folder"></span>Відкрити файл</button>
+          <button class="btn btn-outline" data-act="new"><span data-icon="plus"></span>Порожнє полотно</button>
+        </div>
+        <div class="empty-tips">
+          <span>Скріншот у Windows: <span class="kbd">Win</span>+<span class="kbd">Shift</span>+<span class="kbd">S</span></span>
+          <span>на Mac: <span class="kbd">⌘</span>+<span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">4</span></span>
+        </div>
+      </div>
     </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-text">Встав <span class="kbd">Ctrl+V</span> або перетягни файл.</div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-text">Малюй. <b>Колесо миші</b> — зум. <b>Пробіл + drag</b> або <b>середня кнопка</b> — переміщення.</div>
-    </div>
-    <div class="step">
-      <div class="step-num">4</div>
-      <div class="step-text">Збережи: <b>копіюй в буфер</b> або <b>завантаж</b> PNG.</div>
-    </div>
-  </div>
-  <div class="splash-btns">
-    <div class="splash-hint">вставити скріншот → <span class="kbd">Ctrl+V</span></div>
-    <span style="color:var(--muted);font-size:.7rem">або</span>
-    <button class="btn-new" id="splashNew">+ новий аркуш</button>
+    <div class="drop-hint" id="dropHint">Відпустіть, щоб відкрити зображення</div>
   </div>
 </div>
 
-<!-- TOOLBAR -->
-<div id="toolbar">
-  <span class="logo-sm">
-    <div class="logo-sm-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
-    <span class="logo-text">SnapEdit</span>
-  </span>
-  <div class="div"></div>
+<footer class="statusbar">
+  <span id="stSize"></span>
+  <span id="stObjs"></span>
+  <span class="grow"></span>
+  <span id="stHint">Колесо миші — масштаб · Пробіл + тягнути — переміщення</span>
+</footer>
 
-  <button class="tbtn active" data-tool="pen"     data-tip="Пензель (B)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="11" cy="11" r="2"/></svg>
-  </button>
-  <button class="tbtn" data-tool="line"    data-tip="Лінія (L)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="20" x2="20" y2="4"/></svg>
-  </button>
-  <button class="tbtn" data-tool="arrow"   data-tip="Стрілка (A)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="9 5 19 5 19 15"/></svg>
-  </button>
-  <button class="tbtn" data-tool="rect"    data-tip="Прямокутник (R)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-  </button>
-  <button class="tbtn" data-tool="ellipse" data-tip="Еліпс (E)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="10" ry="7"/></svg>
-  </button>
-  <button class="tbtn" data-tool="step"    data-tip="Нумерація кроків (N)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" fill="currentColor" opacity="0.15"/><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor" stroke="none" font-family="Inter,sans-serif">N</text></svg>
-  </button>
-  <button class="tbtn" data-tool="blur"    data-tip="Мозаїка (M)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
-  </button>
-  <button class="tbtn" data-tool="eraser"  data-tip="Гумка (X)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H7L3 16l13-13 5 5-1 12z"/><line x1="6" y1="16" x2="17" y2="5"/></svg>
-  </button>
+<div class="pop" id="pop"></div>
 
-  <div class="div"></div>
-
-  <input type="color" id="colorPicker" value="#ff4e6a" title="Колір">
-  <div class="size-wrap">
-    <label>px</label>
-    <input type="range" id="sizeRange" min="1" max="30" value="3">
-    <span id="sizeVal">3</span>
-  </div>
-
-  <div class="div"></div>
-
-  <button class="tbtn" id="btnUndo" data-tip="Undo (Ctrl+Z)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
-  </button>
-  <button class="tbtn" id="btnRedo" data-tip="Redo (Ctrl+Y)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-4.95"/></svg>
-  </button>
-  <button class="tbtn" id="btnClear" data-tip="Очистити" style="color:var(--danger)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-  </button>
-  <button class="tbtn" id="btnResetStep" data-tip="Скинути лічильник кроків">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" stroke="none" font-family="Inter,sans-serif">1</text><path d="M4.5 4.5l1.8 1.8" stroke-width="2.5" stroke-linecap="round"/></svg>
-  </button>
-
-  <div class="div"></div>
-
-  <!-- ZOOM CONTROLS -->
-  <div id="zoomBadge">
-    <button class="zbtn" id="btnZoomOut" title="Зменшити (-)">−</button>
-    <span id="zoomLabel">100%</span>
-    <button class="zbtn" id="btnZoomIn"  title="Збільшити (+)">+</button>
-    <button class="zbtn" id="btnZoomFit" title="По розміру (0)" style="font-size:.6rem;padding:0 4px;width:auto">FIT</button>
-  </div>
-
-  <div class="spacer"></div>
-
-  <button class="abtn" id="btnNew">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-    <span class="btn-label">Новий аркуш</span>
-  </button>
-  <button class="abtn" id="btnCopy">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-    <span class="btn-label">Копіювати</span>
-  </button>
-  <button class="abtn primary" id="btnDownload">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    <span class="btn-label">Завантажити</span>
-  </button>
-</div>
-
-<!-- NEW CANVAS MODAL -->
-<div id="modalOverlay">
-  <div id="modalBox">
-    <div class="modal-header">
-      <span class="modal-title">Новий аркуш</span>
-      <button class="modal-close" id="modalClose">✕</button>
+<div class="overlay" id="newModal">
+  <div class="modal" role="dialog">
+    <div class="modal-head"><h3>Нове полотно</h3><button class="btn btn-icon" data-close><span data-icon="close"></span></button></div>
+    <div class="presets" id="presets">
+      <button class="preset on" data-w="1280" data-h="720"><b>HD</b><span>1280 × 720</span></button>
+      <button class="preset" data-w="1920" data-h="1080"><b>Full HD</b><span>1920 × 1080</span></button>
+      <button class="preset" data-w="1200" data-h="800"><b>Стандартне</b><span>1200 × 800</span></button>
+      <button class="preset" data-w="1080" data-h="1080"><b>Квадрат</b><span>1080 × 1080</span></button>
+      <button class="preset" data-w="1240" data-h="1754"><b>A4 (вертикально)</b><span>1240 × 1754</span></button>
+      <button class="preset" data-w="800" data-h="600"><b>Маленьке</b><span>800 × 600</span></button>
     </div>
-    <div class="modal-presets">
-      <button class="preset-btn sel" data-w="1200" data-h="800">
-        <span class="preset-name">Стандартний</span>
-        <span class="preset-dim">1200 × 800 px</span>
-      </button>
-      <button class="preset-btn" data-w="1920" data-h="1080">
-        <span class="preset-name">Full HD</span>
-        <span class="preset-dim">1920 × 1080 px</span>
-      </button>
-      <button class="preset-btn" data-w="2560" data-h="1440">
-        <span class="preset-name">2K / QHD</span>
-        <span class="preset-dim">2560 × 1440 px</span>
-      </button>
-      <button class="preset-btn" data-w="800" data-h="600">
-        <span class="preset-name">Маленький</span>
-        <span class="preset-dim">800 × 600 px</span>
-      </button>
-    </div>
-    <div class="modal-divider">або свій розмір</div>
-    <div class="custom-size">
-      <input class="custom-input" type="number" id="customW" placeholder="Ширина" min="1" max="8000">
-      <span class="custom-sep">×</span>
-      <input class="custom-input" type="number" id="customH" placeholder="Висота" min="1" max="8000">
-      <span class="custom-sep" style="color:var(--muted);font-size:.7rem">px</span>
-    </div>
+    <span class="field-label">Свій розмір, px</span>
+    <div class="custom-size"><input type="number" id="customW" min="16" max="8000" placeholder="Ширина"><span>×</span><input type="number" id="customH" min="16" max="8000" placeholder="Висота"></div>
     <div class="modal-actions">
-      <button class="mbtn cancel" id="modalCancel">Скасувати</button>
-      <button class="mbtn confirm" id="modalConfirm">Створити</button>
+      <button class="btn btn-outline" data-close>Скасувати</button>
+      <button class="btn btn-primary" id="newOk">Створити</button>
     </div>
   </div>
 </div>
-
-<!-- VIEWPORT -->
-<div id="viewport">
-  <div id="scene">
-    <canvas id="canvas"></canvas>
-  </div>
-  <div id="empty">
-    <div class="e-icon">
-      <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="1.5">
-        <rect x="10" y="18" width="60" height="44" rx="4"/>
-        <path d="M10 28h60M24 18v10M56 18v10"/>
-        <circle cx="40" cy="46" r="8"/>
-      </svg>
-    </div>
-    <div class="e-label">порожнє полотно</div>
-    <div class="e-hint">
-      <span class="kbd">Ctrl+V</span>&nbsp; вставити скріншот &nbsp;·&nbsp; або натисни «Новий аркуш»
+<div class="overlay" id="confirmModal">
+  <div class="modal" role="alertdialog">
+    <div class="modal-head"><h3 id="confirmTitle">Підтвердження</h3></div>
+    <p class="msg" id="confirmMsg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="confirmCancel">Скасувати</button>
+      <button class="btn btn-primary" id="confirmOk">Так</button>
     </div>
   </div>
 </div>
-
-<div id="toast"></div>
-
+<div class="overlay" id="helpModal">
+  <div class="modal" style="max-width:520px" role="dialog">
+    <div class="modal-head"><h3>Гарячі клавіші</h3><button class="btn btn-icon" data-close><span data-icon="close"></span></button></div>
+    <div class="kgrid" id="helpGrid"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div id="tip"></div>
+<input type="file" id="fileInput" accept="image/*" hidden>
 <script>
-// ── REFS ──────────────────────────────────────────────────────────────────────
-const canvas   = document.getElementById('canvas');
-const ctx      = canvas.getContext('2d');
-const viewport = document.getElementById('viewport');
-const scene    = document.getElementById('scene');
-const empty    = document.getElementById('empty');
-const splash   = document.getElementById('splash');
-const zoomLbl  = document.getElementById('zoomLabel');
+(function () {
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════════
+   SnapEdit · Edvault — редактор скріншотів.
+   • Скріншот (основа) зберігається окремо, а всі позначки — об'єкти
+     (стрілки, рамки, текст…). Їх можна вибрати, пересунути, змінити, видалити;
+     гумка прибирає позначки, не зачіпаючи сам скріншот.
+   • Історія змін — знімки списку об'єктів (дешево), тож Ctrl+Z швидкий.
+   • Робота автоматично зберігається в браузері (IndexedDB).
+   ═══════════════════════════════════════════════════════════════════════ */
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const IS_MAC = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+const uid = () => 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
-// ── VIEW STATE (pan / zoom) ───────────────────────────────────────────────────
-let vx = 0, vy = 0, vz = 1;   // offset x/y, zoom scale
-const ZOOM_MIN = 0.05, ZOOM_MAX = 16;
-const ZOOM_STEP = 0.12;
-
-function applyTransform() {
-  scene.style.transform = `translate(${vx}px,${vy}px) scale(${vz})`;
-  zoomLbl.textContent = Math.round(vz * 100) + '%';
+/* ═══════════ ІКОНКИ ═══════════ */
+const I = {
+  back: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  logo: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
+  folder: '<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+  chevron: '<path d="m6 9 6 6 6-6"/>',
+  close: '<path d="M18 6 6 18M6 6l12 12"/>',
+  cursor: '<path d="M4 4l7.07 17 2.51-7.39L21 11.07z"/>',
+  crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
+  arrow: '<path d="M5 19 19 5"/><path d="M9 5h10v10"/>',
+  rect: '<rect x="3" y="5" width="18" height="14" rx="2"/>',
+  ellipse: '<ellipse cx="12" cy="12" rx="9.5" ry="7"/>',
+  line: '<path d="M5 19 19 5"/>',
+  pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  marker: '<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
+  text: '<path d="M4 7V5h16v2"/><path d="M9 19h6M12 5v14"/>',
+  step: '<circle cx="12" cy="12" r="9"/><path d="M10.5 9.5 12.5 8v8"/>',
+  blur: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
+  eraser: '<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  duplicate: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>',
+  front: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>',
+  back2: '<rect x="4" y="4" width="12" height="12" rx="2"/><path d="M20 8v11a1 1 0 0 1-1 1H8"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  fit: '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+};
+const icon = n => '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (I[n] || '') + '</svg>';
+function fillIcons(root) {
+  $$('[data-icon]', root).forEach(el => { if (el.dataset.done) return; el.dataset.done = 1; el.innerHTML = icon(el.dataset.icon); el.style.display = 'contents'; });
 }
 
-function fitCanvas() {
-  if (!active) return;
-  const vw = viewport.clientWidth, vh = viewport.clientHeight;
-  const margin = 40;
-  const scale = Math.min((vw - margin*2) / canvas.width, (vh - margin*2) / canvas.height, 1);
-  vz = scale;
-  vx = (vw - canvas.width  * vz) / 2;
-  vy = (vh - canvas.height * vz) / 2;
-  applyTransform();
+/* ═══════════ СТАН ═══════════ */
+const canvas = $('#canvas');
+const ctx = canvas.getContext('2d');
+const viewport = $('#viewport');
+const scene = $('#scene');
+const TOOL_NAMES = { select: 'Вибір', crop: 'Обрізання', arrow: 'Стрілка', rect: 'Прямокутник', ellipse: 'Еліпс', line: 'Лінія', pen: 'Олівець', highlighter: 'Маркер', text: 'Текст', step: 'Нумерація', blur: 'Приховати', eraser: 'Гумка' };
+const COLORS = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#111827', '#ffffff'];
+const DEFAULT_STYLES = {
+  arrow: { color: '#ef4444', width: 6 },
+  line: { color: '#ef4444', width: 4 },
+  rect: { color: '#ef4444', width: 4, fill: 'none' },
+  ellipse: { color: '#ef4444', width: 4, fill: 'none' },
+  pen: { color: '#ef4444', width: 4 },
+  highlighter: { color: '#facc15', width: 22 },
+  text: { color: '#ef4444', size: 28, bg: 'light' },
+  step: { color: '#ef4444', size: 20 },
+  blur: { mode: 'pixel', strength: 12 },
+};
+const S = {
+  doc: null,          // { w, h, baseId }
+  bases: new Map(),   // baseId → canvas
+  objects: [],
+  selId: null,
+  tool: 'arrow',
+  styles: loadStyles(),
+  view: { x: 0, y: 0, z: 1 },
+  hist: [], hidx: -1,
+  op: null,           // поточна дія мишею
+  crop: null,         // { x, y, w, h } рамка обрізання
+  editing: null,      // текст, що редагується
+  space: false,
+};
+function loadStyles() {
+  const st = JSON.parse(JSON.stringify(DEFAULT_STYLES));
+  try { const s = JSON.parse(localStorage.getItem('snapedit_styles') || '{}'); Object.keys(st).forEach(k => Object.assign(st[k], s[k] || {})); } catch (e) { /* ignore */ }
+  return st;
 }
+function saveStyles() { try { localStorage.setItem('snapedit_styles', JSON.stringify(S.styles)); } catch (e) { /* ignore */ } }
+const selObj = () => S.objects.find(o => o.id === S.selId) || null;
 
-function zoomAt(cx, cy, delta) {
-  // cx, cy — point in viewport coords to zoom towards
-  const newZ = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, vz * (1 + delta)));
-  const ratio = newZ / vz;
-  vx = cx - ratio * (cx - vx);
-  vy = cy - ratio * (cy - vy);
-  vz = newZ;
-  applyTransform();
+/* ═══════════ ПЕРЕГЛЯД (зум / панорама) ═══════════ */
+function applyView() {
+  scene.style.transform = 'translate(' + S.view.x + 'px,' + S.view.y + 'px) scale(' + S.view.z + ')';
+  $('#zoomLabel').textContent = Math.round(S.view.z * 100) + '%';
+  viewport.classList.toggle('px', S.view.z >= 2);
+  positionTextEditor();
+  updateStatus();
 }
-
-// convert viewport-space point to canvas-pixel coords
-function vpToCanvas(clientX, clientY) {
+function fit() {
+  if (!S.doc) return;
+  const vw = viewport.clientWidth, vh = viewport.clientHeight, m = vw < 640 ? 16 : 48;
+  const z = Math.min((vw - m * 2) / S.doc.w, (vh - m * 2) / S.doc.h, 1);
+  S.view.z = Math.max(0.02, z);
+  S.view.x = (vw - S.doc.w * S.view.z) / 2;
+  S.view.y = (vh - S.doc.h * S.view.z) / 2;
+  applyView();
+  render();
+}
+function zoomAt(cx, cy, z) {
+  z = clamp(z, 0.05, 16);
+  const r = z / S.view.z;
+  S.view.x = cx - r * (cx - S.view.x);
+  S.view.y = cy - r * (cy - S.view.y);
+  S.view.z = z;
+  applyView();
+  render();
+}
+function zoomBy(f) { zoomAt(viewport.clientWidth / 2, viewport.clientHeight / 2, S.view.z * f); }
+function toDoc(cx, cy) {
   const r = viewport.getBoundingClientRect();
-  const lx = clientX - r.left;
-  const ly = clientY - r.top;
-  return {
-    x: (lx - vx) / vz,
-    y: (ly - vy) / vz
-  };
+  return { x: (cx - r.left - S.view.x) / S.view.z, y: (cy - r.top - S.view.y) / S.view.z };
+}
+function toScreen(x, y) {
+  const r = viewport.getBoundingClientRect();
+  return { x: r.left + S.view.x + x * S.view.z, y: r.top + S.view.y + y * S.view.z };
 }
 
-// ── DRAW STATE ────────────────────────────────────────────────────────────────
-let tool     = 'pen';
-let color    = '#ff4e6a';
-let size     = 3;
-let drawing  = false;
-let startX   = 0, startY = 0;
-let active   = false;
-let snapshot = null;
-let textNode = null;
-let history  = [], histIdx = -1;
-const MAX_H  = 40;
-let stepCounter = 1;
+/* ═══════════ МАЛЮВАННЯ ОБ'ЄКТІВ ═══════════ */
+const FONT = 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif';
+const alpha = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+function isLight(hex) { const n = parseInt(String(hex).slice(1), 16); const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; return (r * 299 + g * 587 + b * 114) / 1000 > 165; }
+function textMetrics(o, c) {
+  c = c || ctx;
+  c.save();
+  c.font = '700 ' + o.size + 'px ' + FONT;
+  const lines = String(o.text || '').split('\n');
+  const w = Math.max(1, ...lines.map(l => c.measureText(l).width));
+  c.restore();
+  const lh = o.size * 1.25;
+  const pad = o.bg && o.bg !== 'none' ? Math.round(o.size * 0.38) : 0;
+  return { lines, w, lh, pad, bw: w + pad * 2, bh: lines.length * lh + pad * 2 };
+}
+function roundRectPath(c, x, y, w, h, r) {
+  r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+function norm(o) { return { x: Math.min(o.x, o.x + o.w), y: Math.min(o.y, o.y + o.h), w: Math.abs(o.w), h: Math.abs(o.h) }; }
+function drawObject(c, o) {
+  c.save();
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  switch (o.type) {
+    case 'pen': case 'highlighter': {
+      const p = o.points;
+      if (!p.length) break;
+      c.strokeStyle = o.color;
+      c.lineWidth = o.width;
+      if (o.type === 'highlighter') { c.globalAlpha = 0.5; c.globalCompositeOperation = 'multiply'; c.lineCap = 'square'; }
+      c.beginPath();
+      c.moveTo(p[0][0], p[0][1]);
+      if (p.length === 1) c.lineTo(p[0][0] + 0.01, p[0][1]);
+      for (let i = 1; i < p.length - 1; i++) { const mx = (p[i][0] + p[i + 1][0]) / 2, my = (p[i][1] + p[i + 1][1]) / 2; c.quadraticCurveTo(p[i][0], p[i][1], mx, my); }
+      if (p.length > 1) c.lineTo(p[p.length - 1][0], p[p.length - 1][1]);
+      c.stroke();
+      break;
+    }
+    case 'line': case 'arrow': {
+      const { x1, y1, x2, y2, width: w } = o;
+      c.strokeStyle = c.fillStyle = o.color;
+      c.lineWidth = w;
+      const ang = Math.atan2(y2 - y1, x2 - x1);
+      const len = Math.hypot(x2 - x1, y2 - y1);
+      if (o.type === 'arrow') {
+        const head = Math.min(len * 0.6, Math.max(14, w * 3.6));
+        const hw = head * 0.62;
+        const bx = x2 - Math.cos(ang) * head * 0.82, by = y2 - Math.sin(ang) * head * 0.82;
+        c.beginPath(); c.moveTo(x1, y1); c.lineTo(bx, by); c.stroke();
+        c.beginPath();
+        c.moveTo(x2, y2);
+        c.lineTo(x2 - Math.cos(ang) * head + Math.sin(ang) * hw, y2 - Math.sin(ang) * head - Math.cos(ang) * hw);
+        c.lineTo(x2 - Math.cos(ang) * head - Math.sin(ang) * hw, y2 - Math.sin(ang) * head + Math.cos(ang) * hw);
+        c.closePath();
+        c.lineWidth = Math.max(1, w * 0.5);
+        c.fill(); c.stroke();
+      } else {
+        c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+      }
+      break;
+    }
+    case 'rect': case 'ellipse': {
+      const b = norm(o);
+      c.strokeStyle = o.color;
+      c.lineWidth = o.width;
+      if (o.type === 'rect') roundRectPath(c, b.x, b.y, b.w, b.h, Math.max(2, o.width * 1.2));
+      else { c.beginPath(); c.ellipse(b.x + b.w / 2, b.y + b.h / 2, Math.max(0.5, b.w / 2), Math.max(0.5, b.h / 2), 0, 0, Math.PI * 2); }
+      if (o.fill === 'solid') { c.fillStyle = o.color; c.fill(); }
+      else if (o.fill === 'semi') { c.fillStyle = alpha(o.color, 0.18); c.fill(); }
+      c.stroke();
+      break;
+    }
+    case 'text': {
+      const m = textMetrics(o, c);
+      if (o.bg === 'light' || o.bg === 'solid') {
+        c.fillStyle = o.bg === 'solid' ? o.color : 'rgba(255,255,255,.94)';
+        c.shadowColor = 'rgba(0,0,0,.18)'; c.shadowBlur = o.size * 0.4; c.shadowOffsetY = o.size * 0.08;
+        roundRectPath(c, o.x, o.y, m.bw, m.bh, o.size * 0.28);
+        c.fill();
+        c.shadowColor = 'transparent';
+        if (o.bg === 'light') { c.strokeStyle = alpha(o.color, 0.35); c.lineWidth = Math.max(1, o.size * 0.05); c.stroke(); }
+      }
+      c.font = '700 ' + o.size + 'px ' + FONT;
+      c.textBaseline = 'top';
+      c.fillStyle = o.bg === 'solid' ? (isLight(o.color) ? '#111827' : '#ffffff') : o.color;
+      if (o.bg === 'none' || !o.bg) { c.lineWidth = Math.max(2, o.size * 0.12); c.strokeStyle = isLight(o.color) ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.85)'; }
+      m.lines.forEach((l, i) => {
+        const ty = o.y + m.pad + i * m.lh + (m.lh - o.size) / 2;
+        if (o.bg === 'none' || !o.bg) c.strokeText(l, o.x + m.pad, ty);
+        c.fillText(l, o.x + m.pad, ty);
+      });
+      break;
+    }
+    case 'step': {
+      const r = o.size;
+      c.shadowColor = 'rgba(0,0,0,.28)'; c.shadowBlur = r * 0.5; c.shadowOffsetY = r * 0.1;
+      c.beginPath(); c.arc(o.x, o.y, r, 0, Math.PI * 2);
+      c.fillStyle = o.color; c.fill();
+      c.shadowColor = 'transparent';
+      c.lineWidth = Math.max(2, r * 0.14); c.strokeStyle = '#ffffff'; c.stroke();
+      c.fillStyle = isLight(o.color) ? '#111827' : '#ffffff';
+      const label = String(o.n);
+      c.font = '800 ' + Math.round(r * (label.length > 1 ? 0.95 : 1.12)) + 'px ' + FONT;
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(label, o.x, o.y + r * 0.06);
+      break;
+    }
+    case 'blur': {
+      const b = norm(o);
+      const x = Math.max(0, Math.floor(b.x)), y = Math.max(0, Math.floor(b.y));
+      const w = Math.min(c.canvas.width - x, Math.ceil(b.w + b.x - x)), h = Math.min(c.canvas.height - y, Math.ceil(b.h + b.y - y));
+      if (w < 2 || h < 2) break;
+      const tmp = document.createElement('canvas');
+      if (o.mode === 'blur') {
+        const pad = o.strength * 2;
+        const sx = Math.max(0, x - pad), sy = Math.max(0, y - pad);
+        const sw = Math.min(c.canvas.width - sx, w + pad * 2), sh = Math.min(c.canvas.height - sy, h + pad * 2);
+        tmp.width = sw; tmp.height = sh;
+        tmp.getContext('2d').drawImage(c.canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+        c.beginPath(); c.rect(x, y, w, h); c.clip();
+        if ('filter' in c) { c.filter = 'blur(' + Math.max(2, o.strength * 0.8) + 'px)'; c.drawImage(tmp, sx, sy); c.filter = 'none'; }
+        else pixelate(c, tmp, sx, sy, sw, sh, o.strength);
+      } else {
+        tmp.width = w; tmp.height = h;
+        tmp.getContext('2d').drawImage(c.canvas, x, y, w, h, 0, 0, w, h);
+        pixelate(c, tmp, x, y, w, h, Math.max(4, o.strength));
+      }
+      break;
+    }
+  }
+  c.restore();
+}
+// Мозаїка з усередненням кольору в кожному блоці — текст під нею гарантовано не прочитати.
+function pixelate(c, src, x, y, w, h, block) {
+  block = Math.max(2, Math.round(block));
+  const data = src.getContext('2d').getImageData(0, 0, src.width, src.height).data;
+  const W = src.width, H = src.height;
+  c.save();
+  for (let by = 0; by < H; by += block) {
+    for (let bx = 0; bx < W; bx += block) {
+      let r = 0, g = 0, b = 0, a = 0, n = 0;
+      const ex = Math.min(W, bx + block), ey = Math.min(H, by + block);
+      for (let yy = by; yy < ey; yy++) {
+        for (let xx = bx; xx < ex; xx++) {
+          const i = (yy * W + xx) * 4;
+          r += data[i]; g += data[i + 1]; b += data[i + 2]; a += data[i + 3]; n++;
+        }
+      }
+      c.fillStyle = 'rgba(' + (r / n | 0) + ',' + (g / n | 0) + ',' + (b / n | 0) + ',' + (a / n / 255).toFixed(3) + ')';
+      c.fillRect(x + bx, y + by, ex - bx, ey - by);
+    }
+  }
+  c.restore();
+}
+function renderInto(c, withUi) {
+  const d = S.doc;
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.clearRect(0, 0, d.w, d.h);
+  const base = S.bases.get(d.baseId);
+  if (base) c.drawImage(base, 0, 0);
+  S.objects.forEach(o => drawObject(c, o));
+  if (withUi) drawUi(c);
+  c.restore();
+}
+let renderQueued = false;
+function render() {
+  if (!S.doc) return;
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => { renderQueued = false; if (S.doc) renderInto(ctx, true); });
+}
+function renderNow() { if (S.doc) renderInto(ctx, true); }
 
-// panning state
-let panning    = false;
-let spaceDown  = false;
-let panStartX  = 0, panStartY  = 0;
-let panOriginX = 0, panOriginY = 0;
-
-// ── TOAST ─────────────────────────────────────────────────────────────────────
-function toast(msg, type) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show ' + (type || '');
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.className = '', 2600);
+/* ═══════════ ГЕОМЕТРІЯ / ВИБІР ═══════════ */
+function bounds(o) {
+  switch (o.type) {
+    case 'pen': case 'highlighter': {
+      let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+      o.points.forEach(p => { x1 = Math.min(x1, p[0]); y1 = Math.min(y1, p[1]); x2 = Math.max(x2, p[0]); y2 = Math.max(y2, p[1]); });
+      const h = o.width / 2;
+      return { x: x1 - h, y: y1 - h, w: x2 - x1 + o.width, h: y2 - y1 + o.width };
+    }
+    case 'line': case 'arrow': return { x: Math.min(o.x1, o.x2), y: Math.min(o.y1, o.y2), w: Math.abs(o.x2 - o.x1), h: Math.abs(o.y2 - o.y1) };
+    case 'rect': case 'ellipse': case 'blur': return norm(o);
+    case 'text': { const m = textMetrics(o); return { x: o.x, y: o.y, w: m.bw, h: m.bh }; }
+    case 'step': return { x: o.x - o.size, y: o.y - o.size, w: o.size * 2, h: o.size * 2 };
+  }
+  return { x: 0, y: 0, w: 0, h: 0 };
+}
+function segDist(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1, l = dx * dx + dy * dy;
+  let t = l ? ((px - x1) * dx + (py - y1) * dy) / l : 0;
+  t = clamp(t, 0, 1);
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+function hit(o, p, tol) {
+  switch (o.type) {
+    case 'pen': case 'highlighter': {
+      const pts = o.points, lim = tol + o.width / 2;
+      if (pts.length === 1) return Math.hypot(p.x - pts[0][0], p.y - pts[0][1]) < lim;
+      for (let i = 1; i < pts.length; i++) if (segDist(p.x, p.y, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]) < lim) return true;
+      return false;
+    }
+    case 'line': case 'arrow': return segDist(p.x, p.y, o.x1, o.y1, o.x2, o.y2) < tol + o.width / 2 + (o.type === 'arrow' ? 4 : 0);
+    case 'rect': {
+      const b = norm(o);
+      const inside = p.x >= b.x - tol && p.x <= b.x + b.w + tol && p.y >= b.y - tol && p.y <= b.y + b.h + tol;
+      if (!inside) return false;
+      if (o.fill && o.fill !== 'none') return true;
+      const t = tol + o.width / 2;
+      return p.x <= b.x + t || p.x >= b.x + b.w - t || p.y <= b.y + t || p.y >= b.y + b.h - t;
+    }
+    case 'ellipse': {
+      const b = norm(o);
+      const rx = b.w / 2, ry = b.h / 2, cx = b.x + rx, cy = b.y + ry;
+      if (rx < 1 || ry < 1) return false;
+      const d = Math.hypot((p.x - cx) / rx, (p.y - cy) / ry);
+      if (o.fill && o.fill !== 'none') return d <= 1 + tol / Math.min(rx, ry);
+      return Math.abs(d - 1) * Math.min(rx, ry) < tol + o.width / 2;
+    }
+    case 'blur': case 'text': { const b = bounds(o); return p.x >= b.x - tol && p.x <= b.x + b.w + tol && p.y >= b.y - tol && p.y <= b.y + b.h + tol; }
+    case 'step': return Math.hypot(p.x - o.x, p.y - o.y) <= o.size + tol;
+  }
+  return false;
+}
+function hitTest(p) {
+  const tol = 6 / S.view.z;
+  for (let i = S.objects.length - 1; i >= 0; i--) if (hit(S.objects[i], p, tol)) return S.objects[i];
+  return null;
+}
+function handlesOf(o) {
+  if (o.type === 'line' || o.type === 'arrow') return [{ id: 'p1', x: o.x1, y: o.y1, cur: 'move' }, { id: 'p2', x: o.x2, y: o.y2, cur: 'move' }];
+  if (o.type === 'rect' || o.type === 'ellipse' || o.type === 'blur' || o.type === 'crop') {
+    const b = norm(o);
+    return [
+      { id: 'nw', x: b.x, y: b.y, cur: 'nwse' }, { id: 'n', x: b.x + b.w / 2, y: b.y, cur: 'ns' }, { id: 'ne', x: b.x + b.w, y: b.y, cur: 'nesw' },
+      { id: 'e', x: b.x + b.w, y: b.y + b.h / 2, cur: 'ew' }, { id: 'se', x: b.x + b.w, y: b.y + b.h, cur: 'nwse' }, { id: 's', x: b.x + b.w / 2, y: b.y + b.h, cur: 'ns' },
+      { id: 'sw', x: b.x, y: b.y + b.h, cur: 'nesw' }, { id: 'w', x: b.x, y: b.y + b.h / 2, cur: 'ew' },
+    ];
+  }
+  if (o.type === 'text' || o.type === 'step') { const b = bounds(o); return [{ id: 'size', x: b.x + b.w, y: b.y + b.h, cur: 'nwse' }]; }
+  return [];
+}
+function hitHandle(o, p) {
+  const r = 9 / S.view.z;
+  return handlesOf(o).find(h => Math.abs(h.x - p.x) <= r && Math.abs(h.y - p.y) <= r) || null;
+}
+function moveObj(o, dx, dy) {
+  if (o.points) o.points.forEach(pt => { pt[0] += dx; pt[1] += dy; });
+  else if ('x1' in o) { o.x1 += dx; o.y1 += dy; o.x2 += dx; o.y2 += dy; }
+  else { o.x += dx; o.y += dy; }
+}
+function resizeObj(o, h, p, start, shift) {
+  if (h.id === 'p1' || h.id === 'p2') {
+    let x = p.x, y = p.y;
+    if (shift) { const ox = h.id === 'p1' ? o.x2 : o.x1, oy = h.id === 'p1' ? o.y2 : o.y1; const q = snap45(ox, oy, x, y); x = q.x; y = q.y; }
+    if (h.id === 'p1') { o.x1 = x; o.y1 = y; } else { o.x2 = x; o.y2 = y; }
+    return;
+  }
+  if (h.id === 'size') {
+    const b0 = start.b;
+    const scale = Math.max(0.2, Math.max((p.x - b0.x) / Math.max(1, b0.w), (p.y - b0.y) / Math.max(1, b0.h)));
+    if (o.type === 'text') o.size = clamp(Math.round(start.size * scale), 10, 400);
+    else o.size = clamp(Math.round(start.size * scale), 8, 200);
+    return;
+  }
+  const b = start.b;
+  let x1 = b.x, y1 = b.y, x2 = b.x + b.w, y2 = b.y + b.h;
+  if (h.id.includes('w')) x1 = p.x;
+  if (h.id.includes('e')) x2 = p.x;
+  if (h.id.includes('n')) y1 = p.y;
+  if (h.id.includes('s')) y2 = p.y;
+  if (shift && h.id.length === 2) {
+    const side = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1));
+    if (h.id.includes('w')) x1 = x2 - side * Math.sign(x2 - x1 || 1); else x2 = x1 + side * Math.sign(x2 - x1 || 1);
+    if (h.id.includes('n')) y1 = y2 - side * Math.sign(y2 - y1 || 1); else y2 = y1 + side * Math.sign(y2 - y1 || 1);
+  }
+  o.x = Math.min(x1, x2); o.y = Math.min(y1, y2); o.w = Math.abs(x2 - x1); o.h = Math.abs(y2 - y1);
+}
+function snap45(ox, oy, x, y) {
+  const a = Math.atan2(y - oy, x - ox), l = Math.hypot(x - ox, y - oy);
+  const s = Math.round(a / (Math.PI / 4)) * (Math.PI / 4);
+  return { x: ox + Math.cos(s) * l, y: oy + Math.sin(s) * l };
 }
 
-// ── HISTORY ───────────────────────────────────────────────────────────────────
-function pushHistory() {
-  history = history.slice(0, histIdx + 1);
-  if (history.length >= MAX_H) history.shift();
-  history.push(canvas.toDataURL());
-  histIdx = history.length - 1;
-}
-
-function restoreState(url) {
-  const img = new Image();
-  img.onload = () => { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); };
-  img.src = url;
-}
-
-function undo() { if (histIdx <= 0) { toast('Нічого відміняти','err'); return; } restoreState(history[--histIdx]); }
-function redo() { if (histIdx >= history.length-1) { toast('Нічого повертати','err'); return; } restoreState(history[++histIdx]); }
-
-// ── INIT ──────────────────────────────────────────────────────────────────────
-function initBlank(w, h) {
-  canvas.width  = w || 1200;
-  canvas.height = h || 800;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  active = true;
-  empty.classList.add('hidden');
-  splash.classList.add('hide');
-  history = []; histIdx = -1;
-  stepCounter = 1;
-  pushHistory();
-  fitCanvas();
-}
-
-function newCanvas() {
-  openNewModal();
-}
-
-// ── NEW CANVAS MODAL ──────────────────────────────────────────────────────────
-const modalOverlay = document.getElementById('modalOverlay');
-const customW = document.getElementById('customW');
-const customH = document.getElementById('customH');
-let selectedW = 1200, selectedH = 800;
-
-function openNewModal() {
-  modalOverlay.classList.add('open');
-  customW.value = ''; customH.value = '';
-  document.querySelectorAll('.preset-btn').forEach((b,i) => b.classList.toggle('sel', i===0));
-  selectedW = 1200; selectedH = 800;
-}
-function closeModal() { modalOverlay.classList.remove('open'); }
-
-document.querySelectorAll('.preset-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('sel'));
-    btn.classList.add('sel');
-    selectedW = +btn.dataset.w; selectedH = +btn.dataset.h;
-    customW.value = ''; customH.value = '';
-  });
-});
-
-[customW, customH].forEach(inp => {
-  inp.addEventListener('input', () => {
-    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('sel'));
-  });
-});
-
-document.getElementById('modalClose').addEventListener('click', closeModal);
-document.getElementById('modalCancel').addEventListener('click', closeModal);
-modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
-
-document.getElementById('modalConfirm').addEventListener('click', () => {
-  const cw = parseInt(customW.value), ch = parseInt(customH.value);
-  const w = (cw > 0 && cw <= 8000) ? cw : selectedW;
-  const h = (ch > 0 && ch <= 8000) ? ch : selectedH;
-  if (active && !confirm('Створити новий аркуш? Зміни буде втрачено.')) return;
-  closeModal();
-  initBlank(w, h);
-  toast(`Новий аркуш ${w}×${h} ✓`, 'ok');
-});
-
-// ── LOAD IMAGE ────────────────────────────────────────────────────────────────
-function loadImage(url) {
-  const img = new Image();
-  img.onload = () => {
-    initBlank(img.width, img.height);
-    ctx.drawImage(img, 0, 0);
-    history = []; histIdx = -1;
-    pushHistory();
-    toast('Скріншот вставлено ✓','ok');
-    URL.revokeObjectURL(url);
-  };
-  img.onerror = () => toast('Помилка зображення','err');
-  img.src = url;
-}
-
-// ── DRAW UTILS ────────────────────────────────────────────────────────────────
-function setupCtx() {
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.strokeStyle = color;
-  ctx.fillStyle   = color;
-  ctx.lineWidth   = size;
-  ctx.lineCap     = 'round';
-  ctx.lineJoin    = 'round';
-}
-
-function drawArrow(x1,y1,x2,y2) {
-  const hw = Math.max(size*3,12), angle = Math.atan2(y2-y1,x2-x1);
-  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x2,y2);
-  ctx.lineTo(x2-hw*Math.cos(angle-Math.PI/6), y2-hw*Math.sin(angle-Math.PI/6));
-  ctx.lineTo(x2-hw*Math.cos(angle+Math.PI/6), y2-hw*Math.sin(angle+Math.PI/6));
-  ctx.closePath(); ctx.fillStyle=color; ctx.fill();
-}
-
-// ── PAN/ZOOM CURSOR HELPER ────────────────────────────────────────────────────
-function isPanMode() { return spaceDown || tool === 'pan'; }
-
-function updateCursor() {
-  if (isPanMode()) {
-    canvas.className = panning ? 'cur-grabbing' : 'cur-grab';
-    viewport.classList.add('panning');
-  } else {
-    viewport.classList.remove('panning');
-    canvas.className = tool === 'text' ? 'cur-text' : 'cur-crosshair';
+/* ═══════════ UI НА ПОЛОТНІ (виділення, обрізання) ═══════════ */
+function drawUi(c) {
+  const z = S.view.z;
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#4F6BF4';
+  const o = selObj();
+  if (o && S.tool !== 'crop' && (!S.editing || S.editing.id !== o.id)) {
+    const b = bounds(o), pad = 4 / z;
+    c.save();
+    c.strokeStyle = accent; c.lineWidth = 1.5 / z; c.setLineDash([5 / z, 4 / z]);
+    if (o.type !== 'line' && o.type !== 'arrow') c.strokeRect(b.x - pad, b.y - pad, b.w + pad * 2, b.h + pad * 2);
+    c.setLineDash([]);
+    handlesOf(o).forEach(h => drawHandle(c, h.x, h.y, accent, z));
+    c.restore();
+  }
+  if (S.tool === 'crop' && S.crop) {
+    const b = norm(S.crop);
+    c.save();
+    c.fillStyle = 'rgba(10,12,18,.55)';
+    c.beginPath(); c.rect(0, 0, S.doc.w, S.doc.h); c.rect(b.x, b.y, b.w, b.h); c.fill('evenodd');
+    c.strokeStyle = '#fff'; c.lineWidth = 1.5 / z; c.strokeRect(b.x, b.y, b.w, b.h);
+    c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1 / z;
+    for (let i = 1; i < 3; i++) { c.beginPath(); c.moveTo(b.x + b.w * i / 3, b.y); c.lineTo(b.x + b.w * i / 3, b.y + b.h); c.moveTo(b.x, b.y + b.h * i / 3); c.lineTo(b.x + b.w, b.y + b.h * i / 3); c.stroke(); }
+    handlesOf(Object.assign({ type: 'crop' }, b)).forEach(h => drawHandle(c, h.x, h.y, accent, z));
+    const label = Math.round(b.w) + ' × ' + Math.round(b.h);
+    c.font = '600 ' + 12 / z + 'px ' + FONT;
+    const tw = c.measureText(label).width;
+    const lx = b.x + 6 / z, ly = b.y + b.h + 8 / z > S.doc.h - 26 / z ? b.y + 6 / z : b.y + b.h + 8 / z;
+    c.fillStyle = 'rgba(20,22,32,.85)';
+    roundRectPath(c, lx, ly, tw + 14 / z, 22 / z, 6 / z); c.fill();
+    c.fillStyle = '#fff'; c.textBaseline = 'middle'; c.fillText(label, lx + 7 / z, ly + 11 / z);
+    c.restore();
   }
 }
+function drawHandle(c, x, y, accent, z) {
+  const s = 9 / z;
+  c.fillStyle = '#fff'; c.strokeStyle = accent; c.lineWidth = 1.8 / z;
+  c.beginPath(); c.rect(x - s / 2, y - s / 2, s, s); c.fill(); c.stroke();
+}
 
-// ── POINTER EVENTS ON VIEWPORT ────────────────────────────────────────────────
-// We listen on viewport so pan works even outside canvas bounds
-viewport.addEventListener('mousedown', onDown);
-viewport.addEventListener('mousemove', onMove);
-viewport.addEventListener('mouseup',   onUp);
-viewport.addEventListener('mouseleave',onUp);
-viewport.addEventListener('touchstart', e => { e.preventDefault(); onDown(e); }, {passive:false});
-viewport.addEventListener('touchmove',  e => { e.preventDefault(); onMove(e); }, {passive:false});
-viewport.addEventListener('touchend',   e => { e.preventDefault(); onUp(e);   }, {passive:false});
+/* ═══════════ ІСТОРІЯ ═══════════ */
+function snapshot() { return { objects: JSON.stringify(S.objects), baseId: S.doc.baseId, w: S.doc.w, h: S.doc.h }; }
+function commit() {
+  if (!S.doc) return;
+  const s = snapshot();
+  const cur = S.hist[S.hidx];
+  if (cur && cur.objects === s.objects && cur.baseId === s.baseId) return;
+  S.hist.length = S.hidx + 1;
+  S.hist.push(s);
+  if (S.hist.length > 150) S.hist.shift();
+  S.hidx = S.hist.length - 1;
+  afterChange();
+}
+function restore(s) {
+  S.objects = JSON.parse(s.objects);
+  S.doc = { w: s.w, h: s.h, baseId: s.baseId };
+  if (canvas.width !== s.w || canvas.height !== s.h) { canvas.width = s.w; canvas.height = s.h; }
+  if (S.selId && !selObj()) S.selId = null;
+  afterChange();
+  render();
+}
+function undo() { finishText(); if (S.op) return; if (S.hidx <= 0) { toast('Немає що скасовувати'); return; } S.hidx--; restore(S.hist[S.hidx]); }
+function redo() { finishText(); if (S.op) return; if (S.hidx >= S.hist.length - 1) return; S.hidx++; restore(S.hist[S.hidx]); }
+function afterChange() {
+  $('#btnUndo').disabled = S.hidx <= 0;
+  $('#btnRedo').disabled = S.hidx >= S.hist.length - 1;
+  updateStatus();
+  renderProps();
+  scheduleSave();
+}
 
-// Middle mouse button pan
-viewport.addEventListener('mousedown', e => { if (e.button === 1) { e.preventDefault(); startPan(e.clientX, e.clientY); } });
+/* ═══════════ ДОКУМЕНТ ═══════════ */
+let baseSeq = 0;
+function addBase(cv) { const id = 'b' + Date.now().toString(36) + (++baseSeq); S.bases.set(id, cv); return id; }
+function newDoc(cv) {
+  finishText();
+  S.bases.clear();
+  const id = addBase(cv);
+  S.doc = { w: cv.width, h: cv.height, baseId: id };
+  canvas.width = cv.width; canvas.height = cv.height;
+  S.objects = []; S.selId = null; S.crop = null;
+  S.hist = []; S.hidx = -1;
+  $('#empty').classList.add('hidden');
+  commit();
+  fit();
+  savedBaseId = null;
+}
+function blankCanvas(w, h) {
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const c = cv.getContext('2d');
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h);
+  return cv;
+}
+function hasWork() { return !!S.doc && (S.objects.length > 0 || S.hidx > 0); }
+async function replaceDocWith(fn, what) {
+  if (hasWork()) {
+    const ok = await confirmDialog('Замінити поточне зображення?', 'Зараз відкрито зображення з позначками. ' + what + ' замінить його. Якщо потрібно — спершу збережіть або скопіюйте поточне.', 'Замінити');
+    if (!ok) return;
+  }
+  fn();
+}
+function loadImageBlob(blob, silent) {
+  return new Promise(res => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const MAX = 8000;
+      if (w > MAX || h > MAX) { const k = MAX / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      res(cv);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); if (!silent) toast('Не вдалося відкрити це зображення', 'err'); res(null); };
+    img.src = url;
+  });
+}
+async function openImage(blob, source) {
+  if (!blob || !/^image\//.test(blob.type || 'image/')) { toast('Це не зображення', 'err'); return; }
+  const cv = await loadImageBlob(blob);
+  if (!cv) return;
+  replaceDocWith(() => { newDoc(cv); setTool(S.tool === 'crop' || S.tool === 'eraser' ? 'arrow' : S.tool); toast((source || 'Зображення відкрито') + ' · ' + cv.width + '×' + cv.height, 'ok'); }, 'Нове зображення');
+}
 
-function startPan(cx, cy) {
-  panning   = true;
-  panStartX = cx; panStartY = cy;
-  panOriginX = vx; panOriginY = vy;
+/* ═══════════ ІНСТРУМЕНТИ ═══════════ */
+function setTool(t) {
+  finishText();
+  if (S.tool === 'crop' && t !== 'crop') S.crop = null;
+  S.tool = t;
+  if (t === 'crop' && S.doc) { S.selId = null; S.crop = { x: 0, y: 0, w: S.doc.w, h: S.doc.h }; }
+  if (t !== 'select') { const o = selObj(); if (o && !(o.type === t || (t === 'arrow' && o.type === 'arrow'))) S.selId = null; }
+  $$('#rail .tool').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
   updateCursor();
+  renderProps();
+  render();
 }
-
-function onDown(e) {
-  if (!active) return;
-  if (e.button === 1) return; // handled separately
-
-  const src = e.touches ? e.touches[0] : e;
-
-  // Two-finger pan/pinch on touch
-  if (e.touches && e.touches.length === 2) {
-    pinchStart(e); return;
+function updateCursor(p) {
+  let cur = 'crosshair';
+  if (S.space || S.op && S.op.kind === 'pan') cur = S.op && S.op.kind === 'pan' ? 'grabbing' : 'grab';
+  else if (S.tool === 'text') cur = 'text';
+  else if (S.tool === 'eraser') cur = 'eraser';
+  else if (S.tool === 'select') cur = 'default';
+  if (p && !S.space && S.doc) {
+    if (S.tool === 'crop' && S.crop) {
+      const h = hitHandle(Object.assign({ type: 'crop' }, norm(S.crop)), p);
+      if (h) cur = h.cur; else { const b = norm(S.crop); if (p.x > b.x && p.x < b.x + b.w && p.y > b.y && p.y < b.y + b.h) cur = 'move'; }
+    } else if (S.tool !== 'eraser') {
+      const o = selObj();
+      const h = o && hitHandle(o, p);
+      if (h) cur = h.cur;
+      else if (S.tool === 'select') { const t = hitTest(p); cur = t ? 'move' : 'default'; }
+      else if (o && hit(o, p, 6 / S.view.z)) cur = 'move';
+    }
   }
+  viewport.dataset.cursor = cur;
+}
+function nextStep() { return S.objects.filter(o => o.type === 'step').reduce((m, o) => Math.max(m, o.n), 0) + 1; }
 
-  if (isPanMode()) {
-    startPan(src.clientX, src.clientY);
+const pointers = new Map();
+let pinch = null;
+viewport.addEventListener('contextmenu', e => e.preventDefault());
+// Не даємо кліку по полотну забрати фокус у поля введення тексту
+viewport.addEventListener('mousedown', e => { if (!e.target.classList.contains('text-edit')) e.preventDefault(); });
+viewport.addEventListener('pointerdown', e => {
+  if (e.target.closest('.empty') || e.target.classList.contains('text-edit')) return;
+  if (e.button === 2) return;
+  viewport.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    // другий палець — скасовуємо поточне малювання і починаємо жест масштабування
+    if (S.op && S.op.kind !== 'pan') cancelOp();
+    const [a, b] = Array.from(pointers.values());
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: S.view.z, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, vx: S.view.x, vy: S.view.y };
+    S.op = null;
     return;
   }
-
-  const p = vpToCanvas(src.clientX, src.clientY);
-  // Only draw if inside canvas bounds
-  if (p.x < 0 || p.y < 0 || p.x > canvas.width || p.y > canvas.height) return;
-
-  if (tool === 'text') { spawnText(p.x, p.y); return; }
-  if (tool === 'step') { placeStepBadge(p.x, p.y); return; }
-
-  drawing = true;
-  startX = p.x; startY = p.y;
-  setupCtx();
-
-  if (tool === 'pen') {
-    ctx.beginPath(); ctx.moveTo(startX, startY);
-  } else if (tool === 'eraser') {
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.lineWidth = size * 4;
-    ctx.beginPath(); ctx.moveTo(startX, startY);
-  } else {
-    snapshot = ctx.getImageData(0,0,canvas.width,canvas.height);
-  }
-}
-
-// Pinch zoom
-let pinchDist0 = 0, pinchZ0 = 1, pinchMidX = 0, pinchMidY = 0;
-function pinchDist(e) {
-  const dx = e.touches[0].clientX - e.touches[1].clientX;
-  const dy = e.touches[0].clientY - e.touches[1].clientY;
-  return Math.sqrt(dx*dx+dy*dy);
-}
-function pinchStart(e) {
-  pinchDist0 = pinchDist(e);
-  pinchZ0 = vz;
-  pinchMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-  pinchMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-  const r = viewport.getBoundingClientRect();
-  pinchMidX -= r.left; pinchMidY -= r.top;
-}
-
-function onMove(e) {
-  const src = e.touches ? e.touches[0] : e;
-
-  // Pinch zoom
-  if (e.touches && e.touches.length === 2) {
-    const d = pinchDist(e);
-    const newZ = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, pinchZ0 * (d / pinchDist0)));
-    const ratio = newZ / vz;
-    vx = pinchMidX - ratio * (pinchMidX - vx);
-    vy = pinchMidY - ratio * (pinchMidY - vy);
-    vz = newZ;
-    applyTransform();
+  if (pointers.size > 2) return;
+  if (!S.doc) return;
+  if (e.button === 1 || S.space) {
+    e.preventDefault();
+    S.op = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: S.view.x, vy: S.view.y };
+    updateCursor();
     return;
   }
-
-  if (panning) {
-    vx = panOriginX + (src.clientX - panStartX);
-    vy = panOriginY + (src.clientY - panStartY);
-    applyTransform();
+  finishText();
+  toolDown(toDoc(e.clientX, e.clientY), e);
+});
+viewport.addEventListener('pointermove', e => {
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && pointers.size === 2) {
+    const [a, b] = Array.from(pointers.values());
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    const r = viewport.getBoundingClientRect();
+    const cx = (a.x + b.x) / 2 - r.left, cy = (a.y + b.y) / 2 - r.top;
+    const z = clamp(pinch.z * d / pinch.d, 0.05, 16);
+    const k = z / pinch.z;
+    S.view.z = z;
+    S.view.x = cx - k * (pinch.cx - r.left - pinch.vx);
+    S.view.y = cy - k * (pinch.cy - r.top - pinch.vy);
+    applyView(); render();
     return;
   }
-
-  if (!drawing) return;
-  const p = vpToCanvas(src.clientX, src.clientY);
-
-  if (tool === 'pen') {
-    ctx.lineTo(p.x, p.y); ctx.stroke(); return;
+  if (!S.doc) return;
+  if (S.op && S.op.kind === 'pan') {
+    S.view.x = S.op.vx + e.clientX - S.op.sx;
+    S.view.y = S.op.vy + e.clientY - S.op.sy;
+    applyView();
+    return;
   }
-  if (tool === 'eraser') {
-    ctx.lineTo(p.x, p.y); ctx.stroke(); return;
-  }
-
-  ctx.putImageData(snapshot, 0, 0);
-  setupCtx();
-  if (tool === 'line') {
-    ctx.beginPath(); ctx.moveTo(startX,startY); ctx.lineTo(p.x,p.y); ctx.stroke();
-  } else if (tool === 'arrow') {
-    drawArrow(startX,startY,p.x,p.y);
-  } else if (tool === 'rect') {
-    ctx.strokeRect(startX,startY,p.x-startX,p.y-startY);
-  } else if (tool === 'ellipse') {
-    const rx=Math.abs(p.x-startX)/2, ry=Math.abs(p.y-startY)/2;
-    if (rx>0&&ry>0) { ctx.beginPath(); ctx.ellipse(startX+(p.x-startX)/2,startY+(p.y-startY)/2,rx,ry,0,0,Math.PI*2); ctx.stroke(); }
-  } else if (tool === 'blur') {
-    ctx.fillStyle='rgba(80,80,80,0.5)';
-    ctx.fillRect(startX,startY,p.x-startX,p.y-startY);
-  }
-}
-
-function onUp(e) {
-  if (panning) { panning = false; updateCursor(); return; }
-  if (!drawing) return;
-  drawing = false;
-  ctx.globalCompositeOperation = 'source-over';
-
-  if (tool === 'blur' && snapshot) {
-    const src = e.changedTouches ? e.changedTouches[0] : e;
-    const p = vpToCanvas(src.clientX, src.clientY);
-    ctx.putImageData(snapshot, 0, 0);
-    applyMosaic(startX, startY, p.x, p.y);
-  }
-  snapshot = null;
-  pushHistory();
-}
-
-// ── SCROLL ZOOM ───────────────────────────────────────────────────────────────
+  const p = toDoc(e.clientX, e.clientY);
+  if (S.op) toolMove(p, e); else updateCursor(p);
+});
+const endPointer = e => {
+  pointers.delete(e.pointerId);
+  if (pinch) { if (pointers.size < 2) pinch = null; return; }
+  if (!S.op) return;
+  if (S.op.kind === 'pan') { S.op = null; updateCursor(); return; }
+  toolUp(toDoc(e.clientX, e.clientY), e);
+};
+viewport.addEventListener('pointerup', endPointer);
+viewport.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); if (pinch && pointers.size < 2) pinch = null; if (S.op && S.op.kind !== 'pan') cancelOp(); S.op = null; });
 viewport.addEventListener('wheel', e => {
+  if (!S.doc) return;
   e.preventDefault();
-  const r   = viewport.getBoundingClientRect();
-  const cx  = e.clientX - r.left;
-  const cy  = e.clientY - r.top;
-  const dir = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
-  zoomAt(cx, cy, dir);
+  const r = viewport.getBoundingClientRect();
+  if (e.ctrlKey || e.metaKey || (Math.abs(e.deltaX) < 0.5 && !e.shiftKey)) {
+    // колесо миші або жест «щипок» на тачпаді — масштаб під курсором
+    const f = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0022));
+    zoomAt(e.clientX - r.left, e.clientY - r.top, S.view.z * f);
+  } else {
+    // прокрутка двома пальцями на тачпаді / Shift+колесо — переміщення
+    S.view.x -= e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
+    S.view.y -= e.shiftKey ? 0 : e.deltaY;
+    applyView();
+  }
 }, { passive: false });
 
-// ── MOSAIC ────────────────────────────────────────────────────────────────────
-function applyMosaic(x1,y1,x2,y2) {
-  const bx=Math.min(x1,x2), by=Math.min(y1,y2);
-  const bw=Math.abs(x2-x1), bh=Math.abs(y2-y1);
-  if (bw<4||bh<4) return;
-  const block=Math.max(8,size*3);
-  const sw=Math.max(1,Math.ceil(bw/block)), sh=Math.max(1,Math.ceil(bh/block));
-  const tmp=document.createElement('canvas'); tmp.width=bw; tmp.height=bh;
-  const tc=tmp.getContext('2d'); tc.imageSmoothingEnabled=false;
-  tc.drawImage(canvas,bx,by,bw,bh,0,0,sw,sh);
-  tc.drawImage(tmp,0,0,sw,sh,0,0,bw,bh);
-  ctx.drawImage(tmp,bx,by,bw,bh);
+function cancelOp() {
+  if (!S.op) return;
+  if (S.op.snapshot) restore(S.op.snapshot);
+  else if (S.op.obj) { S.objects = S.objects.filter(o => o !== S.op.obj); }
+  S.op = null;
+  render();
 }
-
-// ── STEP BADGE ────────────────────────────────────────────────────────────────
-function placeStepBadge(cx, cy) {
-  const radius = Math.max(14, size * 5);
-  const label  = String(stepCounter);
-
-  // filled circle
-  ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
-
-  // white number
-  const fontSize = Math.round(radius * 1.1);
-  ctx.font = `700 ${fontSize}px 'Inter',system-ui,sans-serif`;
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(label, cx, cy + 1);
-  ctx.restore();
-
-  stepCounter++;
-  updateStepBtn();
-  pushHistory();
-}
-
-function updateStepBtn() {
-  const btn = document.querySelector('[data-tool="step"]');
-  if (btn) btn.setAttribute('data-tip', `Нумерація кроків (N) — наступний: ${stepCounter}`);
-}
-
-// ── TEXT ──────────────────────────────────────────────────────────────────────
-function spawnText(cx, cy) {
-  if (textNode) { textNode.remove(); textNode = null; }
-  const r  = viewport.getBoundingClientRect();
-  const fs = Math.max(12, size * 5);
-  // position in screen coords
-  const sx = vx + cx * vz + r.left;
-  const sy = vy + cy * vz + r.top;
-  const inp = document.createElement('textarea');
-  inp.style.cssText = `
-    position:fixed;left:${sx}px;top:${sy}px;
-    min-width:120px;min-height:32px;background:rgba(255,255,255,.95);color:${color};
-    font-family:'Inter',system-ui,sans-serif;font-size:${fs * vz}px;
-    border:1.5px dashed ${color};border-radius:6px;padding:4px 8px;
-    resize:both;outline:none;z-index:500;line-height:1.4;box-shadow:0 4px 12px rgba(0,0,0,.12);
-  `;
-  document.body.appendChild(inp);
-  inp.focus();
-  textNode = inp;
-  const commit = () => {
-    if (textNode !== inp) return;
-    textNode = null;
-    const val = inp.value.trim();
-    inp.remove();
-    if (!val) return;
-    setupCtx();
-    ctx.font = `${fs}px 'Inter',system-ui,sans-serif`;
-    ctx.fillStyle = color;
-    val.split('\n').forEach((l,i) => ctx.fillText(l, cx, cy + i*(fs*1.3) + fs));
-    pushHistory();
-  };
-  inp.addEventListener('keydown', e => {
-    if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); commit(); }
-    if (e.key==='Escape') { textNode=null; inp.remove(); }
-  });
-  inp.addEventListener('blur', commit);
-}
-
-// ── KEYBOARD ──────────────────────────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (['TEXTAREA','INPUT'].includes(document.activeElement.tagName)) return;
-  const ctrl = e.ctrlKey || e.metaKey;
-  if (ctrl && e.key==='v')  { e.preventDefault(); pasteAPI(); return; }
-  if (ctrl && e.key==='z')  { e.preventDefault(); undo(); return; }
-  if (ctrl && (e.key==='y' || (e.shiftKey&&e.key==='z'))) { e.preventDefault(); redo(); return; }
-  if (ctrl && e.key==='0')  { e.preventDefault(); fitCanvas(); return; }
-  if (ctrl && (e.key==='=' || e.key==='+')) { e.preventDefault(); const r=viewport.getBoundingClientRect(); zoomAt(r.width/2,r.height/2, ZOOM_STEP); return; }
-  if (ctrl && e.key==='-')  { e.preventDefault(); const r=viewport.getBoundingClientRect(); zoomAt(r.width/2,r.height/2,-ZOOM_STEP); return; }
-  if (e.key===' ' && !spaceDown) { e.preventDefault(); spaceDown=true; updateCursor(); return; }
-  if (!ctrl) {
-    const map={b:'pen',l:'line',a:'arrow',r:'rect',e:'ellipse',t:'text',m:'blur',x:'eraser',n:'step'};
-    if (map[e.key]) document.querySelector(`[data-tool="${map[e.key]}"]`)?.click();
+function startOpSnapshot() { return S.hist[S.hidx]; }
+function toolDown(p, e) {
+  const t = S.tool;
+  const st = S.styles[t];
+  // Ручки виділеного об'єкта мають пріоритет для будь-якого інструмента, крім гумки/обрізання
+  const sel = selObj();
+  if (t !== 'eraser' && t !== 'crop' && sel) {
+    const h = hitHandle(sel, p);
+    if (h) { S.op = { kind: 'resize', obj: sel, h, start: { b: bounds(sel), size: sel.size }, snapshot: startOpSnapshot() }; return; }
+    if (t !== 'select' && t !== 'text' && t !== 'step' && hit(sel, p, 6 / S.view.z)) { S.op = { kind: 'move', obj: sel, last: p, moved: false, snapshot: startOpSnapshot() }; return; }
   }
-});
-document.addEventListener('keyup', e => {
-  if (e.key===' ') { spaceDown=false; if (panning) { panning=false; } updateCursor(); }
-});
-
-// ── PASTE ─────────────────────────────────────────────────────────────────────
-document.addEventListener('paste', e => {
-  for (const item of [...(e.clipboardData?.items||[])]) {
-    if (item.type.startsWith('image/')) { loadImage(URL.createObjectURL(item.getAsFile())); return; }
+  if (t === 'select') {
+    const o = hitTest(p);
+    S.selId = o ? o.id : null;
+    if (o) S.op = { kind: 'move', obj: o, last: p, moved: false, snapshot: startOpSnapshot() };
+    renderProps(); render();
+    return;
   }
-});
-async function pasteAPI() {
-  try {
-    for (const item of await navigator.clipboard.read()) {
-      const t = item.types.find(t=>t.startsWith('image/'));
-      if (t) { loadImage(URL.createObjectURL(await item.getType(t))); return; }
+  if (t === 'crop') {
+    const b = S.crop ? norm(S.crop) : null;
+    const h = b && hitHandle(Object.assign({ type: 'crop' }, b), p);
+    if (h) { S.op = { kind: 'crop-resize', h, start: { b } }; return; }
+    const full = b && b.x <= 0.5 && b.y <= 0.5 && b.w >= S.doc.w - 0.5 && b.h >= S.doc.h - 0.5;
+    if (b && !full && p.x > b.x && p.x < b.x + b.w && p.y > b.y && p.y < b.y + b.h) { S.op = { kind: 'crop-move', last: p }; return; }
+    S.crop = { x: clamp(p.x, 0, S.doc.w), y: clamp(p.y, 0, S.doc.h), w: 0, h: 0 };
+    S.op = { kind: 'crop-new', sx: S.crop.x, sy: S.crop.y };
+    return;
+  }
+  if (t === 'eraser') {
+    S.op = { kind: 'erase', removed: 0 };
+    eraseAt(p);
+    return;
+  }
+  if (t === 'text') {
+    const o = hitTest(p);
+    if (o && o.type === 'text') { S.selId = o.id; startTextEdit(o); return; }
+    const obj = { id: uid(), type: 'text', x: p.x, y: p.y - st.size * 0.6, text: '', color: st.color, size: st.size, bg: st.bg };
+    startTextEdit(obj, true);
+    return;
+  }
+  if (t === 'step') {
+    const o = hitTest(p);
+    if (o && o.type === 'step') { S.selId = o.id; S.op = { kind: 'move', obj: o, last: p, moved: false, snapshot: startOpSnapshot() }; render(); renderProps(); return; }
+    const obj = { id: uid(), type: 'step', x: p.x, y: p.y, n: nextStep(), color: st.color, size: st.size };
+    S.objects.push(obj);
+    S.selId = obj.id;
+    commit(); render();
+    return;
+  }
+  // Фігури та олівець
+  let obj;
+  if (t === 'pen' || t === 'highlighter') obj = { id: uid(), type: t, points: [[p.x, p.y]], color: st.color, width: st.width };
+  else if (t === 'line' || t === 'arrow') obj = { id: uid(), type: t, x1: p.x, y1: p.y, x2: p.x, y2: p.y, color: st.color, width: st.width };
+  else if (t === 'rect' || t === 'ellipse') obj = { id: uid(), type: t, x: p.x, y: p.y, w: 0, h: 0, color: st.color, width: st.width, fill: st.fill };
+  else if (t === 'blur') obj = { id: uid(), type: 'blur', x: p.x, y: p.y, w: 0, h: 0, mode: st.mode, strength: st.strength };
+  if (!obj) return;
+  S.selId = null;
+  S.objects.push(obj);
+  S.op = { kind: 'draw', obj, sx: p.x, sy: p.y };
+  render();
+}
+function toolMove(p, e) {
+  const op = S.op;
+  if (op.kind === 'move') {
+    const dx = p.x - op.last.x, dy = p.y - op.last.y;
+    if (!op.moved && Math.hypot(dx, dy) * S.view.z < 2) return;
+    op.moved = true;
+    moveObj(op.obj, dx, dy);
+    op.last = p;
+    render();
+    return;
+  }
+  if (op.kind === 'resize') { resizeObj(op.obj, op.h, p, op.start, e.shiftKey); render(); return; }
+  if (op.kind === 'erase') { eraseAt(p); return; }
+  if (op.kind === 'crop-new') {
+    let x2 = clamp(p.x, 0, S.doc.w), y2 = clamp(p.y, 0, S.doc.h);
+    if (e.shiftKey) { const s = Math.max(Math.abs(x2 - op.sx), Math.abs(y2 - op.sy)); x2 = op.sx + s * Math.sign(x2 - op.sx || 1); y2 = op.sy + s * Math.sign(y2 - op.sy || 1); }
+    S.crop = { x: op.sx, y: op.sy, w: x2 - op.sx, h: y2 - op.sy };
+    render(); renderProps(true);
+    return;
+  }
+  if (op.kind === 'crop-resize') {
+    const o = Object.assign({}, S.crop);
+    resizeObj(o, op.h, { x: clamp(p.x, 0, S.doc.w), y: clamp(p.y, 0, S.doc.h) }, op.start, e.shiftKey);
+    S.crop = o; render(); renderProps(true);
+    return;
+  }
+  if (op.kind === 'crop-move') {
+    const b = norm(S.crop);
+    const dx = clamp(p.x - op.last.x, -b.x, S.doc.w - b.x - b.w), dy = clamp(p.y - op.last.y, -b.y, S.doc.h - b.y - b.h);
+    S.crop = { x: b.x + dx, y: b.y + dy, w: b.w, h: b.h };
+    op.last = { x: op.last.x + dx, y: op.last.y + dy };
+    render();
+    return;
+  }
+  if (op.kind === 'draw') {
+    const o = op.obj;
+    if (o.points) {
+      const last = o.points[o.points.length - 1];
+      if (Math.hypot(p.x - last[0], p.y - last[1]) * S.view.z >= 1.5) {
+        if (e.shiftKey && o.points.length >= 1) { o.points = [o.points[0], [p.x, p.y]]; }
+        else o.points.push([p.x, p.y]);
+      }
+    } else if ('x1' in o) {
+      let q = p;
+      if (e.shiftKey) q = snap45(o.x1, o.y1, p.x, p.y);
+      o.x2 = q.x; o.y2 = q.y;
+    } else {
+      let w = p.x - op.sx, h = p.y - op.sy;
+      if (e.shiftKey) { const s = Math.max(Math.abs(w), Math.abs(h)); w = s * Math.sign(w || 1); h = s * Math.sign(h || 1); }
+      if (e.altKey) { o.x = op.sx - w; o.y = op.sy - h; o.w = w * 2; o.h = h * 2; } else { o.x = op.sx; o.y = op.sy; o.w = w; o.h = h; }
     }
-    toast('В буфері немає зображення','err');
-  } catch { toast('Спробуй Ctrl+V прямо в вікні','err'); }
+    render();
+  }
+}
+function toolUp(p) {
+  const op = S.op;
+  S.op = null;
+  if (!op) return;
+  if (op.kind === 'move') { if (op.moved) commit(); render(); renderProps(); return; }
+  if (op.kind === 'resize') { commit(); render(); return; }
+  if (op.kind === 'erase') { if (op.removed) commit(); return; }
+  if (op.kind.startsWith('crop')) {
+    const b = norm(S.crop);
+    if (b.w < 4 || b.h < 4) S.crop = { x: 0, y: 0, w: S.doc.w, h: S.doc.h };
+    else S.crop = b;
+    render(); renderProps(true);
+    return;
+  }
+  if (op.kind === 'draw') {
+    const o = op.obj;
+    const tiny = o.points ? false : ('x1' in o ? Math.hypot(o.x2 - o.x1, o.y2 - o.y1) * S.view.z < 4 : (Math.abs(o.w) * S.view.z < 4 || Math.abs(o.h) * S.view.z < 4));
+    if (tiny) { S.objects = S.objects.filter(x => x !== o); render(); return; }
+    if (!o.points) { if ('w' in o) Object.assign(o, norm(o)); S.selId = o.id; }
+    commit(); render();
+  }
+}
+function eraseAt(p) {
+  const tol = 10 / S.view.z;
+  for (let i = S.objects.length - 1; i >= 0; i--) {
+    if (hit(S.objects[i], p, tol)) { if (S.objects[i].id === S.selId) S.selId = null; S.objects.splice(i, 1); S.op.removed++; render(); return; }
+  }
+}
+function applyCrop() {
+  if (!S.crop || !S.doc) return;
+  const b = norm(S.crop);
+  const x = Math.round(b.x), y = Math.round(b.y), w = Math.round(b.w), h = Math.round(b.h);
+  if (w < 4 || h < 4) return;
+  if (x === 0 && y === 0 && w === S.doc.w && h === S.doc.h) { setTool('arrow'); return; }
+  const src = S.bases.get(S.doc.baseId);
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const c = cv.getContext('2d');
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h);
+  c.drawImage(src, x, y, w, h, 0, 0, w, h);
+  const id = addBase(cv);
+  S.objects.forEach(o => moveObj(o, -x, -y));
+  S.doc = { w, h, baseId: id };
+  canvas.width = w; canvas.height = h;
+  S.crop = null;
+  S.tool = 'crop';
+  commit();
+  setTool('arrow');
+  fit();
+  toast('Обрізано до ' + w + ' × ' + h, 'ok', { action: 'Скасувати', onAction: undo });
 }
 
-// ── DRAG & DROP ───────────────────────────────────────────────────────────────
-viewport.addEventListener('dragover', e => e.preventDefault());
-viewport.addEventListener('drop', e => {
+/* ═══════════ ТЕКСТ ═══════════ */
+function startTextEdit(o, isNew) {
+  finishText();
+  const ta = document.createElement('textarea');
+  ta.className = 'text-edit';
+  ta.value = o.text || '';
+  ta.spellcheck = false;
+  S.editing = { obj: o, isNew, ta, id: o.id };
+  viewport.appendChild(ta);
+  styleTextEditor();
+  positionTextEditor();
+  render();
+  ta.focus();
+  if (!isNew) ta.select();
+  ta.addEventListener('input', () => { o.text = ta.value; styleTextEditor(); });
+  ta.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); finishText(); }
+    else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finishText(); }
+  });
+  ta.addEventListener('blur', () => setTimeout(() => { if (S.editing && S.editing.ta === ta) finishText(); }, 0));
+}
+function styleTextEditor() {
+  const ed = S.editing;
+  if (!ed) return;
+  const o = ed.obj, ta = ed.ta;
+  const m = textMetrics(Object.assign({}, o, { text: o.text || ' ' }));
+  ta.style.font = '700 ' + o.size + 'px ' + FONT;
+  ta.style.lineHeight = (o.size * 1.25) + 'px';
+  ta.style.color = o.bg === 'solid' ? (isLight(o.color) ? '#111827' : '#fff') : o.color;
+  ta.style.background = o.bg === 'solid' ? o.color : (o.bg === 'light' ? 'rgba(255,255,255,.94)' : 'rgba(255,255,255,.12)');
+  ta.style.padding = m.pad + 'px';
+  ta.style.width = (m.bw + o.size * 0.8) + 'px';
+  ta.style.height = (m.bh + 4) + 'px';
+  ta.style.borderRadius = (o.size * 0.28) + 'px';
+}
+function positionTextEditor() {
+  const ed = S.editing;
+  if (!ed) return;
+  ed.ta.style.left = (S.view.x + ed.obj.x * S.view.z - 2) + 'px';
+  ed.ta.style.top = (S.view.y + ed.obj.y * S.view.z - 2) + 'px';
+  ed.ta.style.transform = 'scale(' + S.view.z + ')';
+}
+function finishText(cancel) {
+  const ed = S.editing;
+  if (!ed) return;
+  S.editing = null;
+  const o = ed.obj;
+  const text = ed.ta.value.replace(/\s+$/, '');
+  ed.ta.remove();
+  if (cancel && ed.isNew) { render(); return; }
+  if (!text.trim()) {
+    if (!ed.isNew) { S.objects = S.objects.filter(x => x !== o); S.selId = null; commit(); }
+    render();
+    return;
+  }
+  o.text = text;
+  if (ed.isNew) S.objects.push(o);
+  S.selId = o.id;
+  commit();
+  render();
+  renderProps();
+}
+
+/* ═══════════ ПАНЕЛЬ ВЛАСТИВОСТЕЙ ═══════════ */
+function styleTarget() {
+  const o = selObj();
+  if (o) return { o, type: o.type };
+  return { o: null, type: S.tool };
+}
+function setProp(k, v) {
+  const { o, type } = styleTarget();
+  if (S.styles[type]) { S.styles[type][k] = v; saveStyles(); }
+  if (o) { o[k] = v; if (S.editing && S.editing.obj === o) styleTextEditor(); commit(); render(); }
+  else if (S.editing) { S.editing.obj[k] = v; styleTextEditor(); }
+  renderProps();
+}
+function renderProps(onlyCrop) {
+  const pb = $('#propbar');
+  if (!S.doc) { pb.innerHTML = '<span class="pb-hint">Відкрийте або вставте зображення, щоб почати.</span>'; return; }
+  const { o, type } = styleTarget();
+  const cur = o || S.styles[type] || {};
+  const parts = [];
+  const title = o ? 'Вибрано: ' + TOOL_NAMES[type].toLowerCase() : TOOL_NAMES[S.tool];
+  parts.push('<span class="pb-title">' + icon(o ? toolIcon(type) : toolIcon(S.tool)) + esc(title) + '</span>');
+  if (S.tool === 'crop') {
+    const b = S.crop ? norm(S.crop) : { w: S.doc.w, h: S.doc.h };
+    parts.push('<span class="pb-hint">Потягніть рамку або її кути · Shift — квадрат</span><span class="sep"></span>');
+    parts.push('<span class="pb-hint"><b style="color:var(--text)">' + Math.round(b.w) + ' × ' + Math.round(b.h) + '</b> px</span><span class="grow"></span>');
+    parts.push('<button class="pb-btn" data-p="cropReset">Скинути</button><button class="pb-btn" data-p="cropCancel">Скасувати</button><button class="pb-btn primary" data-p="cropApply">' + icon('check') + 'Обрізати <span style="opacity:.7">Enter</span></button>');
+    pb.innerHTML = parts.join('');
+    return;
+  }
+  if (onlyCrop) return;
+  if (S.tool === 'eraser' && !o) { parts.push('<span class="pb-hint">Проведіть по позначці, щоб її видалити. Сам скріншот не змінюється.</span>'); pb.innerHTML = parts.join(''); return; }
+  if (S.tool === 'select' && !o) { parts.push('<span class="pb-hint">Клікніть на позначку, щоб вибрати, перемістити чи змінити її · Delete — видалити</span>'); pb.innerHTML = parts.join(''); return; }
+  const colorRow = () => '<span class="pb-group">' + COLORS.map(c => '<button class="sw' + (String(cur.color).toLowerCase() === c ? ' on' : '') + '" data-p="color" data-v="' + c + '" style="background:' + c + '" aria-label="Колір"></button>').join('') +
+    '<label class="sw sw-custom' + (COLORS.includes(String(cur.color).toLowerCase()) ? '' : ' on') + '" data-tip="Свій колір"><input type="color" data-p="colorCustom" value="' + esc(cur.color || '#ef4444') + '"></label></span><span class="sep"></span>';
+  const widthRow = (list) => '<span class="pb-group"><span class="pb-label">Товщина</span><span class="seg">' + list.map(w => '<button data-p="width" data-v="' + w + '" class="' + (cur.width === w ? 'on' : '') + '" data-tip="' + w + ' px"><span class="dotw" style="width:' + Math.min(16, 3 + w * 0.7) + 'px;height:' + Math.min(16, 3 + w * 0.7) + 'px"></span></button>').join('') + '</span></span>';
+  if (type === 'blur') {
+    parts.push('<span class="pb-group"><span class="seg"><button data-p="mode" data-v="pixel" class="' + (cur.mode !== 'blur' ? 'on' : '') + '">Мозаїка</button><button data-p="mode" data-v="blur" class="' + (cur.mode === 'blur' ? 'on' : '') + '">Розмиття</button></span></span>');
+    parts.push('<span class="sep"></span><span class="range"><span class="pb-label">Сила</span><input type="range" min="4" max="40" value="' + (cur.strength || 12) + '" data-p="strength"><span>' + (cur.strength || 12) + '</span></span>');
+  } else {
+    parts.push(colorRow());
+    if (type === 'pen' || type === 'line' || type === 'arrow' || type === 'rect' || type === 'ellipse') parts.push(widthRow([2, 4, 6, 10, 16]));
+    if (type === 'highlighter') parts.push(widthRow([12, 18, 24, 34, 48]));
+    if (type === 'rect' || type === 'ellipse') parts.push('<span class="sep"></span><span class="pb-group"><span class="pb-label">Заливка</span><span class="seg">' + [['none', 'Без'], ['semi', 'Прозора'], ['solid', 'Суцільна']].map(f => '<button data-p="fill" data-v="' + f[0] + '" class="' + ((cur.fill || 'none') === f[0] ? 'on' : '') + '">' + f[1] + '</button>').join('') + '</span></span>');
+    if (type === 'text') {
+      parts.push('<span class="pb-group"><span class="pb-label">Розмір</span><span class="seg">' + [[18, 'S'], [28, 'M'], [40, 'L'], [60, 'XL']].map(s => '<button data-p="size" data-v="' + s[0] + '" class="' + (cur.size === s[0] ? 'on' : '') + '">' + s[1] + '</button>').join('') + '</span></span><span class="sep"></span>');
+      parts.push('<span class="pb-group"><span class="pb-label">Фон</span><span class="seg">' + [['none', 'Без'], ['light', 'Світлий'], ['solid', 'Кольоровий']].map(s => '<button data-p="bg" data-v="' + s[0] + '" class="' + ((cur.bg || 'none') === s[0] ? 'on' : '') + '">' + s[1] + '</button>').join('') + '</span></span>');
+    }
+    if (type === 'step') {
+      parts.push('<span class="pb-group"><span class="pb-label">Розмір</span><span class="seg">' + [[14, 'S'], [20, 'M'], [28, 'L'], [38, 'XL']].map(s => '<button data-p="size" data-v="' + s[0] + '" class="' + (cur.size === s[0] ? 'on' : '') + '">' + s[1] + '</button>').join('') + '</span></span>');
+      if (!o) parts.push('<span class="sep"></span><span class="pb-hint">Наступний номер: <b style="color:var(--text)">' + nextStep() + '</b></span>');
+    }
+  }
+  if (o) {
+    parts.push('<span class="grow"></span>');
+    if (o.type === 'text') parts.push('<button class="pb-btn" data-p="editText">' + icon('text') + 'Редагувати</button>');
+    parts.push('<button class="pb-btn" data-p="dup" data-tip="Дублювати" data-kbd="Ctrl+D">' + icon('duplicate') + '</button>');
+    parts.push('<button class="pb-btn" data-p="front" data-tip="На передній план">' + icon('front') + '</button>');
+    parts.push('<button class="pb-btn" data-p="back" data-tip="На задній план">' + icon('back2') + '</button>');
+    parts.push('<button class="pb-btn danger" data-p="del" data-tip="Видалити" data-kbd="Delete">' + icon('trash') + 'Видалити</button>');
+  }
+  pb.innerHTML = parts.join('');
+}
+function toolIcon(t) { return { select: 'cursor', crop: 'crop', arrow: 'arrow', rect: 'rect', ellipse: 'ellipse', line: 'line', pen: 'pen', highlighter: 'marker', text: 'text', step: 'step', blur: 'blur', eraser: 'eraser' }[t] || 'cursor'; }
+$('#propbar').addEventListener('mousedown', e => { if (!e.target.closest('input')) e.preventDefault(); });
+$('#propbar').addEventListener('click', e => {
+  const b = e.target.closest('[data-p]');
+  if (!b || b.tagName === 'INPUT') return;
+  const p = b.dataset.p, v = b.dataset.v;
+  const o = selObj();
+  switch (p) {
+    case 'color': setProp('color', v); break;
+    case 'width': setProp('width', +v); break;
+    case 'size': setProp('size', +v); break;
+    case 'fill': setProp('fill', v); break;
+    case 'bg': setProp('bg', v); break;
+    case 'mode': setProp('mode', v); break;
+    case 'del': deleteSelected(); break;
+    case 'dup': duplicateSelected(); break;
+    case 'front': if (o) { S.objects = S.objects.filter(x => x !== o).concat(o); commit(); render(); } break;
+    case 'back': if (o) { S.objects = [o].concat(S.objects.filter(x => x !== o)); commit(); render(); } break;
+    case 'editText': if (o) startTextEdit(o); break;
+    case 'cropApply': applyCrop(); break;
+    case 'cropCancel': setTool('arrow'); break;
+    case 'cropReset': S.crop = { x: 0, y: 0, w: S.doc.w, h: S.doc.h }; render(); renderProps(); break;
+  }
+});
+$('#propbar').addEventListener('input', e => {
+  const p = e.target.dataset.p;
+  if (p === 'colorCustom') {
+    const { o, type } = styleTarget();
+    if (S.styles[type]) S.styles[type].color = e.target.value;
+    if (o) { o.color = e.target.value; render(); }
+    if (S.editing) { S.editing.obj.color = e.target.value; styleTextEditor(); }
+  }
+  if (p === 'strength') {
+    e.target.nextElementSibling.textContent = e.target.value;
+    const { o } = styleTarget();
+    S.styles.blur.strength = +e.target.value;
+    if (o) { o.strength = +e.target.value; render(); }
+  }
+});
+$('#propbar').addEventListener('change', e => {
+  const p = e.target.dataset.p;
+  if (p === 'colorCustom' || p === 'strength') { saveStyles(); if (selObj()) commit(); renderProps(); }
+});
+function deleteSelected() {
+  const o = selObj();
+  if (!o) return;
+  S.objects = S.objects.filter(x => x !== o);
+  S.selId = null;
+  commit(); render();
+}
+function duplicateSelected() {
+  const o = selObj();
+  if (!o) return;
+  const c = JSON.parse(JSON.stringify(o));
+  c.id = uid();
+  moveObj(c, 16 / S.view.z, 16 / S.view.z);
+  if (c.type === 'step') c.n = nextStep();
+  S.objects.push(c);
+  S.selId = c.id;
+  commit(); render();
+}
+
+/* ═══════════ ЕКСПОРТ ═══════════ */
+function exportCanvas() {
+  const cv = document.createElement('canvas');
+  cv.width = S.doc.w; cv.height = S.doc.h;
+  renderInto(cv.getContext('2d'), false);
+  return cv;
+}
+function fileStamp() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return 'snapedit-' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+}
+function download(fmt) {
+  if (!S.doc) { toast('Спочатку відкрийте зображення', 'err'); return; }
+  finishText();
+  const cv = exportCanvas();
+  let type = 'image/png', ext = 'png', q;
+  if (fmt === 'jpg') {
+    type = 'image/jpeg'; ext = 'jpg'; q = 0.92;
+    const c2 = document.createElement('canvas'); c2.width = cv.width; c2.height = cv.height;
+    const x = c2.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.drawImage(cv, 0, 0);
+    return saveBlobFrom(c2, type, q, ext);
+  }
+  saveBlobFrom(cv, type, q, ext);
+}
+function saveBlobFrom(cv, type, q, ext) {
+  cv.toBlob(blob => {
+    if (!blob) { toast('Не вдалося зберегти файл', 'err'); return; }
+    const name = fileStamp() + '.' + ext;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    toast('Збережено «' + name + '»', 'ok');
+  }, type, q);
+}
+async function copyImage() {
+  if (!S.doc) { toast('Спочатку відкрийте зображення', 'err'); return; }
+  finishText();
+  const btn = $('#btnCopy');
+  try {
+    const blob = await new Promise(r => exportCanvas().toBlob(r, 'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    btn.classList.add('done');
+    setTimeout(() => btn.classList.remove('done'), 1400);
+    toast('Скопійовано — вставляйте Ctrl+V у чат, документ чи презентацію', 'ok');
+  } catch (e) {
+    toast('Браузер не дозволив копіювання. Скористайтеся «Зберегти».', 'err');
+  }
+}
+
+/* ═══════════ АВТОЗБЕРЕЖЕННЯ (IndexedDB) ═══════════ */
+let db = null, saveTimer = null, savedBaseId = null;
+function openDb() {
+  return new Promise(res => {
+    if (!window.indexedDB) { res(null); return; }
+    let rq;
+    try { rq = indexedDB.open('edvault-snapedit', 1); } catch (e) { res(null); return; }
+    rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = rq.onblocked = () => res(null);
+  });
+}
+function kv(mode, fn) {
+  return new Promise((res, rej) => {
+    if (!db) { res(null); return; }
+    const tx = db.transaction('kv', mode);
+    const st = tx.objectStore('kv');
+    const rq = fn(st);
+    tx.oncomplete = () => res(rq && rq.result);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveSession, 600); }
+async function saveSession() {
+  if (!db || !S.doc) return;
+  try {
+    if (savedBaseId !== S.doc.baseId) {
+      const base = S.bases.get(S.doc.baseId);
+      const blob = await new Promise(r => base.toBlob(r, 'image/png'));
+      await kv('readwrite', st => st.put(blob, 'base'));
+      savedBaseId = S.doc.baseId;
+    }
+    await kv('readwrite', st => st.put({ w: S.doc.w, h: S.doc.h, objects: S.objects, styles: S.styles, t: Date.now() }, 'meta'));
+  } catch (e) { console.warn('SnapEdit: autosave failed', e); }
+}
+async function clearSession() { try { await kv('readwrite', st => { st.delete('meta'); return st.delete('base'); }); } catch (e) { /* ignore */ } }
+async function restoreSession() {
+  if (!db) return false;
+  try {
+    const meta = await kv('readonly', st => st.get('meta'));
+    const blob = await kv('readonly', st => st.get('base'));
+    if (!meta || !blob) return false;
+    const cv = await loadImageBlob(blob, true);
+    if (!cv) return false;
+    newDoc(cv);
+    S.objects = Array.isArray(meta.objects) ? meta.objects : [];
+    S.hist = []; S.hidx = -1;
+    commit();
+    savedBaseId = S.doc.baseId;
+    render();
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ═══════════ ТОСТИ / МОДАЛКИ / ПІДКАЗКИ / МЕНЮ ═══════════ */
+let toastTimer = null;
+function toast(msg, type, opts) {
+  opts = opts || {};
+  const t = $('#toast');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.innerHTML = '<span>' + esc(msg) + '</span>' + (opts.action ? '<button class="t-act">' + esc(opts.action) + '</button>' : '');
+  if (opts.action) t.querySelector('.t-act').onclick = () => { t.classList.remove('show'); opts.onAction(); };
+  requestAnimationFrame(() => t.classList.add('show'));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), opts.duration || 2800);
+}
+let confirmResolve = null;
+function openModal(id) { $('#' + id).classList.add('open'); }
+function closeModal(id) {
+  $('#' + id).classList.remove('open');
+  if (id === 'confirmModal' && confirmResolve) { const r = confirmResolve; confirmResolve = null; r(false); }
+}
+function anyModal() { return $$('.overlay.open').length > 0; }
+function confirmDialog(title, msg, ok) {
+  return new Promise(res => {
+    confirmResolve = res;
+    $('#confirmTitle').textContent = title;
+    $('#confirmMsg').textContent = msg;
+    $('#confirmOk').textContent = ok || 'Так';
+    openModal('confirmModal');
+    setTimeout(() => $('#confirmOk').focus(), 30);
+  });
+}
+$('#confirmOk').addEventListener('click', () => { const r = confirmResolve; confirmResolve = null; closeModal('confirmModal'); if (r) r(true); });
+$('#confirmCancel').addEventListener('click', () => closeModal('confirmModal'));
+$$('.overlay').forEach(ov => {
+  ov.addEventListener('mousedown', e => { if (e.target === ov) closeModal(ov.id); });
+  $$('[data-close]', ov).forEach(b => b.addEventListener('click', () => closeModal(ov.id)));
+});
+const tip = $('#tip');
+let tipTarget = null, tipTimer = null;
+document.addEventListener('mouseover', e => {
+  if (window.matchMedia && matchMedia('(pointer: coarse)').matches) return;
+  const t = e.target.closest && e.target.closest('[data-tip]');
+  if (t === tipTarget) return;
+  clearTimeout(tipTimer); tip.classList.remove('show'); tipTarget = t;
+  if (!t) return;
+  tipTimer = setTimeout(() => {
+    let k = t.dataset.kbd || '';
+    if (k && IS_MAC) k = k.replace(/Ctrl/g, '⌘').replace(/Shift/g, '⇧');
+    tip.innerHTML = esc(t.dataset.tip) + (k ? '<span class="k">' + esc(k) + '</span>' : '');
+    tip.classList.add('show');
+    const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    let top = r.bottom + 8, left = r.left + r.width / 2 - w / 2;
+    if (t.closest('.rail') && window.innerWidth > 640) { top = r.top + r.height / 2 - h / 2; left = r.right + 10; }
+    if (top + h > window.innerHeight - 6) top = r.top - h - 8;
+    tip.style.top = top + 'px';
+    tip.style.left = clamp(left, 6, window.innerWidth - w - 6) + 'px';
+  }, 380);
+});
+document.addEventListener('mousedown', () => { clearTimeout(tipTimer); tip.classList.remove('show'); tipTarget = null; }, true);
+const pop = $('#pop');
+let popAnchor = null, popPick = null;
+function openPop(anchor, html, pick) {
+  if (popAnchor === anchor && pop.classList.contains('open')) { closePop(); return; }
+  popAnchor = anchor; popPick = pick;
+  pop.innerHTML = html;
+  pop.classList.add('open');
+  const r = anchor.getBoundingClientRect(), w = pop.offsetWidth;
+  pop.style.top = (r.bottom + 6) + 'px';
+  pop.style.left = clamp(r.right - w, 8, window.innerWidth - w - 8) + 'px';
+}
+function closePop() { pop.classList.remove('open'); popAnchor = null; }
+pop.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b && popPick) { const f = popPick; closePop(); f(b.dataset.v); } });
+document.addEventListener('mousedown', e => { if (pop.classList.contains('open') && !pop.contains(e.target) && !(popAnchor && popAnchor.contains(e.target))) closePop(); });
+
+/* ═══════════ СТАТУС ═══════════ */
+function updateStatus() {
+  if (!S.doc) { $('#stSize').textContent = ''; $('#stObjs').textContent = ''; return; }
+  $('#stSize').innerHTML = 'Розмір: <b>' + S.doc.w + ' × ' + S.doc.h + '</b> px';
+  const n = S.objects.length;
+  $('#stObjs').innerHTML = 'Позначок: <b>' + n + '</b>';
+}
+
+/* ═══════════ ТЕМА / ДОВІДКА ═══════════ */
+function applyTheme(t) {
+  try { localStorage.setItem('edvault-theme', t); } catch (e) { /* ignore */ }
+  document.documentElement.setAttribute('data-theme', t);
+  $('#themeIco').innerHTML = icon(t === 'dark' ? 'sun' : 'moon');
+  render();
+}
+function renderHelp() {
+  const k = s => s.split('+').map(x => '<span class="kbd">' + esc(IS_MAC ? x.replace('Ctrl', '⌘').replace('Shift', '⇧') : x) + '</span>').join('');
+  const rows = [
+    ['grp', 'Інструменти'],
+    ['Вибір / Обрізання', k('V') + ' ' + k('C')],
+    ['Стрілка / Прямокутник / Еліпс / Лінія', k('A') + ' ' + k('R') + ' ' + k('E') + ' ' + k('L')],
+    ['Олівець / Маркер / Текст', k('P') + ' ' + k('H') + ' ' + k('T')],
+    ['Нумерація / Приховати / Гумка', k('N') + ' ' + k('B') + ' ' + k('X')],
+    ['Рівні лінії, квадрат, коло', 'тримайте ' + k('Shift')],
+    ['grp', 'Дії'],
+    ['Вставити скріншот', k('Ctrl+V')],
+    ['Скасувати / повторити', k('Ctrl+Z') + ' ' + k('Ctrl+Shift+Z')],
+    ['Копіювати результат у буфер', k('Ctrl+Shift+C')],
+    ['Зберегти PNG', k('Ctrl+S')],
+    ['Відкрити файл', k('Ctrl+O')],
+    ['Видалити / дублювати позначку', k('Delete') + ' ' + k('Ctrl+D')],
+    ['Посунути позначку', k('←↑→↓') + ' (з ' + k('Shift') + ' — на 10 px)'],
+    ['Застосувати обрізання', k('Enter')],
+    ['grp', 'Перегляд'],
+    ['Масштаб', 'колесо миші, ' + k('Ctrl++') + ' ' + k('Ctrl+−')],
+    ['Вписати / 100%', k('Ctrl+0') + ' ' + k('Ctrl+1')],
+    ['Переміщення', k('Пробіл') + ' + тягнути, або середня кнопка миші'],
+  ];
+  $('#helpGrid').innerHTML = rows.map(r => r[0] === 'grp' ? '<div class="grp">' + r[1] + '</div>' : '<span>' + esc(r[0]) + '</span><span>' + r[1] + '</span>').join('');
+}
+
+/* ═══════════ ДІЇ ═══════════ */
+function act(a, el) {
+  switch (a) {
+    case 'open': $('#fileInput').click(); break;
+    case 'new': openNewModal(); break;
+    case 'undo': undo(); break;
+    case 'redo': redo(); break;
+    case 'zoomIn': zoomBy(1.25); break;
+    case 'zoomOut': zoomBy(0.8); break;
+    case 'zoomMenu':
+      openPop(el, [['fit', 'Вписати в екран', 'Ctrl+0'], ['1', '100%', 'Ctrl+1'], ['0.5', '50%'], ['2', '200%']].map(z => '<button class="mi" data-v="' + z[0] + '">' + z[1] + (z[2] ? '<span class="k">' + z[2] + '</span>' : '') + '</button>').join(''), v => {
+        if (v === 'fit') fit(); else zoomAt(viewport.clientWidth / 2, viewport.clientHeight / 2, +v);
+      });
+      break;
+    case 'theme': applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); break;
+    case 'help': renderHelp(); openModal('helpModal'); break;
+    case 'copy': copyImage(); break;
+    case 'download': download('png'); break;
+    case 'saveMenu':
+      openPop(el, '<button class="mi" data-v="png">' + icon('image') + '<span>PNG<span class="sub">Найкраща якість, прозорість</span></span></button>' +
+        '<button class="mi" data-v="jpg">' + icon('image') + '<span>JPG<span class="sub">Менший файл</span></span></button>' +
+        '<button class="mi" data-v="copy">' + icon('copy') + '<span>Копіювати в буфер</span></button>', v => { if (v === 'copy') copyImage(); else download(v); });
+      break;
+  }
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-act]');
+  if (a) { act(a.dataset.act, a); return; }
+  const t = e.target.closest('[data-tool]');
+  if (t) { if (!S.doc && t.dataset.tool !== S.tool) toast('Спочатку вставте або відкрийте зображення'); setTool(t.dataset.tool); }
+});
+$('#rail').addEventListener('mousedown', e => e.preventDefault());
+function openNewModal() {
+  $$('#presets .preset').forEach((b, i) => b.classList.toggle('on', i === 0));
+  $('#customW').value = ''; $('#customH').value = '';
+  openModal('newModal');
+}
+$('#presets').addEventListener('click', e => {
+  const b = e.target.closest('.preset');
+  if (!b) return;
+  $$('#presets .preset').forEach(x => x.classList.toggle('on', x === b));
+  $('#customW').value = ''; $('#customH').value = '';
+});
+$('#presets').addEventListener('dblclick', e => { if (e.target.closest('.preset')) $('#newOk').click(); });
+['#customW', '#customH'].forEach(s => $(s).addEventListener('input', () => $$('#presets .preset').forEach(x => x.classList.remove('on'))));
+$('#newOk').addEventListener('click', () => {
+  const sel = $('#presets .preset.on');
+  let w = +$('#customW').value, h = +$('#customH').value;
+  if (!(w >= 16 && h >= 16)) { if (sel) { w = +sel.dataset.w; h = +sel.dataset.h; } else { toast('Вкажіть ширину й висоту (від 16 px)', 'err'); return; } }
+  w = clamp(Math.round(w), 16, 8000); h = clamp(Math.round(h), 16, 8000);
+  closeModal('newModal');
+  replaceDocWith(() => { newDoc(blankCanvas(w, h)); if (S.tool === 'crop') setTool('arrow'); }, 'Нове полотно');
+});
+$('#fileInput').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) openImage(f, 'Відкрито «' + f.name + '»'); });
+
+/* ═══════════ ВСТАВКА / DRAG & DROP ═══════════ */
+document.addEventListener('paste', e => {
+  if (S.editing || /INPUT|TEXTAREA/.test((document.activeElement || {}).tagName)) return;
+  const items = Array.from((e.clipboardData && e.clipboardData.items) || []);
+  const it = items.find(i => i.kind === 'file' && i.type.startsWith('image/'));
+  if (it) { e.preventDefault(); openImage(it.getAsFile(), 'Скріншот вставлено'); return; }
+  if (items.length) toast('У буфері немає зображення. Зробіть скріншот і натисніть Ctrl+V.', 'err');
+});
+const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+document.addEventListener('dragover', e => { if (hasFiles(e)) { e.preventDefault(); $('#dropHint').classList.add('show'); } });
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) $('#dropHint').classList.remove('show'); });
+document.addEventListener('drop', e => {
+  $('#dropHint').classList.remove('show');
+  if (!hasFiles(e)) return;
   e.preventDefault();
-  const f = e.dataTransfer.files[0];
-  if (f?.type.startsWith('image/')) loadImage(URL.createObjectURL(f));
+  const f = Array.from(e.dataTransfer.files).find(x => x.type.startsWith('image/'));
+  if (f) openImage(f, 'Відкрито «' + f.name + '»'); else toast('Перетягніть файл зображення (PNG, JPG…)', 'err');
 });
 
-// ── TOOLBAR WIRING ────────────────────────────────────────────────────────────
-document.querySelectorAll('[data-tool]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    tool = btn.dataset.tool;
-    document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    updateCursor();
-  });
+/* ═══════════ КЛАВІАТУРА ═══════════ */
+const TOOL_KEYS = { KeyV: 'select', KeyC: 'crop', KeyA: 'arrow', KeyR: 'rect', KeyE: 'ellipse', KeyL: 'line', KeyP: 'pen', KeyH: 'highlighter', KeyT: 'text', KeyN: 'step', KeyB: 'blur', KeyX: 'eraser' };
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (pop.classList.contains('open')) { closePop(); return; }
+    const open = $$('.overlay.open');
+    if (open.length) { closeModal(open[open.length - 1].id); return; }
+  }
+  if (anyModal()) { if (e.key === 'Enter' && $('#newModal').classList.contains('open')) { e.preventDefault(); $('#newOk').click(); } return; }
+  const inField = /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName);
+  if (inField) return;
+  const mod = e.ctrlKey || e.metaKey;
+  const c = e.code;
+  if (mod) {
+    if (c === 'KeyZ') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+    if (c === 'KeyY') { e.preventDefault(); redo(); return; }
+    if (c === 'KeyS') { e.preventDefault(); download('png'); return; }
+    if (c === 'KeyO') { e.preventDefault(); $('#fileInput').click(); return; }
+    if (c === 'KeyD') { e.preventDefault(); duplicateSelected(); return; }
+    if (c === 'KeyC' && e.shiftKey) { e.preventDefault(); copyImage(); return; }
+    if (c === 'KeyC' && !window.getSelection().toString()) { e.preventDefault(); copyImage(); return; }
+    if (c === 'Digit0' || c === 'Numpad0') { e.preventDefault(); fit(); return; }
+    if (c === 'Digit1' || c === 'Numpad1') { e.preventDefault(); zoomAt(viewport.clientWidth / 2, viewport.clientHeight / 2, 1); return; }
+    if (c === 'Equal' || c === 'NumpadAdd') { e.preventDefault(); zoomBy(1.25); return; }
+    if (c === 'Minus' || c === 'NumpadSubtract') { e.preventDefault(); zoomBy(0.8); return; }
+    return;
+  }
+  if (e.code === 'Space') { e.preventDefault(); if (!S.space) { S.space = true; updateCursor(); } return; }
+  if (!S.doc) return;
+  if (e.key === 'Enter' && S.tool === 'crop') { e.preventDefault(); applyCrop(); return; }
+  if (e.key === 'Escape') {
+    if (S.op) { cancelOp(); return; }
+    if (S.tool === 'crop') { setTool('arrow'); return; }
+    if (S.selId) { S.selId = null; render(); renderProps(); }
+    return;
+  }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && S.selId) { e.preventDefault(); deleteSelected(); return; }
+  if (e.key.startsWith('Arrow') && S.selId) {
+    e.preventDefault();
+    const d = e.shiftKey ? 10 : 1;
+    const o = selObj();
+    moveObj(o, e.key === 'ArrowLeft' ? -d : e.key === 'ArrowRight' ? d : 0, e.key === 'ArrowUp' ? -d : e.key === 'ArrowDown' ? d : 0);
+    render();
+    clearTimeout(nudgeTimer); nudgeTimer = setTimeout(commit, 400);
+    return;
+  }
+  if (e.key === 'Enter' && selObj() && selObj().type === 'text') { e.preventDefault(); startTextEdit(selObj()); return; }
+  if (!e.altKey && TOOL_KEYS[c]) { setTool(TOOL_KEYS[c]); }
 });
+let nudgeTimer = null;
+document.addEventListener('keyup', e => { if (e.code === 'Space') { S.space = false; updateCursor(); } });
+window.addEventListener('blur', () => { S.space = false; });
+window.addEventListener('resize', () => { if (S.doc) { applyView(); } });
 
-document.getElementById('colorPicker').addEventListener('input', e => color = e.target.value);
-const sizeRange = document.getElementById('sizeRange');
-const sizeVal   = document.getElementById('sizeVal');
-sizeRange.addEventListener('input', e => { size = +e.target.value; sizeVal.textContent = size; });
-
-document.getElementById('btnUndo').addEventListener('click', undo);
-document.getElementById('btnRedo').addEventListener('click', redo);
-document.getElementById('btnResetStep').addEventListener('click', () => {
-  stepCounter = 1;
-  updateStepBtn();
-  toast('Лічильник кроків скинуто до 1');
-});
-document.getElementById('btnClear').addEventListener('click', () => {
-  if (!active) return;
-  if (confirm('Очистити полотно?')) { restoreState(history[0]); history=[history[0]]; histIdx=0; toast('Очищено'); }
-});
-document.getElementById('btnNew').addEventListener('click', openNewModal);
-document.getElementById('splashNew').addEventListener('click', openNewModal);
-
-// zoom buttons
-document.getElementById('btnZoomIn').addEventListener('click',  () => { const r=viewport.getBoundingClientRect(); zoomAt(r.width/2,r.height/2, ZOOM_STEP*2); });
-document.getElementById('btnZoomOut').addEventListener('click', () => { const r=viewport.getBoundingClientRect(); zoomAt(r.width/2,r.height/2,-ZOOM_STEP*2); });
-document.getElementById('btnZoomFit').addEventListener('click', fitCanvas);
-
-document.getElementById('btnCopy').addEventListener('click', () => {
-  if (!active) { toast('Нема що копіювати','err'); return; }
-  canvas.toBlob(async blob => {
-    try { await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); toast('Скопійовано ✓','ok'); }
-    catch { toast('Не вдалось скопіювати','err'); }
-  });
-});
-
-document.getElementById('btnDownload').addEventListener('click', () => {
-  if (!active) { toast('Нема що завантажувати','err'); return; }
-  const adj=['swift','bright','crisp','sharp','pixel','vivid','bold','clean'];
-  const noun=['shot','snap','frame','view','grab','scene'];
-  const name=`${adj[Math.random()*adj.length|0]}-${noun[Math.random()*noun.length|0]}-${(Math.random()*9000+1000)|0}.png`;
-  const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download=name; a.click();
-  toast('Збережено як '+name,'ok');
-});
-
-// ── BOOT ──────────────────────────────────────────────────────────────────────
-canvas.width = 0; canvas.height = 0;
-applyTransform();
-updateCursor();
+/* ═══════════ СТАРТ ═══════════ */
+async function init() {
+  fillIcons(document);
+  $('#themeIco').innerHTML = icon(document.documentElement.getAttribute('data-theme') === 'dark' ? 'sun' : 'moon');
+  setTool('arrow');
+  renderProps();
+  $('#btnUndo').disabled = true; $('#btnRedo').disabled = true;
+  db = await openDb();
+  const restored = await restoreSession();
+  if (restored) toast('Відновлено вашу попередню роботу', 'ok', { action: 'Почати заново', onAction: async () => { await clearSession(); location.reload(); } });
+  window.addEventListener('beforeunload', () => { if (S.doc) saveSession(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && S.doc) saveSession(); });
+  window.SnapEdit = { S, commit, undo, redo, render: renderNow, exportCanvas, setTool, applyCrop, saveSession };
+}
+init();
+})();
 </script>
 </body>
 </html>
