@@ -1,493 +1,1095 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='white' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='white'/%3E%3Ccircle cx='23' cy='9' r='2.5' fill='%23ef4444'/%3E%3C/svg%3E">
 <meta charset="UTF-8">
-<title>ScreenRecorder</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Запис екрану — Edvault</title>
+<meta name="theme-color" content="#4F6BF4">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='white' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='white'/%3E%3Ccircle cx='23' cy='9' r='2.5' fill='%23ef4444'/%3E%3C/svg%3E">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('edvault-theme') || 'auto';
+      var dark = t === 'dark' || (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root{
+  color-scheme:light;
+  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f7f8fa;--surface3:#eef0f4;
+  --border:#e2e5ea;--border2:#d0d5dd;
+  --text:#1a1d23;--text2:#4b5563;--muted:#8a919e;
+  --accent:#4F6BF4;--accent-hover:#3d57e0;--accent-light:#eef0fe;--accent-border:#c7d0fc;--on-accent:#ffffff;
+  --danger:#ef4444;--danger-hover:#dc2626;--danger-light:#fef2f2;--success:#10b981;--success-light:#ecfdf5;
+  --shadow-sm:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.04);
+  --shadow-md:0 4px 16px rgba(16,24,40,.10),0 2px 6px rgba(16,24,40,.06);
+  --shadow-lg:0 24px 60px rgba(16,24,40,.16),0 4px 16px rgba(16,24,40,.08);
+  --r:8px;--float-bg:#1f2230;--float-text:#e9ebf2;
+  --stage-bg:#dfe3ea;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1117;--surface:#171a22;--surface2:#1d212b;--surface3:#252a35;
+  --border:#2a2f3b;--border2:#394050;
+  --text:#e7e9ef;--text2:#b3b9c6;--muted:#7f8797;
+  --accent:#7189ff;--accent-hover:#8a9dff;--accent-light:rgba(113,137,255,.14);--accent-border:rgba(113,137,255,.38);--on-accent:#0f1117;
+  --danger:#f87171;--danger-hover:#fb8a8a;--danger-light:rgba(248,113,113,.12);--success:#34d399;--success-light:rgba(52,211,153,.12);
+  --shadow-sm:0 1px 3px rgba(0,0,0,.4);--shadow-md:0 6px 20px rgba(0,0,0,.45);--shadow-lg:0 24px 60px rgba(0,0,0,.6);
+  --float-bg:#262a38;--stage-bg:#0b0d12;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;background:var(--bg);color:var(--text);
+  display:flex;flex-direction:column;min-height:100vh;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+button:disabled{cursor:default;opacity:.45}
+input,select{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none !important}
+.ico{width:18px;height:18px;display:block;flex-shrink:0}
 
-  :root {
-    --bg: #f0f2f5;
-    --surface: #ffffff;
-    --surface2: #f7f8fa;
-    --border: #e2e5ea;
-    --border2: #d0d5dd;
-    --accent: #4F6BF4;
-    --accent-light: #eef0fe;
-    --accent-hover: #3d57e0;
-    --danger: #ef4444;
-    --danger-light: #fef2f2;
-    --danger-border: #fecaca;
-    --success: #10b981;
-    --success-light: #ecfdf5;
-    --success-border: #a7f3d0;
-    --text: #1a1d23;
-    --text2: #4b5563;
-    --muted: #9ca3af;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
-    --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
-    --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
-  }
+/* ── Topbar ── */
+.topbar{height:56px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:30}
+.back-link{display:flex;align-items:center;gap:6px;height:34px;padding:0 10px 0 8px;border-radius:var(--r);color:var(--text2);text-decoration:none;font-size:13px;font-weight:500;flex-shrink:0}
+.back-link:hover{background:var(--surface2);color:var(--text)}
+.back-link .ico{width:16px;height:16px}
+.sep{width:1px;height:22px;background:var(--border);margin:0 4px;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.brand-mark{width:30px;height:30px;border-radius:9px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(79,107,244,.35)}
+.brand-mark .ico{width:17px;height:17px}
+.brand-name{font-weight:700;font-size:15px;letter-spacing:-.01em;white-space:nowrap}
+.rec-chip{display:none;align-items:center;gap:7px;height:26px;padding:0 10px;border-radius:20px;background:var(--danger-light);color:var(--danger);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;margin-left:6px}
+.rec-chip i{width:7px;height:7px;border-radius:50%;background:var(--danger);animation:blink 1s step-end infinite}
+body.recording .rec-chip{display:inline-flex}
+.grow{flex:1}
 
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    -webkit-font-smoothing: antialiased;
-  }
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 12px;border-radius:var(--r);border:1px solid transparent;font-size:13px;font-weight:500;white-space:nowrap;color:var(--text2);transition:background .12s,border-color .12s,color .12s,transform .08s;text-decoration:none}
+.btn:hover:not(:disabled){background:var(--surface2);color:var(--text)}
+.btn:active:not(:disabled){transform:scale(.98)}
+.btn .ico{width:16px;height:16px}
+.btn-icon{width:34px;padding:0}
+.btn-outline{border-color:var(--border);background:var(--surface)}
+.btn-outline:hover:not(:disabled){border-color:var(--border2)}
+.btn-primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:600;box-shadow:0 2px 8px rgba(79,107,244,.28)}
+.btn-primary:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover);color:var(--on-accent)}
+.btn-stop{background:var(--danger);border-color:var(--danger);color:#fff;font-weight:600;box-shadow:0 2px 10px rgba(239,68,68,.3)}
+.btn-stop:hover:not(:disabled){background:var(--danger-hover);border-color:var(--danger-hover);color:#fff}
+.btn-xl{height:48px;padding:0 22px;font-size:15px;border-radius:12px;width:100%}
+.btn-xl .ico{width:18px;height:18px}
+.btn-sm{height:30px;padding:0 10px;font-size:12.5px}
+.btn kbd{font:600 11px 'Inter',sans-serif;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.2);margin-left:4px}
+.btn-outline kbd{background:var(--surface3)}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 7px;border-radius:6px;border:1px solid var(--border2);border-bottom-width:2px;background:var(--surface2);font-size:11.5px;font-weight:600;color:var(--text2)}
 
-  .app { width: 100%; max-width: 520px; padding: 2rem; position: relative; }
+/* ── Layout ── */
+.main{flex:1;display:flex;justify-content:center;padding:28px 20px 40px}
+.screen{display:none;width:100%;max-width:1100px}
+.screen.on{display:block;animation:fadeUp .22s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm)}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.5;margin:10px 0 0;text-align:center}
 
-  /* OVERLAY */
-  .overlay {
-    position: fixed; inset: 0;
-    background: rgba(15,18,25,.42);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 100;
-    animation: fadeIn 0.22s ease;
-  }
-  .overlay.hidden { display: none; }
+/* ── Stage (preview) ── */
+.stage-card{padding:14px}
+.stage{position:relative;aspect-ratio:16/9;border-radius:10px;background:var(--stage-bg);overflow:hidden;border:1px solid var(--border)}
+.mock{position:absolute;inset:7% 6%;border-radius:8px;background:var(--surface);box-shadow:var(--shadow-md);display:flex;flex-direction:column;overflow:hidden}
+.mock-bar{height:9%;min-height:14px;background:var(--surface3);display:flex;align-items:center;gap:5px;padding:0 3%}
+.mock-bar i{width:7px;height:7px;border-radius:50%;background:var(--border2)}
+.mock-body{flex:1;padding:5% 6%;display:flex;flex-direction:column;gap:5%}
+.mock-line{height:7%;border-radius:4px;background:var(--surface3)}
+.mock-line.a{width:46%;background:var(--accent-light)}
+.mock-line.b{width:78%}.mock-line.c{width:64%}.mock-line.d{width:70%}
+.stage-label{position:absolute;left:50%;top:10px;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:600;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 9px}
+.cam-bubble{position:absolute;overflow:hidden;background:#2a2f3b;box-shadow:0 0 0 3px #fff,0 6px 20px rgba(0,0,0,.35);display:none}
+.cam-bubble.show{display:block}
+.cam-bubble video{width:100%;height:100%;object-fit:cover;display:block}
+.cam-bubble.mirror video{transform:scaleX(-1)}
+.cam-bubble.s{height:18%}.cam-bubble.m{height:25%}.cam-bubble.l{height:33%}
+.cam-bubble.circle{aspect-ratio:1;border-radius:50%}
+.cam-bubble.rect{aspect-ratio:4/3;border-radius:12%/16%}
+.cam-bubble.tl{left:3%;top:5.3%}.cam-bubble.tr{right:3%;top:5.3%}
+.cam-bubble.bl{left:3%;bottom:5.3%}.cam-bubble.br{right:3%;bottom:5.3%}
+.start-wrap{margin-top:14px}
+.notice{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:12px;background:var(--danger-light);color:var(--text);font-size:13.5px;line-height:1.55;margin-top:14px}
+.notice .ico{color:var(--danger);margin-top:2px}
 
-  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-  @keyframes slideUp { from { opacity: 0; transform: translateY(12px) scale(.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
+/* ── Settings panel ── */
+.panel{padding:6px 18px 18px}
+.group{padding:14px 0;border-bottom:1px solid var(--border)}
+.group:last-child{border-bottom:0;padding-bottom:0}
+.group-h{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.row{display:flex;align-items:center;gap:12px;min-height:40px}
+.row + .row{margin-top:4px}
+.row-ico{width:34px;height:34px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text2);flex-shrink:0}
+.row-ico .ico{width:17px;height:17px}
+.row-txt{flex:1;min-width:0}
+.row-txt b{display:block;font-size:13.5px;font-weight:600}
+.row-txt span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.row-label{flex:1;font-size:13px;color:var(--text2);font-weight:500}
+.switch{position:relative;width:38px;height:22px;flex-shrink:0;display:inline-block}
+.switch input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;z-index:1}
+.switch i{position:absolute;inset:0;border-radius:20px;background:var(--border2);transition:background .15s}
+.switch i::after{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.switch input:checked + i{background:var(--accent)}
+.switch input:checked + i::after{transform:translateX(16px)}
+.switch input:focus-visible + i{outline:2px solid var(--accent);outline-offset:2px}
+.sub-block{margin:8px 0 6px 46px;display:flex;flex-direction:column;gap:8px}
+.sub-block .row{min-height:34px}
+.sub-block .row + .row{margin-top:0}
+.select{width:100%;height:34px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);padding:0 10px;font-size:13px;outline:none}
+.select:focus{border-color:var(--accent)}
+.meter{height:6px;border-radius:6px;background:var(--surface3);overflow:hidden}
+.meter i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--success),#eab308 75%,var(--danger));transition:width .06s linear}
+.meter-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.meter-row .meter{flex:1}
+.seg{display:flex;gap:2px;padding:2px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;flex-shrink:0}
+.seg button{height:28px;min-width:32px;padding:0 9px;border-radius:7px;font-size:12.5px;font-weight:500;color:var(--text2);display:flex;align-items:center;justify-content:center;gap:5px}
+.seg button:hover:not(:disabled){color:var(--text)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm)}
+.seg .ico{width:15px;height:15px}
+.small-note{font-size:12px;color:var(--muted);line-height:1.45;margin-top:6px}
 
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 28px;
-    width: 90%; max-width: 420px;
-    box-shadow: var(--shadow-lg);
-    animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1);
-  }
+/* ── Recording ── */
+.rec-card{max-width:760px;margin:0 auto;padding:22px}
+.rec-top{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.rec-badge{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 11px;border-radius:20px;background:var(--danger-light);color:var(--danger);font-size:12px;font-weight:700;letter-spacing:.06em}
+.rec-badge i{width:8px;height:8px;border-radius:50%;background:var(--danger);animation:blink 1s step-end infinite}
+.timer{font-size:40px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1}
+.rec-sources{margin-left:auto;font-size:12.5px;color:var(--muted);text-align:right}
+.rec-video{width:100%;aspect-ratio:16/9;border-radius:10px;background:#000;display:block;object-fit:contain}
+.rec-foot{display:flex;align-items:center;gap:12px;margin:14px 0}
+.rec-foot .meter-row{flex:1}
 
-  .modal-icon {
-    width: 48px; height: 48px;
-    border-radius: 12px;
-    background: var(--accent-light);
-    border: 1px solid #c7d0fc;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 18px;
-  }
-  .modal-icon svg { width: 22px; height: 22px; }
+/* ── Review ── */
+.player-card{padding:14px}
+.player{width:100%;aspect-ratio:16/9;border-radius:10px;background:#000;display:block}
+.done-tag{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 11px;border-radius:20px;background:var(--success-light);color:var(--success);font-size:12.5px;font-weight:700;margin:14px 0 4px}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:12px 0 16px;font-size:13px}
+.meta dt{color:var(--muted)}
+.meta dd{margin:0;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.field-label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin:0 0 6px}
+.name-row{display:flex;align-items:center;height:38px;border:1px solid var(--border);border-radius:9px;background:var(--surface2);margin-bottom:12px;overflow:hidden}
+.name-row:focus-within{border-color:var(--accent);background:var(--surface)}
+.name-row input{flex:1;min-width:0;height:100%;border:0;background:transparent;outline:none;padding:0 12px;font-size:14px}
+.name-row span{padding:0 12px 0 4px;color:var(--muted);font-size:13px;font-weight:500}
+.stack{display:flex;flex-direction:column;gap:8px}
+.link{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-size:13px;font-weight:500;text-decoration:none;margin-top:14px}
+.link:hover{text-decoration:underline}
+.link .ico{width:15px;height:15px}
 
-  .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.3px; color: var(--text); }
-  .modal p { font-size: 13.5px; color: var(--text2); line-height: 1.65; margin-bottom: 6px; }
-  .modal p strong { color: var(--text); font-weight: 600; }
+/* ── Modal / Toast / Tip ── */
+.overlay{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,18,25,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.overlay.open{display:flex;animation:fadeUp .16s ease}
+.modal{width:100%;max-width:460px;max-height:calc(100vh - 40px);overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-lg);padding:22px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.modal-head h3{margin:0;font-size:16px;font-weight:700}
+.modal p.msg{margin:0 0 4px;font-size:13.5px;line-height:1.55;color:var(--text2)}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap}
+.steps{display:flex;flex-direction:column;gap:10px;margin:4px 0 14px}
+.step{display:flex;gap:10px;font-size:13.5px;color:var(--text2);line-height:1.5}
+.step-num{width:22px;height:22px;border-radius:7px;background:var(--accent-light);color:var(--accent);font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step b{color:var(--text);font-weight:600}
+.kgrid{display:grid;grid-template-columns:1fr auto;gap:8px 16px;font-size:13px;align-items:center;padding-top:12px;border-top:1px solid var(--border)}
+.toast{position:fixed;left:50%;bottom:28px;z-index:500;transform:translate(-50%,12px);opacity:0;pointer-events:none;display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;background:var(--float-bg);color:var(--float-text);font-size:13px;font-weight:500;box-shadow:0 12px 32px rgba(0,0,0,.28);transition:opacity .18s,transform .18s;max-width:calc(100vw - 24px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.ok{background:#0f8a62;color:#fff}
+.toast.err{background:#c73b3b;color:#fff}
 
-  .steps {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin: 16px 0 22px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .step {
-    display: flex; align-items: flex-start; gap: 10px;
-    font-size: 13px; color: var(--text2); line-height: 1.5;
-  }
-  .step-num {
-    min-width: 22px; height: 22px;
-    border-radius: 7px;
-    background: var(--accent-light);
-    font-size: 11px; font-weight: 700; color: var(--accent);
-    display: flex; align-items: center; justify-content: center;
-    margin-top: 1px; flex-shrink: 0;
-  }
-
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-family: 'Inter', system-ui, sans-serif;
-    font-weight: 600; font-size: 14px;
-    cursor: pointer; border: 1px solid transparent;
-    transition: all 0.13s ease;
-    letter-spacing: -0.1px;
-  }
-  .btn:active { transform: scale(0.97); }
-
-  .btn-primary {
-    background: var(--accent);
-    color: #fff;
-    width: 100%;
-    border-color: var(--accent);
-    box-shadow: 0 2px 8px rgba(79,107,244,.28);
-  }
-  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-
-  .btn-outline {
-    background: var(--surface2);
-    border-color: var(--border);
-    color: var(--text2);
-  }
-  .btn-outline:hover { background: var(--border); color: var(--text); }
-
-  .btn-ghost {
-    background: var(--surface2);
-    border-color: var(--border);
-    color: var(--text2);
-    font-size: 13.5px;
-  }
-  .btn-ghost:hover { background: var(--border); color: var(--text); }
-
-  .btn-green {
-    background: var(--success-light);
-    border-color: var(--success-border);
-    color: var(--success);
-    font-weight: 600;
-  }
-  .btn-green:hover { background: #d1fae5; }
-
-  .btn-danger {
-    background: var(--danger-light);
-    border-color: var(--danger-border);
-    color: var(--danger);
-    font-weight: 600;
-  }
-  .btn-danger:hover { background: #fee2e2; }
-
-  /* MAIN UI */
-  .header { margin-bottom: 28px; display: flex; align-items: center; gap: 12px; }
-  .header-icon {
-    width: 40px; height: 40px; border-radius: 11px;
-    background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(79,107,244,.3);
-  }
-  .header-icon svg { width: 20px; height: 20px; color: white; }
-  .header-text h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; color: var(--text); }
-  .header-text p { font-size: 12px; color: var(--muted); margin-top: 2px; font-weight: 500; }
-
-  /* SCREEN STATE */
-  #screen-start, #screen-recording, #screen-review { display: none; }
-  #screen-start.active, #screen-recording.active, #screen-review.active { display: block; }
-
-  /* CARD */
-  .rec-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: var(--shadow-sm);
-  }
-  .rec-card-label {
-    font-size: 11px; font-weight: 600; color: var(--muted);
-    letter-spacing: .07em; text-transform: uppercase; margin-bottom: 14px;
-  }
-
-  /* INFO BLOCK */
-  .info-block {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 14px;
-    font-size: 13px; color: var(--text2);
-    line-height: 1.6;
-    margin-bottom: 18px;
-  }
-  .info-block strong { color: var(--text); font-weight: 600; }
-
-  /* TIMER */
-  .timer-display {
-    font-variant-numeric: tabular-nums;
-    font-size: 52px;
-    font-weight: 700;
-    letter-spacing: -2px;
-    color: var(--text);
-    margin: 6px 0 16px;
-    line-height: 1;
-  }
-  .timer-display.pulse { animation: tpulse 1.2s ease-in-out infinite alternate; }
-  @keyframes tpulse { from { opacity: 1 } to { opacity: 0.5 } }
-
-  .rec-indicator {
-    display: inline-flex; align-items: center; gap: 7px;
-    font-size: 11.5px; font-weight: 600; color: var(--danger);
-    letter-spacing: .06em; text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-  .rec-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--danger);
-    animation: blink 1s step-end infinite;
-  }
-  @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: 0 } }
-
-  .action-row { display: flex; gap: 8px; margin-top: 18px; }
-  .action-row .btn { flex: 1; }
-
-  /* VIDEO PREVIEW */
-  #video-preview {
-    width: 100%; aspect-ratio: 16/9;
-    border-radius: 10px;
-    background: #f7f8fa;
-    border: 1px solid var(--border);
-    object-fit: contain;
-    display: block;
-    margin-bottom: 12px;
-  }
-
-  /* INPUT */
-  .input-styled {
-    width: 100%;
-    background: var(--surface2);
-    border: 1.5px solid var(--border);
-    border-radius: 9px;
-    padding: 10px 14px;
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 14px;
-    color: var(--text);
-    outline: none;
-    margin: 14px 0 18px;
-    transition: border-color 0.13s;
-    font-weight: 500;
-  }
-  .input-styled:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.1); }
-  .input-styled::placeholder { color: var(--muted); font-weight: 400; }
-
-  .modal-btns { display: flex; gap: 8px; }
-  .modal-btns .btn { flex: 1; }
-
-  /* Status tag */
-  .status-tag {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11.5px; color: var(--success); font-weight: 600;
-    background: var(--success-light);
-    border: 1px solid var(--success-border);
-    border-radius: 7px; padding: 4px 10px;
-    margin-bottom: 12px;
-    letter-spacing: .03em;
-  }
-
-  .divider { height: 1px; background: var(--border); margin: 16px 0; }
-
-  .rec-hint { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .rec-sources{display:none}
+}
+@media(max-width:640px){
+  .hide-sm{display:none !important}
+  .topbar{padding:0 6px;gap:2px}
+  .main{padding:16px 12px 32px}
+  .timer{font-size:32px}
+}
 </style>
 </head>
 <body>
 
-<!-- INSTRUCTION OVERLAY -->
-<div class="overlay" id="overlay-intro">
-  <div class="modal">
-    <div class="modal-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#4F6BF4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
-      </svg>
+<header class="topbar">
+  <a class="back-link" href="../tools.html" title="До всіх інструментів Edvault">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+    <span class="hide-sm">Інструменти</span>
+  </a>
+  <div class="sep"></div>
+  <div class="brand">
+    <div class="brand-mark"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg></div>
+    <span class="brand-name">Запис екрану</span>
+  </div>
+  <span class="rec-chip" id="recChip"><i></i><span id="recChipTime">00:00</span></span>
+  <div class="grow"></div>
+  <button class="btn btn-icon" id="btnTheme" title="Змінити тему">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+  <button class="btn btn-icon" id="btnHelp" title="Як це працює (?)">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+  </button>
+</header>
+
+<main class="main">
+
+  <!-- ═════ НАЛАШТУВАННЯ ═════ -->
+  <section class="screen on" id="scrSetup">
+    <div class="grid">
+      <div>
+        <div class="card stage-card">
+          <div class="stage" id="stage">
+            <div class="mock">
+              <div class="mock-bar"><i></i><i></i><i></i></div>
+              <div class="mock-body"><div class="mock-line a"></div><div class="mock-line b"></div><div class="mock-line c"></div><div class="mock-line d"></div></div>
+            </div>
+            <span class="stage-label">Попередній вигляд</span>
+            <div class="cam-bubble" id="camBubble"><video id="camPreview" muted playsinline autoplay></video></div>
+          </div>
+          <div class="start-wrap" id="startWrap">
+            <button class="btn btn-primary btn-xl" id="btnStart">
+              <svg class="ico" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg>
+              Почати запис <kbd class="hide-sm">R</kbd>
+            </button>
+            <p class="hint">Браузер запропонує вибрати, що записувати: весь екран, вікно або вкладку.</p>
+          </div>
+          <div class="notice" id="unsupported" hidden>
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            <div><b>Цей браузер не вміє записувати екран.</b><br>Відкрийте сторінку на комп’ютері в Chrome, Edge, Firefox або Safari. На телефонах запис екрана з браузера недоступний.</div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="card panel">
+        <div class="group">
+          <div class="group-h">Звук</div>
+          <div class="row">
+            <div class="row-ico"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg></div>
+            <div class="row-txt"><b>Мікрофон</b><span>Ваш голос</span></div>
+            <label class="switch" title="Записувати мікрофон"><input type="checkbox" id="optMic"><i></i></label>
+          </div>
+          <div class="sub-block" id="micBlock">
+            <select class="select" id="micSelect" aria-label="Мікрофон"><option value="">Типовий мікрофон</option></select>
+            <div class="meter-row"><span>Рівень</span><div class="meter"><i id="micMeter"></i></div></div>
+            <button class="btn btn-outline btn-sm" id="btnMicTest" hidden>Перевірити мікрофон</button>
+          </div>
+          <div class="row">
+            <div class="row-ico"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></div>
+            <div class="row-txt"><b>Звук екрана</b><span>Відео, музика, звук застосунків</span></div>
+            <label class="switch" title="Записувати звук вкладки або системи"><input type="checkbox" id="optSys"><i></i></label>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-h">Камера</div>
+          <div class="row">
+            <div class="row-ico"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg></div>
+            <div class="row-txt"><b>Веб-камера</b><span>Ваше обличчя в кутку відео</span></div>
+            <label class="switch" title="Додати веб-камеру"><input type="checkbox" id="optCam"><i></i></label>
+          </div>
+          <div class="sub-block" id="camBlock">
+            <select class="select" id="camSelect" aria-label="Камера"><option value="">Типова камера</option></select>
+            <div class="row"><span class="row-label">Кут</span>
+              <div class="seg" id="segPos">
+                <button data-v="tl" title="Зверху ліворуч"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="2.2" fill="currentColor"/></svg></button>
+                <button data-v="tr" title="Зверху праворуч"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="16" cy="9" r="2.2" fill="currentColor"/></svg></button>
+                <button data-v="bl" title="Знизу ліворуч"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="15" r="2.2" fill="currentColor"/></svg></button>
+                <button data-v="br" title="Знизу праворуч"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="16" cy="15" r="2.2" fill="currentColor"/></svg></button>
+              </div>
+            </div>
+            <div class="row"><span class="row-label">Розмір</span>
+              <div class="seg" id="segSize"><button data-v="s">S</button><button data-v="m">M</button><button data-v="l">L</button></div>
+            </div>
+            <div class="row"><span class="row-label">Форма</span>
+              <div class="seg" id="segShape"><button data-v="circle">Коло</button><button data-v="rect">Прямокутник</button></div>
+            </div>
+            <div class="row"><span class="row-label">Дзеркально</span>
+              <label class="switch" title="Віддзеркалити зображення камери"><input type="checkbox" id="optMirror"><i></i></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-h">Якість</div>
+          <div class="row"><span class="row-label">Роздільність</span>
+            <div class="seg" id="segQuality"><button data-v="720">720p</button><button data-v="1080">1080p</button><button data-v="orig" title="Як на екрані, без зменшення">Оригінал</button></div>
+          </div>
+          <div class="row"><span class="row-label">Кадри</span>
+            <div class="seg" id="segFps"><button data-v="30">30 fps</button><button data-v="60">60 fps</button></div>
+          </div>
+          <div class="row"><span class="row-label">Формат</span>
+            <div class="seg" id="segFormat"><button data-v="mp4">MP4</button><button data-v="webm">WebM</button></div>
+          </div>
+          <div class="small-note" id="fmtNote"></div>
+        </div>
+      </aside>
     </div>
-    <h2>Запис екрану</h2>
-    <p>Цей інструмент дозволяє <strong>записувати ваш екран</strong> прямо з браузера. Ось як це працює:</p>
+  </section>
+
+  <!-- ═════ ЗАПИС ═════ -->
+  <section class="screen" id="scrRec">
+    <div class="card rec-card">
+      <div class="rec-top">
+        <span class="rec-badge"><i></i>REC</span>
+        <span class="timer" id="timer">00:00</span>
+        <span class="rec-sources" id="recSources"></span>
+      </div>
+      <video class="rec-video" id="recPreview" muted playsinline autoplay></video>
+      <div class="rec-foot">
+        <div class="meter-row" id="recMeterRow"><span>Мікрофон</span><div class="meter"><i id="recMeter"></i></div></div>
+      </div>
+      <button class="btn btn-stop btn-xl" id="btnStop">
+        <svg class="ico" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+        Зупинити запис <kbd class="hide-sm">S</kbd>
+      </button>
+      <p class="hint">Або натисніть «Припинити доступ» на панелі браузера — запис збережеться так само.</p>
+    </div>
+  </section>
+
+  <!-- ═════ ПЕРЕГЛЯД ═════ -->
+  <section class="screen" id="scrReview">
+    <div class="grid">
+      <div class="card player-card"><video class="player" id="player" controls playsinline></video></div>
+      <aside class="card panel">
+        <div class="done-tag"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M20 6 9 17l-5-5"/></svg>Запис готовий</div>
+        <dl class="meta">
+          <dt>Тривалість</dt><dd id="mDur">—</dd>
+          <dt>Розмір файлу</dt><dd id="mSize">—</dd>
+          <dt>Роздільність</dt><dd id="mRes">—</dd>
+          <dt>Формат</dt><dd id="mFmt">—</dd>
+        </dl>
+        <label class="field-label" for="fileName">Назва файлу</label>
+        <div class="name-row"><input id="fileName" type="text" spellcheck="false" autocomplete="off"><span id="fileExt">.webm</span></div>
+        <div class="stack">
+          <button class="btn btn-primary btn-xl" id="btnDownload">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+            Завантажити
+          </button>
+          <button class="btn btn-outline btn-xl" id="btnNew">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            Новий запис
+          </button>
+        </div>
+        <a class="link" href="videocut.html" target="_blank" rel="noopener">
+          Обрізати зайве у VideoCut
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+        <p class="small-note">Запис існує лише в цій вкладці, доки ви його не завантажите.</p>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<!-- Довідка -->
+<div class="overlay" id="helpModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="modal-head"><h3 id="helpTitle">Як записати екран</h3>
+      <button class="btn btn-icon" data-close title="Закрити (Esc)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
     <div class="steps">
-      <div class="step"><div class="step-num">1</div><span>Натисніть <strong>«Почати запис»</strong> — браузер попросить дозвіл на захоплення екрану.</span></div>
-      <div class="step"><div class="step-num">2</div><span>Оберіть вікно, вкладку або весь екран для запису та підтвердіть.</span></div>
-      <div class="step"><div class="step-num">3</div><span>Натисніть <strong>«Зупинити»</strong> коли готово — ви зможете переглянути запис.</span></div>
-      <div class="step"><div class="step-num">4</div><span>Якщо все ок — <strong>збережіть</strong> файл. Якщо ні — запишіть знову.</span></div>
+      <div class="step"><div class="step-num">1</div><span>Праворуч увімкніть <b>мікрофон</b>, <b>звук екрана</b> чи <b>веб-камеру</b> й оберіть якість.</span></div>
+      <div class="step"><div class="step-num">2</div><span>Натисніть <b>«Почати запис»</b> і виберіть екран, вікно або вкладку. Щоб записати звук вкладки, увімкніть у вікні вибору <b>«Поділитися звуком»</b>.</span></div>
+      <div class="step"><div class="step-num">3</div><span>Коли закінчите — <b>«Зупинити запис»</b> тут або «Припинити доступ» на панелі браузера.</span></div>
+      <div class="step"><div class="step-num">4</div><span>Перегляньте відео й <b>завантажте</b> його. Нічого не надсилається на сервер — усе лишається на вашому комп’ютері.</span></div>
     </div>
-    <button class="btn btn-primary" onclick="closeIntro()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      Зрозуміло, поїхали!
-    </button>
+    <div class="kgrid">
+      <span>Почати запис</span><span><span class="kbd">R</span></span>
+      <span>Зупинити запис</span><span><span class="kbd">S</span></span>
+      <span>Завантажити запис</span><span><span class="kbd">Ctrl</span> <span class="kbd">S</span></span>
+      <span>Довідка</span><span><span class="kbd">?</span></span>
+    </div>
+    <div class="modal-actions"><button class="btn btn-primary" data-close>Зрозуміло</button></div>
   </div>
 </div>
 
-<!-- FILENAME OVERLAY -->
-<div class="overlay hidden" id="overlay-save">
-  <div class="modal">
-    <div class="modal-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#4F6BF4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-      </svg>
-    </div>
-    <h2>Зберегти запис</h2>
-    <p>Введіть назву файлу для вашого відео. Формат WebM.</p>
-    <input class="input-styled" id="filename-input" type="text" placeholder="мій-запис-екрану" value="запис-екрану" />
-    <div class="modal-btns">
-      <button class="btn btn-ghost" onclick="closeSave()">Скасувати</button>
-      <button class="btn btn-primary" onclick="doSave()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Завантажити
-      </button>
+<!-- Підтвердження -->
+<div class="overlay" id="confirmModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" style="max-width:420px">
+    <div class="modal-head"><h3 id="confirmTitle">Почати новий запис?</h3></div>
+    <p class="msg" id="confirmMsg">Поточний запис ще не завантажено — він зникне.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="confirmNo">Скасувати</button>
+      <button class="btn btn-primary" id="confirmYes">Так, новий запис</button>
     </div>
   </div>
 </div>
 
-<!-- MAIN APP -->
-<div class="app">
-  <div class="header">
-    <div class="header-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
-      </svg>
-    </div>
-    <div class="header-text">
-      <h1>Запис екрану</h1>
-      <p>Screen recorder · browser native</p>
-    </div>
-  </div>
-
-  <!-- START SCREEN -->
-  <div id="screen-start" class="active">
-    <div class="rec-card">
-      <div class="rec-card-label">Готовий до запису</div>
-      <div class="info-block">Браузер використовує <strong>MediaRecorder API</strong> — нічого не завантажується на сервер. Все залишається у вас.</div>
-      <button class="btn btn-primary" id="btn-start" onclick="startRecording()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
-        Почати запис
-      </button>
-    </div>
-  </div>
-
-  <!-- RECORDING SCREEN -->
-  <div id="screen-recording">
-    <div class="rec-card">
-      <div class="rec-indicator">
-        <div class="rec-dot"></div>
-        REC
-      </div>
-      <div class="timer-display pulse" id="timer">00:00:00</div>
-      <div style="font-size:12.5px; color:var(--muted); font-weight:500;">іде запис...</div>
-      <div class="action-row">
-        <button class="btn btn-danger" onclick="stopRecording()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-          Зупинити
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- REVIEW SCREEN -->
-  <div id="screen-review">
-    <div class="status-tag">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
-      Запис завершено
-    </div>
-    <video id="video-preview" controls></video>
-    <div class="action-row">
-      <button class="btn btn-ghost" onclick="reRecord()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
-        Перезаписати
-      </button>
-      <button class="btn btn-green" onclick="openSave()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Зберегти
-      </button>
-    </div>
-  </div>
-</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
-  let mediaRecorder = null;
-  let chunks = [];
-  let videoBlob = null;
-  let timerInterval = null;
-  let seconds = 0;
-  let stream = null;
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const md = navigator.mediaDevices;
+  const SUPPORTED = !!(md && md.getDisplayMedia && window.MediaRecorder);
 
-  function closeIntro() {
-    document.getElementById('overlay-intro').classList.add('hidden');
+  // ═════════ Налаштування (запам'ятовуються) ═════════
+  const LS_KEY = 'edvault-screenrec';
+  const DEFAULTS = { mic: true, micId: '', sys: true, cam: false, camId: '', pos: 'br', size: 'm', shape: 'circle', mirror: true, quality: '1080', fps: '30', format: 'mp4' };
+  const cfg = Object.assign({}, DEFAULTS);
+  try { Object.assign(cfg, JSON.parse(localStorage.getItem(LS_KEY) || '{}')); } catch (e) { /* ignore */ }
+  const saveCfg = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(cfg)); } catch (e) { /* ignore */ } };
+
+  const MIME = {
+    mp4: ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1,opus', 'video/mp4;codecs=avc1', 'video/mp4'],
+    webm: ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'],
+  };
+  const pickMime = fmt => (window.MediaRecorder ? MIME[fmt].find(t => MediaRecorder.isTypeSupported(t)) : '') || '';
+  const MP4_OK = !!pickMime('mp4');
+  const BITRATE = { '720': 5e6, '1080': 8e6, orig: 12e6 };
+  const MAX_H = { '720': 720, '1080': 1080, orig: 4320 };
+  const CAM_SIZE = { s: .18, m: .25, l: .33 };
+
+  // ═════════ Тост / модалки / тема ═════════
+  let toastTimer = 0;
+  function toast(msg, kind, ms) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (kind ? ' ' + kind : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), ms || 3200);
   }
-
-  function showScreen(name) {
-    ['start','recording','review'].forEach(s => {
-      const el = document.getElementById('screen-' + s);
-      el.classList.remove('active');
+  function openModal(id) { $(id).classList.add('open'); const b = $(id).querySelector('.btn-primary'); if (b) b.focus(); }
+  function closeModal(id) { $(id).classList.remove('open'); }
+  document.querySelectorAll('.overlay').forEach(o => {
+    o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-close]')) closeModal(o.id); });
+  });
+  function confirmDialog() {
+    return new Promise(res => {
+      openModal('confirmModal');
+      const done = v => { closeModal('confirmModal'); $('confirmYes').onclick = $('confirmNo').onclick = null; res(v); };
+      $('confirmYes').onclick = () => done(true);
+      $('confirmNo').onclick = () => done(false);
     });
-    document.getElementById('screen-' + name).classList.add('active');
   }
 
-  function formatTime(s) {
-    const h = Math.floor(s / 3600).toString().padStart(2,'0');
-    const m = Math.floor((s % 3600) / 60).toString().padStart(2,'0');
-    const sec = (s % 60).toString().padStart(2,'0');
-    return h + ':' + m + ':' + sec;
+  const SUN = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>';
+  const MOON = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  function syncThemeBtn() {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    $('btnTheme').innerHTML = dark ? SUN : MOON;
+    $('btnTheme').title = dark ? 'Світла тема' : 'Темна тема';
+    document.querySelector('meta[name="theme-color"]').content = dark ? '#171a22' : '#4F6BF4';
+  }
+  $('btnTheme').addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('edvault-theme', next); } catch (e) { /* ignore */ }
+    syncThemeBtn();
+  });
+  syncThemeBtn();
+  $('btnHelp').addEventListener('click', () => openModal('helpModal'));
+
+  // ═════════ Екрани ═════════
+  let screen = 'setup';
+  function show(name) {
+    screen = name;
+    ['setup', 'rec', 'review'].forEach(n => $('scr' + n[0].toUpperCase() + n.slice(1)).classList.toggle('on', n === name));
+    document.body.classList.toggle('recording', name === 'rec');
+    if (name !== 'rec') document.title = 'Запис екрану — Edvault';
   }
 
-  async function startRecording() {
-    try {
-      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      chunks = [];
-      mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMime() });
-      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-      mediaRecorder.onstop = handleStop;
-      mediaRecorder.start(1000);
+  // ═════════ Аудіо (спільний AudioContext: індикатор рівня і змішування) ═════════
+  let actx = null;
+  const getCtx = () => {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  };
+  let meterRaf = 0, meterAnalyser = null, meterSrc = null;
+  function startMeter(stream) {
+    stopMeter();
+    if (!stream || !stream.getAudioTracks().length) return;
+    const ctx = getCtx();
+    meterSrc = ctx.createMediaStreamSource(stream);
+    meterAnalyser = ctx.createAnalyser();
+    meterAnalyser.fftSize = 512;
+    meterSrc.connect(meterAnalyser);
+    const data = new Float32Array(meterAnalyser.fftSize);
+    const loop = () => {
+      meterAnalyser.getFloatTimeDomainData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+      const rms = Math.sqrt(sum / data.length);
+      const pct = Math.min(100, Math.round(Math.sqrt(rms) * 170));
+      $('micMeter').style.width = pct + '%';
+      $('recMeter').style.width = pct + '%';
+      meterRaf = requestAnimationFrame(loop);
+    };
+    loop();
+  }
+  function stopMeter() {
+    cancelAnimationFrame(meterRaf);
+    if (meterSrc) { try { meterSrc.disconnect(); } catch (e) { /* ignore */ } }
+    meterSrc = meterAnalyser = null;
+    $('micMeter').style.width = '0';
+    $('recMeter').style.width = '0';
+  }
 
-      stream.getVideoTracks()[0].onended = () => stopRecording();
+  // ═════════ Мікрофон і камера ═════════
+  let micStream = null, camStream = null;
+  const stopStream = s => { if (s) s.getTracks().forEach(t => t.stop()); };
 
-      seconds = 0;
-      document.getElementById('timer').textContent = '00:00:00';
-      timerInterval = setInterval(() => {
-        seconds++;
-        document.getElementById('timer').textContent = formatTime(seconds);
-      }, 1000);
+  async function acquireMic() {
+    if (micStream && micStream.getAudioTracks().some(t => t.readyState === 'live')) return micStream;
+    const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+    if (cfg.micId) audio.deviceId = { exact: cfg.micId };
+    try { micStream = await md.getUserMedia({ audio }); }
+    catch (e) {
+      if (!cfg.micId || e.name === 'NotAllowedError') throw e;
+      delete audio.deviceId; micStream = await md.getUserMedia({ audio }); // збережений пристрій зник — беремо типовий
+    }
+    $('btnMicTest').hidden = true;
+    startMeter(micStream);
+    refreshDevices();
+    return micStream;
+  }
+  function releaseMic() { stopMeter(); stopStream(micStream); micStream = null; }
 
-      showScreen('recording');
-    } catch(err) {
-      alert('Не вдалося отримати дозвіл на запис. Перевірте налаштування браузера.\n\n' + err.message);
+  async function acquireCam() {
+    if (camStream && camStream.getVideoTracks().some(t => t.readyState === 'live')) return camStream;
+    const video = { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } };
+    if (cfg.camId) video.deviceId = { exact: cfg.camId };
+    try { camStream = await md.getUserMedia({ video }); }
+    catch (e) {
+      if (!cfg.camId || e.name === 'NotAllowedError') throw e;
+      delete video.deviceId; camStream = await md.getUserMedia({ video });
+    }
+    $('camPreview').srcObject = camStream;
+    $('camPreview').play().catch(() => {});
+    refreshDevices();
+    return camStream;
+  }
+  function releaseCam() { stopStream(camStream); camStream = null; $('camPreview').srcObject = null; }
+
+  async function refreshDevices() {
+    if (!md || !md.enumerateDevices) return;
+    let list = [];
+    try { list = await md.enumerateDevices(); } catch (e) { return; }
+    const fill = (sel, kind, label, cur) => {
+      const items = list.filter(d => d.kind === kind && d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications');
+      sel.innerHTML = '';
+      const def = document.createElement('option'); def.value = ''; def.textContent = label; sel.appendChild(def);
+      items.forEach((d, i) => {
+        const o = document.createElement('option');
+        o.value = d.deviceId; o.textContent = d.label || (label.replace('Типов', 'Пристр') + ' ' + (i + 1));
+        sel.appendChild(o);
+      });
+      sel.value = items.some(d => d.deviceId === cur) ? cur : '';
+    };
+    fill($('micSelect'), 'audioinput', 'Типовий мікрофон', cfg.micId);
+    fill($('camSelect'), 'videoinput', 'Типова камера', cfg.camId);
+  }
+  if (md && md.addEventListener) md.addEventListener('devicechange', refreshDevices);
+
+  async function permissionGranted(name) {
+    try { return (await navigator.permissions.query({ name })).state === 'granted'; } catch (e) { return false; }
+  }
+
+  // ═════════ UI налаштувань ═════════
+  function bindSeg(id, key, after) {
+    const seg = $(id);
+    const sync = () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === String(cfg[key])));
+    seg.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b || b.disabled) return;
+      cfg[key] = b.dataset.v; saveCfg(); sync(); if (after) after();
+    });
+    sync();
+  }
+  function syncBubble() {
+    const b = $('camBubble');
+    b.className = 'cam-bubble ' + cfg.pos + ' ' + cfg.size + ' ' + cfg.shape + (cfg.mirror ? ' mirror' : '') + (cfg.cam ? ' show' : '');
+  }
+  function syncBlocks() {
+    $('micBlock').hidden = !cfg.mic;
+    $('camBlock').hidden = !cfg.cam;
+    syncBubble();
+  }
+  function syncFmtNote() {
+    const n = $('fmtNote');
+    if (!MP4_OK) n.textContent = 'Цей браузер записує лише WebM. Його відкривають Chrome, Firefox, VLC; для інших програм конвертуйте у VideoCut.';
+    else if (cfg.format === 'mp4') n.textContent = 'MP4 відкривається всюди: Windows, macOS, телефони, Google Диск.';
+    else n.textContent = 'WebM менший за розміром, але деякі програми його не відкривають.';
+  }
+
+  $('optMic').checked = cfg.mic;
+  $('optSys').checked = cfg.sys;
+  $('optCam').checked = cfg.cam;
+  $('optMirror').checked = cfg.mirror;
+
+  $('optMic').addEventListener('change', async e => {
+    cfg.mic = e.target.checked; saveCfg(); syncBlocks();
+    if (cfg.mic) { try { await acquireMic(); } catch (err) { micDenied(err); } }
+    else releaseMic();
+  });
+  function micDenied(err) {
+    $('btnMicTest').hidden = false;
+    toast(err && err.name === 'NotAllowedError' ? 'Немає доступу до мікрофона — дозвольте його в адресному рядку браузера' : 'Мікрофон не знайдено', 'err', 4500);
+  }
+  $('btnMicTest').addEventListener('click', async () => { try { await acquireMic(); } catch (err) { micDenied(err); } });
+  $('micSelect').addEventListener('change', async e => {
+    cfg.micId = e.target.value; saveCfg(); releaseMic();
+    try { await acquireMic(); } catch (err) { micDenied(err); }
+  });
+  $('optSys').addEventListener('change', e => { cfg.sys = e.target.checked; saveCfg(); });
+
+  async function camOn() {
+    try { await acquireCam(); }
+    catch (err) {
+      cfg.cam = false; $('optCam').checked = false; saveCfg(); syncBlocks();
+      toast(err && err.name === 'NotAllowedError' ? 'Немає доступу до камери — дозвольте її в адресному рядку браузера' : 'Камеру не знайдено', 'err', 4500);
     }
   }
+  $('optCam').addEventListener('change', e => {
+    cfg.cam = e.target.checked; saveCfg(); syncBlocks();
+    if (cfg.cam) camOn(); else releaseCam();
+  });
+  $('camSelect').addEventListener('change', e => { cfg.camId = e.target.value; saveCfg(); releaseCam(); camOn(); });
+  $('optMirror').addEventListener('change', e => { cfg.mirror = e.target.checked; saveCfg(); syncBubble(); });
 
-  function getSupportedMime() {
-    const types = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
-    return types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  bindSeg('segPos', 'pos', syncBubble);
+  bindSeg('segSize', 'size', syncBubble);
+  bindSeg('segShape', 'shape', syncBubble);
+  bindSeg('segQuality', 'quality');
+  bindSeg('segFps', 'fps');
+  if (!MP4_OK) {
+    cfg.format = 'webm';
+    const b = $('segFormat').querySelector('[data-v="mp4"]');
+    b.disabled = true; b.title = 'Цей браузер не вміє записувати MP4';
+  }
+  bindSeg('segFormat', 'format', syncFmtNote);
+  syncBlocks();
+  syncFmtNote();
+
+  if (!SUPPORTED) {
+    $('startWrap').hidden = true;
+    $('unsupported').hidden = false;
+  }
+
+  // Пристрої, дозвіл на які вже є, вмикаємо одразу — без зайвих запитів браузера
+  (async () => {
+    if (!SUPPORTED) return;
+    refreshDevices();
+    if (cfg.mic) { if (await permissionGranted('microphone')) acquireMic().catch(() => { $('btnMicTest').hidden = false; }); else $('btnMicTest').hidden = false; }
+    if (cfg.cam) { if (await permissionGranted('camera')) camOn(); }
+  })();
+
+  // ═════════ Компонування: екран + камера на одному полотні ═════════
+  // Кадри читаємо через MediaStreamTrackProcessor, а таймер живе у воркері — так запис
+  // не "замерзає", коли вкладка Edvault у фоні (а під час запису вона майже завжди у фоні).
+  function frameSource(track) {
+    if (window.MediaStreamTrackProcessor) {
+      let last = null, stopped = false;
+      const reader = new MediaStreamTrackProcessor({ track }).readable.getReader();
+      (async () => {
+        try {
+          while (!stopped) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (stopped) { value.close(); break; }
+            if (last) last.close();
+            last = value;
+          }
+        } catch (e) { /* трек зупинено */ }
+      })();
+      return {
+        get: () => last,
+        size: () => last ? [last.displayWidth, last.displayHeight] : [0, 0],
+        stop() { stopped = true; reader.cancel().catch(() => {}); if (last) { last.close(); last = null; } },
+      };
+    }
+    const v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.srcObject = new MediaStream([track]); v.play().catch(() => {});
+    return {
+      get: () => (v.readyState >= 2 ? v : null),
+      size: () => [v.videoWidth, v.videoHeight],
+      stop() { v.srcObject = null; },
+    };
+  }
+
+  // Воркер шле наступний тік лише після підтвердження ('ack'), що попередній кадр намальовано —
+  // інакше на слабкому комп'ютері тіки накопичуються в черзі й сторінка "захлинається".
+  function makeTicker(fps, fn) {
+    const src = 'let t=0,busy=false;onmessage=e=>{if(e.data==="ack"){busy=false;return}clearInterval(t);busy=false;' +
+      'if(e.data)t=setInterval(()=>{if(!busy){busy=true;postMessage(0)}},e.data)}';
+    const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+    const w = new Worker(url);
+    let alive = true;
+    w.onmessage = () => { if (!alive) return; try { fn(); } finally { w.postMessage('ack'); } };
+    w.postMessage(Math.round(1000 / fps));
+    return () => { alive = false; w.postMessage(0); w.terminate(); URL.revokeObjectURL(url); };
+  }
+
+  function camPath(ctx, x, y, w, h, shape) {
+    ctx.beginPath();
+    if (shape === 'circle') ctx.arc(x + w / 2, y + h / 2, w / 2, 0, Math.PI * 2);
+    else if (ctx.roundRect) ctx.roundRect(x, y, w, h, h * 0.12);
+    else ctx.rect(x, y, w, h);
+  }
+
+  function createCompositor(screenTrack, camTrack, opts) {
+    const s = screenTrack.getSettings();
+    let W = s.width || 1920, H = s.height || 1080;
+    const k = Math.min(1, MAX_H[opts.quality] / H);
+    W = Math.round(W * k / 2) * 2; H = Math.round(H * k / 2) * 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const scr = frameSource(screenTrack);
+    const cam = camTrack ? frameSource(camTrack) : null;
+
+    let track, writer = null, writing = false;
+    if (window.MediaStreamTrackGenerator && window.VideoFrame) {
+      const gen = new MediaStreamTrackGenerator({ kind: 'video' });
+      writer = gen.writable.getWriter();
+      track = gen;
+    } else {
+      track = canvas.captureStream(opts.fps).getVideoTracks()[0];
+    }
+    const t0 = performance.now();
+
+    function draw() {
+      const tDraw = performance.now();
+      const f = scr.get();
+      if (f) {
+        const [fw, fh] = scr.size();
+        if (fw && fh) {
+          const r = Math.min(W / fw, H / fh);
+          const dw = fw * r, dh = fh * r;
+          if (dw < W - 1 || dh < H - 1) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
+          ctx.drawImage(f, (W - dw) / 2, (H - dh) / 2, dw, dh);
+        }
+      }
+      const cf = cam && cam.get();
+      if (cf) {
+        const [cw, ch] = cam.size();
+        if (cw && ch) {
+          const bh = Math.round(H * CAM_SIZE[opts.size]);
+          const bw = opts.shape === 'circle' ? bh : Math.round(bh * 4 / 3);
+          const m = Math.round(H * 0.035);
+          const x = opts.pos[1] === 'r' ? W - bw - m : m;
+          const y = opts.pos[0] === 'b' ? H - bh - m : m;
+          const ar = bw / bh;
+          let sw = cw, sh = ch;
+          if (cw / ch > ar) sw = ch * ar; else sh = cw / ar;
+          const sx = (cw - sw) / 2, sy = (ch - sh) / 2;
+          const border = Math.max(2, Math.round(bh * 0.025));
+          ctx.save();
+          ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = bh * 0.08; ctx.shadowOffsetY = bh * 0.02;
+          ctx.fillStyle = '#fff';
+          camPath(ctx, x - border, y - border, bw + border * 2, bh + border * 2, opts.shape);
+          ctx.fill();
+          ctx.restore();
+          ctx.save();
+          camPath(ctx, x, y, bw, bh, opts.shape);
+          ctx.clip();
+          if (opts.mirror) { ctx.translate(x + bw, y); ctx.scale(-1, 1); ctx.drawImage(cf, sx, sy, sw, sh, 0, 0, bw, bh); }
+          else ctx.drawImage(cf, sx, sy, sw, sh, x, y, bw, bh);
+          ctx.restore();
+        }
+      }
+      if (writer && !writing) {
+        writing = true;
+        const vf = new VideoFrame(canvas, { timestamp: Math.round((performance.now() - t0) * 1000) });
+        writer.write(vf).catch(() => {}).finally(() => { writing = false; });
+      }
+      stats.frames++; stats.ms += performance.now() - tDraw;
+    }
+    const stats = { frames: 0, ms: 0 };
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    const stopTick = makeTicker(opts.fps, draw);
+    return {
+      track, width: W, height: H, stats,
+      stop() {
+        stopTick(); scr.stop(); if (cam) cam.stop();
+        if (writer) writer.close().catch(() => {});
+        track.stop();
+      },
+    };
+  }
+
+  // ═════════ Запис ═════════
+  let rec = null, display = null, comp = null, mixCtxNodes = [], recStart = 0, tickTimer = 0, stopping = false;
+  let chunks = [], result = null; // result: {blob, url, ext, duration, width, height, saved}
+
+  const fmtTime = s => {
+    s = Math.max(0, Math.floor(s));
+    const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+    return (h ? h + ':' + String(m).padStart(2, '0') : String(m).padStart(2, '0')) + ':' + String(sec).padStart(2, '0');
+  };
+
+  async function startRecording() {
+    if (!SUPPORTED || screen !== 'setup' || rec) return;
+    const fps = Number(cfg.fps);
+    const video = { frameRate: { ideal: fps, max: fps } };
+    if (cfg.quality !== 'orig') video.height = { max: MAX_H[cfg.quality] };
+    try {
+      display = await md.getDisplayMedia({
+        video,
+        audio: cfg.sys ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false } : false,
+        systemAudio: cfg.sys ? 'include' : 'exclude',
+        selfBrowserSurface: 'exclude',
+        surfaceSwitching: 'include',
+      });
+    } catch (e) {
+      display = null;
+      if (e.name === 'NotAllowedError' || e.name === 'AbortError') toast('Запис скасовано');
+      else toast('Не вдалося почати запис: ' + e.message, 'err', 5000);
+      return;
+    }
+
+    // джерела
+    let mic = null, cam = null;
+    if (cfg.mic) { try { mic = await acquireMic(); } catch (e) { toast('Мікрофон недоступний — записую без нього', 'err', 4500); } }
+    if (cfg.cam) { try { cam = await acquireCam(); } catch (e) { toast('Камера недоступна — записую без неї', 'err', 4500); } }
+    if (!display.active) { cleanupSources(); return; } // користувач уже встиг зупинити доступ
+
+    const screenTrack = display.getVideoTracks()[0];
+    let videoTrack = screenTrack;
+    const camTrack = cam && cam.getVideoTracks()[0];
+    try {
+      if (camTrack) {
+        comp = createCompositor(screenTrack, camTrack, { quality: cfg.quality, fps, pos: cfg.pos, size: cfg.size, shape: cfg.shape, mirror: cfg.mirror });
+        videoTrack = comp.track;
+      }
+    } catch (e) { comp = null; videoTrack = screenTrack; toast('Не вдалося додати камеру — записую лише екран', 'err', 4500); }
+
+    // звук: екран + мікрофон змішуємо в одну доріжку
+    const sysTrack = display.getAudioTracks()[0];
+    const micTrack = mic && mic.getAudioTracks()[0];
+    const audioTracks = [];
+    if (sysTrack && micTrack) {
+      const ctx = getCtx();
+      const dest = ctx.createMediaStreamDestination();
+      [[sysTrack, 1], [micTrack, 1]].forEach(([t, g]) => {
+        const src = ctx.createMediaStreamSource(new MediaStream([t]));
+        const gain = ctx.createGain(); gain.gain.value = g;
+        src.connect(gain).connect(dest);
+        mixCtxNodes.push(src, gain);
+      });
+      mixCtxNodes.push(dest);
+      audioTracks.push(dest.stream.getAudioTracks()[0]);
+    } else if (sysTrack) audioTracks.push(sysTrack);
+    else if (micTrack) audioTracks.push(micTrack);
+
+    const out = new MediaStream([videoTrack, ...audioTracks]);
+    let mime = pickMime(cfg.format) || pickMime('webm');
+    const vbr = Math.round(BITRATE[cfg.quality] * (fps > 30 ? 1.5 : 1));
+    try {
+      rec = new MediaRecorder(out, { mimeType: mime, videoBitsPerSecond: vbr, audioBitsPerSecond: 128000 });
+    } catch (e) {
+      try { mime = ''; rec = new MediaRecorder(out); }
+      catch (e2) { toast('Браузер не зміг почати запис: ' + e2.message, 'err', 5000); cleanupSources(); return; }
+    }
+    chunks = [];
+    stopping = false;
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = finish;
+    rec.onerror = e => { toast('Помилка запису: ' + ((e.error && e.error.message) || 'невідома'), 'err', 5000); stopRecording(); };
+    screenTrack.addEventListener('ended', stopRecording);
+    rec.start(1000);
+    recStart = performance.now();
+
+    // екран запису
+    const srcs = ['Екран'];
+    if (sysTrack) srcs.push('звук екрана');
+    if (micTrack) srcs.push('мікрофон');
+    if (camTrack && comp) srcs.push('камера');
+    $('recSources').textContent = srcs.join(' · ');
+    $('recMeterRow').style.visibility = micTrack ? 'visible' : 'hidden';
+    $('recPreview').srcObject = new MediaStream([videoTrack]);
+    $('recPreview').play().catch(() => {});
+    updateTimer();
+    tickTimer = setInterval(updateTimer, 250);
+    show('rec');
+    if (cfg.sys && !sysTrack) toast('Звук екрана не записується — у вікні вибору треба увімкнути «Поділитися звуком»', '', 6000);
+  }
+
+  function updateTimer() {
+    const t = fmtTime((performance.now() - recStart) / 1000);
+    $('timer').textContent = t;
+    $('recChipTime').textContent = t;
+    document.title = '● ' + t + ' · Запис екрану';
   }
 
   function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    clearInterval(timerInterval);
+    if (!rec || stopping) return;
+    stopping = true;
+    clearInterval(tickTimer);
+    result = { duration: (performance.now() - recStart) / 1000 };
+    if (rec.state !== 'inactive') rec.stop(); else finish();
   }
 
-  function handleStop() {
-    videoBlob = new Blob(chunks, { type: chunks[0]?.type || 'video/webm' });
-    const url = URL.createObjectURL(videoBlob);
-    const vid = document.getElementById('video-preview');
-    vid.src = url;
-    showScreen('review');
+  function cleanupSources() {
+    if (comp) { comp.stop(); comp = null; }
+    stopStream(display); display = null;
+    mixCtxNodes.forEach(n => { try { n.disconnect(); } catch (e) { /* ignore */ } });
+    mixCtxNodes = [];
+    $('recPreview').srcObject = null;
+    releaseCam();
+    releaseMic();
   }
 
-  function reRecord() {
-    videoBlob = null;
+  async function finish() {
+    const mime = (rec && rec.mimeType) || (chunks[0] && chunks[0].type) || 'video/webm';
+    if (!result) result = { duration: (performance.now() - recStart) / 1000 };
+    clearInterval(tickTimer);
+    rec = null;
+    cleanupSources();
+    if (!chunks.length) { result = null; toast('Запис порожній — спробуйте ще раз', 'err'); backToSetup(); return; }
+    let blob = new Blob(chunks, { type: mime.split(';')[0] });
     chunks = [];
-    document.getElementById('video-preview').src = '';
-    showScreen('start');
+    const isMp4 = /mp4/.test(mime);
+    if (!isMp4) {
+      try { blob = await fixWebmDuration(blob, result.duration * 1000); } catch (e) { /* лишаємо як є */ }
+    }
+    Object.assign(result, { blob, url: URL.createObjectURL(blob), ext: isMp4 ? '.mp4' : '.webm', saved: false });
+    const p = $('player');
+    p.src = result.url;
+    p.onloadedmetadata = () => {
+      result.width = p.videoWidth; result.height = p.videoHeight;
+      $('mRes').textContent = p.videoWidth ? p.videoWidth + '×' + p.videoHeight : '—';
+    };
+    $('mDur').textContent = fmtTime(result.duration);
+    $('mSize').textContent = fmtSize(blob.size);
+    $('mFmt').textContent = isMp4 ? 'MP4' : 'WebM';
+    $('mRes').textContent = '—';
+    $('fileExt').textContent = result.ext;
+    $('fileName').value = defaultName();
+    show('review');
+    toast('Запис готовий', 'ok');
   }
 
-  function openSave() {
-    document.getElementById('overlay-save').classList.remove('hidden');
-    document.getElementById('filename-input').focus();
-    document.getElementById('filename-input').select();
+  const fmtSize = b => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' КБ' : (b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace('.', ',') + ' МБ';
+  function defaultName() {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    return 'запис-екрану-' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
   }
 
-  function closeSave() {
-    document.getElementById('overlay-save').classList.add('hidden');
-  }
-
-  function doSave() {
-    if (!videoBlob) return;
-    let name = document.getElementById('filename-input').value.trim() || 'запис-екрану';
-    const ext = videoBlob.type.includes('mp4') ? '.mp4' : '.webm';
-    if (!name.endsWith(ext)) name += ext;
+  function download() {
+    if (!result || !result.blob) return;
+    let name = $('fileName').value.trim().replace(/[\\/:*?"<>|]+/g, '-') || defaultName();
+    if (name.toLowerCase().endsWith(result.ext)) name = name.slice(0, -result.ext.length);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(videoBlob);
-    a.download = name;
-    a.click();
-    closeSave();
+    a.href = result.url; a.download = name + result.ext;
+    document.body.appendChild(a); a.click(); a.remove();
+    result.saved = true;
+    toast('Файл завантажено: ' + name + result.ext, 'ok');
   }
 
-  document.getElementById('filename-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') doSave();
-    if (e.key === 'Escape') closeSave();
+  function backToSetup() {
+    const p = $('player');
+    p.pause(); p.removeAttribute('src'); p.load();
+    if (result && result.url) URL.revokeObjectURL(result.url);
+    result = null;
+    show('setup');
+    if (cfg.cam) camOn();
+    if (cfg.mic) acquireMic().catch(() => { $('btnMicTest').hidden = false; });
+  }
+  async function newRecording() {
+    if (result && !result.saved && !(await confirmDialog())) return;
+    backToSetup();
+  }
+
+  $('btnStart').addEventListener('click', startRecording);
+  $('btnStop').addEventListener('click', stopRecording);
+  $('btnDownload').addEventListener('click', download);
+  $('btnNew').addEventListener('click', newRecording);
+  $('fileName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); download(); } });
+
+  // ═════════ Клавіші (за фізичною клавішею — працює й на українській розкладці) ═════════
+  document.addEventListener('keydown', e => {
+    const open = document.querySelector('.overlay.open');
+    if (e.key === 'Escape' && open) { if (open.id === 'confirmModal') $('confirmNo').click(); else closeModal(open.id); return; }
+    if (open) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.code === 'KeyS' && screen === 'review') { e.preventDefault(); download(); return; }
+    const typing = /^(INPUT|SELECT|TEXTAREA)$/.test((e.target && e.target.tagName) || '');
+    if (typing || mod || e.altKey) return;
+    if (e.code === 'KeyR' && screen === 'setup') { e.preventDefault(); startRecording(); }
+    else if (e.code === 'KeyS' && screen === 'rec') { e.preventDefault(); stopRecording(); }
+    else if (e.key === '?' || (e.shiftKey && e.code === 'Slash')) { e.preventDefault(); openModal('helpModal'); }
   });
+
+  window.addEventListener('beforeunload', e => {
+    if (rec || (result && result.blob && !result.saved)) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // перший візит — коротка довідка
+  try {
+    if (SUPPORTED && !localStorage.getItem(LS_KEY + '-intro')) { openModal('helpModal'); localStorage.setItem(LS_KEY + '-intro', '1'); }
+  } catch (e) { /* ignore */ }
+
+  // ═════════ WebM: дописуємо тривалість ═════════
+  // MediaRecorder у Chrome пише WebM без тривалості — у плеєрі не працює перемотка,
+  // а деякі програми показують 0:00. Додаємо елемент Duration у блок Segment/Info.
+  async function fixWebmDuration(blob, durationMs) {
+    const HEAD = Math.min(blob.size, 1 << 20);
+    const buf = new Uint8Array(await blob.slice(0, HEAD).arrayBuffer());
+    const readId = p => {
+      const b = buf[p]; let len = 1, mask = 0x80;
+      while (len <= 4 && !(b & mask)) { len++; mask >>= 1; }
+      if (len > 4 || p + len > buf.length) return null;
+      let v = 0; for (let i = 0; i < len; i++) v = v * 256 + buf[p + i];
+      return { len, id: v };
+    };
+    const readSize = p => {
+      const b = buf[p]; let len = 1, mask = 0x80;
+      while (len <= 8 && !(b & mask)) { len++; mask >>= 1; }
+      if (len > 8 || p + len > buf.length) return null;
+      let v = b & (mask - 1), ones = v === mask - 1;
+      for (let i = 1; i < len; i++) { v = v * 256 + buf[p + i]; if (buf[p + i] !== 0xff) ones = false; }
+      return { len, v, unknown: ones };
+    };
+    let p = 0;
+    let id = readId(p); if (!id || id.id !== 0x1A45DFA3) return blob;
+    let sz = readSize(p + id.len); if (!sz) return blob;
+    p += id.len + sz.len + sz.v;
+    id = readId(p); if (!id || id.id !== 0x18538067) return blob;
+    const seg = readSize(p + id.len); if (!seg || !seg.unknown) return blob;
+    p += id.len + seg.len;
+    while (p < buf.length - 12) {
+      id = readId(p); if (!id) return blob;
+      sz = readSize(p + id.len); if (!sz || sz.unknown) return blob;
+      const start = p + id.len + sz.len, end = start + sz.v;
+      if (id.id === 0x114D9B74) return blob; // SeekHead зі зсувами — не чіпаємо
+      if (id.id === 0x1549A966) {
+        if (end > buf.length) return blob;
+        let q = start, scale = 1e6;
+        while (q < end) {
+          const cid = readId(q), cs = cid && readSize(q + cid.len); if (!cs) return blob;
+          const cd = q + cid.len + cs.len;
+          if (cid.id === 0x2AD7B1) { let v = 0; for (let i = 0; i < cs.v; i++) v = v * 256 + buf[cd + i]; scale = v || 1e6; }
+          if (cid.id === 0x4489) {
+            const dv = new DataView(buf.buffer, cd, cs.v);
+            const val = durationMs * 1e6 / scale;
+            if (cs.v === 8) dv.setFloat64(0, val); else if (cs.v === 4) dv.setFloat32(0, val); else return blob;
+            return new Blob([buf, blob.slice(HEAD)], { type: blob.type });
+          }
+          q = cd + cs.v;
+        }
+        const dur = new Uint8Array(11);
+        dur[0] = 0x44; dur[1] = 0x89; dur[2] = 0x88;
+        new DataView(dur.buffer).setFloat64(3, durationMs * 1e6 / scale);
+        const newSize = new Uint8Array(8); newSize[0] = 0x01;
+        let v = sz.v + dur.length;
+        for (let i = 7; i >= 1; i--) { newSize[i] = v & 0xff; v = Math.floor(v / 256); }
+        return new Blob([buf.subarray(0, p + id.len), newSize, buf.subarray(start, end), dur, buf.subarray(end), blob.slice(HEAD)], { type: blob.type });
+      }
+      p = end;
+    }
+    return blob;
+  }
+
+  // для автотестів
+  window.ScreenRec = { get comp() { return comp; }, cfg, start: startRecording, stop: stopRecording, get result() { return result; }, fixWebmDuration };
+})();
 </script>
 </body>
 </html>
