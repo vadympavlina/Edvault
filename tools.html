@@ -1,549 +1,252 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M8 10h16M8 16h10M8 22h13' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Інструменти · Edvault</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<meta name="description" content="Безкоштовні інструменти для вчителя просто в браузері: запис екрану, вайтборд, редактор фото й тексту, голосування та інші.">
+<meta name="theme-color" content="#4F6BF4">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M8 10h16M8 16h10M8 22h13' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('edvault-theme') || 'auto';
+      var dark = t === 'dark' || (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root{
+  color-scheme:light;
+  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f7f8fa;--surface3:#eef0f4;
+  --border:#e2e5ea;--border2:#d0d5dd;
+  --text:#1a1d23;--text2:#4b5563;--muted:#8a919e;
+  --accent:#4F6BF4;--accent-hover:#3d57e0;--accent-light:#eef0fe;--accent-border:#c7d0fc;--on-accent:#ffffff;
+  --danger:#ef4444;--danger-light:#fef2f2;
+  --shadow-sm:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.04);
+  --shadow-md:0 4px 16px rgba(16,24,40,.10),0 2px 6px rgba(16,24,40,.06);
+  --shadow-lg:0 24px 60px rgba(16,24,40,.16),0 4px 16px rgba(16,24,40,.08);
+  --r:8px;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1117;--surface:#171a22;--surface2:#1d212b;--surface3:#252a35;
+  --border:#2a2f3b;--border2:#394050;
+  --text:#e7e9ef;--text2:#b3b9c6;--muted:#7f8797;
+  --accent:#7189ff;--accent-hover:#8a9dff;--accent-light:rgba(113,137,255,.14);--accent-border:rgba(113,137,255,.38);--on-accent:#0f1117;
+  --danger:#f87171;--danger-light:rgba(248,113,113,.12);
+  --shadow-sm:0 1px 3px rgba(0,0,0,.4);--shadow-md:0 6px 20px rgba(0,0,0,.45);--shadow-lg:0 24px 60px rgba(0,0,0,.6);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+input{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none !important}
+.ico{width:18px;height:18px;display:block;flex-shrink:0}
 
-  :root {
-    --bg: #f0f2f5;
-    --surface: #ffffff;
-    --surface2: #f7f8fa;
-    --border: #e2e5ea;
-    --border2: #d0d5dd;
-    --accent: #4F6BF4;
-    --accent-light: #eef0fe;
-    --accent-hover: #3d57e0;
-    --danger: #ef4444;
-    --success: #10b981;
-    --warn: #f59e0b;
-    --text: #1a1d23;
-    --text2: #4b5563;
-    --muted: #9ca3af;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
-    --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
-    --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
-  }
+/* ── Topbar ── */
+.topbar{height:56px;display:flex;align-items:center;gap:8px;padding:0 max(16px,env(safe-area-inset-left));background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:30}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;min-width:0}
+.brand-mark{width:30px;height:30px;border-radius:9px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(79,107,244,.35);flex-shrink:0}
+.brand-mark svg{width:16px;height:16px}
+.brand-name{font-weight:700;font-size:15px;letter-spacing:-.01em}
+.brand-sub{font-size:13px;color:var(--muted);font-weight:500;white-space:nowrap}
+.brand-sep{width:1px;height:18px;background:var(--border);flex-shrink:0}
+.grow{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 12px;border-radius:var(--r);border:1px solid transparent;font-size:13px;font-weight:500;white-space:nowrap;color:var(--text2);transition:background .12s,border-color .12s,color .12s}
+.btn:hover{background:var(--surface2);color:var(--text)}
+.btn-icon{width:34px;padding:0}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);color:var(--on-accent)}
 
-  html, body { height: 100%; }
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    -webkit-font-smoothing: antialiased;
-    min-height: 100vh;
-  }
+/* ── Page ── */
+.page{max-width:1180px;margin:0 auto;padding:32px 20px 56px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px}
+.head h1{margin:0 0 6px;font-size:clamp(24px,4vw,30px);font-weight:800;letter-spacing:-.03em}
+.head p{margin:0;color:var(--text2);font-size:14.5px;line-height:1.55;max-width:560px}
+.search{position:relative;width:min(360px,100%)}
+.search .ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted);pointer-events:none}
+.search input{width:100%;height:42px;border-radius:11px;border:1px solid var(--border);background:var(--surface);padding:0 70px 0 38px;font-size:14px;outline:none;box-shadow:var(--shadow-sm);transition:border-color .12s,box-shadow .12s}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
+.search input::placeholder{color:var(--muted)}
+.search input::-webkit-search-cancel-button{display:none}
+.search .kbd,.search .clear{position:absolute;right:9px;top:50%;transform:translateY(-50%)}
+.kbd{display:inline-flex;align-items:center;height:22px;padding:0 7px;border-radius:6px;border:1px solid var(--border2);border-bottom-width:2px;background:var(--surface2);font-size:11.5px;font-weight:600;color:var(--muted)}
+.clear{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.clear:hover{background:var(--surface2);color:var(--text)}
+.clear .ico{position:static;transform:none;width:14px;height:14px}
 
-  ::-webkit-scrollbar { width: 10px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+/* ── Toolbar: tabs + view ── */
+.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.tabs{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;padding:2px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0;transition:all .12s}
+.tab:hover{border-color:var(--border2);color:var(--text)}
+.tab.on{background:var(--text);border-color:var(--text);color:var(--surface)}
+.tab .n{font-size:11px;font-weight:600;min-width:20px;height:18px;padding:0 5px;border-radius:5px;background:var(--surface3);color:var(--muted);display:inline-flex;align-items:center;justify-content:center}
+.tab.on .n{background:rgba(255,255,255,.18);color:inherit}
+:root[data-theme="dark"] .tab.on .n{background:rgba(0,0,0,.14)}
+.count{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.count b{color:var(--text2);font-weight:600}
+.seg{display:flex;gap:2px;padding:2px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;flex-shrink:0}
+.seg button{width:32px;height:28px;border-radius:7px;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm)}
+.seg .ico{width:15px;height:15px}
 
-  /* =========== TOPBAR =========== */
-  .topbar {
-    min-height: 64px; flex-shrink: 0;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px;
-    padding: 0 clamp(16px, 4vw, 28px);
-    padding-top: env(safe-area-inset-top, 0);
-    position: sticky; top: 0; z-index: 30;
-  }
-  .topbar-left { display: flex; align-items: center; gap: clamp(9px, 2vw, 12px); min-width: 0; }
-  .topbar-logo {
-    width: 36px; height: 36px; border-radius: 10px;
-    background: var(--accent); display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 8px rgba(79,107,244,.3); flex-shrink: 0;
-  }
-  .topbar-logo svg { width: 18px; height: 18px; }
-  .topbar-text { min-width: 0; }
-  .topbar-text h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .topbar-text p { font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .topbar-badge {
-    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
-    background: var(--accent-light); color: var(--accent); letter-spacing: .03em;
-    flex-shrink: 0;
-  }
+/* ── Recent ── */
+.section-h{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.section-h .ico{width:13px;height:13px}
+.recent{margin-bottom:28px}
+.recent-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.recent-card{display:flex;align-items:center;gap:10px;height:52px;padding:0 12px;border-radius:12px;background:var(--surface);border:1px solid var(--border);text-decoration:none;color:inherit;box-shadow:var(--shadow-sm);transition:border-color .12s,transform .12s,box-shadow .12s;min-width:0}
+.recent-card:hover{border-color:var(--a);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.recent-card .ic{width:30px;height:30px;border-radius:8px}
+.recent-card .ic svg{width:15px;height:15px}
+.recent-card span{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.recent-card .ext{width:13px;height:13px;color:var(--muted);flex:none}
 
-  @media (max-width: 420px) {
-    .topbar-text p { display: none; }
-  }
+/* ── Cards ── */
+.ic{display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--al);border:1px solid var(--ab);color:var(--a)}
+:root[data-theme="dark"] .ic{background:color-mix(in srgb,var(--a) 16%,transparent);border-color:color-mix(in srgb,var(--a) 34%,transparent)}
+.ic svg{color:var(--a)}
+.ic img{width:24px;height:24px;border-radius:6px;object-fit:contain}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.card{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:16px;background:var(--surface);border:1px solid var(--border);text-decoration:none;color:inherit;box-shadow:var(--shadow-sm);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;animation:cardIn .3s ease both}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--a)}
+.card:focus-visible{outline-offset:3px}
+@keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.card .ic{width:46px;height:46px;border-radius:13px}
+.card .ic svg{width:22px;height:22px}
+.tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);white-space:nowrap}
+.tag.ext{display:inline-flex;align-items:center;gap:4px}
+.tag.ext svg{width:10px;height:10px}
+.card-name{font-size:16px;font-weight:700;letter-spacing:-.01em;margin:0 0 5px}
+.card-desc{font-size:13.5px;color:var(--text2);line-height:1.55;margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card-body{flex:1}
+.card-foot{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--a)}
+.card-foot svg{width:14px;height:14px;transition:transform .15s}
+.card:hover .card-foot svg{transform:translateX(3px)}
+.card.external{border-style:dashed}
+mark{background:color-mix(in srgb,var(--accent) 22%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 
-  /* =========== MAIN =========== */
-  .main {
-    max-width: 1200px; width: 100%;
-    margin: 0 auto;
-    padding: clamp(28px, 6vw, 48px) clamp(16px, 4vw, 28px) clamp(56px, 10vw, 100px);
-    padding-bottom: calc(clamp(56px, 10vw, 100px) + env(safe-area-inset-bottom, 0px));
-  }
+/* list view */
+.grid.list{grid-template-columns:1fr;gap:8px}
+.grid.list .card{flex-direction:row;align-items:center;gap:14px;padding:12px 16px;border-radius:12px}
+.grid.list .card:hover{transform:none}
+.grid.list .card-top{order:0}
+.grid.list .card-top .tag{display:none}
+.grid.list .card .ic{width:40px;height:40px;border-radius:11px}
+.grid.list .card-name{font-size:14.5px;margin:0 0 2px}
+.grid.list .card-desc{-webkit-line-clamp:1;font-size:13px}
+.grid.list .card-foot span{display:none}
 
-  /* =========== HERO =========== */
-  .hero {
-    text-align: center; margin-bottom: clamp(32px, 6vw, 52px);
-  }
-  .hero-eyebrow {
-    display: inline-flex; align-items: center; gap: 7px;
-    font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--accent); background: var(--accent-light); border: 1px solid #d6dcfd;
-    padding: 5px 14px; border-radius: 20px; margin-bottom: 16px;
-  }
-  .hero-eyebrow span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; animation: dot-blink 1.8s ease-in-out infinite; }
-  @keyframes dot-blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
-  .hero h2 {
-    font-size: clamp(26px, 6vw, 42px); font-weight: 900; letter-spacing: -1px; color: var(--text);
-    line-height: 1.15; margin-bottom: 12px;
-  }
-  .hero h2 em {
-    font-style: normal;
-    background: linear-gradient(135deg, var(--accent), #8b5cf6);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  .hero p {
-    font-size: clamp(14px, 2.4vw, 16px); color: var(--text2); max-width: 520px; margin: 0 auto;
-    line-height: 1.6; font-weight: 450; padding: 0 8px;
-  }
+/* ── States ── */
+.skel{height:190px;border-radius:16px;background:var(--surface);border:1px solid var(--border);position:relative;overflow:hidden}
+.skel::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--surface2),transparent);animation:shimmer 1.3s infinite}
+@keyframes shimmer{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.state{text-align:center;padding:64px 20px;color:var(--text2)}
+.state .big{width:56px;height:56px;border-radius:16px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
+.state .big .ico{width:24px;height:24px}
+.state h3{margin:0 0 6px;font-size:17px;font-weight:700;color:var(--text)}
+.state p{margin:0 0 16px;font-size:13.5px}
+.note{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin:-8px 0 18px}
+.note .ico{width:14px;height:14px}
 
-  /* =========== SEARCH =========== */
-  .search-wrap {
-    max-width: 420px; margin: 0 auto clamp(28px, 5vw, 44px); position: relative;
-  }
-  .search-icon {
-    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-    width: 16px; height: 16px; color: var(--muted); pointer-events: none;
-  }
-  .search-input {
-    width: 100%; padding: 12px 14px 12px 40px;
-    border: 1.5px solid var(--border2); border-radius: 12px;
-    background: var(--surface); font-family: inherit; font-size: 14px; color: var(--text);
-    outline: none; transition: all .15s ease;
-    box-shadow: var(--shadow-sm);
-  }
-  .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.1); }
-  .search-input::placeholder { color: var(--muted); }
-  .search-clear {
-    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-    width: 22px; height: 22px; border-radius: 6px; border: none;
-    background: var(--border); color: var(--text2); display: none;
-    align-items: center; justify-content: center; cursor: pointer; font-size: 13px;
-    transition: background .12s;
-  }
-  .search-clear:hover { background: var(--border2); }
-  .search-clear.visible { display: flex; }
+.foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;font-size:12.5px;color:var(--muted)}
 
-  /* =========== ОСТАННІ ВІДКРИТІ =========== */
-  .recent-section { margin-bottom: 22px; }
-  .recent-title {
-    display: flex; align-items: center; gap: 7px;
-    font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 10px;
-  }
-  .recent-title svg { width: 14px; height: 14px; }
-  .recent-row { display: flex; gap: 10px; flex-wrap: wrap; }
-  .recent-card {
-    display: inline-flex; align-items: center; gap: 10px;
-    padding: 9px 14px 9px 10px; border-radius: 12px;
-    background: var(--surface); border: 1.5px solid var(--border);
-    text-decoration: none; color: inherit; cursor: pointer;
-    transition: all .13s ease; box-shadow: var(--shadow-sm);
-    flex-shrink: 0;
-  }
-
-  @media (max-width: 640px) {
-    .recent-row {
-      flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity;
-      -webkit-overflow-scrolling: touch; scrollbar-width: none;
-    }
-    .recent-row::-webkit-scrollbar { display: none; }
-    .recent-card { scroll-snap-align: start; }
-    .recent-card:last-child { margin-right: 4px; }
-  }
-  .recent-card:hover { border-color: var(--card-accent, var(--accent)); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-  .recent-card-icon {
-    width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--card-accent-light, var(--accent-light));
-    border: 1.5px solid var(--card-accent-border, #d6dcfd);
-  }
-  .recent-card-icon svg { width: 15px; height: 15px; color: var(--card-accent, var(--accent)); }
-  .recent-card-icon img { width: 16px; height: 16px; border-radius: 4px; object-fit: contain; }
-  .recent-card-name { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; }
-  .recent-card-ext { color: var(--muted); flex-shrink: 0; }
-  .recent-card-ext svg { width: 11px; height: 11px; }
-
-  /* =========== FILTER TABS =========== */
-  .filter-tabs {
-    display: flex; align-items: center; gap: 6px;
-    margin-top: 8px; margin-bottom: 30px; flex-wrap: wrap;
-  }
-  .filter-tab {
-    padding: 7px 16px; border-radius: 10px; border: 1.5px solid var(--border);
-    background: var(--surface); color: var(--text2);
-    font-size: 12.5px; font-weight: 600; cursor: pointer;
-    transition: all .13s ease; display: flex; align-items: center; gap: 6px;
-    flex-shrink: 0; white-space: nowrap;
-  }
-
-  @media (max-width: 640px) {
-    .filter-tabs {
-      flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity;
-      -webkit-overflow-scrolling: touch; scrollbar-width: none;
-    }
-    .filter-tabs::-webkit-scrollbar { display: none; }
-    .filter-tab { scroll-snap-align: start; }
-    .filter-tab:last-child { margin-right: 4px; }
-  }
-  .filter-tab:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
-  .filter-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .filter-tab .count {
-    font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 5px;
-    background: rgba(255,255,255,.25); color: inherit;
-  }
-  .filter-tab:not(.active) .count { background: var(--border); color: var(--muted); }
-
-  /* =========== TOOLS GRID =========== */
-  .tools-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-    gap: 18px;
-  }
-
-  /* =========== TOOL CARD =========== */
-  .tool-card {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 18px;
-    padding: 24px;
-    cursor: pointer;
-    text-decoration: none; color: inherit;
-    display: flex; flex-direction: column; gap: 16px;
-    transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s ease, border-color .15s ease;
-    position: relative; overflow: hidden;
-    box-shadow: var(--shadow-sm);
-  }
-  .tool-card::before {
-    content: ''; position: absolute; inset: 0;
-    background: radial-gradient(circle at 50% 0%, var(--card-accent-light, rgba(79,107,244,.06)), transparent 65%);
-    opacity: 0; transition: opacity .2s ease;
-    pointer-events: none;
-  }
-  .tool-card:hover { transform: translateY(-4px) scale(1.012); box-shadow: var(--shadow-md); border-color: var(--card-accent, var(--accent)); }
-  .tool-card:hover::before { opacity: 1; }
-  .tool-card:active { transform: translateY(-1px) scale(1.005); }
-
-  .tool-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  .tool-icon {
-    width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--card-accent-light, var(--accent-light));
-    border: 1.5px solid var(--card-accent-border, #d6dcfd);
-  }
-  .tool-icon svg { width: 22px; height: 22px; color: var(--card-accent, var(--accent)); }
-  .tool-icon img { width: 24px; height: 24px; border-radius: 6px; object-fit: contain; }
-
-  .tool-tag {
-    font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 7px;
-    background: var(--card-accent-light, var(--accent-light));
-    color: var(--card-accent, var(--accent)); letter-spacing: .04em; text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  .tool-card-body { flex: 1; }
-  .tool-name { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); margin-bottom: 6px; }
-  .tool-desc { font-size: 13px; color: var(--text2); line-height: 1.6; }
-
-  .tool-card-footer {
-    display: flex; align-items: center; justify-content: space-between;
-    padding-top: 14px; border-top: 1px solid var(--border);
-  }
-  .tool-open-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 12.5px; font-weight: 700; color: var(--card-accent, var(--accent));
-    background: var(--card-accent-light, var(--accent-light));
-    border: 1.5px solid var(--card-accent-border, #d6dcfd);
-    padding: 7px 14px; border-radius: 9px;
-    transition: all .13s ease;
-  }
-  .tool-card:hover .tool-open-btn {
-    background: var(--card-accent, var(--accent)); color: #fff; border-color: var(--card-accent, var(--accent));
-  }
-  .tool-open-btn svg { width: 12px; height: 12px; }
-
-  /* Зовнішні інструменти — візуально відокремлені від наших */
-  .tool-card-external { border-style: dashed; }
-  .tool-card-external-badge {
-    position: absolute; top: 14px; right: 14px;
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 9.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
-    background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe;
-    padding: 3px 8px; border-radius: 20px;
-  }
-  .tool-card-external-badge svg { width: 9px; height: 9px; }
-  .tools-section-divider {
-    display: flex; align-items: center; gap: 12px;
-    margin: 36px 0 20px;
-  }
-  .tools-section-divider span {
-    font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
-    color: var(--muted); white-space: nowrap;
-  }
-  .tools-section-divider::after {
-    content: ''; flex: 1; height: 1px; background: var(--border);
-  }
-  .tool-file {
-    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600;
-    color: var(--muted); background: var(--surface2); border: 1px solid var(--border);
-    padding: 4px 9px; border-radius: 7px; letter-spacing: .02em;
-  }
-
-  /* =========== EMPTY STATE =========== */
-  .empty-state {
-    text-align: center; padding: 80px 20px; display: none;
-  }
-  .empty-state.visible { display: block; }
-  .empty-icon { font-size: 48px; margin-bottom: 16px; }
-  .empty-state h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-  .empty-state p { font-size: 13.5px; color: var(--text2); }
-
-  /* =========== LOADING / ERROR STATE =========== */
-  .loading-state, .error-state {
-    display: none; text-align: center; padding: 90px 20px;
-  }
-  .loading-state.visible, .error-state.visible { display: block; }
-  .spinner {
-    width: 34px; height: 34px; margin: 0 auto 18px;
-    border: 3px solid var(--border); border-top-color: var(--accent);
-    border-radius: 50%; animation: spin .7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-state p { font-size: 13.5px; color: var(--text2); font-weight: 500; }
-  .error-state .error-icon {
-    width: 48px; height: 48px; margin: 0 auto 16px; color: var(--danger);
-  }
-  .error-state h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-  .error-state p { font-size: 13.5px; color: var(--text2); margin-bottom: 18px; }
-  .retry-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 18px; border-radius: 10px; border: none;
-    background: var(--accent); color: #fff; font-family: inherit;
-    font-size: 13px; font-weight: 700; cursor: pointer; transition: background .13s;
-  }
-  .retry-btn:hover { background: var(--accent-hover); }
-
-  /* =========== SKELETON CARDS =========== */
-  .skeleton-card {
-    background: var(--surface); border: 1.5px solid var(--border); border-radius: 18px;
-    padding: 24px; display: flex; flex-direction: column; gap: 16px; height: 178px;
-  }
-  .skeleton-line {
-    background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
-    background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite;
-    border-radius: 8px;
-  }
-  @keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
-  /* =========== STATS BAR =========== */
-  .stats-bar {
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
-    gap: 12px; margin-bottom: 22px;
-  }
-  .stats-bar-left { font-size: 13px; color: var(--muted); font-weight: 500; }
-  .stats-bar-left b { color: var(--text); font-weight: 700; }
-  .stats-bar-right { display: flex; gap: 8px; }
-  .view-btn {
-    width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--border);
-    background: var(--surface); color: var(--muted); cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: all .13s ease; flex-shrink: 0;
-  }
-  .view-btn:hover, .view-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .view-btn svg { width: 15px; height: 15px; }
-
-  /* =========== LIST VIEW =========== */
-  .tools-grid.list-view { grid-template-columns: 1fr; gap: 10px; }
-  .list-view .tool-card {
-    flex-direction: row; align-items: center; gap: 16px; padding: 16px 20px;
-  }
-  .list-view .tool-card-header { flex-direction: row; align-items: center; flex: 0 0 auto; gap: 14px; }
-  .list-view .tool-card-body { flex: 1; }
-  .list-view .tool-card-footer { border-top: none; padding-top: 0; flex: 0 0 auto; }
-  .list-view .tool-icon { width: 42px; height: 42px; }
-  .list-view .tool-tag { display: none; }
-  .list-view .tool-card::before { display: none; }
-
-  /* =========== RESPONSIVE =========== */
-
-  /* Планшети / вузькі десктопи — трохи щільніша сітка й відступи */
-  @media (max-width: 900px) {
-    .tools-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-  }
-
-  /* Телефони (портрет/ландшафт) */
-  @media (max-width: 640px) {
-    .topbar { min-height: 58px; }
-    .topbar-logo { width: 32px; height: 32px; border-radius: 9px; }
-    .topbar-logo svg { width: 16px; height: 16px; }
-
-    .tools-grid { grid-template-columns: 1fr; gap: 14px; }
-
-    .tool-card { padding: 18px; border-radius: 16px; gap: 13px; }
-    .tool-icon { width: 44px; height: 44px; }
-    .tool-name { font-size: 15px; }
-    .tool-desc { font-size: 12.5px; }
-
-    .list-view .tool-card {
-      flex-wrap: nowrap; padding: 10px 14px; gap: 12px; border-radius: 12px;
-    }
-    .list-view .tool-card-header { gap: 0; }
-    .list-view .tool-icon { width: 36px; height: 36px; border-radius: 10px; }
-    .list-view .tool-icon svg { width: 16px; height: 16px; }
-    .list-view .tool-icon img { width: 18px; height: 18px; }
-    .list-view .tool-card-body { min-width: 0; }
-    .list-view .tool-name {
-      font-size: 13.5px; margin-bottom: 2px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .list-view .tool-desc {
-      font-size: 11.5px; line-height: 1.3;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .list-view .tool-card-footer { flex: 0 0 auto; width: auto; padding-top: 0; border-top: none; }
-    .list-view .tool-open-btn {
-      width: 30px; height: 30px; padding: 0; border-radius: 50%;
-      justify-content: center; gap: 0; font-size: 0; line-height: 0;
-    }
-    .list-view .tool-open-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
-    .list-view .tool-card-external-badge { display: none; }
-
-    .stats-bar { margin-bottom: 18px; }
-    .stats-bar-left { font-size: 12.5px; }
-
-    .tools-section-divider { margin: 28px 0 16px; }
-
-    .empty-state, .loading-state, .error-state { padding: 56px 16px; }
-  }
-
-  /* Малі телефони (SE, компактні Android) */
-  @media (max-width: 380px) {
-    .topbar-badge { display: none; }
-    .hero-eyebrow { font-size: 10.5px; padding: 4px 11px; }
-    .tool-card { padding: 16px; }
-    .tool-card-footer { flex-wrap: wrap; gap: 8px; }
-  }
-
-  /* Дотикові екрани — без "залипання" hover-стану після тапу */
-  @media (hover: none) {
-    .tool-card:hover { transform: none; box-shadow: var(--shadow-sm); border-color: var(--border); }
-    .tool-card:hover::before { opacity: 0; }
-    .tool-card:hover .tool-open-btn { background: var(--card-accent-light, var(--accent-light)); color: var(--card-accent, var(--accent)); border-color: var(--card-accent-border, #d6dcfd); }
-    .tool-card:active { transform: scale(.98); box-shadow: var(--shadow-sm); border-color: var(--card-accent, var(--accent)); }
-    .tool-card:active .tool-open-btn { background: var(--card-accent, var(--accent)); color: #fff; }
-    .recent-card:hover { transform: none; box-shadow: var(--shadow-sm); }
-    .recent-card:active { transform: scale(.97); }
-  }
-
-  @keyframes card-appear {
-    from { opacity: 0; transform: translateY(16px) scale(.97); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .tool-card { animation: card-appear .35s cubic-bezier(.16,1,.3,1) both; }
+@media(max-width:640px){
+  .page{padding:20px 14px 40px}
+  .brand-sub,.brand-sep{display:none}
+  .search{width:100%}
+  .search .kbd{display:none}
+  .count{display:none}
+  .grid{grid-template-columns:1fr;gap:12px}
+  .recent-row{grid-template-columns:1fr 1fr}
+}
+@media(prefers-reduced-motion:reduce){.card,.skel::after{animation:none}.card:hover{transform:none}}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="topbar-left">
-    <div class="topbar-logo">
-      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 10h16M8 16h10M8 22h13" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
+<header class="topbar">
+  <a class="brand" href="tools.html" aria-label="Edvault — інструменти">
+    <span class="brand-mark"><svg viewBox="0 0 32 32" fill="none"><path d="M8 10h16M8 16h10M8 22h13" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></span>
+    <span class="brand-name">Edvault</span>
+  </a>
+  <span class="brand-sep"></span>
+  <span class="brand-sub">Інструменти для класу</span>
+  <div class="grow"></div>
+  <button class="btn btn-icon" id="btnTheme" title="Змінити тему"></button>
+</header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <h1>Інструменти</h1>
+      <p>Усе для уроку просто в браузері — без встановлення програм і реєстрації.</p>
     </div>
-    <div class="topbar-text">
-      <h1>Edvault</h1>
-      <p>Інструменти для класу</p>
-    </div>
+    <label class="search" role="search">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="q" placeholder="Знайти інструмент…" autocomplete="off" spellcheck="false" aria-label="Пошук інструментів">
+      <span class="kbd" id="qKbd" title="Натисніть /, щоб шукати">/</span>
+      <button class="clear" id="qClear" type="button" title="Очистити (Esc)" hidden><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </label>
   </div>
-  <div class="topbar-badge">Beta</div>
-</div>
 
-<div class="main">
+  <section class="recent" id="recent" hidden>
+    <div class="section-h"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Нещодавно відкриті</div>
+    <div class="recent-row" id="recentRow"></div>
+  </section>
 
-  <!-- ОСТАННІ ВІДКРИТІ (з localStorage, тільки на вкладці "Всі" без пошуку) -->
-  <div class="recent-section" id="recent-section" style="display:none;">
-    <div class="recent-title">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Останні відкриті
-    </div>
-    <div class="recent-row" id="recent-row"></div>
-  </div>
-
-  <!-- FILTER TABS (рендеряться динамічно з категорій у БД) -->
-  <div class="filter-tabs" id="filter-tabs"></div>
-
-  <!-- STATS BAR -->
-  <div class="stats-bar">
-    <div class="stats-bar-left"><b id="visible-count">0</b> інструментів</div>
-    <div class="stats-bar-right">
-      <button class="view-btn active" id="grid-btn" onclick="setView('grid')" title="Сітка">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      </button>
-      <button class="view-btn" id="list-btn" onclick="setView('list')" title="Список">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      </button>
+  <div class="toolbar">
+    <div class="tabs" id="tabs" role="tablist" aria-label="Категорії"></div>
+    <span class="count" id="count"></span>
+    <div class="seg" role="group" aria-label="Вигляд">
+      <button id="viewGrid" class="on" title="Картки"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
+      <button id="viewList" title="Список"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg></button>
     </div>
   </div>
 
-  <!-- LOADING STATE -->
-  <div class="loading-state visible" id="loading-state">
-    <div class="tools-grid" style="margin-bottom: 24px;">
-      <div class="skeleton-card">
-        <div class="skeleton-line" style="width:48px;height:48px;border-radius:14px;"></div>
-        <div class="skeleton-line" style="width:70%;height:14px;"></div>
-        <div class="skeleton-line" style="width:100%;height:34px;"></div>
-      </div>
-      <div class="skeleton-card">
-        <div class="skeleton-line" style="width:48px;height:48px;border-radius:14px;"></div>
-        <div class="skeleton-line" style="width:60%;height:14px;"></div>
-        <div class="skeleton-line" style="width:100%;height:34px;"></div>
-      </div>
-      <div class="skeleton-card">
-        <div class="skeleton-line" style="width:48px;height:48px;border-radius:14px;"></div>
-        <div class="skeleton-line" style="width:80%;height:14px;"></div>
-        <div class="skeleton-line" style="width:100%;height:34px;"></div>
-      </div>
-    </div>
-    <div class="spinner"></div>
-    <p>Завантажуємо інструменти…</p>
+  <div class="note" id="offlineNote" hidden>
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+    <span>Немає з’єднання — показано збережений список.</span>
   </div>
 
-  <!-- ERROR STATE -->
-  <div class="error-state" id="error-state">
-    <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    <h3>Не вдалося завантажити інструменти</h3>
-    <p>Перевір з'єднання з інтернетом і спробуй ще раз</p>
-    <button class="retry-btn" onclick="loadTools()">Спробувати знову</button>
-  </div>
+  <div class="grid" id="grid" aria-live="polite"></div>
 
-  <!-- TOOLS GRID -->
-  <div class="tools-grid" id="tools-grid"></div>
-
-  <!-- EMPTY STATE -->
-  <div class="empty-state" id="empty-state">
-    <div class="empty-icon">🔍</div>
+  <div class="state" id="empty" hidden>
+    <div class="big"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
     <h3>Нічого не знайдено</h3>
-    <p>Спробуйте інший запит або скиньте фільтр</p>
+    <p id="emptyMsg">Спробуйте інший запит або іншу категорію.</p>
+    <button class="btn btn-primary" id="emptyReset">Показати всі</button>
   </div>
 
-</div>
+  <div class="state" id="error" hidden>
+    <div class="big" style="color:var(--danger)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+    <h3>Не вдалося завантажити інструменти</h3>
+    <p>Перевірте з’єднання з інтернетом і спробуйте ще раз.</p>
+    <button class="btn btn-primary" id="retry">Спробувати знову</button>
+  </div>
+
+  <footer class="foot">
+    <span>© Edvault</span>
+    <span>Підказка: <span class="kbd">/</span> — пошук, <span class="kbd">Enter</span> — відкрити перший результат</span>
+  </footer>
+</main>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// ── Firebase (той самий проєкт edvault-d4a7f, вузол "tools") ──
+// ── Firebase (той самий проєкт edvault-d4a7f, вузол "tools"; список редагується в tools-admin.html) ──
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyASpQTZaka3P-YUJ4tfHNmG-LCI-hQPhAI",
   authDomain: "edvault-d4a7f.firebaseapp.com",
@@ -553,252 +256,230 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "181496726566",
   appId: "1:181496726566:web:5a86e78588c9440a0b52e7"
 };
-const app = initializeApp(FIREBASE_CONFIG);
-const db = getDatabase(app);
+const db = getDatabase(initializeApp(FIREBASE_CONFIG));
 
-// ── Дефолтний набір — використовується лише для one-time seed,
-//    якщо вузол tools/ у базі ще порожній ──
+// ── Запасний набір: показується, лише якщо в базі ще нічого немає ──
+const I = p => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
 const DEFAULT_TOOLS = {
-  'vote': {
-    order: 1, name: 'Голосування',
-    desc: 'Інтерактивне голосування за кращу роботу. Картки команд, підрахунок голосів у реальному часі, феєрверки на фіналі.',
-    type: 'internal', file: 'vote.html', tag: 'Клас', category: 'class',
-    accent: '#4F6BF4', accentLight: 'rgba(79,107,244,.1)', accentBorder: '#d6dcfd',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/></svg>'
-  },
-  'class-manager': {
-    order: 2, name: 'Менеджер класу',
-    desc: 'Управління учнями, розклад, відвідуваність і оцінки. Все що потрібно вчителю в одному місці.',
-    type: 'internal', file: 'class-manager.html', tag: 'Клас', category: 'class',
-    accent: '#10b981', accentLight: 'rgba(16,185,129,.1)', accentBorder: '#a7f3d0',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
-  },
-  'screen-recorder': {
-    order: 3, name: 'Запис екрану',
-    desc: 'Записуй екран прямо з браузера. Підтримка мікрофону, камери та вибір ділянки. Без встановлення програм.',
-    type: 'internal', file: 'screen-recorder.html', tag: 'Медіа', category: 'media',
-    accent: '#ef4444', accentLight: 'rgba(239,68,68,.1)', accentBorder: '#fecaca',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>'
-  },
-  'snap-editor': {
-    order: 4, name: 'Редактор фото',
-    desc: 'Швидке редагування зображень: кадрування, фільтри, текст, анотації. Ідеально для підготовки навчальних матеріалів.',
-    type: 'internal', file: 'snap-editor.html', tag: 'Медіа', category: 'media',
-    accent: '#f59e0b', accentLight: 'rgba(245,158,11,.1)', accentBorder: '#fde68a',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
-  },
-  'text-craft': {
-    order: 5, name: 'Текстовий редактор',
-    desc: 'Форматований текстовий редактор з темами та стилями. Для написання, редагування й оформлення учнівських робіт.',
-    type: 'internal', file: 'text-craft.html', tag: 'Творчість', category: 'creative',
-    accent: '#8b5cf6', accentLight: 'rgba(139,92,246,.1)', accentBorder: '#ddd6fe',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>'
-  },
-  'videocut': {
-    order: 6, name: 'Відеоредактор',
-    desc: 'Нарізка та монтаж відео прямо в браузері. Обрізай, об\u02BCєднуй кліпи і додавай субтитри без зайвих програм.',
-    type: 'internal', file: 'videocut.html', tag: 'Медіа', category: 'media',
-    accent: '#ec4899', accentLight: 'rgba(236,72,153,.1)', accentBorder: '#fbcfe8',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'
-  }
+  'text-craft': { order: 1, name: 'Текстовий редактор', desc: 'Документи, конспекти й промпти з блоками, заголовками та списками. Автозбереження і експорт.', type: 'internal', file: 'text-craft.html', tag: 'Творчість', category: 'creative', accent: '#8b5cf6', accentLight: 'rgba(139,92,246,.1)', accentBorder: '#ddd6fe', icon: I('<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>') },
+  'whiteboard': { order: 2, name: 'Вайтборд', desc: 'Дошка для пояснень: олівець, фігури, стікери, нумерація, лазерна указка, PDF і режим презентації.', type: 'internal', file: 'whiteboard.html', tag: 'Клас', category: 'class', accent: '#0ea5e9', accentLight: 'rgba(14,165,233,.1)', accentBorder: '#bae6fd', icon: I('<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>') },
+  'screen-recorder': { order: 3, name: 'Запис екрану', desc: 'Запис екрана з мікрофоном, звуком і веб-камерою в кутку. MP4 або WebM, без встановлення програм.', type: 'internal', file: 'screen-recorder.html', tag: 'Медіа', category: 'media', accent: '#ef4444', accentLight: 'rgba(239,68,68,.1)', accentBorder: '#fecaca', icon: I('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/>') },
+  'snap-editor': { order: 4, name: 'Редактор фото', desc: 'Скриншоти й фото: кадрування, стрілки, текст, розмиття, нумерація. Для навчальних матеріалів.', type: 'internal', file: 'snap-editor.html', tag: 'Медіа', category: 'media', accent: '#f59e0b', accentLight: 'rgba(245,158,11,.1)', accentBorder: '#fde68a', icon: I('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>') },
+  'videocut': { order: 5, name: 'Відеоредактор', desc: 'Обрізання та монтаж відео прямо в браузері.', type: 'internal', file: 'videocut.html', tag: 'Медіа', category: 'media', accent: '#ec4899', accentLight: 'rgba(236,72,153,.1)', accentBorder: '#fbcfe8', icon: I('<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>') },
+  'vote': { order: 6, name: 'Голосування', desc: 'Голосування за кращу роботу: картки команд, підрахунок у реальному часі, феєрверки на фіналі.', type: 'internal', file: 'vote.html', tag: 'Клас', category: 'class', accent: '#4F6BF4', accentLight: 'rgba(79,107,244,.1)', accentBorder: '#d6dcfd', icon: I('<path d="M12 2l2.5 6.5L21 9l-5 4.5 1.5 7L12 17l-5.5 3.5L8 13.5 3 9l6.5-.5z"/>') },
+  'class-manager': { order: 7, name: 'Менеджер класу', desc: 'Учні, розклад, відвідуваність і оцінки в одному місці.', type: 'internal', file: 'class-manager.html', tag: 'Клас', category: 'class', accent: '#10b981', accentLight: 'rgba(16,185,129,.1)', accentBorder: '#a7f3d0', icon: I('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
 };
 
-// Людські підписи для відомих категорій; невідомі категорії
-// (додані пізніше через базу) підписуються самі собою.
 const CATEGORY_LABELS = { media: 'Медіа', class: 'Клас', creative: 'Творчість', external: 'Зовнішні' };
+const catLabel = c => CATEGORY_LABELS[c] || (c ? c.charAt(0).toUpperCase() + c.slice(1) : '');
+const CACHE_KEY = 'ev_tools_cache', RECENT_KEY = 'ev_recent_tools', VIEW_KEY = 'ev_tools_view';
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* приватний режим — ігноруємо */ } },
+};
 
-let TOOLS = [];
-let currentFilter = 'all';
-let currentSearch = '';
-let currentView = 'grid';
+const state = { tools: [], filter: 'all', q: '', view: store.get(VIEW_KEY, 'grid') === 'list' ? 'list' : 'grid' };
 
-// ── "Останні відкриті" — зберігаємо id інструментів у localStorage ──
-const RECENT_KEY = 'ev_recent_tools';
+// ── Тема ──
+const SUN = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>';
+const MOON = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+function syncTheme() {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  $('btnTheme').innerHTML = dark ? SUN : MOON;
+  $('btnTheme').title = dark ? 'Світла тема' : 'Темна тема';
+  document.querySelector('meta[name="theme-color"]').content = dark ? '#171a22' : '#4F6BF4';
+}
+$('btnTheme').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('edvault-theme', next); } catch (e) { /* ignore */ }
+  syncTheme();
+});
+syncTheme();
 
-function getRecentIds() {
-  try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; }
-  catch (e) { return []; }
+// ── Допоміжні ──
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = s => String(s ?? '').toLowerCase().replace(/[ʼ’'`]/g, '');
+function highlight(text, q) {
+  const t = esc(text);
+  if (!q) return t;
+  const i = norm(text).indexOf(q);
+  if (i < 0 || norm(text).length !== String(text).length) return t;
+  return esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>' + esc(text.slice(i + q.length));
+}
+const safeColor = c => /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%deg]+\))$/i.test(String(c || '').trim()) ? c : '';
+function cardVars(t) {
+  const a = safeColor(t.accent) || '#4F6BF4';
+  return `--a:${a};--al:${safeColor(t.accentLight) || 'rgba(79,107,244,.1)'};--ab:${safeColor(t.accentBorder) || '#d6dcfd'}`;
+}
+const hrefOf = t => t.type === 'external' ? t.url : 'tools/' + t.file;
+const EXT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>';
+const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+const linkAttrs = t => t.type === 'external' ? ' target="_blank" rel="noopener noreferrer"' : '';
+
+function cardHtml(t, i) {
+  const ext = t.type === 'external';
+  return `<a class="card${ext ? ' external' : ''}" href="${esc(hrefOf(t))}"${linkAttrs(t)} data-id="${esc(t.id)}" style="${cardVars(t)};animation-delay:${Math.min(i, 12) * 35}ms">
+    <div class="card-top">
+      <div class="ic">${t.icon || ''}</div>
+      ${ext ? `<span class="tag ext">${EXT_ICON}Зовнішній</span>` : (t.tag ? `<span class="tag">${esc(t.tag)}</span>` : '')}
+    </div>
+    <div class="card-body">
+      <h2 class="card-name">${highlight(t.name, state.q)}</h2>
+      <p class="card-desc">${highlight(t.desc, state.q)}</p>
+    </div>
+    <div class="card-foot"><span>${ext ? 'Перейти' : 'Відкрити'}</span>${ext ? EXT_ICON : ARROW}</div>
+  </a>`;
+}
+function recentHtml(t) {
+  return `<a class="recent-card" href="${esc(hrefOf(t))}"${linkAttrs(t)} data-id="${esc(t.id)}" style="${cardVars(t)}">
+    <div class="ic">${t.icon || ''}</div><span>${esc(t.name)}</span>${t.type === 'external' ? `<span class="ext">${EXT_ICON}</span>` : ''}
+  </a>`;
 }
 
-function pushRecent(id) {
-  try {
-    let ids = getRecentIds().filter(x => x !== id);
-    ids.unshift(id);
-    localStorage.setItem(RECENT_KEY, JSON.stringify(ids.slice(0, 6)));
-  } catch (e) { /* localStorage недоступний (приватний режим тощо) — просто ігноруємо */ }
+// ── Дані: спершу кеш (миттєво), потім свіжі з бази ──
+function setTools(data) {
+  state.tools = Object.entries(data || {})
+    .map(([id, v]) => ({ id, ...v }))
+    .filter(t => t && t.name && (t.type === 'external' ? t.url : t.file) && t.hidden !== true)
+    .sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || String(a.name).localeCompare(String(b.name), 'uk'));
+  const cats = new Set(state.tools.map(t => t.category));
+  if (state.filter !== 'all' && !cats.has(state.filter)) state.filter = 'all';
 }
 
-// Викликається з onclick на картці — не заважає навігації за href
-window.trackRecent = function (id) { pushRecent(id); };
+function showSkeleton() {
+  $('grid').innerHTML = Array.from({ length: 6 }, () => '<div class="skel"></div>').join('');
+}
 
-async function loadTools() {
-  setState('loading');
+async function load() {
+  $('error').hidden = true;
+  const cached = store.get(CACHE_KEY, null);
+  if (cached && cached.data) { setTools(cached.data); render(); }
+  else showSkeleton();
   try {
-    const snap = await get(ref(db, 'tools'));
-    let data = snap.exists() ? snap.val() : null;
-
-    // Якщо вузол tools/ ще порожній — засіваємо його дефолтним набором один раз,
-    // щоб сторінка не була пустою одразу після підключення до бази.
-    if (!data) {
-      await set(ref(db, 'tools'), DEFAULT_TOOLS);
-      data = DEFAULT_TOOLS;
-    }
-
-    TOOLS = Object.entries(data).map(([id, val]) => ({ id, ...val }));
-    TOOLS.sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name, 'uk'));
-
-    buildFilterTabs();
-    setState('ready');
+    const snap = await Promise.race([
+      get(ref(db, 'tools')),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000)),
+    ]);
+    const data = snap.exists() ? snap.val() : DEFAULT_TOOLS;
+    store.set(CACHE_KEY, { t: Date.now(), data });
+    $('offlineNote').hidden = true;
+    setTools(data);
     render();
   } catch (err) {
-    console.error('Не вдалось завантажити tools/ з Firebase:', err);
-    setState('error');
+    console.warn('Не вдалося завантажити tools/ з Firebase:', err);
+    if (cached && cached.data) { $('offlineNote').hidden = false; return; }
+    $('grid').innerHTML = '';
+    $('error').hidden = false;
+    $('empty').hidden = true;
+    $('recent').hidden = true;
   }
 }
 
-function setState(state) {
-  document.getElementById('loading-state').classList.toggle('visible', state === 'loading');
-  document.getElementById('error-state').classList.toggle('visible', state === 'error');
-  document.getElementById('tools-grid').style.display = state === 'ready' ? '' : 'none';
+// ── Рендер ──
+function visibleTools() {
+  const q = state.q;
+  return state.tools.filter(t => {
+    const inCat = state.filter === 'all' ? (t.category !== 'external' || !!q) : t.category === state.filter;
+    if (!inCat) return false;
+    if (!q) return true;
+    return [t.name, t.desc, t.tag, catLabel(t.category)].some(s => norm(s).includes(q));
+  });
 }
 
-function buildFilterTabs() {
+function renderTabs() {
   const cats = [];
-  TOOLS.forEach(t => { if (t.category && !cats.includes(t.category)) cats.push(t.category); });
-  const internalCount = TOOLS.filter(t => t.category !== 'external').length;
-
-  const tabsHtml = [`
-    <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">
-      Всі <span class="count" id="count-all">${internalCount}</span>
-    </button>`
-  ].concat(cats.map(cat => {
-    const count = TOOLS.filter(t => t.category === cat).length;
-    const label = CATEGORY_LABELS[cat] || (cat.charAt(0).toUpperCase() + cat.slice(1));
-    return `
-    <button class="filter-tab" data-filter="${cat}" onclick="setFilter('${cat}', this)">
-      ${label} <span class="count" id="count-${cat}">${count}</span>
-    </button>`;
-  }));
-
-  document.getElementById('filter-tabs').innerHTML = tabsHtml.join('');
+  state.tools.forEach(t => { if (t.category && !cats.includes(t.category)) cats.push(t.category); });
+  const allN = state.tools.filter(t => t.category !== 'external').length;
+  const tab = (key, label, n) => `<button class="tab${state.filter === key ? ' on' : ''}" role="tab" aria-selected="${state.filter === key}" data-f="${esc(key)}">${esc(label)}<span class="n">${n}</span></button>`;
+  $('tabs').innerHTML = [tab('all', 'Всі', allN)]
+    .concat(cats.map(c => tab(c, catLabel(c), state.tools.filter(t => t.category === c).length))).join('');
 }
 
-function cardHtml(t, i) {
-  const isExternal = t.type === 'external';
-  const href = isExternal ? t.url : `tools/${t.file}`;
-  const linkAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
-  const externalIconPath = '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>';
-  return `
-    <a class="tool-card${isExternal ? ' tool-card-external' : ''}" href="${href}"${linkAttrs} onclick="trackRecent('${t.id}')" style="
-      --card-accent: ${t.accent};
-      --card-accent-light: ${t.accentLight};
-      --card-accent-border: ${t.accentBorder};
-      animation-delay: ${i * 55}ms;
-    ">
-      ${isExternal ? `<span class="tool-card-external-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${externalIconPath}</svg>Зовнішній</span>` : ''}
-      <div class="tool-card-header">
-        <div class="tool-icon">${t.icon}</div>
-        ${isExternal ? '' : `<span class="tool-tag">${t.tag}</span>`}
-      </div>
-      <div class="tool-card-body">
-        <div class="tool-name">${t.name}</div>
-        <div class="tool-desc">${t.desc}</div>
-      </div>
-      <div class="tool-card-footer">
-        <div class="tool-open-btn">
-          ${isExternal ? 'Перейти' : 'Відкрити'}
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${isExternal ? externalIconPath : '<path d="M5 12h14M12 5l7 7-7 7"/>'}</svg>
-        </div>
-      </div>
-    </a>
-  `;
-}
-
-function recentCardHtml(t) {
-  const isExternal = t.type === 'external';
-  const href = isExternal ? t.url : `tools/${t.file}`;
-  const linkAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
-  return `
-    <a class="recent-card" href="${href}"${linkAttrs} onclick="trackRecent('${t.id}')" style="
-      --card-accent: ${t.accent};
-      --card-accent-light: ${t.accentLight};
-      --card-accent-border: ${t.accentBorder};
-    ">
-      <div class="recent-card-icon">${t.icon}</div>
-      <span class="recent-card-name">${t.name}</span>
-      ${isExternal ? `<span class="recent-card-ext"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>` : ''}
-    </a>
-  `;
-}
-
-function renderRecentSection() {
-  const section = document.getElementById('recent-section');
-  // Показуємо тільки на вкладці "Всі" без активного пошуку — це швидкий доступ,
-  // а не ще один список для гортання під час фільтрації.
-  if (currentFilter !== 'all' || currentSearch) { section.style.display = 'none'; return; }
-
-  const recentTools = getRecentIds()
-    .map(id => TOOLS.find(t => t.id === id))
-    .filter(Boolean)
-    .slice(0, 3);
-
-  if (recentTools.length === 0) { section.style.display = 'none'; return; }
-
-  document.getElementById('recent-row').innerHTML = recentTools.map(t => recentCardHtml(t)).join('');
-  section.style.display = 'block';
+function renderRecent() {
+  const sec = $('recent');
+  if (state.filter !== 'all' || state.q) { sec.hidden = true; return; }
+  const list = store.get(RECENT_KEY, []).map(id => state.tools.find(t => t.id === id)).filter(Boolean).slice(0, 4);
+  sec.hidden = list.length === 0;
+  $('recentRow').innerHTML = list.map(recentHtml).join('');
 }
 
 function render() {
-  renderRecentSection();
-
-  const grid = document.getElementById('tools-grid');
-  const emptyState = document.getElementById('empty-state');
-
-  let filtered = TOOLS.filter(t => {
-    // На вкладці "Всі" зовнішні інструменти не показуємо —
-    // їх видно лише на окремій вкладці "Зовнішні".
-    const matchFilter = currentFilter === 'all'
-      ? t.category !== 'external'
-      : t.category === currentFilter;
-    const q = currentSearch.toLowerCase();
-    const matchSearch = !q || t.name.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q) || (t.tag || '').toLowerCase().includes(q);
-    return matchFilter && matchSearch;
-  });
-
-  document.getElementById('visible-count').textContent = filtered.length;
-
-  if (filtered.length === 0) {
-    grid.innerHTML = '';
-    emptyState.classList.add('visible');
-    return;
-  }
-  emptyState.classList.remove('visible');
-
-  grid.innerHTML = filtered.map((t, i) => cardHtml(t, i)).join('');
+  renderTabs();
+  renderRecent();
+  const list = visibleTools();
+  const grid = $('grid');
+  grid.classList.toggle('list', state.view === 'list');
+  grid.innerHTML = list.map(cardHtml).join('');
+  $('count').innerHTML = '<b>' + list.length + '</b> ' + plural(list.length);
+  $('empty').hidden = list.length > 0 || !state.tools.length;
+  $('emptyMsg').textContent = state.q ? `За запитом «${$('q').value.trim()}» нічого немає. Спробуйте інше слово.` : 'У цій категорії поки порожньо.';
+  $('error').hidden = true;
 }
+const plural = n => {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'інструмент';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'інструменти';
+  return 'інструментів';
+};
 
-function setFilter(filter, btn) {
-  currentFilter = filter;
-  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
+// ── Події ──
+function setFilter(f) {
+  state.filter = f;
+  history.replaceState(null, '', f === 'all' ? location.pathname + location.search : '#' + encodeURIComponent(f));
   render();
 }
+$('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) setFilter(b.dataset.f); });
 
-function setView(view) {
-  currentView = view;
-  const grid = document.getElementById('tools-grid');
-  grid.classList.toggle('list-view', view === 'list');
-  document.getElementById('grid-btn').classList.toggle('active', view === 'grid');
-  document.getElementById('list-btn').classList.toggle('active', view === 'list');
+const q = $('q');
+function onQuery() {
+  state.q = norm(q.value.trim());
+  $('qClear').hidden = !q.value;
+  $('qKbd').hidden = !!q.value;
+  render();
 }
+q.addEventListener('input', onQuery);
+q.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (q.value) { q.value = ''; onQuery(); } else q.blur(); }
+  if (e.key === 'Enter') { const first = $('grid').querySelector('.card'); if (first) { e.preventDefault(); first.click(); } }
+});
+$('qClear').addEventListener('click', () => { q.value = ''; onQuery(); q.focus(); });
+$('emptyReset').addEventListener('click', () => { q.value = ''; state.q = ''; $('qClear').hidden = true; $('qKbd').hidden = false; setFilter('all'); });
+$('retry').addEventListener('click', load);
 
-// Функції потрібні в inline onclick/oninput-атрибутах —
-// у модулях вони не глобальні за замовчуванням, тож виносимо явно.
-window.setFilter = setFilter;
-window.setView = setView;
-window.loadTools = loadTools;
+function setView(v) {
+  state.view = v; store.set(VIEW_KEY, v);
+  $('viewGrid').classList.toggle('on', v === 'grid');
+  $('viewList').classList.toggle('on', v === 'list');
+  $('grid').classList.toggle('list', v === 'list');
+}
+$('viewGrid').addEventListener('click', () => setView('grid'));
+$('viewList').addEventListener('click', () => setView('list'));
+setView(state.view);
 
-loadTools();
+// «Нещодавно відкриті»: запам'ятовуємо будь-який перехід, зокрема середньою кнопкою миші
+function track(e) {
+  const a = e.target.closest('a[data-id]');
+  if (!a) return;
+  const ids = store.get(RECENT_KEY, []).filter(x => x !== a.dataset.id);
+  ids.unshift(a.dataset.id);
+  store.set(RECENT_KEY, ids.slice(0, 8));
+}
+document.addEventListener('click', track);
+document.addEventListener('auxclick', e => { if (e.button === 1) track(e); });
+
+document.addEventListener('keydown', e => {
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+  if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === '/' || e.code === 'Slash')) { e.preventDefault(); q.focus(); q.select(); }
+});
+
+// повернення кнопкою «Назад» зі сторінки інструмента — оновлюємо «нещодавні»
+window.addEventListener('pageshow', e => { if (e.persisted && state.tools.length) renderRecent(); });
+
+const hashCat = decodeURIComponent(location.hash.slice(1));
+if (hashCat) state.filter = hashCat;
+load();
 </script>
 </body>
 </html>
