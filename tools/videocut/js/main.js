@@ -228,6 +228,7 @@ segPick('exRes', 'short', Number);
 segPick('exQuality', 'quality');
 segPick('exRange', 'range');
 $('btnExport').addEventListener('click', openExport);
+on('open-export', openExport);
 
 function openExport() {
   if (!duration()) { toast('Спочатку додайте відео на таймлайн'); return; }
@@ -308,6 +309,7 @@ async function startExport() {
     $('exAgain').hidden = !blob;
     $('exDoneInfo').textContent = `${name}${blob ? ' · ' + fmtBytes(blob.size) : ''} · за ${fmt(secs)}`;
     toast('Експорт завершено', 'ok');
+    emit('exported');
   } catch (e) {
     console.error(e);
     if (writable) try { await writable.abort(); } catch (er) { /* ignore */ }

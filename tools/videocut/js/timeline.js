@@ -23,7 +23,7 @@ export function initTimeline() {
   on('peaks', drawCanvases);
   on('time', () => { placePlayhead(); if (S.playing) follow(); });
   on('marks', () => { placeRange(); drawRuler(); });
-  scroll.addEventListener('scroll', () => { drawCanvases(); drawRuler(); });
+  scroll.addEventListener('scroll', () => { heads.scrollTop = scroll.scrollTop; drawCanvases(); drawRuler(); });
   window.addEventListener('resize', () => { render(); });
   scroll.addEventListener('wheel', onWheel, { passive: false });
   inner.addEventListener('pointerdown', onDown);
@@ -66,6 +66,11 @@ function onWheel(e) {
     $('tlZoom').value = sliderFromZoom(pps);
     drawCanvases(); drawRuler();
   } else if (!e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    // коліщатко: якщо доріжок більше, ніж вміщується, — прокручуємо їх вертикально,
+    // а в кінці (або якщо все вміщується) — рухаємо таймлайн по горизонталі
+    const canV = scroll.scrollHeight > scroll.clientHeight + 1;
+    const atEdge = e.deltaY > 0 ? scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 1 : scroll.scrollTop <= 0;
+    if (canV && !atEdge) return;
     e.preventDefault();
     scroll.scrollLeft += e.deltaY;
   }
@@ -131,7 +136,7 @@ export function render() {
     `<div class="head head-v" style="height:${V_H}px">${icon('video')}<span>Відео</span></div>` +
     `<div class="head" style="height:${A_H}px">${icon('music')}<span>Музика</span></div>` +
     `<div class="head" style="height:${CC_H}px">${icon('cc')}<span>Субтитри</span></div>` +
-    `<div class="head" style="height:${ovH}px">${icon('text')}<span>Графіка</span></div>`;
+    `<div class="head" style="height:${ovH}px">${icon('text')}<span>Графіка</span></div><div style="height:40px"></div>`;
   vCanvas = $('tlVCanvas'); aCanvas = $('tlACanvas');
   placePlayhead(); placeRange(); drawRuler(); drawCanvases();
   $('tlDur').textContent = fmt(d, true);
@@ -384,6 +389,7 @@ function onUp() {
     }
   }
   if (!commit()) emit('project', {});
+  else if (d.kind === 'clip' && d.mode !== 'move') emit('did-cut');
 }
 
 // ── перетягування файлів на таймлайн ──
