@@ -209,6 +209,9 @@ export function initInspector() {
   box().addEventListener('input', onInput);
   box().addEventListener('change', onChange);
   box().addEventListener('click', onClick);
+  box().addEventListener('toggle', e => { const d = e.target.closest && e.target.closest('details[data-more]'); if (d) { if (d.open) openMore.add(d.dataset.more); else openMore.delete(d.dataset.more); } }, true);
+  on('exported', () => markProgress('exported'));
+  on('did-cut', () => markProgress('cut'));
   renderInspector();
 }
 
@@ -217,12 +220,18 @@ function swatches(cur, key) {
     <label class="sw sw-custom" data-tip="Свій колір"><input type="color" value="${/^#[0-9a-f]{6}$/i.test(cur) ? cur : '#ffffff'}" data-color="${key}"></label></div>`;
 }
 const range = (f, label, min, max, step, val, unit = '', show = null) =>
-  `<div class="field"><label>${label}<span class="aux" data-show="${f}">${show ?? val}${unit}</span></label><input type="range" data-f="${f}" min="${min}" max="${max}" step="${step}" value="${val}" data-unit="${unit}"></div>`;
-const seg = (f, label, opts, cur) =>
-  `<div class="field"><label>${label}</label><div class="seg">${opts.map(([v, n]) => `<button data-set="${f}" data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}">${n}</button>`).join('')}</div></div>`;
+  `<div class="field"><label>${label}<span class="aux" data-show="${f}">${show ?? String(val).replace('.', ',')}${unit}</span></label><input type="range" data-f="${f}" min="${min}" max="${max}" step="${step}" value="${val}" data-unit="${unit}"></div>`;
+const near = (a, b) => Math.abs(+a - +b) < 1e-6;
+const seg = (f, label, opts, cur, hint = '') =>
+  `<div class="field"><label>${label}</label><div class="seg">${opts.map(([v, n]) => `<button data-set="${f}" data-v="${v}" class="${String(cur) === String(v) || (!isNaN(+v) && !isNaN(+cur) && near(v, cur)) ? 'on' : ''}">${n}</button>`).join('')}</div>${hint ? `<p class="hint">${hint}</p>` : ''}</div>`;
 const timeField = (f, label, val) => `<div class="field half"><label>${label}</label><input class="input" data-time="${f}" value="${fmt(val, true)}" inputmode="decimal"></div>`;
 const actions = (...btns) => `<div class="insp-actions">${btns.join('')}</div>`;
 const act = (a, ic, label, extra = '') => `<button class="btn btn-outline btn-sm" data-a="${a}" ${extra}>${icon(ic)}${label}</button>`;
+// кнопка-перемикач: вмикає значення `on`, вимикає в 0/false
+const chip = (f, label, cur, on, ic) => `<button class="chip${cur ? ' on' : ''}" data-toggle="${f}" data-on="${on}">${icon(cur ? 'check' : ic)}${label}</button>`;
+// розгортання «Точніше» пам'ятає, чи було відкрите
+const openMore = new Set();
+const more = (key, html) => `<details class="more" data-more="${key}" ${openMore.has(key) ? 'open' : ''}><summary>Точніше</summary><div class="more-body">${html}</div></details>`;
 
 function renderInspector() {
   const el = box();
@@ -236,103 +245,139 @@ function renderInspector() {
 
 function head(ic, title, sub) {
   return `<div class="insp-head"><span class="insp-ico">${icon(ic)}</span><div><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div>
-    <button class="btn btn-icon btn-sm" data-a="deselect" data-tip="Зняти виділення (Esc)">${icon('x')}</button></div>`;
+    <button class="btn btn-icon btn-sm" data-a="deselect" data-tip="Готово (Esc)">${icon('x')}</button></div>`;
 }
 
+// ── Проєкт: покрокова підказка + формат ──
+// прогрес покрокової підказки (зберігається в браузері)
+export const progress = (() => { try { return JSON.parse(localStorage.getItem('ev_vc_guide')) || {}; } catch (e) { return {}; } })();
+function markProgress(k) {
+  if (progress[k]) return;
+  progress[k] = true;
+  try { localStorage.setItem('ev_vc_guide', JSON.stringify(progress)); } catch (e) { /* ignore */ }
+  if (!S.sel) renderInspector();
+}
 function projectPanel() {
   const p = S.project;
-  const d = duration();
-  return `<div class="insp-head"><span class="insp-ico">${icon('gear')}</span><div><b>Проєкт</b><small>${S.project.clips.length} кліп(ів) · ${fmt(d)}</small></div></div>
-    <div class="field"><label>Назва</label><input class="input" data-pf="name" value="${esc(p.name)}" maxlength="80"></div>
-    ${seg('p:aspect', 'Формат кадру', [['16:9', '16:9'], ['9:16', '9:16'], ['1:1', '1:1'], ['4:3', '4:3']], p.aspect)}
-    <p class="hint">16:9 — YouTube, презентації · 9:16 — Reels, Shorts, TikTok · 1:1 — дописи</p>
-    ${seg('p:fps', 'Кадрів за секунду', [[24, '24'], [25, '25'], [30, '30'], [60, '60']], p.fps)}
-    <div class="field"><label>Колір фону</label>${swatches(p.bg, 'p:bg')}</div>
-    <div class="tips">
-      <b>Швидкий старт</b>
-      <ol>
-        <li>Перетягніть відео у вікно або натисніть «Додати файли».</li>
-        <li>Поставте курсор і натисніть <kbd>S</kbd>, щоб розрізати; виділіть зайве й натисніть <kbd>Delete</kbd>.</li>
-        <li>Або позначте шматок клавішами <kbd>I</kbd> і <kbd>O</kbd> та виріжте його <kbd>X</kbd>.</li>
-        <li>Додайте текст, стрілки чи розмиття ліворуч, а потім — «Експорт».</li>
-      </ol>
-    </div>`;
+  const hasClips = p.clips.length > 0;
+  const steps = [
+    { done: hasClips, title: 'Додайте відео', text: 'Перетягніть файл у вікно або виберіть на комп’ютері.', btns: `<button class="btn btn-sm btn-primary" data-a="import">${icon('upload')}Вибрати файли</button>` },
+    { done: !!progress.cut, title: 'Приберіть зайве', text: 'Поставте червону лінію на таймлайні туди, де починається зайве, і натисніть «Розрізати». Потім клацніть непотрібний шматок і «Видалити».', btns: hasClips ? `<button class="btn btn-sm btn-outline" data-a="split">${icon('split')}Розрізати тут</button>` : '' },
+    { done: p.overlays.length > 0 || p.captions.length > 0, title: 'Додайте підписи', text: 'Заголовок, стрілка на важливе, розмиття пароля чи субтитри.', btns: `<button class="btn btn-sm btn-outline" data-a="tab" data-v="text">${icon('text')}Текст</button><button class="btn btn-sm btn-outline" data-a="tab" data-v="elements">${icon('shapes')}Стрілка, розмиття</button>` },
+    { done: !!progress.exported, title: 'Збережіть відео', text: 'Готовий файл MP4 завантажиться на комп’ютер.', btns: hasClips ? `<button class="btn btn-sm btn-outline" data-a="export">${icon('download')}Експорт</button>` : '' },
+  ];
+  const cur = steps.findIndex(x => !x.done);
+  const FORMATS = [['16:9', 'YouTube, урок', 'r169'], ['9:16', 'Reels, Shorts', 'r916'], ['1:1', 'Квадрат', 'r11'], ['4:3', 'Класичний', 'r43']];
+  return `<div class="insp-head"><span class="insp-ico">${icon('film')}</span><div><b>Як змонтувати відео</b><small>${cur < 0 ? 'Усе готово!' : `Крок ${cur + 1} з ${steps.length}`}</small></div></div>
+    <ol class="guide">${steps.map((x, i) => `<li class="${x.done ? 'done' : ''}${i === cur ? ' now' : ''}">
+      <span class="g-num">${x.done ? icon('check') : i + 1}</span>
+      <div><b>${x.title}</b>${i === cur || (!x.done && i < cur + 2) ? `<p>${x.text}</p>${x.btns ? `<div class="g-btns">${x.btns}</div>` : ''}` : ''}</div>
+    </li>`).join('')}</ol>
+    <div class="sep"></div>
+    <div class="field"><label>Назва проєкту</label><input class="input" data-pf="name" value="${esc(p.name)}" maxlength="80"></div>
+    <div class="field"><label>Форма кадру</label><div class="fmt-cards">${FORMATS.map(([v, n, cls]) => `<button class="fmt-card${p.aspect === v ? ' on' : ''}" data-set="p:aspect" data-v="${v}"><i class="fmt-shape ${cls}"></i><b>${v}</b><small>${n}</small></button>`).join('')}</div></div>
+    ${more('project', `${seg('p:fps', 'Кадрів за секунду', [[24, '24'], [25, '25'], [30, '30'], [60, '60']], p.fps, '30 — стандарт. 60 — для плавних рухів мишею чи ігор.')}
+      <div class="field"><label>Колір фону (де немає відео)</label>${swatches(p.bg, 'p:bg')}</div>`)}`;
 }
 
+// ── Кліп ──
 function clipPanel(c) {
   const m = media.get(c.mediaId);
   const l = layout().find(x => x.clip.id === c.id);
   const isImg = m && m.kind === 'image';
   const sp = c.speed || 1;
-  const sub = m ? (isImg ? 'Зображення' : `Фрагмент ${fmt(c.in)}–${fmt(c.out)} з ${fmt(m.duration)}`) : 'Файл відсутній';
+  const z = c.zoom || 1;
+  const sub = l ? `${fmt(l.start, true)} – ${fmt(l.end, true)} · ${fmtShort(clipDur(c))}` : '';
   return head(isImg ? 'image' : 'video', m ? m.name : 'Кліп', sub) +
-    `<div class="insp-row"><div class="field half"><label>На таймлайні</label><div class="static">${l ? fmt(l.start, true) + ' – ' + fmt(l.end, true) : '—'}</div></div><div class="field half"><label>Тривалість</label>${isImg ? `<input class="input" data-time="_dur" value="${fmt(clipDur(c), true)}">` : `<div class="static">${fmtShort(clipDur(c))}</div>`}</div></div>
-    ${isImg ? '' : `${seg('speed', 'Швидкість', [[0.5, '0,5×'], [0.75, '0,75×'], [1, '1×'], [1.25, '1,25×'], [1.5, '1,5×'], [2, '2×']], sp)}
-    <div class="field"><label>Гучність<span class="aux" data-show="volume">${Math.round((c.volume ?? 1) * 100)}%</span></label>
-      <div class="inline"><button class="btn btn-icon btn-sm${c.muted ? ' danger' : ''}" data-a="mute" data-tip="${c.muted ? 'Увімкнути звук' : 'Вимкнути звук'}">${icon(c.muted ? 'mute' : 'volume')}</button>
-      <input type="range" data-f="volume" data-pct="1" min="0" max="2" step="0.05" value="${c.volume ?? 1}" ${c.muted ? 'disabled' : ''}></div></div>`}
-    ${range('fadeIn', 'Плавна поява', 0, 3, 0.1, c.fadeIn || 0, ' с')}
-    ${range('fadeOut', 'Плавне зникнення', 0, 3, 0.1, c.fadeOut || 0, ' с')}
-    <div class="sep"></div>
-    ${seg('fit', 'Кадр', [['contain', 'Вписати'], ['cover', 'Заповнити']], c.fit || 'contain')}
-    ${range('zoom', 'Наближення', 1, 4, 0.05, c.zoom || 1, '×', (c.zoom || 1).toFixed(2).replace('.', ','))}
-    ${(c.zoom || 1) > 1.001 ? '<p class="hint">Перетягніть хрестик на перегляді, щоб вибрати, куди наближати.</p>' : '<p class="hint">Наближення допомагає показати дрібну деталь на записі екрана.</p>'}
-    ${actions(act('split', 'split', 'Розрізати', 'data-key="S"'), act('dup', 'copy', 'Дублювати'), act('del', 'trash', 'Видалити'))}`;
+    `<div class="chips">
+      ${chip('fadeIn', 'Плавна поява', c.fadeIn > 0, 0.8, 'sparkle')}
+      ${chip('fadeOut', 'Плавне зникнення', c.fadeOut > 0, 0.8, 'sparkle')}
+      ${isImg ? '' : chip('muted', 'Без звуку', !!c.muted, 'true', 'mute')}
+    </div>
+    ${isImg ? `<div class="field"><label>Скільки показувати</label><div class="seg">${[3, 5, 8, 10].map(v => `<button data-a="imgDur" data-v="${v}" class="${near(clipDur(c), v) ? 'on' : ''}">${v} с</button>`).join('')}</div></div>`
+      : `${seg('speed', 'Швидкість', [[0.5, '0,5×'], [1, '1×'], [1.25, '1,25×'], [1.5, '1,5×'], [2, '2×']], sp, sp === 1 ? '1× — звичайна швидкість. Лекцію часто зручно прискорити до 1,25×.' : sp > 1 ? 'Голос залишиться природним — без «мультяшного» ефекту.' : sp < 1 ? 'Уповільнення — зручно, щоб показати швидкі дії.' : '')}
+      ${c.muted ? '' : `<div class="field"><label>Гучність<span class="aux" data-show="volume">${Math.round((c.volume ?? 1) * 100)}%</span></label><input type="range" data-f="volume" data-pct="1" min="0" max="2" step="0.05" value="${c.volume ?? 1}"></div>`}`}
+    ${seg('zoom', 'Наблизити частину кадру', [[1, 'Ні'], [1.5, '1,5×'], [2, '2×'], [3, '3×']], z, z > 1.001 ? 'Перетягніть синій хрестик на перегляді туди, що треба показати ближче.' : 'Допомагає показати дрібну кнопку чи текст на записі екрана.')}
+    ${actions(act('split', 'split', 'Розрізати тут', 'data-key="S"'), act('dup', 'copy', 'Дублювати'), act('del', 'trash', 'Видалити'))}
+    ${more('clip', `${range('fadeIn', 'Тривалість появи', 0, 3, 0.1, c.fadeIn || 0, ' с')}
+      ${range('fadeOut', 'Тривалість зникнення', 0, 3, 0.1, c.fadeOut || 0, ' с')}
+      ${range('zoom', 'Наближення', 1, 4, 0.05, z, '×', z.toFixed(2).replace('.', ','))}
+      ${seg('fit', 'Якщо форма кадру інша', [['contain', 'Показати повністю'], ['cover', 'На весь кадр']], c.fit || 'contain', '«На весь кадр» — без чорних смуг, але краї обрізаються.')}
+      ${isImg ? '' : `<p class="hint">Фрагмент ${fmt(c.in)}–${fmt(c.out)} з файлу тривалістю ${fmt(m ? m.duration : 0)}.</p>`}`)}`;
 }
 
+// ── Текст і елементи ──
 const OV_NAMES = { text: 'Текст', rect: 'Рамка', arrow: 'Стрілка', blur: 'Розмиття', spot: 'Прожектор', image: 'Зображення' };
 const OV_ICONS = { text: 'text', rect: 'rect', arrow: 'arrow', blur: 'blur', spot: 'spot', image: 'image' };
+const STYLES = [['shadow', 'Тінь'], ['outline', 'Контур'], ['box', 'Плашка'], ['none', 'Просто']];
+
+function timing(o) {
+  const end = mainEnd();
+  const toEnd = end > o.start + 0.3 && near(o.start + o.dur, end);
+  return `<div class="field"><label>Показувати<span class="aux">${fmt(o.start, true)} – ${fmt(o.start + o.dur, true)}</span></label>
+    <div class="seg">${[2, 4, 8].map(v => `<button data-a="durPreset" data-v="${v}" class="${near(o.dur, v) ? 'on' : ''}">${v} с</button>`).join('')}<button data-a="durPreset" data-v="end" class="${toEnd ? 'on' : ''}" ${end > o.start + 0.3 ? '' : 'disabled'}>До кінця</button></div></div>
+    <div class="chips">${chip('fade', 'Плавна поява', !!o.fade, 'true', 'sparkle')}<button class="chip" data-a="toCursor">${icon('stepFwd')}Почати з курсора</button></div>`;
+}
+
 function overlayPanel(o) {
-  let body = '';
+  let body = '', extra = '';
   if (o.type === 'text') {
-    body = `<div class="field"><label>Текст</label><textarea class="input" rows="3" data-f="text" spellcheck="true">${esc(o.text)}</textarea></div>
+    body = `<div class="field"><textarea class="input" rows="3" data-f="text" spellcheck="true" placeholder="Введіть текст">${esc(o.text)}</textarea></div>
+      <div class="field"><label>Вигляд</label><div class="style-grid">${STYLES.map(([v, n]) => `<button class="style-card st-${v}${(o.bg || 'none') === v ? ' on' : ''}" data-set="bg" data-v="${v}"><span>Aa</span><small>${n}</small></button>`).join('')}</div></div>
       ${range('size', 'Розмір', 20, 220, 1, o.size)}
-      ${seg('weight', 'Насиченість', [[400, 'Звичайний'], [600, 'Напівжирний'], [800, 'Жирний']], o.weight || 700)}
       <div class="field"><label>Колір тексту</label>${swatches(o.color, 'color')}</div>
-      ${seg('bg', 'Оформлення', [['none', 'Без'], ['shadow', 'Тінь'], ['outline', 'Контур'], ['box', 'Плашка']], o.bg || 'none')}
-      ${o.bg === 'box' || o.bg === 'outline' ? `<div class="field"><label>Колір ${o.bg === 'box' ? 'плашки' : 'контуру'}</label>${swatches(o.bgColor || '#000000', 'bgColor')}</div>` : ''}
-      ${o.bg === 'box' ? range('bgAlpha', 'Непрозорість плашки', 0.2, 1, 0.05, o.bgAlpha ?? 0.7, '%', Math.round((o.bgAlpha ?? 0.7) * 100)) : ''}
+      <div class="field"><label>Де розмістити</label><div class="seg">${[['top', 'Вгорі'], ['middle', 'По центру'], ['bottom', 'Внизу']].map(([v, n]) => `<button data-a="place" data-v="${v}">${n}</button>`).join('')}</div><p class="hint">Або просто перетягніть текст на перегляді.</p></div>`;
+    extra = `${seg('weight', 'Товщина літер', [[400, 'Звичайні'], [600, 'Напівжирні'], [800, 'Жирні']], o.weight || 700)}
       <div class="field"><label>Вирівнювання</label><div class="seg">${[['left', 'alignL'], ['center', 'alignC'], ['right', 'alignR']].map(([v, ic]) => `<button data-set="align" data-v="${v}" class="${(o.align || 'left') === v ? 'on' : ''}">${icon(ic)}</button>`).join('')}</div></div>
-      <div class="field"><label>Розташування</label><div class="seg">${[['top', 'Вгорі'], ['middle', 'Центр'], ['bottom', 'Внизу']].map(([v, n]) => `<button data-a="place" data-v="${v}">${n}</button>`).join('')}</div></div>`;
-  } else if (o.type === 'rect') {
+      ${o.bg === 'box' || o.bg === 'outline' ? `<div class="field"><label>Колір ${o.bg === 'box' ? 'плашки' : 'контуру'}</label>${swatches(o.bgColor || '#000000', 'bgColor')}</div>` : ''}
+      ${o.bg === 'box' ? range('bgAlpha', 'Прозорість плашки', 0.2, 1, 0.05, o.bgAlpha ?? 0.7, '%', Math.round((o.bgAlpha ?? 0.7) * 100)) : ''}`;
+  } else if (o.type === 'rect' || o.type === 'arrow') {
+    const cur = o.stroke || (o.type === 'arrow' ? 10 : 8);
     body = `<div class="field"><label>Колір</label>${swatches(o.color, 'color')}</div>
-      ${range('stroke', 'Товщина', 2, 30, 1, o.stroke || 8)}${range('radius', 'Заокруглення', 0, 80, 1, o.radius ?? 16)}
-      ${seg('fill', 'Заливка', [['false', 'Без'], ['true', 'Напівпрозора']], String(!!o.fill))}`;
-  } else if (o.type === 'arrow') {
-    body = `<div class="field"><label>Колір</label>${swatches(o.color, 'color')}</div>${range('stroke', 'Товщина', 3, 30, 1, o.stroke || 10)}
-      <p class="hint">Тягніть кінці стрілки на перегляді.</p>`;
+      ${seg('stroke', 'Товщина', [[5, 'Тонка'], [10, 'Середня'], [16, 'Товста']], [5, 10, 16].reduce((a, b) => (Math.abs(b - cur) < Math.abs(a - cur) ? b : a)))}
+      <p class="hint">${o.type === 'arrow' ? 'Тягніть кінці стрілки на перегляді.' : 'Тягніть рамку та її кути на перегляді.'}</p>`;
+    extra = `${range('stroke', 'Точна товщина', 2, 30, 1, cur)}${o.type === 'rect' ? range('radius', 'Заокруглення кутів', 0, 80, 1, o.radius ?? 16) + seg('fill', 'Заливка всередині', [['false', 'Немає'], ['true', 'Напівпрозора']], String(!!o.fill)) : ''}`;
   } else if (o.type === 'blur') {
-    body = `${range('strength', 'Сила', 6, 60, 1, o.strength || 20)}${seg('pixel', 'Вигляд', [['false', 'Розмиття'], ['true', 'Пікселі']], String(!!o.pixel))}
-      <p class="hint">Перемістіть і змініть розмір області на перегляді, щоб закрити пароль, пошту чи обличчя.</p>`;
+    const st = o.strength || 20;
+    body = `${seg('strength', 'Сила', [[10, 'Слабке'], [20, 'Середнє'], [40, 'Сильне']], [10, 20, 40].reduce((a, b) => (Math.abs(b - st) < Math.abs(a - st) ? b : a)))}
+      ${seg('pixel', 'Вигляд', [['false', 'Розмиття'], ['true', 'Пікселі']], String(!!o.pixel))}
+      <p class="hint">Перетягніть область на перегляді туди, де пароль, пошта чи обличчя, і змініть її розмір за кути.</p>`;
+    extra = range('strength', 'Точна сила', 6, 60, 1, st);
   } else if (o.type === 'spot') {
-    body = `${range('dim', 'Затемнення', 0.2, 0.9, 0.02, o.dim ?? 0.6, '%', Math.round((o.dim ?? 0.6) * 100))}${seg('shape', 'Форма', [['rect', 'Прямокутник'], ['ellipse', 'Овал']], o.shape || 'rect')}`;
+    const d = o.dim ?? 0.6;
+    body = `${seg('dim', 'Затемнення довкола', [[0.4, 'Легке'], [0.6, 'Середнє'], [0.8, 'Сильне']], [0.4, 0.6, 0.8].reduce((a, b) => (Math.abs(b - d) < Math.abs(a - d) ? b : a)))}
+      ${seg('shape', 'Форма', [['rect', 'Прямокутник'], ['ellipse', 'Овал']], o.shape || 'rect')}
+      <p class="hint">Все, крім світлої області, затемниться — увага глядача буде саме там.</p>`;
+    extra = range('dim', 'Точне затемнення', 0.2, 0.9, 0.02, d, '%', Math.round(d * 100));
   } else if (o.type === 'image') {
-    body = range('radius', 'Заокруглення', 0, 120, 1, o.radius || 0);
+    body = '<p class="hint">Перетягніть картинку на перегляді й змініть розмір за кути.</p>';
+    extra = range('radius', 'Заокруглення кутів', 0, 120, 1, o.radius || 0);
   }
-  const sub = `${fmt(o.start, true)} – ${fmt(o.start + o.dur, true)}`;
-  return head(OV_ICONS[o.type], OV_NAMES[o.type], sub) + body +
-    `<div class="sep"></div>
-    <div class="insp-row">${timeField('start', 'Початок', o.start)}${timeField('dur', 'Тривалість', o.dur)}</div>
-    <label class="check"><input type="checkbox" data-f="fade" ${o.fade ? 'checked' : ''}> Плавна поява й зникнення</label>
-    ${actions(act('toCursor', 'stepFwd', 'До курсора'), act('front', 'front', 'Наперед'), act('dup', 'copy', 'Дублювати'), act('del', 'trash', 'Видалити'))}`;
+  return head(OV_ICONS[o.type], OV_NAMES[o.type], '') + body + timing(o) +
+    actions(act('dup', 'copy', 'Дублювати'), act('del', 'trash', 'Видалити')) +
+    more('ov-' + o.type, `${extra}<div class="insp-row">${timeField('start', 'Початок', o.start)}${timeField('dur', 'Тривалість', o.dur)}</div>
+      <button class="btn btn-outline btn-sm btn-block" data-a="front">${icon('front')}Перенести наперед</button>`);
 }
 
 function captionPanel(c) {
   return head('cc', 'Субтитр', `${fmt(c.start, true)} – ${fmt(c.start + c.dur, true)}`) +
-    `<div class="field"><label>Текст</label><textarea class="input" rows="3" data-f="text" spellcheck="true">${esc(c.text)}</textarea></div>
+    `<div class="field"><textarea class="input" rows="3" data-f="text" spellcheck="true" placeholder="Що говориться в цей момент">${esc(c.text)}</textarea></div>
     <div class="insp-row">${timeField('start', 'Початок', c.start)}${timeField('dur', 'Тривалість', c.dur)}</div>
-    <p class="hint">Вигляд усіх субтитрів — у вкладці «Субтитри» ліворуч.</p>
-    ${actions(act('split', 'split', 'Розрізати'), act('dup', 'copy', 'Дублювати'), act('del', 'trash', 'Видалити'))}`;
+    <p class="hint">Час можна змінити й перетягуванням країв на таймлайні. Вигляд усіх субтитрів — у вкладці «Субтитри».</p>
+    ${actions(act('dup', 'copy', 'Дублювати'), act('del', 'trash', 'Видалити'))}`;
 }
 
 function musicPanel(x) {
   const m = media.get(x.mediaId);
+  const v = x.volume ?? 1;
   return head('music', m ? m.name : 'Аудіо', `${fmt(x.start, true)} – ${fmt(x.start + musicDur(x), true)}`) +
-    `<div class="field"><label>Гучність<span class="aux" data-show="volume">${Math.round((x.volume ?? 1) * 100)}%</span></label><input type="range" data-f="volume" data-pct="1" min="0" max="2" step="0.05" value="${x.volume ?? 1}"></div>
-    ${range('fadeIn', 'Плавна поява', 0, 5, 0.1, x.fadeIn || 0, ' с')}
-    ${range('fadeOut', 'Плавне зникнення', 0, 8, 0.1, x.fadeOut || 0, ' с')}
-    <div class="insp-row">${timeField('start', 'Початок', x.start)}<div class="field half"><label>Тривалість</label><div class="static">${fmtShort(musicDur(x))}</div></div></div>
-    ${actions(act('fitMusic', 'fit', 'Під довжину відео', mainEnd() > x.start ? '' : 'disabled'), act('split', 'split', 'Розрізати'), act('del', 'trash', 'Видалити'))}`;
+    `${seg('volume', 'Гучність', [[0.2, 'Тихий фон'], [0.4, 'Фон'], [0.7, 'Середня'], [1, 'Повна']], [0.2, 0.4, 0.7, 1].reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a)), 'Для музики під голос найкраще «Фон» або «Тихий фон».')}
+    <div class="chips">${chip('fadeIn', 'Плавна поява', x.fadeIn > 0, 1, 'sparkle')}${chip('fadeOut', 'Плавне зникнення', x.fadeOut > 0, 2, 'sparkle')}</div>
+    ${actions(act('fitMusic', 'fit', 'Обрізати під відео', mainEnd() > x.start ? '' : 'disabled'), act('split', 'split', 'Розрізати'), act('del', 'trash', 'Видалити'))}
+    ${more('music', `<div class="field"><label>Точна гучність<span class="aux" data-show="volume">${Math.round(v * 100)}%</span></label><input type="range" data-f="volume" data-pct="1" min="0" max="2" step="0.05" value="${v}"></div>
+      ${range('fadeIn', 'Тривалість появи', 0, 5, 0.1, x.fadeIn || 0, ' с')}
+      ${range('fadeOut', 'Тривалість зникнення', 0, 8, 0.1, x.fadeOut || 0, ' с')}
+      <div class="insp-row">${timeField('start', 'Початок', x.start)}<div class="field half"><label>Тривалість</label><div class="static">${fmtShort(musicDur(x))}</div></div></div>`)}`;
 }
 
 // ── обробка введення ──
@@ -383,6 +428,13 @@ function setColor(o, key, val) {
 function onClick(e) {
   const b = e.target.closest('button'); if (!b) return;
   const o = findSel();
+  if (b.dataset.toggle) {
+    if (!o) return;
+    const f = b.dataset.toggle, on = b.dataset.on;
+    const val = on === 'true' ? true : +on;
+    o[f] = o[f] ? (on === 'true' ? false : 0) : val;
+    commit(); return;
+  }
   if (b.dataset.sw) {
     const key = b.dataset.sw;
     if (key.startsWith('p:')) S.project[key.slice(2)] = b.dataset.c; else if (o) o[key] = b.dataset.c;
@@ -421,6 +473,21 @@ function onClick(e) {
     case 'mute': if (o) { o.muted = !o.muted; commit(); } break;
     case 'toCursor': if (o) { o.start = S.t; commit(); } break;
     case 'fitMusic': if (o) trimMusicToVideo(o); break;
+    case 'import': $('fileInput').dataset.target = ''; $('fileInput').click(); break;
+    case 'export': emit('open-export'); break;
+    case 'tab': showTab(b.dataset.v); document.body.classList.add('show-lib'); break;
+    case 'imgDur': if (o) {
+      const l = layout().find(x => x.clip.id === o.id);
+      const before = clipDur(o);
+      o.in = 0; o.out = +b.dataset.v * (o.speed || 1);
+      const delta = clipDur(o) - before;
+      rippleShift(l.end + Math.min(0, delta), delta);
+      commit();
+    } break;
+    case 'durPreset': if (o) {
+      o.dur = b.dataset.v === 'end' ? Math.max(0.3, mainEnd() - o.start) : +b.dataset.v;
+      commit();
+    } break;
     case 'place': if (o) {
       const h = textBoxes.get(o) || 0.12;
       o.y = b.dataset.v === 'top' ? 0.07 : b.dataset.v === 'middle' ? (1 - h) / 2 : 0.93 - h;

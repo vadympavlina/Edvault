@@ -1,5 +1,5 @@
 // Операції редагування — кожна змінює проєкт і записує крок в історію.
-import { S, media, uid, layout, clipAt, srcTime, clipDur, musicDur, mainEnd, duration, commit, select, findSel, rippleShift, outputSize, ASPECTS } from './state.js';
+import { S, media, uid, emit, layout, clipAt, srcTime, clipDur, musicDur, mainEnd, duration, commit, select, findSel, rippleShift, outputSize, ASPECTS } from './state.js';
 import { seek } from './player.js';
 import { toast } from './ui.js';
 
@@ -70,6 +70,7 @@ export function splitAt(t = S.t) {
   c.out = st; c.fadeOut = 0;
   p.clips.splice(p.clips.indexOf(c) + 1, 0, b);
   commit();
+  emit('did-cut');
   select('clip', b.id);
   return true;
 }
@@ -84,6 +85,7 @@ export function deleteSel() {
     p.clips = p.clips.filter(c => c.id !== o.id);
     rippleShift(l.start, -(l.end - l.start));
     if (S.t > l.start) seek(Math.max(l.start, S.t - (l.end - l.start)));
+    emit('did-cut');
   } else if (s.kind === 'overlay') p.overlays = p.overlays.filter(x => x.id !== o.id);
   else if (s.kind === 'caption') p.captions = p.captions.filter(x => x.id !== o.id);
   else if (s.kind === 'music') p.music = p.music.filter(x => x.id !== o.id);
@@ -129,6 +131,7 @@ export function cutRange(a, b) {
   commit();
   seek(a);
   toast(`Вирізано ${(b - a).toFixed(1).replace('.', ',')} с`);
+  emit('did-cut');
   return true;
 }
 
