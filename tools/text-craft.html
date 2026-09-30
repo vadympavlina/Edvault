@@ -443,7 +443,7 @@ svg{flex-shrink:0}
 
 /* ═══════════ POPOVERS / MENUS ═══════════ */
 .pop{
-  position:fixed;z-index:3000;display:none;min-width:200px;max-width:calc(100vw - 16px);max-height:calc(100vh - 80px);overflow-y:auto;
+  position:fixed;z-index:3700;display:none;min-width:200px;max-width:calc(100vw - 16px);max-height:calc(100vh - 80px);overflow-y:auto;
   background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px;
   animation:popIn .12s ease-out;
 }
@@ -766,6 +766,7 @@ svg{flex-shrink:0}
     <button class="btn btn-icon" data-act="toc" data-tip="Зміст" id="tocToggle"><span data-icon="toc"></span></button>
     <button class="btn btn-icon hide-sm" data-act="header" data-tip="Шапка документа"><span data-icon="banner"></span></button>
     <button class="btn btn-icon" data-act="view" data-tip="Вигляд: тема, ширина, шрифт"><span data-icon="view"></span></button>
+    <button class="btn btn-icon hide-sm" data-act="clearDoc" data-tip="Очистити весь документ"><span data-icon="trash"></span></button>
     <button class="btn btn-icon hide-sm" data-act="help" data-tip="Гарячі клавіші та підказки"><span data-icon="help"></span></button>
     <button class="btn btn-primary" data-act="export" data-tip="Зберегти як HTML, PDF або Markdown"><span data-icon="download"></span><span class="hide-sm">Експорт</span></button>
   </div>
@@ -4638,6 +4639,17 @@ async function newDoc() {
   caretStart(editor.firstElementChild);
   toast('Створено новий документ', 'ok');
 }
+// Очистити весь текст поточного документа (назва й шапка лишаються); повернути можна через Ctrl+Z
+async function clearDoc() {
+  const empty = !(editor.textContent || '').trim() && !editor.querySelector('img,table,hr,pre');
+  if (empty) { toast('Документ уже порожній'); return; }
+  const ok = await confirmDialog('Очистити документ?', 'Увесь текст, блоки й картинки в цьому документі буде прибрано. Назва й шапка залишаться. Передумали — натисніть Ctrl+Z.', 'Очистити', true);
+  if (!ok) return;
+  mutate(() => { editor.innerHTML = DEFAULT_HTML; });
+  editor.focus();
+  caretEnd(editor.firstElementChild);
+  toast('Документ очищено. Ctrl+Z — повернути');
+}
 async function duplicateDoc(id) {
   await flushSave();
   const rec = await Store.get(id);
@@ -5286,6 +5298,7 @@ function bindUi() {
       case 'docs': openDrawer(); break;
       case 'closeDrawer': closeDrawer(); break;
       case 'newDoc': newDoc(); break;
+      case 'clearDoc': clearDoc(); break;
       case 'import': $('#importInput').click(); break;
       case 'toc': toggleToc(); break;
       case 'header': openHeaderModal(); break;
