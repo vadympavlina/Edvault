@@ -433,3 +433,12 @@ details.more summary:hover{color:var(--text)}
 .rec-badge .btn:hover:not(:disabled){background:#dc2626;color:#fff}
 @keyframes recBlink{50%{opacity:.3}}
 body.recording .tl,body.recording .lib,body.recording .insp,body.recording .topbar{pointer-events:none;opacity:.6}
+.auto-cc{display:flex;align-items:center;gap:12px;width:100%;padding:12px;margin-bottom:10px;border-radius:12px;border:1px solid var(--accent-border);background:linear-gradient(135deg,var(--accent-light),color-mix(in srgb,#ec4899 10%,transparent));text-align:left;transition:transform .1s,box-shadow .12s}
+.auto-cc:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+.auto-cc:disabled{opacity:.5}
+.auto-cc > .ico{width:34px;height:34px;padding:7px;border-radius:9px;background:var(--accent);color:#fff;flex-shrink:0}
+.auto-cc b{display:block;font-size:13.5px}
+.auto-cc small{display:block;font-size:12px;color:var(--text2);margin-top:1px}
+.corner-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.corner-grid button{height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);font-size:16px;color:var(--text2)}
+.corner-grid button:hover{border-color:var(--accent);color:var(--accent)}

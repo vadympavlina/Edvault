@@ -1,6 +1,7 @@
 // Перегляд: відтворення через <video>/<audio> з синхронізацією за таймлайном.
 import { S, media, emit, on, layout, clipAt, srcTime, duration, musicDur, outputSize } from './state.js';
 import { renderScene, fadeAlpha } from './render.js';
+import { duckGain } from './duck.js';
 
 let canvas, ctx;
 let actx = null;
@@ -73,9 +74,36 @@ export function requestDraw() {
   drawQueued = true;
   requestAnimationFrame(() => { drawQueued = false; draw(); });
 }
+// ── відео поверх відео: окремий елемент для кожної накладки ──
+const ovEls = new Map(); // overlay.id → HTMLVideoElement
+function ovEl(o) {
+  let v = ovEls.get(o.id);
+  const m = media.get(o.mediaId);
+  if (!m) return null;
+  if (v && v.dataset.media !== m.id) { v.removeAttribute('src'); v.load(); v.remove(); v = null; }
+  if (!v) {
+    v = document.createElement('video');
+    v.preload = 'auto'; v.playsInline = true; v.src = m.url; v.dataset.media = m.id;
+    v.addEventListener('loadeddata', () => { if (!S.playing) requestDraw(); });
+    document.getElementById('mediaPool').appendChild(v);
+    ovEls.set(o.id, v);
+  }
+  return v;
+}
+function cleanupOvEls() {
+  const ids = new Set(S.project.overlays.filter(o => o.type === 'video').map(o => o.id));
+  for (const [id, v] of ovEls) if (!ids.has(id)) { v.pause(); v.removeAttribute('src'); v.load(); v.remove(); ovEls.delete(id); }
+}
+function ovProvider(o, st) {
+  const v = ovEl(o);
+  if (!v || v.readyState < 2) return null;
+  return { src: v, w: v.videoWidth, h: v.videoHeight };
+}
+const activeOv = t => S.project.overlays.filter(o => o.type === 'video' && t >= o.start && t < o.start + o.dur);
+
 function draw() {
   if (!ctx) return;
-  renderScene(ctx, canvas.width, canvas.height, S.t, previewProvider, undefined, { editing: !S.playing });
+  renderScene(ctx, canvas.width, canvas.height, S.t, previewProvider, undefined, { editing: !S.playing, ovFrame: ovProvider });
 }
 
 // ── перемотування ──
@@ -88,7 +116,19 @@ export function seek(t) {
   emit('time');
 }
 
+function syncPausedOv() {
+  for (const o of activeOv(S.t)) {
+    const v = ovEl(o); if (!v) continue;
+    const st = (o.in || 0) + (S.t - o.start);
+    if (Math.abs(v.currentTime - st) > 0.03) {
+      v.addEventListener('seeked', () => { if (!S.playing) requestDraw(); }, { once: true });
+      v.currentTime = st;
+    }
+  }
+}
 function syncPaused() {
+  cleanupOvEls();
+  syncPausedOv();
   const l = clipAt(S.t);
   if (!l) return;
   const m = media.get(l.clip.mediaId);
@@ -121,6 +161,7 @@ export function pause() {
   S.playing = false;
   cancelAnimationFrame(raf);
   media.forEach(m => { if (m.el && m.el.pause) m.el.pause(); });
+  ovEls.forEach(v => v.pause());
   emit('play');
   syncPaused();
   requestDraw();
@@ -165,6 +206,14 @@ function syncElements(hard, L = layout()) {
       if (v.paused) v.play().catch(() => {});
     }
   }
+  for (const o of activeOv(t)) {
+    const v = ovEl(o); if (!v) continue;
+    const st = (o.in || 0) + (t - o.start);
+    active.add(v);
+    if (hard || Math.abs(v.currentTime - st) > 0.25) v.currentTime = st;
+    setVolume(v, o.muted ? 0 : (o.volume ?? 1));
+    if (v.paused) v.play().catch(() => {});
+  }
   for (const mu of S.project.music) {
     const m = media.get(mu.mediaId);
     if (!m || !m.el) continue;
@@ -173,17 +222,18 @@ function syncElements(hard, L = layout()) {
     const a = m.el, st = mu.in + (t - mu.start);
     active.add(a);
     if (hard || Math.abs(a.currentTime - st) > 0.3) a.currentTime = st;
-    setVolume(a, (mu.volume ?? 1) * fadeAlpha(t, mu.start, md, mu.fadeIn || 0, mu.fadeOut || 0));
+    setVolume(a, (mu.volume ?? 1) * fadeAlpha(t, mu.start, md, mu.fadeIn || 0, mu.fadeOut || 0) * (mu.duck ? duckGain(t, L) : 1));
     if (a.paused) a.play().catch(() => {});
   }
   media.forEach(m => { if (m.el && m.el.pause && !active.has(m.el) && !m.el.paused) m.el.pause(); });
+  ovEls.forEach(v => { if (!active.has(v) && !v.paused) v.pause(); });
 }
 
 // знімок поточного кадру в PNG у повній роздільності
 export async function snapshot() {
   const { W, H } = outputSize();
   const c = document.createElement('canvas'); c.width = W; c.height = H;
-  renderScene(c.getContext('2d'), W, H, S.t, previewProvider);
+  renderScene(c.getContext('2d'), W, H, S.t, previewProvider, undefined, { ovFrame: ovProvider });
   return new Promise(r => c.toBlob(r, 'image/png'));
 }
 

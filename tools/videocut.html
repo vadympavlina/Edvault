@@ -187,6 +187,30 @@
   </div>
 </div>
 
+<!-- Автосубтитри -->
+<div class="overlay" id="asrModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="asrTitle">
+    <div class="modal-head"><h3 id="asrTitle">Субтитри автоматично</h3><button class="btn btn-icon" data-close><span data-icon="x"></span></button></div>
+    <div id="asrSetup">
+      <p class="msg">Редактор сам розпізнає, що говориться у відео, і створить субтитри з часом. Усе працює у вашому браузері — відео нікуди не надсилається. Першого разу завантажиться модель розпізнавання, потім вона береться з пам’яті браузера.</p>
+      <div class="field" style="margin-top:14px"><label>Мова відео</label><div class="seg seg-wide" id="asrLang">
+        <button data-v="uk" class="on">Українська</button><button data-v="en">Англійська</button><button data-v="auto">Визначити самому</button>
+      </div></div>
+      <div class="field"><label>Точність</label><div class="seg seg-wide" id="asrModel">
+        <button data-v="base" class="on">Швидко<small>модель ≈ 80 МБ</small></button>
+        <button data-v="small">Точніше<small>модель ≈ 250 МБ, повільніше</small></button>
+      </div></div>
+      <div class="ex-info" id="asrInfo"></div>
+      <div class="modal-actions"><button class="btn btn-outline" data-close>Скасувати</button><button class="btn btn-primary" id="asrStart"><span data-icon="wand"></span>Створити субтитри</button></div>
+    </div>
+    <div id="asrRun" hidden>
+      <div class="ex-prog"><div class="ex-bar"><i id="asrBar"></i></div><div class="ex-row"><b id="asrPct">0%</b><span id="asrStage">Готуємо…</span></div></div>
+      <p class="hint">Можна закрити це вікно й працювати далі — розпізнавання триватиме. Не закривайте вкладку.</p>
+      <div class="modal-actions"><button class="btn btn-outline" id="asrCancel">Скасувати</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- Озвучення -->
 <div class="overlay" id="voModal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="voTitle">

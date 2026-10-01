@@ -94,6 +94,24 @@ export async function exportVideo(opts) {
     tails.set(L[i - 1].clip.id, await ensureTail(L[i - 1].clip));
   }
   const tailOf = c => tails.get(c.id) || null;
+  // відео поверх відео — окремий декодер для кожної накладки
+  const ovReaders = new Map();
+  const ovFrames = new Map(); // кадри накладок для поточного кадру (рахуються заздалегідь, бо renderScene синхронний)
+  async function prepareOv(t) {
+    ovFrames.clear();
+    for (const o of S.project.overlays) {
+      if (o.type !== 'video') continue;
+      const live = t >= o.start && t < o.start + o.dur;
+      if (!live) { const r = ovReaders.get(o.id); if (r && t >= o.start + o.dur) { await r.close(); ovReaders.delete(o.id); } continue; }
+      const m = media.get(o.mediaId); if (!m) continue;
+      let r = ovReaders.get(o.id);
+      const st = (o.in || 0) + (t - o.start);
+      if (!r) { r = m.vt && m.canDecodeV ? new ClipFrames(m, st - 0.05, (o.in || 0) + o.dur) : new ElementFrames(m); ovReaders.set(o.id, r); }
+      if (st <= m.duration) ovFrames.set(o.id, await r.at(st));
+    }
+  }
+  const ovFrame = o => ovFrames.get(o.id) || null;
+  const hasOv = S.project.overlays.some(o => o.type === 'video');
   const readers = new Map(); // clip.id → ClipFrames|ElementFrames
   const readerFor = l => {
     let r = readers.get(l.clip.id);
@@ -131,7 +149,8 @@ export async function exportVideo(opts) {
       lastClipId = l ? l.clip.id : null;
       let frame = null;
       if (l) { const r = readerFor(l); frame = r ? await r.at(srcTime(l, t)) : null; }
-      renderScene(ctx, W, H, t, () => frame, L, { tailOf });
+      if (hasOv) await prepareOv(t);
+      renderScene(ctx, W, H, t, () => frame, L, { tailOf, ovFrame });
       await vsrc.add(i / fps, 1 / fps);
       if (i % 5 === 0 || i === frames - 1) {
         const p = (i + 1) / frames;
@@ -147,6 +166,7 @@ export async function exportVideo(opts) {
     throw e;
   } finally {
     for (const r of readers.values()) await r.close();
+    for (const r of ovReaders.values()) await r.close();
   }
   if (opts.writable) return null;
   return new Blob([target.buffer], { type: opts.format === 'mp4' ? 'video/mp4' : 'video/webm' });

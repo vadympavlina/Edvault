@@ -3,6 +3,7 @@
 import { AudioBufferSink } from '../vendor/mediabunny.min.mjs';
 import { S, media, layout, musicDur } from './state.js';
 import { fadeAlpha } from './render.js';
+import { duckEnvelope } from './duck.js';
 
 export const SR = 48000;
 const sinks = new Map();
@@ -33,7 +34,7 @@ async function readPCM(m, from, to) {
 }
 
 // Сегменти звуку, що потрапляють у [t0, t1)
-function segments(t0, t1) {
+function segments(t0, t1, speechOnly = false) {
   const out = [];
   for (const l of layout()) {
     if (l.end <= t0 || l.start >= t1) continue;
@@ -42,10 +43,17 @@ function segments(t0, t1) {
     out.push({ m, start: l.start, end: l.end, srcIn: c.in, speed: c.speed || 1, vol: c.volume ?? 1, fin: c.fadeIn || 0, fout: c.fadeOut || 0 });
   }
   for (const mu of S.project.music) {
+    if (speechOnly && !mu.voice) continue;
     const m = media.get(mu.mediaId);
     const d = musicDur(mu);
     if (!m || !m.at || !m.canDecodeA || mu.start + d <= t0 || mu.start >= t1) continue;
-    out.push({ m, start: mu.start, end: mu.start + d, srcIn: mu.in, speed: 1, vol: mu.volume ?? 1, fin: mu.fadeIn || 0, fout: mu.fadeOut || 0 });
+    out.push({ m, start: mu.start, end: mu.start + d, srcIn: mu.in, speed: 1, vol: mu.volume ?? 1, fin: mu.fadeIn || 0, fout: mu.fadeOut || 0, duck: !speechOnly && !!mu.duck });
+  }
+  for (const o of S.project.overlays) {
+    if (o.type !== 'video' || o.muted || (o.volume ?? 1) <= 0) continue;
+    const m = media.get(o.mediaId);
+    if (!m || !m.at || !m.canDecodeA || o.start + o.dur <= t0 || o.start >= t1) continue;
+    out.push({ m, start: o.start, end: o.start + Math.min(o.dur, m.duration - (o.in || 0)), srcIn: o.in || 0, speed: 1, vol: o.volume ?? 1, fin: 0, fout: 0 });
   }
   return out;
 }
@@ -54,14 +62,16 @@ const GRAIN = Math.round(0.05 * SR), HOP = GRAIN / 2;
 const WIN = new Float32Array(GRAIN).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / GRAIN)); // періодичне вікно Ганна: сума з 50% перекриттям = 1
 
 // Рендерить блок [t0, t1) таймлайну в AudioBuffer (48 кГц, стерео)
-export async function renderBlock(t0, t1) {
+export async function renderBlock(t0, t1, { speechOnly = false } = {}) {
   const n = Math.max(1, Math.round((t1 - t0) * SR));
   const outL = new Float32Array(n), outR = new Float32Array(n);
-  for (const s of segments(t0, t1)) {
+  let env = null;
+  for (const s of segments(t0, t1, speechOnly)) {
     const a = Math.max(t0, s.start), b = Math.min(t1, s.end);
     const o0 = Math.round((a - t0) * SR), o1 = Math.round((b - t0) * SR);
     if (o1 <= o0) continue;
-    const gain = j => s.vol * fadeAlpha(t0 + j / SR, s.start, s.end - s.start, s.fin, s.fout);
+    if (s.duck && !env) env = duckEnvelope(t0, t1);
+    const gain = s.duck ? (j => s.vol * fadeAlpha(t0 + j / SR, s.start, s.end - s.start, s.fin, s.fout) * env.at(t0 + j / SR)) : (j => s.vol * fadeAlpha(t0 + j / SR, s.start, s.end - s.start, s.fin, s.fout));
     if (Math.abs(s.speed - 1) < 1e-3) {
       const from = s.srcIn + (a - s.start);
       const [L, R] = await readPCM(s.m, from, from + (o1 - o0) / SR + 1 / SR);
@@ -102,5 +112,6 @@ export async function renderBlock(t0, t1) {
 
 export function hasAnyAudio() {
   return layout().some(l => { const m = media.get(l.clip.mediaId); return m && m.at && m.canDecodeA && !l.clip.muted; })
-    || S.project.music.some(mu => { const m = media.get(mu.mediaId); return m && m.at && m.canDecodeA; });
+    || S.project.music.some(mu => { const m = media.get(mu.mediaId); return m && m.at && m.canDecodeA; })
+    || S.project.overlays.some(o => { if (o.type !== 'video' || o.muted) return false; const m = media.get(o.mediaId); return m && m.at && m.canDecodeA; });
 }

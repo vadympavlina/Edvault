@@ -6,8 +6,8 @@ import { seek } from './player.js';
 import { $, esc, icon, clamp, fmt } from './ui.js';
 
 const ROW = 28, CC_H = 30, V_H = 66, A_H = 44, RULER_H = 26;
-const OV_LABEL = { text: 'Текст', rect: 'Рамка', arrow: 'Стрілка', blur: 'Розмиття', spot: 'Прожектор', image: 'Зображення', emoji: 'Емодзі', progress: 'Прогрес' };
-const OV_ICON = { text: 'text', rect: 'rect', arrow: 'arrow', blur: 'blur', spot: 'spot', image: 'image', emoji: 'smile', progress: 'progress' };
+const OV_LABEL = { video: 'Відео поверх', text: 'Текст', rect: 'Рамка', arrow: 'Стрілка', blur: 'Розмиття', spot: 'Прожектор', image: 'Зображення', emoji: 'Емодзі', progress: 'Прогрес' };
+const OV_ICON = { video: 'pip', text: 'text', rect: 'rect', arrow: 'arrow', blur: 'blur', spot: 'spot', image: 'image', emoji: 'smile', progress: 'progress' };
 const TR_NAMES = { fade: 'Розчинення', black: 'Через чорне', slide: 'Зсув', wipe: 'Шторка', zoom: 'Наближення' };
 
 let scroll, inner, lanes, heads, ruler, playheadEl, rangeEl, insertEl;
@@ -328,8 +328,18 @@ function moveTimed(P, list, dt) {
   if (!o) return;
   const end = orig.start + orig.dur;
   if (drag.mode === 'move') o.start = Math.max(0, snapBoth(orig.start + dt, orig.dur, o.id));
-  else if (drag.mode === 'l') { o.start = clamp(snap(orig.start + dt, o.id), 0, end - 0.2); o.dur = end - o.start; }
-  else o.dur = Math.max(0.2, snap(end + dt, o.id) - orig.start);
+  else if (drag.mode === 'l') {
+    o.start = clamp(snap(orig.start + dt, o.id), 0, end - 0.2);
+    if (o.type === 'video') { // ліву межу відео поверх не можна тягнути раніше за його початок
+      const nin = (orig.in || 0) + (o.start - orig.start);
+      if (nin < 0) o.start = orig.start - (orig.in || 0);
+      o.in = Math.max(0, (orig.in || 0) + (o.start - orig.start));
+    }
+    o.dur = end - o.start;
+  } else {
+    o.dur = Math.max(0.2, snap(end + dt, o.id) - orig.start);
+    if (o.type === 'video') { const m = media.get(o.mediaId); if (m) o.dur = Math.min(o.dur, m.duration - (o.in || 0)); }
+  }
 }
 
 function moveMusic(P, dt) {

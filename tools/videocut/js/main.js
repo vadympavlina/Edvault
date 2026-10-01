@@ -8,6 +8,7 @@ import { initPreviewLayer, renderHandles } from './preview.js';
 import { addToTimeline, addOverlay, splitAt, deleteSel, duplicateSel, cutRange, addCaption, findSilences, cutRanges, addVoice } from './ops.js';
 import { exportVideo, exportAudio, exportSize, detectCodecs, canExport } from './export.js';
 import { DB, takeHandoff } from './db.js';
+import { initAsr, openAsr } from './asr.js';
 import { $, icon, hydrateIcons, initTips, initTheme, toast, fmt, openModal, closeModal, anyModalOpen, confirmDialog, downloadBlob, safeName, fmtBytes } from './ui.js';
 
 hydrateIcons();
@@ -18,6 +19,8 @@ initTimeline();
 initLibrary();
 initInspector();
 initPreviewLayer();
+initAsr();
+on('open-asr', openAsr);
 
 // ── розмір перегляду ──
 const stage = $('stage');
