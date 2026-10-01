@@ -2,7 +2,7 @@
 import { S, media, uid, emit, layout, clipAt, srcTime, clipDur, musicDur, mainEnd, duration, commit, select, findSel, rippleShift, outputSize, ASPECTS } from './state.js';
 import { seek } from './player.js';
 import { toast } from './ui.js';
-import { addMedia, peakIn, PEAKS_RATE } from './media.js';
+import { addMedia, peakIn, PEAKS_RATE, grabFrame } from './media.js';
 
 const FPS_EPS = 0.05;
 
@@ -14,7 +14,7 @@ function nearestAspect(w, h) {
 }
 
 export function newClip(m) {
-  return { id: uid('c'), mediaId: m.id, in: 0, out: m.kind === 'image' ? 5 : m.duration, speed: 1, volume: 1, muted: false, fadeIn: 0, fadeOut: 0, fit: 'contain', zoom: 1, zx: 0.5, zy: 0.5 };
+  return { id: uid('c'), mediaId: m.id, in: 0, out: m.kind === 'image' ? 5 : m.duration, speed: 1, volume: 1, muted: false, fadeIn: 0, fadeOut: 0, fit: 'blur', zoom: 1, zx: 0.5, zy: 0.5, motion: m.kind === 'image' ? 'in' : 'none' };
 }
 
 // Додає відео/фото в кінець основної доріжки, аудіо — на музичну доріжку
@@ -33,10 +33,10 @@ export function addMusic(m, silent) {
   const p = S.project;
   const start = p.music.length ? Math.min(S.t, duration()) : 0;
   const len = mainEnd() > 0 ? Math.min(m.duration, Math.max(1, mainEnd() - start)) : m.duration;
-  const x = { id: uid('a'), mediaId: m.id, start, in: 0, out: len, volume: mainEnd() > 0 ? 0.35 : 1, fadeIn: 0.5, fadeOut: 1.5 };
+  const x = { id: uid('a'), mediaId: m.id, start, in: 0, out: len, volume: mainEnd() > 0 ? 0.5 : 1, fadeIn: 0.5, fadeOut: 1.5, duck: mainEnd() > 0 };
   p.music.push(x);
   commit();
-  if (!silent) { select('music', x.id); toast(mainEnd() > 0 ? 'Музику додано під відео — гучність 35%, щоб не заглушати голос' : 'Аудіо додано'); }
+  if (!silent) { select('music', x.id); toast(mainEnd() > 0 ? 'Музику додано під відео — вона сама стишується, коли хтось говорить' : 'Аудіо додано'); }
   return x;
 }
 
@@ -179,6 +179,12 @@ export function addOverlay(type, extra = {}) {
   let o;
   if (type === 'text') o = { ...base, ...structuredClone(TEXT_PRESETS[extra.preset || 'plain'].o), anim: 'fade' };
   else if (type === 'emoji') { const w = 0.13; o = { ...base, emoji: extra.emoji || '⭐', x: 0.78, y: 0.08, w, h: w * W / H, anim: 'pop', dur: 3 }; }
+  else if (type === 'video') {
+    const m = media.get(extra.mediaId);
+    const w = 0.24, h = w * W / H; // коло
+    const start = extra.start ?? S.t;
+    o = { ...base, mediaId: extra.mediaId, in: 0, start, dur: m ? m.duration : 5, x: 0.97 - w, y: 0.95 - h, w, h, shape: 'circle', border: '#ffffff', volume: 1, muted: false, fade: true, anim: 'pop', flip: false };
+  }
   else if (type === 'progress') o = { ...base, start: 0, dur: Math.max(1, mainEnd() || duration() || 10), x: 0, y: 0.985, w: 1, h: 0.015, color: '#4F6BF4', fade: false };
   else if (type === 'rect') o = { ...base, x: 0.3, y: 0.3, w: 0.4, h: 0.3, color: '#ef4444', stroke: 8, radius: 16, fill: false };
   else if (type === 'arrow') o = { ...base, x: 0.28, y: 0.3, w: 0.18, h: 0.16 * W / H, color: '#ef4444', stroke: 10 };
@@ -347,4 +353,32 @@ export function addVoice(m, start) {
   commit();
   select('music', x.id);
   return x;
+}
+
+// Стоп-кадр: поточний кадр застигає на кілька секунд (вставляється як фото в позиції курсора)
+export async function freezeFrame(dur = 3) {
+  const l = clipAt(S.t);
+  if (!l) { toast('Поставте курсор на відео'); return false; }
+  const c = l.clip, m = media.get(c.mediaId);
+  if (!m || m.kind !== 'video') { toast('Стоп-кадр можна зробити лише з відео'); return false; }
+  const cv = await grabFrame(m, srcTime(l, S.t), 1920);
+  if (!cv) { toast('Не вдалося взяти кадр', 'err'); return false; }
+  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.92));
+  const fm = await addMedia(blob, 'Стоп-кадр.jpg');
+  const p = S.project, t = S.t;
+  const idx = p.clips.indexOf(c);
+  const fc = { ...newClip(fm), out: dur, fit: c.fit, rot: c.rot, flip: c.flip, look: c.look, bri: c.bri, con: c.con, sat: c.sat, zoom: c.zoom, zx: c.zx, zy: c.zy, motion: 'none' };
+  if (t <= l.start + 0.05) p.clips.splice(idx, 0, fc);
+  else if (t >= l.end - 0.05) p.clips.splice(idx + 1, 0, fc);
+  else {
+    const st = srcTime(l, t);
+    const b = { ...structuredClone(c), id: uid('c'), in: st, fadeIn: 0 }; delete b.tr;
+    c.out = st; c.fadeOut = 0;
+    p.clips.splice(idx + 1, 0, fc, b);
+  }
+  rippleShift(t, dur);
+  commit();
+  select('clip', fc.id);
+  toast(`Стоп-кадр на ${dur} с додано`, 'ok');
+  return true;
 }

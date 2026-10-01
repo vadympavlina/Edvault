@@ -175,8 +175,7 @@ export function thumbAt(m, t) {
 const tails = new Map(); // key → HTMLCanvasElement | null | 'pending'
 const tailKey = c => c.mediaId + '@' + (+c.out).toFixed(3);
 
-async function grabFrame(m, t) {
-  const maxW = 1280;
+export async function grabFrame(m, t, maxW = 1280) {
   const w = Math.min(maxW, m.width || maxW), h = Math.max(2, Math.round(w * (m.height || 720) / (m.width || 1280)));
   if (m.vt && m.canDecodeV) {
     try {

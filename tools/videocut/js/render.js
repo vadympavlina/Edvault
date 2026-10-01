@@ -239,6 +239,32 @@ export function drawOverlay(ctx, o, W, H, k, x = {}) {
       ctx.restore();
       break;
     }
+    case 'video': {
+      const f = x.frame;
+      let bx = o.x * W, by = o.y * H, bw = o.w * W, bh = o.h * H;
+      if (bw < 0) { bx += bw; bw = -bw; } if (bh < 0) { by += bh; bh = -bh; }
+      const shape = o.shape || 'circle';
+      const path = () => {
+        ctx.beginPath();
+        if (shape === 'circle') ctx.ellipse(bx + bw / 2, by + bh / 2, bw / 2, bh / 2, 0, 0, Math.PI * 2);
+        else roundRectPath(ctx, bx, by, bw, bh, shape === 'round' ? Math.min(bw, bh) * 0.12 : 0);
+      };
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 24 * k; ctx.shadowOffsetY = 6 * k;
+      path(); ctx.fillStyle = '#111'; ctx.fill();
+      ctx.restore();
+      if (f && f.w && f.h) {
+        ctx.save(); path(); ctx.clip();
+        const r = Math.max(bw / f.w, bh / f.h), dw = f.w * r, dh = f.h * r;
+        const dx = bx + (bw - dw) / 2, dy = by + (bh - dh) / 2;
+        if (o.flip) { ctx.translate(bx + bw / 2, 0); ctx.scale(-1, 1); ctx.translate(-(bx + bw / 2), 0); }
+        if (f.src && typeof f.src.draw === 'function' && !(f.src instanceof HTMLCanvasElement)) f.src.draw(ctx, dx, dy, dw, dh);
+        else ctx.drawImage(f.src, dx, dy, dw, dh);
+        ctx.restore();
+      }
+      if (o.border && o.border !== 'none') { ctx.save(); path(); ctx.lineWidth = 6 * k; ctx.strokeStyle = o.border; ctx.stroke(); ctx.restore(); }
+      break;
+    }
     case 'image': {
       const m = media.get(o.mediaId);
       if (!m || !m.el) break;
@@ -277,11 +303,59 @@ function drawCaption(ctx, c, W, H, k, style) {
 }
 
 // Малює кадр основної доріжки з урахуванням вписування, зуму й затемнення
-function drawFitted(ctx, c, f, W, H) {
-  const r = (c.fit === 'cover' ? Math.max : Math.min)(W / f.w, H / f.h);
-  const dw0 = f.w * r, dh0 = f.h * r;
-  const z = Math.max(1, c.zoom || 1);
-  const fx = c.zx ?? 0.5, fy = c.zy ?? 0.5;
+// малює джерело з поворотом/віддзеркаленням так, що (cx, cy) — центр, dw×dh — розмір на екрані (вже з урахуванням повороту)
+function drawOriented(g, f, cx, cy, dw, dh, rot, flip) {
+  const side = rot === 90 || rot === 270;
+  const sw = side ? dh : dw, sh = side ? dw : dh;
+  g.save();
+  g.translate(cx, cy);
+  if (rot) g.rotate(rot * Math.PI / 180);
+  if (flip) g.scale(-1, 1);
+  if (f.src && typeof f.src.draw === 'function' && !(f.src instanceof HTMLCanvasElement)) f.src.draw(g, -sw / 2, -sh / 2, sw, sh);
+  else g.drawImage(f.src, -sw / 2, -sh / 2, sw, sh);
+  g.restore();
+}
+// розмитий фон замість чорних смуг: кадр зменшується до кількох десятків пікселів і розтягується назад
+let bgCv = null;
+function drawBlurBg(ctx, c, f, W, H, rot, fw, fh) {
+  const bw = 28, bh = Math.max(2, Math.round(bw * H / W));
+  if (!bgCv) bgCv = document.createElement('canvas');
+  if (bgCv.width !== bw || bgCv.height !== bh) { bgCv.width = bw; bgCv.height = bh; }
+  const g = bgCv.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, bw, bh);
+  const k = bw / W;
+  g.setTransform(k, 0, 0, k, 0, 0);
+  const r = Math.max(W / fw, H / fh) * 1.08;
+  const filt = FILTERS_OK ? lookFilter(c) : 'none';
+  if (filt !== 'none') g.filter = filt;
+  drawOriented(g, f, W / 2, H / 2, fw * r, fh * r, rot, !!c.flip);
+  g.filter = 'none';
+  ctx.save();
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bgCv, 0, 0, bw, bh, -W * 0.02, -H * 0.02, W * 1.04, H * 1.04);
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+export const MOTIONS = { none: 'Без руху', in: 'Наближення', out: 'Віддалення', pan: 'Панорама' };
+// prog — позиція всередині кліпу 0…1 (для плавного руху фото)
+function drawFitted(ctx, c, f, W, H, prog = 0) {
+  const rot = (((c.rot || 0) % 360) + 360) % 360;
+  const side = rot === 90 || rot === 270;
+  const fw = side ? f.h : f.w, fh = side ? f.w : f.h;
+  const fit = c.fit || 'contain';
+  if (fit === 'blur' && Math.abs(fw / fh - W / H) > 0.01) drawBlurBg(ctx, c, f, W, H, rot, fw, fh);
+  const r = (fit === 'cover' ? Math.max : Math.min)(W / fw, H / fh);
+  const dw0 = fw * r, dh0 = fh * r;
+  let z = Math.max(1, c.zoom || 1);
+  let fx = c.zx ?? 0.5, fy = c.zy ?? 0.5;
+  const mo = c.motion;
+  if (mo && mo !== 'none') {
+    const e = smooth(clamp01(prog));
+    if (mo === 'in') z *= 1 + 0.16 * e;
+    else if (mo === 'out') z *= 1.16 - 0.16 * e;
+    else if (mo === 'pan') { z *= 1.14; fx = 0.15 + 0.7 * e; }
+  }
   const dw = dw0 * z, dh = dh0 * z;
   // точка фокусу лишається на тому самому місці екрана
   const px = W / 2 + (fx - 0.5) * dw0, py = H / 2 + (fy - 0.5) * dh0;
@@ -292,14 +366,13 @@ function drawFitted(ctx, c, f, W, H) {
   }
   const filt = FILTERS_OK ? lookFilter(c) : 'none';
   if (filt !== 'none') ctx.filter = filt;
-  if (f.src && typeof f.src.draw === 'function' && !(f.src instanceof HTMLCanvasElement)) f.src.draw(ctx, x, y, dw, dh);
-  else ctx.drawImage(f.src, x, y, dw, dh);
+  drawOriented(ctx, f, x + dw / 2, y + dh / 2, dw, dh, rot, !!c.flip);
   if (filt !== 'none') ctx.filter = 'none';
   applyLookOverlay(ctx, c, W, H);
 }
 export function drawClipFrame(ctx, l, f, W, H, t) {
   const c = l.clip;
-  drawFitted(ctx, c, f, W, H);
+  drawFitted(ctx, c, f, W, H, (t - l.start) / Math.max(0.01, l.end - l.start));
   const a = 1 - fadeAlpha(t, l.start, l.end - l.start, c.fadeIn || 0, c.fadeOut || 0);
   if (a > 0.001) { ctx.fillStyle = `rgba(0,0,0,${a})`; ctx.fillRect(0, 0, W, H); }
 }
@@ -324,7 +397,8 @@ export function renderScene(ctx, W, H, t, provider, L = layout(), opts = {}) {
   }
   for (const o of p.overlays) {
     if (t < o.start || t >= o.start + o.dur) continue;
-    drawAnimated(ctx, o, W, H, k, t, opts.editing);
+    const frame = o.type === 'video' && opts.ovFrame ? opts.ovFrame(o, (o.in || 0) + (t - o.start)) : null;
+    drawAnimated(ctx, o, W, H, k, t, opts.editing, frame);
   }
   const cap = p.captions.find(c => t >= c.start && t < c.start + c.dur);
   if (cap && cap.text.trim()) drawCaption(ctx, cap, W, H, k, p.captionStyle || {});
@@ -333,7 +407,7 @@ export function renderScene(ctx, W, H, t, provider, L = layout(), opts = {}) {
 // Перехід: попередній кліп «застигає» на останньому кадрі й поступається новому
 function drawTransition(ctx, tr, p, prev, pf, l, f, W, H, t) {
   const drawNew = () => { if (f && f.w && f.h) drawClipFrame(ctx, l, f, W, H, t); };
-  const drawOld = () => { if (pf && pf.w && pf.h) drawFitted(ctx, prev.clip, pf, W, H); else { ctx.fillStyle = S.project.bg || '#000'; ctx.fillRect(0, 0, W, H); } };
+  const drawOld = () => { if (pf && pf.w && pf.h) drawFitted(ctx, prev.clip, pf, W, H, 1); else { ctx.fillStyle = S.project.bg || '#000'; ctx.fillRect(0, 0, W, H); } };
   switch (tr.type) {
     case 'black':
       if (p < 0.5) { drawOld(); ctx.fillStyle = `rgba(0,0,0,${p * 2})`; ctx.fillRect(0, 0, W, H); }
@@ -363,9 +437,9 @@ function drawTransition(ctx, tr, p, prev, pf, l, f, W, H, t) {
 // Анімація появи елементів: плавно, знизу, пружинка, друк
 export const ANIMS = { none: 'Одразу', fade: 'Плавно', up: 'Знизу', pop: 'Пружинка', type: 'Друк' };
 export const animOf = o => o.anim || (o.fade ? 'fade' : 'none');
-function drawAnimated(ctx, o, W, H, k, t, editing) {
+function drawAnimated(ctx, o, W, H, k, t, editing, frame) {
   const anim = editing ? 'none' : animOf(o);
-  const x = { t };
+  const x = { t, frame };
   if (anim === 'none') { drawOverlay(ctx, o, W, H, k, x); return; }
   const inD = Math.min(0.5, o.dur / 3), outD = Math.min(0.35, o.dur / 4);
   const pin = clamp01((t - o.start) / inD), pout = clamp01((o.start + o.dur - t) / outD);
