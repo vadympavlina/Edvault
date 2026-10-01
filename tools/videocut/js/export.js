@@ -6,6 +6,7 @@ import {
 } from '../vendor/mediabunny.min.mjs';
 import { S, media, layout, clipAt, srcTime, duration, outputSize } from './state.js';
 import { renderScene, staticKey } from './render.js';
+import { capStyle, loadCcFont } from './cc.js';
 import { renderBlock, hasAnyAudio, resetAudioSinks } from './audio.js';
 import { ensureTail } from './media.js';
 
@@ -86,6 +87,7 @@ export async function exportVideo(opts) {
   if (withAudio) { asrc = new AudioBufferSource({ codec: acodec, bitrate: opts.quality === 'low' ? 96e3 : 160e3 }); output.addAudioTrack(asrc); }
   await output.start();
 
+  if (S.project.captions.length) await loadCcFont(capStyle(S.project));
   const L = layout();
   // останні кадри кліпів, після яких іде перехід
   const tails = new Map();
@@ -163,7 +165,7 @@ export async function exportVideo(opts) {
       let frame = null;
       if (l) { const r = readerFor(l); frame = r ? await r.at(srcTime(l, t)) : null; }
       if (hasOv) await prepareOv(t);
-      renderScene(ctx, W, H, t, () => frame, L, { tailOf, ovFrame });
+      renderScene(ctx, W, H, t, () => frame, L, { tailOf, ovFrame, export: true });
       if (key) pend = { ts: i / fps, dur: 1 / fps, key };
       else await vsrc.add(i / fps, 1 / fps);
       report(i);

@@ -137,9 +137,6 @@ details.fold .fold-body{padding:10px 12px 12px}
 details.fold .fold-body .field{margin-top:0}
 
 .row2{display:flex;gap:6px}
-.cap-style{margin:12px 0;border:1px solid var(--border);border-radius:10px;padding:8px 10px}
-.cap-style summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text2)}
-.cap-style .field{margin-top:10px}
 .caps{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .cap{display:flex;gap:6px;align-items:flex-start;padding:6px;border-radius:10px;border:1px solid var(--border);background:var(--surface2)}
 .cap.now{border-color:var(--cc)}
@@ -442,3 +439,35 @@ body.recording .tl,body.recording .lib,body.recording .insp,body.recording .topb
 .corner-grid button{height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);font-size:16px;color:var(--text2)}
 .corner-grid button:hover{border-color:var(--accent);color:var(--accent)}
 #btnCutRange:disabled{display:none}
+
+/* субтитри */
+.cc-presets{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cc-preset{display:flex;flex-direction:column;gap:4px;padding:4px 4px 6px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);transition:border-color .12s}
+.cc-preset:hover{border-color:var(--accent-border)}
+.cc-preset.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.cc-preset img{width:100%;aspect-ratio:16/9;border-radius:7px;display:block;background:#3b4a6b}
+.cc-preset small{font-size:12px;font-weight:600;color:var(--text2)}
+.cc-preset.on small{color:var(--accent)}
+.cc-switch{display:flex;align-items:center;gap:10px;margin:10px 0 0;padding:9px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer}
+.cc-switch input{width:16px;height:16px;accent-color:var(--accent);flex:none}
+.cc-switch b{display:block;font-size:13px;font-weight:600}
+.cc-switch small{display:block;font-size:11.5px;color:var(--muted)}
+.cc-fonts{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.cc-fonts button{height:34px;padding:0 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-fonts button.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);color:var(--accent)}
+.seg.cc-grid3{display:grid;grid-template-columns:repeat(3,1fr)}
+.seg.cc-grid3 button{white-space:normal;line-height:1.15;height:auto;min-height:30px;padding:3px 4px;text-align:center}
+.row2 .input{flex:1;min-width:0}
+.cc-danger{color:var(--danger,#ef4444)!important;margin-top:10px}
+.cc-fold .fold-body .field:first-child{margin-top:0}
+.cc-count{display:flex;align-items:center;justify-content:space-between}
+.cap.fast{border-left:3px solid #f59e0b}
+.cap[hidden]{display:none}
+.cc-speed{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-4px 0 12px;font-size:12px;color:var(--text2);line-height:1.4}
+.cc-dot{width:8px;height:8px;border-radius:50%;flex:none;background:#22c55e}
+.cc-dot.warn{background:#f59e0b}
+.cc-dot.bad{background:#ef4444}
+.cc-nav{margin-bottom:8px}
+.cc-nav .btn{justify-content:center}
+.pv-layer .selbox.capsel{border-style:dashed}
+.cc-fold summary span{flex:1}

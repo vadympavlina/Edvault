@@ -1,6 +1,7 @@
 // Шар над переглядом: виділення, переміщення й зміна розміру елементів, точка фокусу для наближення.
 import { S, media, on, emit, commit, select, findSel, layout, clipAt, outputSize } from './state.js';
 import { textBoxes } from './render.js';
+import { capBox, capStyle } from './cc.js';
 import { requestDraw } from './player.js';
 import { $, clamp } from './ui.js';
 
@@ -10,13 +11,15 @@ export function initPreviewLayer() {
   layer = $('pvLayer'); canvas = $('pv');
   ['select', 'project', 'aspect'].forEach(ev => on(ev, scheduleHandles));
   // під час відтворення рамку оновлюємо лише коли виділений елемент з'являється чи зникає
-  on('time', () => { if (S.sel && (S.sel.kind === 'overlay' || S.sel.kind === 'clip')) scheduleHandles(); });
+  on('time', () => { if (S.sel && S.sel.kind !== 'music') scheduleHandles(); });
   window.addEventListener('resize', scheduleHandles);
   canvas.addEventListener('pointerdown', onCanvasDown);
   layer.addEventListener('pointerdown', onHandleDown);
   canvas.addEventListener('dblclick', e => {
     const hit = hitTest(e);
-    if (hit && hit.type === 'text') { select('overlay', hit.id); emit('focus-inspector'); }
+    if (hit && hit.type === 'text') { select('overlay', hit.id); emit('focus-inspector'); return; }
+    const cap = capHit(e);
+    if (cap) { select('caption', cap.id); emit('focus-inspector'); }
   });
 }
 
@@ -54,6 +57,14 @@ function hitTest(e) {
   return null;
 }
 
+// субтитр під курсором (рамку запам'ятовує малювання кадру)
+function capHit(e) {
+  if (!capBox.id) return null;
+  const { x, y } = norm(e);
+  if (x < capBox.x || x > capBox.x + capBox.w || y < capBox.y || y > capBox.y + capBox.h) return null;
+  return S.project.captions.find(c => c.id === capBox.id && S.t >= c.start && S.t < c.start + c.dur) || null;
+}
+
 let handlesQueued = false, lastHtml = '', lastBox = '';
 function scheduleHandles() {
   if (handlesQueued) return;
@@ -80,6 +91,8 @@ function renderHandles() {
         ['nw', 'ne', 'sw', 'se'].map(h => `<i class="hd ${h}" data-h="${h}"></i>`).join('') +
         (o.type === 'text' ? '<i class="hd e side" data-h="e"></i><i class="hd w side" data-h="w"></i>' : '') + '</div>';
     }
+  } else if (o && S.sel.kind === 'caption' && capBox.id === o.id) {
+    html = `<div class="selbox capsel" style="left:${capBox.x * 100}%;top:${capBox.y * 100}%;width:${capBox.w * 100}%;height:${capBox.h * 100}%"></div>`;
   } else if (o && S.sel.kind === 'clip' && (o.zoom || 1) > 1.001) {
     const l = layout().find(x => x.clip.id === o.id);
     if (l && S.t >= l.start && S.t < l.end) {
@@ -114,6 +127,12 @@ function onCanvasDown(e) {
     startDrag(e, 'move', hit);
     return;
   }
+  const cap = capHit(e);
+  if (cap) {
+    select('caption', cap.id);
+    startDrag(e, 'cap', cap);
+    return;
+  }
   const l = clipAt(S.t);
   if (l) select('clip', l.clip.id); else select(null);
 }
@@ -126,7 +145,7 @@ function onHandleDown(e) {
 
 function startDrag(e, mode, o) {
   const p = norm(e);
-  drag = { mode, id: o.id, kind: S.sel.kind, sx: p.x, sy: p.y, o0: structuredClone(o), h0: o.type === 'text' ? (textBoxes.get(o) || 0.1) : o.h, moved: false };
+  drag = { mode, id: o.id, kind: S.sel.kind, sx: p.x, sy: p.y, o0: structuredClone(o), cy0: capStyle(S.project).y, h0: o.type === 'text' ? (textBoxes.get(o) || 0.1) : o.h, moved: false };
   const el = e.currentTarget;
   el.setPointerCapture(e.pointerId);
   const mv = ev => onMove(ev);
@@ -150,7 +169,15 @@ function onMove(e) {
   const o = findSel(); if (!o) return;
   const a = drag.o0;
   const gv = layer.querySelector('.gv'), gh = layer.querySelector('.gh');
-  if (drag.mode === 'focus') {
+  if (drag.mode === 'cap') {
+    // висота субтитрів — спільна для всіх; прилипає до центру
+    const st = S.project.captionStyle = capStyle(S.project);
+    let y = clamp(drag.cy0 + dy, 0.03, 0.97);
+    const snap = Math.abs(y - 0.5) < 0.015;
+    if (snap) y = 0.5;
+    st.y = y;
+    gh.hidden = !snap;
+  } else if (drag.mode === 'focus') {
     const b = frameBase(o); if (!b) return;
     o.zx = clamp(0.5 + (p.x * b.W - b.W / 2) / b.dw0, 0, 1);
     o.zy = clamp(0.5 + (p.y * b.H - b.H / 2) / b.dh0, 0, 1);

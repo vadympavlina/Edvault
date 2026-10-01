@@ -1,6 +1,7 @@
 // Малювання кадру сцени — однаково для перегляду й експорту.
 // provider(layoutItem, sourceTime) → {src: CanvasImageSource | VideoSample, w, h} | null
 import { S, media, layout, clipAt, srcTime } from './state.js';
+import { capStyle, drawCaption, capState, capBox } from './cc.js';
 import { tailFrame } from './media.js';
 
 export const FONT_STACK = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
@@ -278,30 +279,6 @@ export function drawOverlay(ctx, o, W, H, k, x = {}) {
   }
 }
 
-function drawCaption(ctx, c, W, H, k, style) {
-  const size = (style.size || 46) * k;
-  ctx.font = `600 ${size}px ${FONT_STACK}`;
-  const maxW = W * 0.84;
-  const lines = wrapLines(ctx, c.text, maxW - size * 0.8);
-  const lh = size * 1.25;
-  const widths = lines.map(l => ctx.measureText(l).width);
-  const pad = size * 0.32;
-  const total = lines.length * lh;
-  const top = style.pos === 'top' ? H * 0.06 : H - H * 0.07 - total - pad * 2;
-  ctx.textAlign = 'center';
-  lines.forEach((l, i) => {
-    const y = top + pad + i * lh;
-    if (style.bg === 'box') {
-      ctx.fillStyle = 'rgba(0,0,0,.66)';
-      roundRectPath(ctx, W / 2 - widths[i] / 2 - pad, y - pad * 0.3, widths[i] + pad * 2, lh + pad * 0.3, size * 0.2);
-      ctx.fill();
-    } else { ctx.lineJoin = 'round'; ctx.lineWidth = size * 0.16; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(l, W / 2, y + size * 0.95); }
-    ctx.fillStyle = style.color || '#ffffff';
-    ctx.fillText(l, W / 2, y + size * 0.95);
-  });
-  ctx.textAlign = 'left';
-}
-
 // Малює кадр основної доріжки з урахуванням вписування, зуму й затемнення
 // малює джерело з поворотом/віддзеркаленням так, що (cx, cy) — центр, dw×dh — розмір на екрані (вже з урахуванням повороту)
 function drawOriented(g, f, cx, cy, dw, dh, rot, flip) {
@@ -411,8 +388,14 @@ export function renderScene(ctx, W, H, t, provider, L = layout(), opts = {}) {
     const frame = o.type === 'video' && opts.ovFrame ? opts.ovFrame(o, (o.in || 0) + (t - o.start)) : null;
     drawAnimated(ctx, o, W, H, k, t, opts.editing, frame);
   }
+  capBox.id = null;
   const cap = p.captions.find(c => t >= c.start && t < c.start + c.dur);
-  if (cap && cap.text.trim()) drawCaption(ctx, cap, W, H, k, p.captionStyle || {});
+  if (cap && cap.text.trim()) {
+    const st = capStyle(p);
+    // «не вшивати у відео»: у перегляді — напівпрозорі, в експорті їх немає
+    if (st.show) drawCaption(ctx, cap, W, H, k, st, t);
+    else if (!opts.export) drawCaption(ctx, cap, W, H, k, st, t, 0.4);
+  }
 }
 
 // Перехід: попередній кліп «застигає» на останньому кадрі й поступається новому
@@ -502,6 +485,6 @@ export function staticKey(t, L) {
     key += '|' + o.id;
   }
   const cap = p.captions.find(c => t >= c.start && t < c.start + c.dur);
-  if (cap) key += '|' + cap.id;
+  if (cap) { const s = capState(cap, t, capStyle(p)); if (s === null) return null; key += '|' + s; }
   return key;
 }

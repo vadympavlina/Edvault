@@ -66,10 +66,23 @@ const P = {
   mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4M8 21h8"/>',
   wand: '<path d="m15 4 5 5L9 20H4v-5Z"/><path d="M13 6l5 5"/><path d="M20 2v3M18.5 3.5h3"/>',
   stop: '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>',
+  merge: '<path d="M8 6h8M8 18h8"/><path d="m12 2 0 8m-3-3 3 3 3-3M12 22v-8m-3 3 3-3 3 3"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  chevL: '<path d="m15 18-6-6 6-6"/>',
+  chevR: '<path d="m9 18 6-6-6-6"/>',
   sparkle: '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>',
 };
 export function icon(name, cls = 'ico') {
   return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ''}</svg>`;
+}
+// перемикач, що не вміщається в рядок, ділимо на рівні ряди замість «хвоста» з однієї кнопки
+export function balanceSegs(el) {
+  el.querySelectorAll('.seg').forEach(g => {
+    const b = g.children;
+    if (b.length < 3 || g.classList.contains('seg-rows') || b[b.length - 1].offsetTop === b[0].offsetTop) return;
+    g.classList.add('seg-rows');
+    g.style.gridTemplateColumns = `repeat(${Math.ceil(b.length / 2)}, 1fr)`;
+  });
 }
 // <span data-icon="name"> → SVG
 export function hydrateIcons(root = document) {
