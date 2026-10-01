@@ -317,7 +317,7 @@ function drawOriented(g, f, cx, cy, dw, dh, rot, flip) {
 }
 // розмитий фон замість чорних смуг: кадр зменшується до кількох десятків пікселів і розтягується назад
 let bgCv = null;
-function drawBlurBg(ctx, c, f, W, H, rot, fw, fh) {
+function drawBlurBg(ctx, c, f, W, H, rot, fw, fh, box) {
   const bw = 28, bh = Math.max(2, Math.round(bw * H / W));
   if (!bgCv) bgCv = document.createElement('canvas');
   if (bgCv.width !== bw || bgCv.height !== bh) { bgCv.width = bw; bgCv.height = bh; }
@@ -331,10 +331,21 @@ function drawBlurBg(ctx, c, f, W, H, rot, fw, fh) {
   if (filt !== 'none') g.filter = filt;
   drawOriented(g, f, W / 2, H / 2, fw * r, fh * r, rot, !!c.flip);
   g.filter = 'none';
+  // малюємо лише поля навколо кадру (під самим відео фон не видно) — це в рази швидше
   ctx.save();
-  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(bgCv, 0, 0, bw, bh, -W * 0.02, -H * 0.02, W * 1.04, H * 1.04);
-  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(0, 0, W, H);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
+  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  const sx = bw / W, sy = bh / H;
+  const piece = (x, y, w, h) => {
+    if (w < 0.5 || h < 0.5) return;
+    ctx.drawImage(bgCv, x * sx, y * sy, w * sx, h * sy, x, y, w, h);
+    ctx.fillRect(x, y, w, h);
+  };
+  const [x0, y0, x1, y1] = [Math.max(0, Math.floor(box.x) + 1), Math.max(0, Math.floor(box.y) + 1), Math.min(W, Math.ceil(box.x + box.w) - 1), Math.min(H, Math.ceil(box.y + box.h) - 1)];
+  piece(0, 0, W, y0);            // верх
+  piece(0, y1, W, H - y1);       // низ
+  piece(0, y0, x0, y1 - y0);     // ліво
+  piece(x1, y0, W - x1, y1 - y0); // право
   ctx.restore();
 }
 export const MOTIONS = { none: 'Без руху', in: 'Наближення', out: 'Віддалення', pan: 'Панорама' };
@@ -344,9 +355,9 @@ function drawFitted(ctx, c, f, W, H, prog = 0) {
   const side = rot === 90 || rot === 270;
   const fw = side ? f.h : f.w, fh = side ? f.w : f.h;
   const fit = c.fit || 'contain';
-  if (fit === 'blur' && Math.abs(fw / fh - W / H) > 0.01) drawBlurBg(ctx, c, f, W, H, rot, fw, fh);
   const r = (fit === 'cover' ? Math.max : Math.min)(W / fw, H / fh);
   const dw0 = fw * r, dh0 = fh * r;
+  if (fit === 'blur' && Math.abs(fw / fh - W / H) > 0.01) drawBlurBg(ctx, c, f, W, H, rot, fw, fh, { x: (W - dw0) / 2, y: (H - dh0) / 2, w: dw0, h: dh0 });
   let z = Math.max(1, c.zoom || 1);
   let fx = c.zx ?? 0.5, fy = c.zy ?? 0.5;
   const mo = c.motion;
@@ -463,4 +474,34 @@ function drawAnimated(ctx, o, W, H, k, t, editing, frame) {
 function boxCenter(o, W, H) {
   const h = o.type === 'text' ? (textBoxes.get(o) || 0.1) : o.h;
   return { x: (o.x + o.w / 2) * W, y: (o.y + h / 2) * H };
+}
+
+// Чи кадр у момент t нічим не відрізняється від сусідніх (фото без руху, текст без анімації).
+// Повертає ключ сцени або null, якщо в кадрі щось рухається. Експорт не кодує однакові кадри повторно.
+export function staticKey(t, L) {
+  const p = S.project;
+  const l = clipAt(t, L);
+  let key = 'bg';
+  if (l) {
+    const c = l.clip, m = media.get(c.mediaId);
+    if (!m || m.kind !== 'image') return null;
+    if (c.motion && c.motion !== 'none') return null;
+    if ((c.fadeIn || 0) > 0 && t < l.start + c.fadeIn + 0.02) return null;
+    if ((c.fadeOut || 0) > 0 && t > l.end - c.fadeOut - 0.02) return null;
+    if (c.tr && L.indexOf(l) > 0 && t < l.start + (c.tr.d || 0.6) + 0.02) return null;
+    key = c.id;
+  }
+  for (const o of p.overlays) {
+    if (t < o.start || t >= o.start + o.dur) continue;
+    if (o.type === 'video' || o.type === 'progress') return null;
+    const anim = animOf(o);
+    if (anim !== 'none') {
+      const inD = anim === 'type' ? 2.3 : Math.min(0.5, o.dur / 3), outD = Math.min(0.35, o.dur / 4);
+      if (t < o.start + inD + 0.02 || t > o.start + o.dur - outD - 0.02) return null;
+    }
+    key += '|' + o.id;
+  }
+  const cap = p.captions.find(c => t >= c.start && t < c.start + c.dur);
+  if (cap) key += '|' + cap.id;
+  return key;
 }

@@ -8,7 +8,7 @@ import { initPreviewLayer, renderHandles } from './preview.js';
 import { addToTimeline, addOverlay, splitAt, deleteSel, duplicateSel, cutRange, addCaption, findSilences, cutRanges, addVoice } from './ops.js';
 import { exportVideo, exportAudio, exportSize, detectCodecs, canExport } from './export.js';
 import { DB, takeHandoff } from './db.js';
-import { initAsr, openAsr } from './asr.js';
+import { initAsr, openAsr, asrBusy } from './asr.js';
 import { $, icon, hydrateIcons, initTips, initTheme, toast, fmt, openModal, closeModal, anyModalOpen, confirmDialog, downloadBlob, safeName, fmtBytes } from './ui.js';
 
 hydrateIcons();
@@ -329,6 +329,11 @@ async function startExport() {
 window.addEventListener('beforeunload', e => { if (exporting) { e.preventDefault(); e.returnValue = ''; } });
 
 // ══════════ Автозбереження ══════════
+let storageWarned = false;
+on('storage-error', ({ name }) => {
+  if (storageWarned) return; storageWarned = true;
+  toast(`У браузері забракло місця, щоб зберегти «${name}». Монтаж працює, але після перезавантаження сторінки файл треба буде додати знову. Експортуйте відео, коли закінчите.`, 'err', 9000);
+});
 let saveTimer = 0;
 function setSaveState(t) { $('saveState').textContent = t; }
 function saveNow() {
@@ -534,4 +539,4 @@ async function stopVoice() {
     toast('Не вдалося зберегти запис: ' + (e.message || e), 'err', 6000);
   }
 }
-window.addEventListener('beforeunload', e => { if (rec) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (rec || asrBusy()) { e.preventDefault(); e.returnValue = ''; } });

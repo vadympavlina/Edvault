@@ -8,7 +8,10 @@ let layer, canvas;
 
 export function initPreviewLayer() {
   layer = $('pvLayer'); canvas = $('pv');
-  ['select', 'project', 'time', 'aspect'].forEach(ev => on(ev, () => requestAnimationFrame(renderHandles)));
+  ['select', 'project', 'aspect'].forEach(ev => on(ev, scheduleHandles));
+  // під час відтворення рамку оновлюємо лише коли виділений елемент з'являється чи зникає
+  on('time', () => { if (S.sel && (S.sel.kind === 'overlay' || S.sel.kind === 'clip')) scheduleHandles(); });
+  window.addEventListener('resize', scheduleHandles);
   canvas.addEventListener('pointerdown', onCanvasDown);
   layer.addEventListener('pointerdown', onHandleDown);
   canvas.addEventListener('dblclick', e => {
@@ -51,11 +54,20 @@ function hitTest(e) {
   return null;
 }
 
+let handlesQueued = false, lastHtml = '', lastBox = '';
+function scheduleHandles() {
+  if (handlesQueued) return;
+  handlesQueued = true;
+  requestAnimationFrame(() => { handlesQueued = false; renderHandles(); });
+}
 function renderHandles() {
   if (!layer) return;
-  const cr = canvas.getBoundingClientRect(), lr = layer.parentElement.getBoundingClientRect();
-  layer.style.left = (cr.left - lr.left) + 'px'; layer.style.top = (cr.top - lr.top) + 'px';
-  layer.style.width = cr.width + 'px'; layer.style.height = cr.height + 'px';
+  const box = `${canvas.offsetLeft},${canvas.offsetTop},${canvas.offsetWidth},${canvas.offsetHeight}`;
+  if (box !== lastBox) {
+    lastBox = box;
+    layer.style.left = canvas.offsetLeft + 'px'; layer.style.top = canvas.offsetTop + 'px';
+    layer.style.width = canvas.offsetWidth + 'px'; layer.style.height = canvas.offsetHeight + 'px';
+  }
   const o = findSel();
   let html = '';
   if (o && S.sel.kind === 'overlay' && visible(o)) {
@@ -75,8 +87,9 @@ function renderHandles() {
       if (f) html = `<i class="hd focus" data-h="focus" style="left:${f.x * 100}%;top:${f.y * 100}%" data-tip="Точка наближення"></i>`;
     }
   }
-  html += '<i class="guide gv" hidden></i><i class="guide gh" hidden></i>';
-  layer.innerHTML = html;
+  if (html === lastHtml && layer.firstChild && !drag) return; // нічого не змінилося — не чіпаємо DOM
+  lastHtml = html;
+  layer.innerHTML = html + '<i class="guide gv" hidden></i><i class="guide gh" hidden></i>';
 }
 
 // де на екрані знаходиться точка фокусу кліпу (без урахування наближення)

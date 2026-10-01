@@ -40,6 +40,7 @@ function thumbURL(m) {
 const thumbCache = new Map();
 
 function renderLibrary() {
+  lastCapKey = '';
   $('libTabs').querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const body = $('libBody');
   if (tab === 'media') {
@@ -69,13 +70,13 @@ function renderLibrary() {
   } else if (tab === 'elements') {
     const imgs = [...media.values()].filter(m => m.kind === 'image');
     const vids = [...media.values()].filter(m => m.kind === 'video');
-    const el = (type, ic, name, sub) => `<button class="elem" data-el="${type}">${icon(ic)}<span><b>${name}</b><small>${sub}</small></span></button>`;
+    const el = (type, ic, name, sub) => `<button class="elem" data-el="${type}" title="${sub}">${icon(ic)}<b>${name}</b></button>`;
     body.innerHTML = `<div class="elems">
       ${el('arrow', 'arrow', 'Стрілка', 'Вказати на кнопку чи деталь')}
       ${el('rect', 'rect', 'Рамка', 'Обвести важливе')}
       ${el('spot', 'spot', 'Прожектор', 'Затемнити все, крім області')}
       ${el('blur', 'blur', 'Розмиття', 'Сховати пароль, пошту, обличчя')}
-      ${el('progress', 'progress', 'Прогрес-бар', 'Смужка внизу — скільки ще лишилось')}
+      ${el('progress', 'progress', 'Прогрес', 'Смужка внизу — скільки ще лишилось')}
     </div>
     <div class="lib-sub">Відео поверх відео</div>
     ${vids.length ? `<div class="mgrid">${vids.map(m => `<button class="mcard img-pick" data-pip="${m.id}" title="${esc(m.name)}"><div class="mthumb">${m.thumbs[0] ? `<img src="${thumbURL(m)}" alt="">` : icon('video')}<span class="mdur">${fmt(m.duration)}</span></div><div class="mname">${esc(m.name)}</div></button>`).join('')}</div>` : `<p class="lib-hint">Додайте ще одне відео (наприклад, запис з вебкамери) — і його можна буде показати в кружечку в кутку.</p>`}
@@ -112,8 +113,13 @@ function renderLibrary() {
   }
 }
 
+let lastCapKey = '';
 function markActiveCaption() {
   const t = S.t;
+  const cur = S.project.captions.find(c => t >= c.start && t < c.start + c.dur);
+  const key = (cur ? cur.id : '') + '|' + (S.sel ? S.sel.id : '') + '|' + S.project.captions.length;
+  if (key === lastCapKey && document.querySelector('#libBody .cap')) return;
+  lastCapKey = key;
   document.querySelectorAll('#libBody .cap').forEach(el => {
     const c = S.project.captions.find(x => x.id === el.dataset.id);
     el.classList.toggle('now', !!c && t >= c.start && t < c.start + c.dur);
@@ -229,7 +235,7 @@ export function initInspector() {
   box().addEventListener('input', onInput);
   box().addEventListener('change', onChange);
   box().addEventListener('click', onClick);
-  box().addEventListener('toggle', e => { const d = e.target.closest && e.target.closest('details[data-more]'); if (d) { if (d.open) openMore.add(d.dataset.more); else openMore.delete(d.dataset.more); } }, true);
+  box().addEventListener('toggle', e => { const d = e.target.closest && e.target.closest('details[data-more]'); if (d) { if (d.open) openMore.add(d.dataset.more); else openMore.delete(d.dataset.more); if (d.open && d.classList.contains('fold') && !d.querySelector('.fold-body')) renderInspector(); } }, true);
   on('exported', () => markProgress('exported'));
   on('did-cut', () => markProgress('cut'));
   renderInspector();
@@ -251,6 +257,8 @@ const act = (a, ic, label, extra = '') => `<button class="btn btn-outline btn-sm
 const chip = (f, label, cur, on, ic) => `<button class="chip${cur ? ' on' : ''}" data-toggle="${f}" data-on="${on}">${icon(cur ? 'check' : ic)}${label}</button>`;
 // розгортання «Точніше» пам'ятає, чи було відкрите
 const openMore = new Set();
+// згорнутий розділ із поточним значенням у заголовку; вміст будується лише коли відкрито
+const fold = (key, label, val, build) => `<details class="fold" data-more="${key}" ${openMore.has(key) ? 'open' : ''}><summary><span>${label}</span><b>${val}</b></summary>${openMore.has(key) ? `<div class="fold-body">${build()}</div>` : ''}</details>`;
 const more = (key, html) => `<details class="more" data-more="${key}" ${openMore.has(key) ? 'open' : ''}><summary>Точніше</summary><div class="more-body">${html}</div></details>`;
 
 function renderInspector() {
@@ -323,7 +331,7 @@ function clipPanel(c) {
   const side = (((c.rot || 0) % 360) + 360) % 360 % 180 === 90;
   const mw = m ? (side ? m.height : m.width) : W, mh = m ? (side ? m.width : m.height) : H;
   const otherShape = m && Math.abs(mw / mh - W / H) > 0.02;
-  const fitSeg = seg('fit', 'Форма кадру не збігається — що робити з полями', [['blur', 'Розмитий фон'], ['contain', 'Чорні смуги'], ['cover', 'Обрізати краї']], c.fit || 'contain');
+  const fitSeg = seg('fit', 'Поля навколо кадру', [['blur', 'Розмиті'], ['contain', 'Чорні'], ['cover', 'Обрізати']], c.fit || 'contain');
   return head(isImg ? 'image' : 'video', m ? m.name : 'Кліп', sub) +
     `<div class="chips">
       ${chip('fadeIn', 'Плавна поява', c.fadeIn > 0, 0.8, 'sparkle')}
@@ -336,9 +344,9 @@ function clipPanel(c) {
       ${c.muted ? '' : `<div class="field"><label>Гучність<span class="aux" data-show="volume">${Math.round((c.volume ?? 1) * 100)}%</span></label><input type="range" data-f="volume" data-pct="1" min="0" max="2" step="0.05" value="${c.volume ?? 1}"></div>`}`}
     ${seg('zoom', 'Наблизити частину кадру', [[1, 'Ні'], [1.5, '1,5×'], [2, '2×'], [3, '3×']], z, z > 1.001 ? 'Перетягніть синій хрестик на перегляді туди, що треба показати ближче.' : 'Допомагає показати дрібну кнопку чи текст на записі екрана.')}
     ${otherShape ? fitSeg : ''}
-    ${lookCards(c, m)}
-    ${idx > 0 ? `<div class="field"><label>Перехід з попереднього кліпу</label><div class="tr-grid">${[['', 'Немає']].concat(Object.entries(TRANSITIONS)).map(([k, n]) => `<button data-a="tr" data-v="${k}" class="tr-card tr-${k || 'none'}${(c.tr ? c.tr.type : '') === k ? ' on' : ''}"><i></i><small>${n}</small></button>`).join('')}</div>
-      <button class="btn btn-sm btn-block btn-ghost-sm" data-a="trAll">${icon('sparkle')}${S.project.clips.slice(1).every(x => x.tr) ? 'Прибрати переходи всюди' : 'Переходи між усіма кліпами'}</button></div>` : ''}
+    ${m ? fold('look', 'Фільтр', LOOKS[c.look || 'none'] ? LOOKS[c.look || 'none'].name : '', () => lookCards(c, m)) : ''}
+    ${idx > 0 ? fold('tr', 'Перехід', c.tr && TRANSITIONS[c.tr.type] ? TRANSITIONS[c.tr.type] : 'Немає', () => `<div class="tr-grid">${[['', 'Немає']].concat(Object.entries(TRANSITIONS)).map(([k, n]) => `<button data-a="tr" data-v="${k}" class="tr-card tr-${k || 'none'}${(c.tr ? c.tr.type : '') === k ? ' on' : ''}"><i></i><small>${n}</small></button>`).join('')}</div>
+      <button class="btn btn-sm btn-block btn-ghost-sm" data-a="trAll">${icon('sparkle')}${S.project.clips.slice(1).every(x => x.tr) ? 'Прибрати переходи всюди' : 'Переходи між усіма кліпами'}</button>`) : ''}
     ${actions(act('split', 'split', 'Розрізати тут', 'data-key="S"'), isImg ? '' : act('freeze', 'camera', 'Стоп-кадр'), act('dup', 'copy', 'Дублювати'), isImg ? '' : act('norm', 'volume', 'Вирівняти гучність'), act('del', 'trash', 'Видалити'))}
     ${more('clip', `${range('fadeIn', 'Тривалість появи', 0, 3, 0.1, c.fadeIn || 0, ' с')}
       ${range('fadeOut', 'Тривалість зникнення', 0, 3, 0.1, c.fadeOut || 0, ' с')}
@@ -376,7 +384,7 @@ function lookCards(c, m) {
     lookCache.set(key, urls);
   }
   const cur = c.look || 'none';
-  return `<div class="field"><label>Фільтр</label><div class="look-grid">${Object.entries(LOOKS).map(([k, v]) => `<button class="look-card${cur === k ? ' on' : ''}" data-set="look" data-v="${k}">${urls ? `<img src="${urls[k]}" alt="">` : '<i></i>'}<small>${v.name}</small></button>`).join('')}</div>
+  return `<div class="field"><div class="look-grid">${Object.entries(LOOKS).map(([k, v]) => `<button class="look-card${cur === k ? ' on' : ''}" data-set="look" data-v="${k}">${urls ? `<img src="${urls[k]}" alt="">` : '<i></i>'}<small>${v.name}</small></button>`).join('')}</div>
     ${FILTERS_OK ? '' : '<p class="hint">У цьому браузері частина фільтрів недоступна — краще відкрити редактор у Chrome чи Edge.</p>'}</div>`;
 }
 
