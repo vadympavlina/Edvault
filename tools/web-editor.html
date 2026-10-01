@@ -10,10 +10,9 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/idea.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
 <script>
   // Apply saved theme before first paint to avoid a light-mode flash
   try{
@@ -462,6 +461,193 @@
     .topbar-text p{ display:none; }
     .name-input{ min-width: 100px; max-width: 140px; }
   }
+
+  /* =========== CATALOG EXTRAS =========== */
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:9px;
+    border:1.5px solid var(--border); background:var(--surface); color:var(--text2);
+    font-size:13px; font-weight:600; text-decoration:none; transition:all .13s ease; flex-shrink:0;
+  }
+  .back-link:hover{ border-color:var(--border2); background:var(--surface2); color:var(--text); }
+  .back-link svg{ width:14px; height:14px; }
+  .topbar-sep{ width:1px; height:26px; background:var(--border); flex-shrink:0; }
+
+  .catalog-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .search-box{ position:relative; }
+  .search-box svg{ position:absolute; left:11px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:var(--muted); pointer-events:none; }
+  .search-input{
+    width:220px; padding:9px 12px 9px 32px; border-radius:10px; border:1.5px solid var(--border);
+    background:var(--surface); color:var(--text); font-family:inherit; font-size:13px; outline:none; transition:border-color .13s ease;
+  }
+  .search-input:focus{ border-color:var(--accent); }
+  .ghost-btn{
+    display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px;
+    border:1.5px solid var(--border); background:var(--surface); color:var(--text2);
+    font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; transition:all .13s ease; flex-shrink:0;
+  }
+  .ghost-btn:hover{ border-color:var(--border2); background:var(--surface2); color:var(--text); }
+  .ghost-btn svg{ width:14px; height:14px; }
+
+  .tool-card.has-thumb{ padding:12px 12px 16px; gap:12px; }
+  .tool-thumb{
+    position:relative; aspect-ratio:16/10; border-radius:11px; overflow:hidden;
+    border:1px solid var(--border); background:#fff;
+  }
+  .tool-thumb iframe{ position:absolute; top:0; left:0; width:1200px; height:750px; border:0; transform-origin:0 0; pointer-events:none; background:#fff; }
+  .tool-thumb .thumb-empty{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:var(--card-accent, var(--accent)); background:var(--card-accent-light, var(--accent-light));
+  }
+  .tool-thumb .thumb-empty svg{ width:34px; height:34px; opacity:.7; }
+  .tool-card.has-thumb .tool-card-body{ padding:0 6px; }
+  .tool-meta{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .tool-meta .tool-desc{ font-size:12px; color:var(--muted); }
+  .tool-more{
+    position:absolute; top:20px; right:20px; width:30px; height:30px; border-radius:9px; border:none;
+    background:rgba(255,255,255,.92); color:#4b5563; box-shadow:0 1px 4px rgba(0,0,0,.18);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    opacity:0; transition:opacity .12s ease, background .12s ease; z-index:2;
+  }
+  .tool-card:hover .tool-more, .tool-more.open{ opacity:1; }
+  .tool-more:hover{ background:#fff; color:#111; }
+  .tool-more svg{ width:16px; height:16px; }
+  @media (hover:none){ .tool-more{ opacity:1; } }
+  .no-results{ text-align:center; color:var(--muted); font-size:13.5px; padding:50px 10px; }
+
+  /* popover menu */
+  .pop-menu{
+    position:fixed; z-index:200; min-width:200px; padding:5px; border-radius:12px;
+    background:var(--surface); border:1.5px solid var(--border); box-shadow:var(--shadow-lg);
+    animation:pop-in .12s ease;
+  }
+  @keyframes pop-in{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
+  .pop-item{
+    display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px; border:none; border-radius:8px;
+    background:none; color:var(--text); font-family:inherit; font-size:13px; font-weight:500; cursor:pointer; text-align:left;
+  }
+  .pop-item:hover{ background:var(--surface2); }
+  .pop-item svg{ width:15px; height:15px; color:var(--text2); flex-shrink:0; }
+  .pop-item.danger{ color:var(--danger); }
+  .pop-item.danger svg{ color:var(--danger); }
+  .pop-sep{ height:1px; background:var(--border); margin:4px 6px; }
+
+  /* modal */
+  .modal-overlay{
+    position:fixed; inset:0; z-index:150; background:rgba(15,18,25,.5);
+    display:flex; align-items:center; justify-content:center; padding:16px;
+    animation:fade-in .15s ease;
+  }
+  @keyframes fade-in{ from{ opacity:0; } to{ opacity:1; } }
+  .modal{
+    width:100%; max-width:820px; max-height:88vh; overflow:auto; background:var(--surface);
+    border:1.5px solid var(--border); border-radius:18px; box-shadow:var(--shadow-lg); padding:22px;
+  }
+  .modal.modal-sm{ max-width:420px; }
+  .modal.modal-md{ max-width:560px; }
+  .modal-title{ font-size:18px; font-weight:800; letter-spacing:-.3px; color:var(--text); margin-bottom:4px; }
+  .modal-sub{ font-size:13px; color:var(--text2); margin-bottom:16px; line-height:1.55; }
+  .modal-input{
+    width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--border2);
+    background:var(--surface); color:var(--text); font-family:inherit; font-size:14px; outline:none; margin:12px 0 16px;
+  }
+  .modal-input:focus{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,107,244,.12); }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+  .retry-btn.danger{ background:var(--danger); }
+
+  .tpl-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px; margin-top:16px; }
+  .tpl-card{
+    display:flex; flex-direction:column; align-items:flex-start; gap:6px; text-align:left;
+    padding:16px; border-radius:14px; border:1.5px solid var(--border); background:var(--surface);
+    color:var(--text); font-family:inherit; cursor:pointer; transition:all .14s ease;
+  }
+  .tpl-card:hover{ border-color:var(--accent); box-shadow:var(--shadow-md); transform:translateY(-2px); }
+  .tpl-emoji{ font-size:26px; line-height:1; margin-bottom:4px; }
+  .tpl-name{ font-size:14.5px; font-weight:800; }
+  .tpl-desc{ font-size:12.5px; color:var(--text2); line-height:1.5; }
+  .tpl-level{ font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; background:var(--accent-light); color:var(--accent); margin-top:4px; }
+
+  .share-row{ display:flex; gap:8px; margin:6px 0 10px; }
+  .share-row .modal-input{ margin:0; font-family:'JetBrains Mono', monospace; font-size:12px; }
+  .share-note{ font-size:12px; color:var(--muted); line-height:1.5; }
+
+  .kbd-list{ display:grid; grid-template-columns:1fr auto; gap:8px 18px; margin-top:12px; font-size:13px; color:var(--text2); }
+  .kbd-list .kbd-sec{ grid-column:1/-1; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-top:10px; }
+  kbd{
+    font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px;
+    background:var(--surface2); border:1px solid var(--border2); color:var(--text); white-space:nowrap;
+  }
+
+  /* toast */
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translate(-50%, 20px); z-index:300;
+    background:#1a1d23; color:#fff; padding:10px 16px; border-radius:11px; font-size:13px; font-weight:500;
+    box-shadow:var(--shadow-lg); opacity:0; pointer-events:none; transition:all .2s ease; max-width:calc(100vw - 32px);
+  }
+  html[data-theme="dark"] .toast{ background:#e8ecf1; color:#14171c; }
+  .toast.show{ opacity:1; transform:translate(-50%, 0); }
+
+  /* =========== EDITOR EXTRAS =========== */
+  .save-status{ font-size:12px; color:var(--muted); font-weight:600; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+  .save-status svg{ width:13px; height:13px; color:var(--success); }
+  .save-status.pending::before{ content:''; width:7px; height:7px; border-radius:50%; background:var(--warn); animation:pulse-dot 1.4s ease-in-out infinite; }
+
+  .pane-head .icon-btn.pending{ color:#fff; background:var(--accent); animation:pulse-dot 1.4s ease-in-out infinite; }
+  .device-seg{ display:flex; gap:1px; padding:2px; border-radius:8px; background:var(--border); margin-right:4px; }
+  .device-seg button{
+    border:none; background:var(--surface2); color:var(--muted); padding:3px 7px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .device-seg button:first-child{ border-radius:6px 0 0 6px; }
+  .device-seg button:last-child{ border-radius:0 6px 6px 0; }
+  .device-seg button svg{ width:14px; height:14px; }
+  .device-seg button:hover{ color:var(--text); }
+  .device-seg button.active{ background:var(--accent); color:#fff; }
+  .device-label{ font-size:10.5px; color:var(--muted); letter-spacing:0; text-transform:none; margin-right:4px; }
+
+  .preview-stage{ flex:1; position:relative; min-height:0; overflow:hidden; display:flex; }
+  .preview-stage.device{ background:var(--surface2); background-image:radial-gradient(var(--border2) 1px, transparent 1px); background-size:16px 16px; }
+  .preview-stage.device #preview-frame{
+    position:absolute; top:14px; left:50%; flex:none; transform-origin:top center;
+    border-radius:12px; box-shadow:0 0 0 1px var(--border2), var(--shadow-md);
+  }
+
+  .CodeMirror-foldgutter{ width:14px; }
+  .CodeMirror-foldgutter-open, .CodeMirror-foldgutter-folded{ color:var(--muted); cursor:pointer; }
+  .CodeMirror-foldgutter-open:after{ content:'▾'; }
+  .CodeMirror-foldgutter-folded:after{ content:'▸'; }
+  .CodeMirror-foldmarker{ color:var(--accent); background:var(--accent-light); border-radius:4px; padding:0 4px; font-family:inherit; text-shadow:none; cursor:pointer; }
+  .cm-error-line{ background:rgba(239,68,68,.13) !important; }
+  .cm-swatch{
+    display:inline-block; width:11px; height:11px; border-radius:3px; margin:0 4px -1px 1px; cursor:pointer; vertical-align:baseline;
+    box-shadow:0 0 0 1px rgba(0,0,0,.28) inset, 0 0 0 1px rgba(255,255,255,.4);
+    background-image:linear-gradient(var(--sw), var(--sw)), repeating-conic-gradient(#ccc 0 25%, #fff 0 50%);
+    background-size:auto, 6px 6px;
+  }
+  .cm-swatch:hover{ transform:scale(1.25); }
+  #color-input{ position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; }
+
+  .console-line{ display:flex; gap:10px; }
+  .console-line .console-text{ flex:1; min-width:0; }
+  .console-loc{ flex-shrink:0; color:var(--muted); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+  .console-loc:hover{ color:var(--accent); }
+  .console-line.console-input{ color:var(--muted); }
+  .console-line.console-result{ color:var(--text); }
+  .console-input-row{
+    flex-shrink:0; display:flex; align-items:center; gap:6px; padding:5px 12px;
+    border-top:1px solid var(--border); font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--accent);
+  }
+  .console-input-row input{
+    flex:1; border:none; outline:none; background:transparent; color:var(--text);
+    font-family:inherit; font-size:12px;
+  }
+  .console-panel{ height:190px; }
+  .console-tools{ display:flex; gap:10px; align-items:center; }
+
+  @media (max-width: 900px){
+    .device-seg, .device-label{ display:none; }
+    .search-input{ width:150px; }
+    .hide-sm{ display:none; }
+  }
 </style>
 </head>
 <body>
@@ -470,32 +656,55 @@
 <div id="view-catalog">
   <div class="topbar">
     <div class="topbar-left">
+      <a class="back-link" href="../tools.html" title="До всіх інструментів Edvault">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <span class="hide-sm">Інструменти</span>
+      </a>
+      <div class="topbar-sep"></div>
       <div class="topbar-logo">
-        <svg viewBox="0 0 32 32" fill="none"><path d="M8 10h16M8 16h10M8 22h13" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 8-4 4 4 4M15 8l4 4-4 4"/></svg>
       </div>
       <div class="topbar-text">
-        <h1>Edvault</h1>
-        <p>Редактор коду</p>
+        <h1>Редактор коду</h1>
+        <p>HTML, CSS і JavaScript з живим переглядом</p>
       </div>
     </div>
-    <div class="topbar-badge">Проєкти</div>
+    <div class="topbar-actions">
+      <button class="view-btn" id="catalog-theme-btn" title="Світла / темна тема"></button>
+    </div>
   </div>
 
   <div class="main">
     <div class="stats-bar">
-      <div class="stats-bar-left"><b id="proj-count">0</b> проєктів</div>
-      <button class="retry-btn" id="add-tile">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Новий проєкт
-      </button>
+      <div class="stats-bar-left"><b id="proj-count">0</b> <span id="proj-word">проєктів</span></div>
+      <div class="catalog-actions">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" class="search-input" id="search-input" placeholder="Пошук проєктів…">
+        </div>
+        <button class="ghost-btn" id="catalog-import-btn" title="Відкрити .zip або .html з комп'ютера">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span class="hide-sm">Імпорт</span>
+        </button>
+        <input type="file" id="catalog-import-input" class="hidden" accept=".zip,.html,.htm">
+        <button class="retry-btn" id="add-tile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Новий проєкт
+        </button>
+      </div>
     </div>
 
     <div class="tools-grid" id="grid"></div>
+    <div class="no-results hidden" id="no-results">Нічого не знайдено</div>
 
     <div class="empty-state" id="empty-state">
-      <div class="empty-icon">🗂️</div>
+      <div class="empty-icon">🧑‍💻</div>
       <h3>Поки що порожньо</h3>
-      <p>Створи перший проєкт — HTML, CSS і JS редагуються окремо з живим переглядом</p>
+      <p>Створи перший проєкт — можна почати з готового шаблону: візитка, список справ, гра чи вікторина</p>
+      <button class="retry-btn" id="empty-new-btn" style="margin:0 auto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Створити проєкт
+      </button>
     </div>
   </div>
 </div>
@@ -506,12 +715,16 @@
     <div class="topbar-left">
       <button class="back-btn" id="back-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        Каталог
+        <span class="hide-sm">Проєкти</span>
       </button>
       <input type="text" id="project-name" class="name-input" placeholder="Назва проєкту">
-      <span class="unsaved-dot hidden" id="unsaved-dot" title="Є незбережені зміни"></span>
+      <span class="save-status" id="save-status"></span>
     </div>
     <div class="topbar-actions">
+      <button class="ghost-btn" id="share-btn" title="Поділитися посиланням на проєкт">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <span class="hide-sm">Поділитися</span>
+      </button>
       <div class="settings-wrap" id="settings-wrap">
         <button class="view-btn" id="settings-btn" title="Налаштування">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -534,7 +747,7 @@
           </div>
 
           <div class="settings-section">
-            <div class="settings-label">Лаяут</div>
+            <div class="settings-label">Де показувати результат</div>
             <div class="settings-opt-row">
               <button class="settings-opt-btn active" id="opt-grid" title="Перегляд знизу">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="8"/><rect x="10.5" y="3" width="7" height="8"/><rect x="18" y="3" width="3" height="8"/><rect x="3" y="13" width="18" height="8" fill="currentColor" fill-opacity=".22"/></svg>
@@ -562,6 +775,13 @@
 
           <div class="settings-section">
             <label class="settings-toggle">
+              <span>Оновлювати перегляд одразу</span>
+              <span class="switch"><input type="checkbox" id="autorun-toggle" checked><span class="slider"></span></span>
+            </label>
+          </div>
+
+          <div class="settings-section">
+            <label class="settings-toggle">
               <span>Перенос рядків</span>
               <span class="switch"><input type="checkbox" id="wrap-toggle" checked><span class="slider"></span></span>
             </label>
@@ -583,16 +803,30 @@
           </div>
 
           <div class="settings-section">
+            <button class="settings-opt-btn settings-opt-full" id="download-html-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m10 13-2 2 2 2M14 13l2 2-2 2"/></svg>
+              Завантажити один .html
+            </button>
+          </div>
+
+          <div class="settings-section">
             <button class="settings-opt-btn settings-opt-full" id="download-zip-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
-              Завантажити .zip
+              Завантажити .zip (3 файли)
+            </button>
+          </div>
+
+          <div class="settings-section">
+            <button class="settings-opt-btn settings-opt-full" id="shortcuts-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>
+              Гарячі клавіші та підказки
             </button>
           </div>
 
         </div>
       </div>
 
-      <button class="retry-btn" id="save-btn">
+      <button class="retry-btn" id="save-btn" title="Зберегти (Ctrl+S). Проєкт також зберігається автоматично">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         <span class="save-label">Зберегти</span>
       </button>
@@ -606,6 +840,9 @@
         <div class="code-pane pane-html" data-lang="html">
           <div class="pane-head">
             <span class="dot"></span>HTML<span class="spacer"></span>
+            <button class="icon-btn" data-format="html" title="Упорядкувати код (Shift+Alt+F)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M7 12h14M7 18h10"/></svg>
+            </button>
             <button class="icon-btn" data-download="html" title="Завантажити HTML-файл">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </button>
@@ -615,6 +852,9 @@
         <div class="code-pane pane-css" data-lang="css">
           <div class="pane-head">
             <span class="dot"></span>CSS<span class="spacer"></span>
+            <button class="icon-btn" data-format="css" title="Упорядкувати код (Shift+Alt+F)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M7 12h14M7 18h10"/></svg>
+            </button>
             <button class="icon-btn" data-download="css" title="Завантажити CSS-файл">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </button>
@@ -624,6 +864,9 @@
         <div class="code-pane pane-js" data-lang="js">
           <div class="pane-head">
             <span class="dot"></span>JS<span class="spacer"></span>
+            <button class="icon-btn" data-format="js" title="Упорядкувати код (Shift+Alt+F)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M7 12h14M7 18h10"/></svg>
+            </button>
             <button class="icon-btn" data-download="js" title="Завантажити JS-файл">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </button>
@@ -638,6 +881,27 @@
     <div class="preview-zone pane-preview">
       <div class="pane-head">
         <span class="dot"></span>Перегляд<span class="spacer"></span>
+        <span class="device-label" id="device-label"></span>
+        <div class="device-seg" id="device-seg">
+          <button data-device="full" class="active" title="На всю ширину">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V5h4M21 9V5h-4M3 15v4h4M21 15v4h-4"/></svg>
+          </button>
+          <button data-device="phone" title="Телефон (375 px)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+          </button>
+          <button data-device="tablet" title="Планшет (768 px)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M11 18h2"/></svg>
+          </button>
+          <button data-device="laptop" title="Комп'ютер (1280 px)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg>
+          </button>
+        </div>
+        <button class="icon-btn" id="run-btn" title="Оновити перегляд (Ctrl+Enter)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        </button>
+        <button class="icon-btn" id="newtab-btn" title="Відкрити в новій вкладці">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14 21 3"/></svg>
+        </button>
         <button class="icon-btn" id="console-toggle-btn" title="Консоль">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
           <span class="console-badge hidden" id="console-badge">0</span>
@@ -646,17 +910,27 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
         </button>
       </div>
-      <iframe id="preview-frame" sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals allow-popups allow-downloads"></iframe>
+      <div class="preview-stage" id="preview-stage">
+        <iframe id="preview-frame" title="Перегляд" sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals allow-popups allow-downloads"></iframe>
+      </div>
       <div class="console-panel hidden" id="console-panel">
         <div class="console-toolbar">
           <span>Консоль</span>
           <button class="console-clear-btn" id="console-clear-btn">Очистити</button>
         </div>
         <div class="console-body" id="console-body"></div>
+        <div class="console-input-row">
+          <span>›</span>
+          <input type="text" id="console-input" placeholder="Напиши JS-вираз і натисни Enter, напр. document.title" autocomplete="off" spellcheck="false">
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<div class="modal-overlay hidden" id="modal"><div class="modal"></div></div>
+<div class="toast" id="toast"></div>
+<input type="color" id="color-input">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
@@ -668,6 +942,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/xml-fold.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchtags.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/brace-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/comment-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
@@ -678,9 +957,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/css-hint.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/javascript-hint.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/anyword-hint.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/keymap/sublime.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script>
@@ -770,14 +1047,6 @@
   }));
   const GENERIC_FONT_FALLBACKS = ['sans-serif','serif','monospace','cursive','system-ui','Arial','Georgia','Verdana'];
 
-  function injectGoogleFont(font){
-    if(usedFonts.has(font)) return;
-    usedFonts.add(font);
-    isDirty = true;
-    updateDirtyIndicator();
-    updatePreview();
-  }
-
   // Listens for the user picking a font-family suggestion and wires up its
   // @import — deferred one tick so it runs after CodeMirror has already
   // inserted the picked text (otherwise inserting a line at the top first
@@ -826,6 +1095,40 @@
     return { list: (filtered.length ? filtered : sortedAll), from, to };
   }
 
+  // ---------- Project templates ----------
+  const TEMPLATES = [
+    { id:'blank', emoji:'📄', name:'Порожній проєкт', desc:'Чистий аркуш: HTML, CSS і JS без нічого зайвого', level:'Будь-який рівень',
+      html:'', css:'', js:'' },
+    { id:'hello', emoji:'👋', name:'Привіт, світ!', desc:'Заголовок, абзац і трохи стилів — найперший крок', level:'Початківці',
+      html:'<main class="hello">\n  <h1>Привіт, світ! 👋</h1>\n  <p>Це моя перша вебсторінка. Зміни цей текст — і результат одразу з\'явиться знизу.</p>\n</main>',
+      css:'body {\n  font-family: system-ui, sans-serif;\n  background: #f0f4ff;\n  color: #1e293b;\n  margin: 0;\n}\n\n.hello {\n  max-width: 560px;\n  margin: 80px auto;\n  padding: 32px;\n  text-align: center;\n  background: white;\n  border-radius: 20px;\n  box-shadow: 0 10px 30px rgba(79, 107, 244, 0.15);\n}\n\nh1 {\n  color: #4f6bf4;\n}',
+      js:'' },
+    { id:'card', emoji:'🪪', name:'Візитка', desc:'Картка про себе з фото, хобі та кнопками-посиланнями', level:'Початківці',
+      html:'<div class="card">\n  <div class="avatar">🦊</div>\n  <h1>Олена Коваленко</h1>\n  <p class="role">Учениця 8-Б класу</p>\n  <p class="about">Люблю малювати, програмувати і читати фантастику. Мрію створити власну гру!</p>\n  <ul class="tags">\n    <li>🎨 Малювання</li>\n    <li>💻 Код</li>\n    <li>📚 Книги</li>\n  </ul>\n  <div class="links">\n    <a href="#" class="btn">Мої роботи</a>\n    <a href="#" class="btn btn-outline">Написати</a>\n  </div>\n</div>',
+      css:'body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  background: linear-gradient(135deg, #a5b4fc, #f0abfc);\n}\n\n.card {\n  width: 320px;\n  padding: 32px 28px;\n  text-align: center;\n  background: white;\n  border-radius: 24px;\n  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);\n}\n\n.avatar {\n  width: 96px;\n  height: 96px;\n  margin: 0 auto 12px;\n  font-size: 56px;\n  line-height: 96px;\n  border-radius: 50%;\n  background: #fef3c7;\n}\n\nh1 { margin: 0; font-size: 22px; }\n.role { margin: 4px 0 14px; color: #6366f1; font-weight: 600; }\n.about { color: #475569; line-height: 1.6; }\n\n.tags {\n  display: flex;\n  justify-content: center;\n  gap: 8px;\n  padding: 0;\n  list-style: none;\n}\n\n.tags li {\n  padding: 4px 10px;\n  font-size: 13px;\n  border-radius: 20px;\n  background: #eef2ff;\n}\n\n.links { display: flex; gap: 10px; margin-top: 20px; }\n\n.btn {\n  flex: 1;\n  padding: 10px;\n  border-radius: 12px;\n  background: #6366f1;\n  color: white;\n  text-decoration: none;\n  font-weight: 600;\n  transition: transform 0.15s;\n}\n\n.btn:hover { transform: translateY(-2px); }\n.btn-outline { background: white; color: #6366f1; border: 2px solid #6366f1; }',
+      js:'' },
+    { id:'counter', emoji:'🔢', name:'Лічильник кліків', desc:'Кнопки, змінна і подія click — основи JavaScript', level:'Перші кроки в JS',
+      html:'<div class="box">\n  <h1>Лічильник</h1>\n  <div id="count">0</div>\n  <div class="buttons">\n    <button id="minus">−</button>\n    <button id="reset">Скинути</button>\n    <button id="plus">+</button>\n  </div>\n</div>',
+      css:'body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  background: #0f172a;\n  color: white;\n}\n\n.box { text-align: center; }\n\n#count {\n  font-size: 96px;\n  font-weight: 800;\n  margin: 10px 0 24px;\n  transition: transform 0.15s;\n}\n\n.buttons { display: flex; gap: 12px; justify-content: center; }\n\nbutton {\n  min-width: 64px;\n  padding: 12px 18px;\n  font-size: 20px;\n  border: none;\n  border-radius: 14px;\n  background: #4f6bf4;\n  color: white;\n  cursor: pointer;\n}\n\nbutton:hover { background: #6c85ff; }\n#reset { font-size: 15px; background: #334155; }',
+      js:'// Змінна, у якій зберігаємо число\nlet count = 0;\n\nconst countEl = document.getElementById(\'count\');\n\nfunction show() {\n  countEl.textContent = count;\n  // колір змінюється залежно від знаку числа\n  countEl.style.color = count > 0 ? \'#4ade80\' : count < 0 ? \'#f87171\' : \'white\';\n  countEl.style.transform = \'scale(1.15)\';\n  setTimeout(() => countEl.style.transform = \'\', 120);\n}\n\ndocument.getElementById(\'plus\').addEventListener(\'click\', () => {\n  count++;\n  show();\n});\n\ndocument.getElementById(\'minus\').addEventListener(\'click\', () => {\n  count--;\n  show();\n});\n\ndocument.getElementById(\'reset\').addEventListener(\'click\', () => {\n  count = 0;\n  show();\n});\n\nconsole.log(\'Лічильник готовий! Відкрий консоль, щоб бачити такі повідомлення.\');' },
+    { id:'todo', emoji:'✅', name:'Список справ', desc:'Додавання, виконання і видалення завдань, збереження в браузері', level:'Середній',
+      html:'<div class="todo">\n  <h1>📝 Мої справи</h1>\n  <form id="form">\n    <input id="input" placeholder="Що потрібно зробити?" autocomplete="off">\n    <button>Додати</button>\n  </form>\n  <ul id="list"></ul>\n  <p id="stats"></p>\n</div>',
+      css:'body {\n  margin: 0;\n  font-family: system-ui, sans-serif;\n  background: #f1f5f9;\n}\n\n.todo {\n  max-width: 440px;\n  margin: 50px auto;\n  padding: 24px;\n  background: white;\n  border-radius: 18px;\n  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);\n}\n\nh1 { margin-top: 0; font-size: 24px; }\n\nform { display: flex; gap: 8px; }\n\ninput {\n  flex: 1;\n  padding: 10px 12px;\n  font-size: 15px;\n  border: 2px solid #e2e8f0;\n  border-radius: 10px;\n  outline: none;\n}\n\ninput:focus { border-color: #10b981; }\n\nbutton {\n  padding: 10px 16px;\n  border: none;\n  border-radius: 10px;\n  background: #10b981;\n  color: white;\n  font-weight: 600;\n  cursor: pointer;\n}\n\nul { list-style: none; padding: 0; }\n\nli {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  padding: 10px 4px;\n  border-bottom: 1px solid #f1f5f9;\n}\n\nli span { flex: 1; cursor: pointer; }\nli.done span { text-decoration: line-through; color: #94a3b8; }\n\n.del {\n  padding: 4px 9px;\n  background: #fee2e2;\n  color: #ef4444;\n}\n\n#stats { color: #64748b; font-size: 14px; }',
+      js:'const form = document.getElementById(\'form\');\nconst input = document.getElementById(\'input\');\nconst list = document.getElementById(\'list\');\nconst stats = document.getElementById(\'stats\');\n\n// Завантажуємо збережені справи (або порожній масив)\nlet todos = JSON.parse(localStorage.getItem(\'todos\') || \'[]\');\n\nfunction save() {\n  localStorage.setItem(\'todos\', JSON.stringify(todos));\n}\n\nfunction render() {\n  list.innerHTML = \'\';\n  todos.forEach((todo, i) => {\n    const li = document.createElement(\'li\');\n    if (todo.done) li.classList.add(\'done\');\n\n    const text = document.createElement(\'span\');\n    text.textContent = todo.text;\n    text.onclick = () => { todo.done = !todo.done; save(); render(); };\n\n    const del = document.createElement(\'button\');\n    del.textContent = \'✕\';\n    del.className = \'del\';\n    del.onclick = () => { todos.splice(i, 1); save(); render(); };\n\n    li.append(text, del);\n    list.append(li);\n  });\n  const left = todos.filter(t => !t.done).length;\n  stats.textContent = todos.length ? `Залишилось: ${left} з ${todos.length}` : \'Список порожній 🎉\';\n}\n\nform.addEventListener(\'submit\', (e) => {\n  e.preventDefault();\n  const text = input.value.trim();\n  if (!text) return;\n  todos.push({ text, done: false });\n  input.value = \'\';\n  save();\n  render();\n});\n\nrender();' },
+    { id:'anim', emoji:'🎨', name:'CSS-анімації', desc:'Ключові кадри @keyframes: стрибки, обертання, пульсація', level:'Початківці',
+      html:'<div class="scene">\n  <div class="ball"></div>\n  <div class="square"></div>\n  <div class="heart">❤️</div>\n</div>\n<p class="hint">Наведи мишку на фігури 👆</p>',
+      css:'body {\n  margin: 0;\n  font-family: system-ui, sans-serif;\n  background: #fdf4ff;\n  text-align: center;\n}\n\n.scene {\n  display: flex;\n  justify-content: center;\n  align-items: flex-end;\n  gap: 60px;\n  height: 260px;\n  padding-top: 40px;\n}\n\n.ball {\n  width: 70px;\n  height: 70px;\n  border-radius: 50%;\n  background: radial-gradient(circle at 30% 30%, #fde047, #f97316);\n  animation: bounce 0.8s ease-in infinite alternate;\n}\n\n@keyframes bounce {\n  from { transform: translateY(-160px); }\n  to { transform: translateY(0) scaleY(0.85); }\n}\n\n.square {\n  width: 70px;\n  height: 70px;\n  border-radius: 14px;\n  background: #8b5cf6;\n  animation: spin 3s linear infinite;\n}\n\n@keyframes spin {\n  to { transform: rotate(360deg); }\n}\n\n.heart {\n  font-size: 64px;\n  animation: pulse 1s ease-in-out infinite;\n}\n\n@keyframes pulse {\n  50% { transform: scale(1.25); }\n}\n\n.scene > div:hover { animation-play-state: paused; }\n.hint { color: #a855f7; }',
+      js:'' },
+    { id:'game', emoji:'🎮', name:'Гра «Спіймай кульку»', desc:'Canvas, таймер і рахунок: клацай по кульках, поки не скінчився час', level:'Середній',
+      html:'<div class="hud">\n  <span>Рахунок: <b id="score">0</b></span>\n  <span>Час: <b id="time">30</b></span>\n  <button id="start">Почати</button>\n</div>\n<canvas id="game" width="640" height="400"></canvas>',
+      css:'body {\n  margin: 0;\n  font-family: system-ui, sans-serif;\n  background: #0b1020;\n  color: white;\n  text-align: center;\n}\n\n.hud {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 24px;\n  padding: 14px;\n  font-size: 18px;\n}\n\nbutton {\n  padding: 8px 18px;\n  font-size: 16px;\n  border: none;\n  border-radius: 10px;\n  background: #22c55e;\n  color: white;\n  cursor: pointer;\n}\n\ncanvas {\n  max-width: 100%;\n  background: #111833;\n  border-radius: 16px;\n  cursor: crosshair;\n}',
+      js:'const canvas = document.getElementById(\'game\');\nconst ctx = canvas.getContext(\'2d\');\nconst scoreEl = document.getElementById(\'score\');\nconst timeEl = document.getElementById(\'time\');\n\nlet ball = null;\nlet score = 0;\nlet timeLeft = 0;\nlet timer = null;\n\nfunction newBall() {\n  const r = 14 + Math.random() * 22;\n  ball = {\n    x: r + Math.random() * (canvas.width - 2 * r),\n    y: r + Math.random() * (canvas.height - 2 * r),\n    r,\n    color: `hsl(${Math.random() * 360}, 85%, 60%)`\n  };\n}\n\nfunction draw() {\n  ctx.clearRect(0, 0, canvas.width, canvas.height);\n  if (ball) {\n    ctx.beginPath();\n    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);\n    ctx.fillStyle = ball.color;\n    ctx.fill();\n  } else {\n    ctx.fillStyle = \'white\';\n    ctx.font = \'24px system-ui\';\n    ctx.textAlign = \'center\';\n    ctx.fillText(\'Натисни «Почати»\', canvas.width / 2, canvas.height / 2);\n  }\n  requestAnimationFrame(draw);\n}\n\ncanvas.addEventListener(\'click\', (e) => {\n  if (!ball || timeLeft <= 0) return;\n  const rect = canvas.getBoundingClientRect();\n  const x = (e.clientX - rect.left) * (canvas.width / rect.width);\n  const y = (e.clientY - rect.top) * (canvas.height / rect.height);\n  if (Math.hypot(x - ball.x, y - ball.y) <= ball.r) {\n    score++;\n    scoreEl.textContent = score;\n    newBall();\n  }\n});\n\ndocument.getElementById(\'start\').addEventListener(\'click\', () => {\n  score = 0;\n  timeLeft = 30;\n  scoreEl.textContent = 0;\n  timeEl.textContent = timeLeft;\n  newBall();\n  clearInterval(timer);\n  timer = setInterval(() => {\n    timeLeft--;\n    timeEl.textContent = timeLeft;\n    if (timeLeft <= 0) {\n      clearInterval(timer);\n      ball = null;\n      alert(\'Час вийшов! Твій рахунок: \' + score);\n    }\n  }, 1000);\n});\n\ndraw();' },
+    { id:'quiz', emoji:'❓', name:'Вікторина', desc:'Питання з варіантами відповідей, перевірка і підсумок', level:'Середній',
+      html:'<div class="quiz">\n  <div class="progress" id="progress"></div>\n  <h2 id="question"></h2>\n  <div id="answers"></div>\n  <button id="next" hidden>Далі →</button>\n</div>',
+      css:'body {\n  margin: 0;\n  font-family: system-ui, sans-serif;\n  background: #ecfeff;\n}\n\n.quiz {\n  max-width: 520px;\n  margin: 50px auto;\n  padding: 28px;\n  background: white;\n  border-radius: 20px;\n  box-shadow: 0 10px 30px rgba(8, 145, 178, 0.15);\n}\n\n.progress { color: #0891b2; font-weight: 600; font-size: 14px; }\n\n#answers { display: grid; gap: 10px; margin: 18px 0; }\n\n#answers button {\n  padding: 12px 14px;\n  font-size: 16px;\n  text-align: left;\n  border: 2px solid #e2e8f0;\n  border-radius: 12px;\n  background: white;\n  cursor: pointer;\n}\n\n#answers button:hover:not(:disabled) { border-color: #06b6d4; }\n#answers .right { border-color: #22c55e; background: #dcfce7; }\n#answers .wrong { border-color: #ef4444; background: #fee2e2; }\n\n#next {\n  padding: 10px 20px;\n  font-size: 16px;\n  border: none;\n  border-radius: 12px;\n  background: #0891b2;\n  color: white;\n  cursor: pointer;\n}',
+      js:'// Додай свої питання: текст, варіанти і номер правильного (з нуля)\nconst questions = [\n  { q: \'Яке місто є столицею України?\', a: [\'Львів\', \'Київ\', \'Одеса\', \'Харків\'], right: 1 },\n  { q: \'Скільки буде 7 × 8?\', a: [\'54\', \'56\', \'64\', \'48\'], right: 1 },\n  { q: \'Який тег робить заголовок першого рівня?\', a: [\'<p>\', \'<head>\', \'<h1>\', \'<title>\'], right: 2 }\n];\n\nlet current = 0;\nlet score = 0;\n\nconst questionEl = document.getElementById(\'question\');\nconst answersEl = document.getElementById(\'answers\');\nconst progressEl = document.getElementById(\'progress\');\nconst nextBtn = document.getElementById(\'next\');\n\nfunction showQuestion() {\n  const item = questions[current];\n  progressEl.textContent = `Питання ${current + 1} з ${questions.length}`;\n  questionEl.textContent = item.q;\n  answersEl.innerHTML = \'\';\n  nextBtn.hidden = true;\n\n  item.a.forEach((text, i) => {\n    const btn = document.createElement(\'button\');\n    btn.textContent = text;\n    btn.onclick = () => {\n      const buttons = answersEl.querySelectorAll(\'button\');\n      buttons.forEach(b => b.disabled = true);\n      buttons[item.right].classList.add(\'right\');\n      if (i === item.right) score++;\n      else btn.classList.add(\'wrong\');\n      nextBtn.hidden = false;\n    };\n    answersEl.append(btn);\n  });\n}\n\nnextBtn.onclick = () => {\n  current++;\n  if (current < questions.length) {\n    showQuestion();\n  } else {\n    progressEl.textContent = \'Готово!\';\n    questionEl.textContent = `Правильних відповідей: ${score} з ${questions.length} 🎉`;\n    answersEl.innerHTML = \'\';\n    nextBtn.hidden = true;\n  }\n};\n\nshowQuestion();' }
+  ];
+
   // ---------- Views ----------
   const viewCatalog = document.getElementById('view-catalog');
   const viewEditor = document.getElementById('view-editor');
@@ -834,17 +1137,22 @@
   const grid = document.getElementById('grid');
   const addTile = document.getElementById('add-tile');
   const emptyState = document.getElementById('empty-state');
+  const noResults = document.getElementById('no-results');
   const projCount = document.getElementById('proj-count');
+  const projWord = document.getElementById('proj-word');
+  const searchInput = document.getElementById('search-input');
+  const catalogThemeBtn = document.getElementById('catalog-theme-btn');
 
   // ---------- Editor elements ----------
   const backBtn = document.getElementById('back-btn');
   const nameInput = document.getElementById('project-name');
-  const unsavedDot = document.getElementById('unsaved-dot');
+  const saveStatus = document.getElementById('save-status');
   const saveBtn = document.getElementById('save-btn');
   const editorBody = document.getElementById('editor-body');
   const resizer = document.getElementById('resizer');
   const codeZone = document.querySelector('.code-zone');
   const previewFrame = document.getElementById('preview-frame');
+  const previewStage = document.getElementById('preview-stage');
   const langTabsEl = document.getElementById('lang-tabs');
   const settingsBtn = document.getElementById('settings-btn');
   const settingsPanel = document.getElementById('settings-panel');
@@ -853,18 +1161,29 @@
   const optLeft = document.getElementById('opt-left');
   const wrapToggle = document.getElementById('wrap-toggle');
   const themeToggle = document.getElementById('theme-toggle');
+  const autorunToggle = document.getElementById('autorun-toggle');
   const fontDecBtn = document.getElementById('font-dec');
   const fontIncBtn = document.getElementById('font-inc');
   const fontSizeValue = document.getElementById('font-size-value');
   const langPills = { html: document.getElementById('pill-html'), css: document.getElementById('pill-css'), js: document.getElementById('pill-js') };
   const codePanesContainer = document.querySelector('.code-panes');
   const downloadZipBtn = document.getElementById('download-zip-btn');
+  const downloadHtmlBtn = document.getElementById('download-html-btn');
   const fullscreenBtn = document.getElementById('fullscreen-btn');
+  const runBtn = document.getElementById('run-btn');
+  const newtabBtn = document.getElementById('newtab-btn');
+  const deviceSeg = document.getElementById('device-seg');
+  const deviceLabel = document.getElementById('device-label');
   const consoleToggleBtn = document.getElementById('console-toggle-btn');
   const consoleBadge = document.getElementById('console-badge');
   const consolePanel = document.getElementById('console-panel');
   const consoleBody = document.getElementById('console-body');
   const consoleClearBtn = document.getElementById('console-clear-btn');
+  const consoleInput = document.getElementById('console-input');
+  const modalEl = document.getElementById('modal');
+  const modalBox = modalEl.querySelector('.modal');
+  const toastEl = document.getElementById('toast');
+  const colorInput = document.getElementById('color-input');
 
   let currentEditId = null;
   let cmHtml, cmCss, cmJs;
@@ -877,6 +1196,27 @@
   let paneFlexBasis = { html:null, css:null, js:null };
   let fontSize = 13;
   let isDirty = false;
+  let loading = false;          // true while openEditor fills the editors (no autosave / dirty marks)
+  let autosaveTimer = null;
+  let autorun = true;
+  let previewStale = false;
+  let jsStartLine = 0;          // line of the preview document where the JS pane's line 1 sits
+  let errorLineHandles = [];
+
+  const ICONS = {
+    open: '<path d="M5 12h14M12 5l7 7-7 7"/>',
+    rename: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    zip: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+    trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    more: '<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>',
+    moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>'
+  };
+  const svg = (paths, extra='') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${paths}</svg>`;
 
   // ---------- Storage ----------
   function loadProjects(){
@@ -884,84 +1224,731 @@
     catch(e){ return []; }
   }
   function saveProjects(list){ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
-  function formatDate(ts){ return new Date(ts).toLocaleDateString('uk-UA', { day:'2-digit', month:'2-digit', year:'numeric' }); }
-  function escapeHtml(str){ const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+  function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function formatDate(ts){
+    const d = new Date(ts), now = new Date();
+    const time = d.toLocaleTimeString('uk-UA', { hour:'2-digit', minute:'2-digit' });
+    if(d.toDateString() === now.toDateString()) return 'сьогодні о ' + time;
+    const y = new Date(now); y.setDate(now.getDate() - 1);
+    if(d.toDateString() === y.toDateString()) return 'вчора о ' + time;
+    return d.toLocaleDateString('uk-UA', { day:'2-digit', month:'2-digit', year:'numeric' });
+  }
+  function escapeHtml(str){ const d = document.createElement('div'); d.textContent = str == null ? '' : String(str); return d.innerHTML; }
+  function escapeAttr(str){ return escapeHtml(str).replace(/"/g, '&quot;'); }
+  function plural(n, one, few, many){
+    const m10 = n % 10, m100 = n % 100;
+    if(m10 === 1 && m100 !== 11) return one;
+    if(m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+    return many;
+  }
+  function hashStr(s){ let h = 0; for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
+
+  // ---------- Toast ----------
+  function toast(msg, ms = 2400){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toastEl.classList.remove('show'), ms);
+  }
+
+  // ---------- Modal ----------
+  let modalOnClose = null;
+  function openModal(html, cls = ''){
+    modalBox.className = 'modal ' + cls;
+    modalBox.innerHTML = html;
+    modalEl.classList.remove('hidden');
+    return modalBox;
+  }
+  function closeModal(){
+    if(modalEl.classList.contains('hidden')) return;
+    modalEl.classList.add('hidden');
+    modalBox.innerHTML = '';
+    const f = modalOnClose; modalOnClose = null;
+    if(f) f();
+  }
+  modalEl.addEventListener('mousedown', (e) => { if(e.target === modalEl) closeModal(); });
+  function isModalOpen(){ return !modalEl.classList.contains('hidden'); }
+
+  function askText(title, value, okLabel = 'Зберегти'){
+    return new Promise(resolve => {
+      const box = openModal(`<h3 class="modal-title">${escapeHtml(title)}</h3>
+        <input class="modal-input" value="${escapeAttr(value)}" maxlength="80">
+        <div class="modal-actions"><button class="ghost-btn" data-x>Скасувати</button><button class="retry-btn" data-ok>${escapeHtml(okLabel)}</button></div>`, 'modal-sm');
+      const inp = box.querySelector('input');
+      let result = null;
+      modalOnClose = () => resolve(result);
+      const ok = () => { result = inp.value.trim() || null; closeModal(); };
+      box.querySelector('[data-x]').onclick = closeModal;
+      box.querySelector('[data-ok]').onclick = ok;
+      inp.addEventListener('keydown', e => { if(e.key === 'Enter') ok(); });
+      setTimeout(() => { inp.focus(); inp.select(); }, 0);
+    });
+  }
+  function askConfirm(title, text, okLabel = 'Видалити'){
+    return new Promise(resolve => {
+      const box = openModal(`<h3 class="modal-title">${escapeHtml(title)}</h3><p class="modal-sub">${escapeHtml(text)}</p>
+        <div class="modal-actions"><button class="ghost-btn" data-x>Скасувати</button><button class="retry-btn danger" data-ok>${escapeHtml(okLabel)}</button></div>`, 'modal-sm');
+      let result = false;
+      modalOnClose = () => resolve(result);
+      box.querySelector('[data-x]').onclick = closeModal;
+      box.querySelector('[data-ok]').onclick = () => { result = true; closeModal(); };
+      setTimeout(() => box.querySelector('[data-ok]').focus(), 0);
+    });
+  }
+
+  // ---------- Popover menu ----------
+  let menuEl = null, menuAnchor = null;
+  function closeMenu(){
+    if(menuEl){ menuEl.remove(); menuEl = null; }
+    if(menuAnchor){ menuAnchor.classList.remove('open'); menuAnchor = null; }
+  }
+  function openMenu(anchor, items){
+    closeMenu();
+    const m = document.createElement('div');
+    m.className = 'pop-menu';
+    items.forEach(it => {
+      if(it === '-'){ const s = document.createElement('div'); s.className = 'pop-sep'; m.appendChild(s); return; }
+      const b = document.createElement('button');
+      b.className = 'pop-item' + (it.danger ? ' danger' : '');
+      b.innerHTML = svg(it.icon || '') + `<span>${escapeHtml(it.label)}</span>`;
+      b.addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); it.action(); });
+      m.appendChild(b);
+    });
+    document.body.appendChild(m);
+    const r = anchor.getBoundingClientRect();
+    const mw = m.offsetWidth, mh = m.offsetHeight;
+    const x = Math.max(8, Math.min(r.right - mw, innerWidth - mw - 8));
+    let y = r.bottom + 6;
+    if(y + mh > innerHeight - 8) y = Math.max(8, r.top - mh - 6);
+    m.style.left = x + 'px'; m.style.top = y + 'px';
+    menuEl = m; menuAnchor = anchor; anchor.classList.add('open');
+  }
+  document.addEventListener('mousedown', (e) => { if(menuEl && !menuEl.contains(e.target) && !(menuAnchor && menuAnchor.contains(e.target))) closeMenu(); });
+  window.addEventListener('resize', closeMenu);
+
+  // ---------- Building the page document ----------
+  // Runs inside the preview iframe: forwards console output and errors to the
+  // parent page, and evaluates expressions typed into our console.
+  function edvaultConsoleBridge(){
+    var P = window.parent;
+    function fmt(a, d){
+      if(a === undefined) return 'undefined';
+      if(a === null) return 'null';
+      var t = typeof a;
+      if(t === 'string') return d ? JSON.stringify(a) : a;
+      if(t === 'number' || t === 'boolean' || t === 'bigint') return String(a);
+      if(t === 'function') return 'ƒ ' + (a.name || 'anonymous') + '()';
+      if(t === 'symbol') return a.toString();
+      if(a instanceof Error) return a.name + ': ' + a.message;
+      if(typeof Element !== 'undefined' && a instanceof Element){
+        var s = '<' + a.tagName.toLowerCase();
+        if(a.id) s += ' id="' + a.id + '"';
+        if(typeof a.className === 'string' && a.className) s += ' class="' + a.className + '"';
+        return s + '>';
+      }
+      if(d > 2) return Array.isArray(a) ? '[…]' : '{…}';
+      try{
+        if(Array.isArray(a)) return '[' + a.slice(0, 50).map(function(x){ return fmt(x, d + 1); }).join(', ') + (a.length > 50 ? ', …' : '') + ']';
+        var keys = Object.keys(a);
+        return '{' + keys.slice(0, 30).map(function(k){ return k + ': ' + fmt(a[k], d + 1); }).join(', ') + (keys.length > 30 ? ', …' : '') + '}';
+      }catch(e){ return String(a); }
+    }
+    function send(level, args, line){
+      try{
+        P.postMessage({ __edvaultConsole:true, level:level, line:line || 0,
+          args: Array.prototype.map.call(args, function(x){ return fmt(x, level === 'result' ? 1 : 0); }) }, '*');
+      }catch(e){}
+    }
+    ['log', 'info', 'warn', 'error', 'debug'].forEach(function(level){
+      var orig = console[level];
+      console[level] = function(){ send(level === 'debug' ? 'log' : level, arguments); if(orig) orig.apply(console, arguments); };
+    });
+    console.table = console.dir = console.log;
+    console.clear = function(){ send('clear', []); };
+    window.addEventListener('error', function(e){ if(e.message) send('error', [e.message], e.lineno); });
+    window.addEventListener('unhandledrejection', function(e){
+      var r = e.reason; send('error', ['Помилка в Promise: ' + (r && r.message ? r.message : r)]);
+    });
+    window.addEventListener('message', function(e){
+      var m = e.data;
+      if(!m || !m.__edvaultEval) return;
+      try{ send('result', [(0, eval)(m.code)]); }
+      catch(err){ send('error', [err && err.name ? err.name + ': ' + err.message : String(err)]); }
+    });
+  }
+  const CONSOLE_BRIDGE_SCRIPT = '<script>(' + edvaultConsoleBridge.toString() + ')();<\/script>';
+
+  function fontLinkTags(fonts){
+    return Array.from(fonts || []).map(f =>
+      `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${f.replace(/ /g, '+')}:wght@400;700&display=swap">`
+      + `\n<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${f.replace(/ /g, '+')}&display=swap">`
+    ).join('\n');
+  }
+
+  // Splits a full page into the part before the JS and the part after it,
+  // so the preview can know on which line the JS pane starts.
+  function docParts(p, opts = {}){
+    const fonts = fontLinkTags(p.fonts);
+    const head = '<!DOCTYPE html>\n<html lang="uk">\n<head>\n<meta charset="UTF-8">\n'
+      + '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+      + (opts.title ? '<title>' + escapeHtml(opts.title) + '</title>\n' : '')
+      + (opts.bridge ? CONSOLE_BRIDGE_SCRIPT + '\n' : '')
+      + (fonts ? fonts + '\n' : '')
+      + '<style>\n' + (p.css || '') + '\n</style>\n</head>\n<body>\n'
+      + (p.html || '') + '\n' + (opts.noScript ? '' : '<script>\n');
+    return { head, tail: opts.noScript ? '</body>\n</html>' : '\n<\/script>\n</body>\n</html>' };
+  }
+  function composeDoc(p, opts = {}){
+    if(p.code) return p.code; // legacy single-field projects
+    const { head, tail } = docParts(p, opts);
+    return head + (opts.noScript ? '' : (p.js || '')) + tail;
+  }
+  function currentData(){
+    return { name: nameInput.value.trim(), html: cmHtml.getValue(), css: cmCss.getValue(), js: cmJs.getValue(), fonts: Array.from(usedFonts) };
+  }
 
   // ---------- Catalog rendering ----------
-  function renderCatalog(){
-    const projects = loadProjects();
-    grid.innerHTML = '';
-    projCount.textContent = projects.length;
-    emptyState.classList.toggle('visible', projects.length === 0);
+  let thumbObserver = null;
+  const thumbResize = new ResizeObserver(entries => {
+    entries.forEach(en => {
+      const f = en.target.querySelector('iframe');
+      if(f) f.style.transform = `scale(${en.contentRect.width / 1200})`;
+    });
+  });
+  function mountThumb(thumb, p){
+    const hasContent = ((p.html || '') + (p.css || '') + (p.code || '')).trim().length > 0;
+    if(!hasContent){ thumb.innerHTML = `<div class="thumb-empty">${svg(CODE_ICON)}</div>`; return; }
+    const f = document.createElement('iframe');
+    f.setAttribute('sandbox', '');          // no scripts in thumbnails: fast and safe
+    f.setAttribute('tabindex', '-1');
+    f.setAttribute('aria-hidden', 'true');
+    f.srcdoc = composeDoc(p, { noScript:true });
+    f.style.transform = `scale(${thumb.clientWidth / 1200 || 0.2})`;
+    thumb.appendChild(f);
+    thumbResize.observe(thumb);
+  }
 
-    projects.forEach((p, i) => {
-      const pal = PALETTE[i % PALETTE.length];
+  function renderCatalog(){
+    const all = loadProjects();
+    const q = searchInput.value.trim().toLowerCase();
+    const projects = all.slice()
+      .sort((a, b) => (b.updated || b.created || 0) - (a.updated || a.created || 0))
+      .filter(p => !q || (p.name || '').toLowerCase().includes(q));
+    grid.innerHTML = '';
+    thumbResize.disconnect();
+    if(thumbObserver) thumbObserver.disconnect();
+    thumbObserver = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        if(!en.isIntersecting) return;
+        thumbObserver.unobserve(en.target);
+        const p = all.find(x => x.id === en.target.dataset.id);
+        if(p) mountThumb(en.target, p);
+      });
+    }, { rootMargin:'200px' });
+
+    projCount.textContent = all.length;
+    projWord.textContent = plural(all.length, 'проєкт', 'проєкти', 'проєктів');
+    emptyState.classList.toggle('visible', all.length === 0);
+    noResults.classList.toggle('hidden', !(all.length && !projects.length));
+
+    projects.forEach(p => {
+      const pal = PALETTE[hashStr(p.id || p.name || '') % PALETTE.length];
       const langs = ['html','css','js'].filter(l => (p[l] || '').trim().length > 0);
-      const tag = langs.length ? langs.map(l => l.toUpperCase()).join(' · ') : 'Порожньо';
+      const tag = p.code ? 'HTML' : langs.length ? langs.map(l => l.toUpperCase()).join(' · ') : 'Порожньо';
 
       const card = document.createElement('div');
-      card.className = 'tool-card';
+      card.className = 'tool-card has-thumb';
       card.style.setProperty('--card-accent', pal.accent);
       card.style.setProperty('--card-accent-light', pal.accentLight);
       card.style.setProperty('--card-accent-border', pal.accentBorder);
       card.innerHTML = `
-        <button class="tool-del" title="Видалити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-        <div class="tool-card-header">
-          <div class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${CODE_ICON}</svg></div>
-          <span class="tool-tag">${tag}</span>
-        </div>
+        <div class="tool-thumb" data-id="${escapeAttr(p.id)}"></div>
+        <button class="tool-more" title="Дії з проєктом">${svg(ICONS.more)}</button>
         <div class="tool-card-body">
           <div class="tool-name">${escapeHtml(p.name)}</div>
-          <div class="tool-desc">Оновлено ${formatDate(p.updated || p.created)}</div>
-        </div>
-        <div class="tool-card-footer">
-          <div class="tool-open-btn">
-            Відкрити
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </div>
-        </div>
-      `;
+          <div class="tool-meta"><span class="tool-tag">${tag}</span><span class="tool-desc">${formatDate(p.updated || p.created)}</span></div>
+        </div>`;
       card.addEventListener('click', (e) => {
-        if(e.target.closest('.tool-del')) return;
+        if(e.target.closest('.tool-more')) return;
         openEditor(p);
       });
-      card.querySelector('.tool-del').addEventListener('click', (e) => {
+      const more = card.querySelector('.tool-more');
+      more.addEventListener('click', (e) => {
         e.stopPropagation();
-        if(confirm(`Видалити проєкт «${p.name}»?`)){
-          saveProjects(loadProjects().filter(x => x.id !== p.id));
-          renderCatalog();
-        }
+        if(menuAnchor === more){ closeMenu(); return; }
+        openMenu(more, [
+          { label:'Відкрити', icon:ICONS.open, action:() => openEditor(p) },
+          { label:'Перейменувати', icon:ICONS.rename, action:() => renameProject(p) },
+          { label:'Дублювати', icon:ICONS.copy, action:() => duplicateProject(p) },
+          '-',
+          { label:'Завантажити .html', icon:ICONS.file, action:() => downloadHtml(p) },
+          { label:'Завантажити .zip', icon:ICONS.zip, action:() => downloadZip(p) },
+          { label:'Поділитися посиланням', icon:ICONS.link, action:() => openShare(p) },
+          '-',
+          { label:'Видалити', icon:ICONS.trash, danger:true, action:() => deleteProject(p) }
+        ]);
       });
       grid.appendChild(card);
+      thumbObserver.observe(card.querySelector('.tool-thumb'));
     });
   }
+  searchInput.addEventListener('input', renderCatalog);
 
-  addTile.addEventListener('click', () => openEditor(null));
+  async function renameProject(p){
+    const name = await askText('Перейменувати проєкт', p.name);
+    if(!name) return;
+    const list = loadProjects();
+    const it = list.find(x => x.id === p.id);
+    if(it){ it.name = name; saveProjects(list); renderCatalog(); }
+  }
+  function duplicateProject(p){
+    const list = loadProjects();
+    const copy = { ...JSON.parse(JSON.stringify(p)), id: newId(), name: p.name + ' (копія)', created: Date.now(), updated: Date.now() };
+    list.push(copy);
+    try{ saveProjects(list); }catch(e){ toast('Не вдалося зберегти: у браузері закінчилося місце'); return; }
+    renderCatalog();
+    toast('Створено копію «' + copy.name + '»');
+  }
+  async function deleteProject(p){
+    if(!await askConfirm('Видалити проєкт?', `«${p.name}» буде видалено назавжди.`)) return;
+    saveProjects(loadProjects().filter(x => x.id !== p.id));
+    renderCatalog();
+    toast('Проєкт видалено');
+  }
+
+  // ---------- New project: templates ----------
+  function openTemplates(){
+    const box = openModal(`<h3 class="modal-title">Новий проєкт</h3>
+      <p class="modal-sub">Обери, з чого почати. Будь-який шаблон можна повністю змінити.</p>
+      <div class="tpl-grid">${TEMPLATES.map(t => `
+        <button class="tpl-card" data-tpl="${t.id}">
+          <span class="tpl-emoji">${t.emoji}</span>
+          <span class="tpl-name">${escapeHtml(t.name)}</span>
+          <span class="tpl-desc">${escapeHtml(t.desc)}</span>
+          <span class="tpl-level">${escapeHtml(t.level)}</span>
+        </button>`).join('')}
+      </div>`);
+    box.querySelectorAll('[data-tpl]').forEach(btn => btn.addEventListener('click', () => {
+      const t = TEMPLATES.find(x => x.id === btn.dataset.tpl);
+      closeModal();
+      openEditor({ name: t.id === 'blank' ? uniqueName('Новий проєкт') : uniqueName(t.name), html: t.html, css: t.css, js: t.js, fonts: [] }, { isNew:true });
+    }));
+  }
+  function uniqueName(base){
+    const names = new Set(loadProjects().map(p => p.name));
+    if(!names.has(base)) return base;
+    let i = 2; while(names.has(`${base} ${i}`)) i++;
+    return `${base} ${i}`;
+  }
+  addTile.addEventListener('click', openTemplates);
+  document.getElementById('empty-new-btn').addEventListener('click', openTemplates);
+
+  // ---------- Import a whole project (.zip / .html) into the catalog ----------
+  function isLocalRef(url){ return url && !/^([a-z]+:)?\/\//i.test(url) && !url.startsWith('data:'); }
+  function baseName(path){ return path.split('/').pop(); }
+  async function parseProjectHtml(text, readFile){
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    const cssParts = [], jsParts = [], fonts = [];
+    for(const l of Array.from(doc.querySelectorAll('link[rel~="stylesheet"][href]'))){
+      const href = l.getAttribute('href');
+      const m = href.match(/fonts\.googleapis\.com\/css2?\?family=([^:&]+)/);
+      if(m){ const f = decodeURIComponent(m[1]).replace(/\+/g, ' '); if(!fonts.includes(f)) fonts.push(f); l.remove(); continue; }
+      if(isLocalRef(href) && readFile){ const c = await readFile(href); if(c != null){ cssParts.push(c.trim()); l.remove(); } }
+    }
+    doc.querySelectorAll('style').forEach(s => { cssParts.push(s.textContent.trim()); s.remove(); });
+    for(const s of Array.from(doc.querySelectorAll('script'))){
+      const src = s.getAttribute('src');
+      if(!src){ jsParts.push(s.textContent.trim()); s.remove(); continue; }
+      if(isLocalRef(src) && readFile){ const c = await readFile(src); if(c != null){ jsParts.push(c.trim()); s.remove(); } }
+    }
+    const headExtra = Array.from(doc.head.querySelectorAll('link[rel~="stylesheet"], script[src]')).map(n => n.outerHTML).join('\n');
+    const html = dedent(doc.body.innerHTML).trim();
+    return { title: doc.title.trim(), html: headExtra ? headExtra + '\n' + html : html,
+      css: cssParts.filter(Boolean).join('\n\n'), js: jsParts.filter(Boolean).join('\n\n'), fonts };
+  }
+  function dedent(text){
+    const lines = text.replace(/\r\n/g, '\n').split('\n');
+    const indents = lines.filter(l => l.trim()).map(l => l.match(/^[ \t]*/)[0].length);
+    const min = indents.length ? Math.min(...indents) : 0;
+    return min ? lines.map(l => l.slice(Math.min(min, l.match(/^[ \t]*/)[0].length))).join('\n') : text;
+  }
+  async function importProjectFile(file){
+    const ext = file.name.split('.').pop().toLowerCase();
+    const stem = file.name.replace(/\.[^.]+$/, '');
+    let data;
+    if(ext === 'zip'){
+      const zip = await JSZip.loadAsync(file);
+      const files = Object.values(zip.files).filter(f => !f.dir && !f.name.startsWith('__MACOSX'));
+      const htmlFile = files.find(f => baseName(f.name).toLowerCase() === 'index.html') || files.find(f => /\.html?$/i.test(f.name));
+      const used = new Set();
+      const readFile = async (href) => {
+        const want = href.replace(/^\.\//, '').split(/[?#]/)[0];
+        const f = files.find(x => x.name === want || x.name.endsWith('/' + want));
+        if(!f) return null;
+        used.add(f.name);
+        return f.async('string');
+      };
+      if(htmlFile){
+        data = await parseProjectHtml(await htmlFile.async('string'), readFile);
+      } else {
+        data = { html:'', css:'', js:'', fonts:[] };
+      }
+      // CSS/JS files that the page didn't reference still go in
+      for(const f of files){
+        if(used.has(f.name)) continue;
+        if(/\.css$/i.test(f.name)) data.css = [data.css, (await f.async('string')).trim()].filter(Boolean).join('\n\n');
+        else if(/\.js$/i.test(f.name)) data.js = [data.js, (await f.async('string')).trim()].filter(Boolean).join('\n\n');
+      }
+    } else {
+      data = await parseProjectHtml(await file.text(), null);
+    }
+    return { name: uniqueName(data.title || stem || 'Імпортований проєкт'), html: data.html, css: data.css, js: data.js, fonts: data.fonts || [] };
+  }
+  const catalogImportInput = document.getElementById('catalog-import-input');
+  document.getElementById('catalog-import-btn').addEventListener('click', () => catalogImportInput.click());
+  catalogImportInput.addEventListener('change', async () => {
+    const file = catalogImportInput.files && catalogImportInput.files[0];
+    catalogImportInput.value = '';
+    if(!file) return;
+    try{
+      const p = await importProjectFile(file);
+      openEditor(p, { isNew:true });
+      toast('Проєкт імпортовано');
+    }catch(e){
+      console.error(e);
+      toast('Не вдалося відкрити файл. Підтримуються .zip і .html', 3500);
+    }
+  });
+
+  // ---------- Share link ----------
+  function b64urlFromBytes(bytes){
+    let bin = '';
+    for(let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function bytesFromB64url(s){
+    const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+    const out = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  async function encodeShare(p){
+    const json = JSON.stringify({ v:1, n:p.name, h:p.html || p.code || '', c:p.css || '', j:p.js || '', f:p.fonts || [] });
+    const stream = new Blob([new TextEncoder().encode(json)]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return b64urlFromBytes(new Uint8Array(await new Response(stream).arrayBuffer()));
+  }
+  async function decodeShare(s){
+    const stream = new Blob([bytesFromB64url(s)]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    const o = JSON.parse(await new Response(stream).text());
+    return { name: o.n || 'Спільний проєкт', html: o.h || '', css: o.c || '', js: o.j || '', fonts: Array.isArray(o.f) ? o.f : [] };
+  }
+  async function openShare(p){
+    let url;
+    try{ url = location.origin + location.pathname + '#p=' + await encodeShare(p); }
+    catch(e){ toast('Цей браузер не вміє створювати посилання. Скористайся завантаженням .zip', 4000); return; }
+    const long = url.length > 30000;
+    const box = openModal(`<h3 class="modal-title">Поділитися проєктом</h3>
+      <p class="modal-sub">Увесь код зашитий у посилання — нікуди не завантажується. Хто відкриє його, отримає <b>власну копію</b> проєкту, а твій лишиться без змін.</p>
+      <div class="share-row"><input class="modal-input" readonly value="${escapeAttr(url)}"><button class="retry-btn" data-copy>Копіювати</button></div>
+      <p class="share-note">${long ? '⚠️ Проєкт великий, тож посилання дуже довге — деякі месенджери можуть його обрізати. Тоді краще надіслати файл .zip.' : 'Посилання можна надіслати в месенджер, Classroom чи на пошту.'}</p>
+      <div class="modal-actions" style="margin-top:14px"><button class="ghost-btn" data-x>Закрити</button></div>`, 'modal-md');
+    const inp = box.querySelector('input');
+    box.querySelector('[data-x]').onclick = closeModal;
+    box.querySelector('[data-copy]').onclick = async (e) => {
+      try{ await navigator.clipboard.writeText(url); }
+      catch(err){ inp.select(); document.execCommand('copy'); }
+      e.currentTarget.textContent = 'Скопійовано ✓';
+    };
+    setTimeout(() => { inp.focus(); inp.select(); }, 0);
+  }
+
+  // ---------- Mini-Emmet for the HTML pane ----------
+  // "ul>li*3", "div.card>h2{Title}+p", "a[href=#]", "(li>a)*2" … then Tab.
+  const EMMET_TAGS = new Set(('a abbr address article aside audio b blockquote br button canvas caption code col dd details '
+    + 'dialog div dl dt em fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hr i iframe img input label legend '
+    + 'li main mark nav ol optgroup option p picture pre progress q s section select small source span strong sub summary sup '
+    + 'table tbody td textarea tfoot th thead time tr u ul video svg').split(' '));
+  const EMMET_VOID = new Set(['br','hr','img','input','source','col','meta','link']);
+  const EMMET_CHILD = { ul:'li', ol:'li', table:'tr', tbody:'tr', thead:'tr', tfoot:'tr', tr:'td', select:'option', optgroup:'option', dl:'dt' };
+  const EMMET_INLINE = new Set(['a','b','i','em','strong','span','small','label','button','p','h1','h2','h3','h4','h5','h6','q','s','u','sub','sup','mark','abbr','code']);
+  const EMMET_DEFAULT_ATTRS = { a:{ href:'' }, img:{ src:'', alt:'' }, input:{ type:'text' }, label:{ for:'' }, iframe:{ src:'' }, form:{ action:'' } };
+  const CARET = '\u0001';
+
+  function emmetParse(s){
+    let i = 0;
+    const fail = () => { throw new Error('bad abbr'); };
+    function parseEl(){
+      const node = { tag:'', id:'', cls:[], attrs:[], text:null, count:1, children:[] };
+      let any = false;
+      const m = /^[a-zA-Z][\w-]*/.exec(s.slice(i));
+      if(m){ node.tag = m[0].toLowerCase(); i += m[0].length; any = true; }
+      while(i < s.length){
+        const c = s[i];
+        if(c === '.' || c === '#'){
+          const mm = /^[\w$-]+/.exec(s.slice(i + 1)); if(!mm) fail();
+          if(c === '.') node.cls.push(mm[0]); else node.id = mm[0];
+          i += 1 + mm[0].length; any = true;
+        } else if(c === '['){
+          const end = s.indexOf(']', i); if(end < 0) fail();
+          const re = /([\w:@-]+)(?:=("[^"]*"|'[^']*'|[^\s\]]+))?/g; let am;
+          const body = s.slice(i + 1, end);
+          while((am = re.exec(body))) node.attrs.push([am[1], am[2] == null ? '' : am[2].replace(/^["']|["']$/g, '')]);
+          i = end + 1; any = true;
+        } else if(c === '{'){
+          const end = s.indexOf('}', i); if(end < 0) fail();
+          node.text = s.slice(i + 1, end); i = end + 1; any = true;
+        } else break;
+      }
+      if(!any) fail();
+      return node;
+    }
+    function parseSeq(){
+      const root = { children:[] };
+      const stack = [root];
+      while(i < s.length && s[i] !== ')'){
+        let node;
+        if(s[i] === '('){ i++; node = { group:true, children: parseSeq(), count:1 }; if(s[i] !== ')') fail(); i++; }
+        else node = parseEl();
+        if(s[i] === '*'){ const m = /^\*(\d+)/.exec(s.slice(i)); if(!m) fail(); node.count = Math.min(100, +m[1]); i += m[0].length; }
+        stack[stack.length - 1].children.push(node);
+        const op = s[i];
+        if(op === '>'){ if(node.group) fail(); i++; stack.push(node); if(i >= s.length) fail(); }
+        else if(op === '+'){ i++; if(i >= s.length) fail(); }
+        else if(op === '^'){ while(s[i] === '^'){ i++; if(stack.length > 1) stack.pop(); } }
+        else if(op !== undefined && op !== ')') fail();
+      }
+      return root.children;
+    }
+    const nodes = parseSeq();
+    if(i !== s.length || !nodes.length) fail();
+    return nodes;
+  }
+  function emmetRender(nodes, parentTag, pad, unit, outerK){
+    const out = [];
+    nodes.forEach(n => {
+      for(let k = 1; k <= n.count; k++){
+        const idx = n.count > 1 ? k : outerK;
+        const num = str => str.replace(/\$+/g, m => String(idx).padStart(m.length, '0'));
+        if(n.group){ out.push(...emmetRender(n.children, parentTag, pad, unit, idx)); continue; }
+        const tag = n.tag || EMMET_CHILD[parentTag] || (EMMET_INLINE.has(parentTag) ? 'span' : 'div');
+        let attrs = '';
+        if(n.id) attrs += ` id="${num(n.id)}"`;
+        if(n.cls.length) attrs += ` class="${num(n.cls.join(' '))}"`;
+        const given = new Set(n.attrs.map(a => a[0]));
+        n.attrs.forEach(([k2, v]) => { attrs += ` ${k2}="${v ? num(v) : CARET}"`; });
+        Object.entries(EMMET_DEFAULT_ATTRS[tag] || {}).forEach(([k2, v]) => { if(!given.has(k2)) attrs += ` ${k2}="${v || CARET}"`; });
+        const open = `<${tag}${attrs}>`;
+        if(EMMET_VOID.has(tag)){ out.push(pad + open); continue; }
+        const text = n.text != null ? num(n.text) : '';
+        const only = n.children.length === 1 ? n.children[0] : null;
+        if(only && !only.group && only.count === 1 && !only.children.length && EMMET_INLINE.has(only.tag || 'span')){
+          // a single inline child stays on the same line: <li><a href="">…</a></li>
+          out.push(pad + open + text + emmetRender(n.children, tag, '', unit, idx)[0] + `</${tag}>`);
+        } else if(n.children.length){
+          out.push(pad + open + text);
+          out.push(...emmetRender(n.children, tag, pad + unit, unit, idx));
+          out.push(pad + `</${tag}>`);
+        } else {
+          out.push(pad + open + (text || CARET) + `</${tag}>`);
+        }
+      }
+    });
+    return out;
+  }
+  function tryEmmet(cm){
+    if(cm.somethingSelected()) return false;
+    const cur = cm.getCursor();
+    if(cm.getModeAt(cur).name !== 'xml') return false;
+    const tok = cm.getTokenAt(cur);
+    if(tok.type && /tag|attribute|string|comment|bracket/.test(tok.type) && tok.end >= cur.ch && tok.start < cur.ch) return false;
+    const line = cm.getLine(cur.line);
+    const before = line.slice(0, cur.ch);
+    // left bound: end of the last real HTML token (tag/bracket) on this line
+    let bound = 0;
+    cm.getLineTokens(cur.line).forEach(t => { if(t.end <= cur.ch && t.type && /tag|bracket|attribute|string|comment/.test(t.type)) bound = Math.max(bound, t.end); });
+    let j = cur.ch, sq = 0, cu = 0;
+    while(j > bound){
+      const c = before[j - 1];
+      if(c === ']') sq++; else if(c === '[') sq--;
+      else if(c === '}') cu++; else if(c === '{') cu--;
+      else if(sq <= 0 && cu <= 0 && /[\s<]/.test(c)) break;
+      j--;
+    }
+    const abbr = before.slice(j);
+    if(!abbr || !/^[a-zA-Z.#(\[]/.test(abbr)) return false;
+    const first = /^[a-zA-Z][\w-]*/.exec(abbr.replace(/^\(+/, ''));
+    if(first && !EMMET_TAGS.has(first[0].toLowerCase())) return false;
+    if(/^[a-zA-Z]+$/.test(abbr) && !EMMET_TAGS.has(abbr.toLowerCase())) return false;
+    let nodes;
+    try{ nodes = emmetParse(abbr); }catch(e){ return false; }
+    const lineIndent = /^\s*/.exec(line)[0];
+    const unit = ' '.repeat(cm.getOption('indentUnit') || 2);
+    const lines = emmetRender(nodes, '', '', unit, 1);
+    let text = lines.map((l, k) => (k ? lineIndent : '') + l).join('\n');
+    const caretAt = text.indexOf(CARET);
+    text = text.split(CARET).join('');
+    const from = { line: cur.line, ch: j };
+    cm.replaceRange(text, from, cur, '+emmet');
+    if(caretAt >= 0){
+      const pre = text.slice(0, caretAt).split('\n');
+      cm.setCursor({ line: cur.line + pre.length - 1, ch: (pre.length === 1 ? j : 0) + pre[pre.length - 1].length });
+    }
+    return true;
+  }
+
+  function smartTab(cm){
+    if(cm.state.completionActive && cm.state.completionActive.widget) return CodeMirror.Pass;
+    if(cm.state.completionActive) cm.state.completionActive.close();
+    if(cm.somethingSelected()){ cm.execCommand('indentMore'); return; }
+    if(cm === cmHtml && tryEmmet(cm)) return;
+    cm.execCommand('insertSoftTab');
+  }
+
+  // ---------- Colour swatches in CSS ----------
+  const COLOR_RE = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b|(?:rgba?|hsla?)\([^()]*\)/g;
+  let swatchMarks = [], swatchTimer = null;
+  function refreshSwatches(){
+    if(!cmCss) return;
+    cmCss.operation(() => {
+      swatchMarks.forEach(m => m.clear());
+      swatchMarks = [];
+      cmCss.eachLine(lh => {
+        const ln = cmCss.getLineNumber(lh);
+        const text = lh.text;
+        if(text.length > 2000) return;
+        COLOR_RE.lastIndex = 0;
+        let m;
+        while((m = COLOR_RE.exec(text))){
+          const type = cmCss.getTokenTypeAt({ line: ln, ch: m.index + 1 }) || '';
+          if(/builtin|comment|qualifier|tag/.test(type)) continue; // #id selectors, comments
+          if(!CSS.supports('color', m[0])) continue;
+          const w = document.createElement('span');
+          w.className = 'cm-swatch';
+          w.style.setProperty('--sw', m[0]);
+          w.title = 'Клацни, щоб вибрати колір';
+          const bm = cmCss.setBookmark({ line: ln, ch: m.index }, { widget: w, insertLeft: true });
+          w.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); pickColor(bm, w); });
+          swatchMarks.push(bm);
+        }
+      });
+    });
+  }
+  function scheduleSwatches(){ clearTimeout(swatchTimer); swatchTimer = setTimeout(refreshSwatches, 250); }
+  function cssToRgba(color){
+    const c = document.createElement('canvas').getContext('2d');
+    c.fillStyle = '#000'; c.fillStyle = color;
+    const v = c.fillStyle; // "#rrggbb" or "rgba(r, g, b, a)"
+    if(v[0] === '#') return { hex: v, a: 1 };
+    const m = v.match(/[\d.]+/g).map(Number);
+    return { hex: '#' + m.slice(0, 3).map(x => x.toString(16).padStart(2, '0')).join(''), a: m[3] == null ? 1 : m[3] };
+  }
+  let pickState = null;
+  function pickColor(bm, w){
+    const pos = bm.find(); if(!pos) return;
+    const lineText = cmCss.getLine(pos.line);
+    COLOR_RE.lastIndex = pos.ch;
+    const m = COLOR_RE.exec(lineText);
+    if(!m || m.index !== pos.ch) return;
+    const { hex, a } = cssToRgba(m[0]);
+    pickState = { line: pos.line, ch: pos.ch, len: m[0].length, alpha: a, first: true, orig: m[0] };
+    const r = w.getBoundingClientRect();
+    colorInput.style.left = r.left + 'px'; colorInput.style.top = (r.bottom + 2) + 'px';
+    colorInput.value = hex;
+    colorInput.click();
+  }
+  colorInput.addEventListener('input', () => {
+    if(!pickState) return;
+    const v = colorInput.value;
+    let out = v;
+    if(pickState.alpha < 1){
+      const n = [1, 3, 5].map(k => parseInt(v.slice(k, k + 2), 16));
+      out = `rgba(${n.join(', ')}, ${pickState.alpha})`;
+    }
+    const from = { line: pickState.line, ch: pickState.ch }, to = { line: pickState.line, ch: pickState.ch + pickState.len };
+    cmCss.replaceRange(out, from, to, pickState.first ? '+color' : '*color');
+    pickState.first = false;
+    pickState.len = out.length;
+  });
+  colorInput.addEventListener('change', () => { pickState = null; refreshSwatches(); });
+
+  // ---------- Code formatting (Prettier, loaded on first use) ----------
+  const PRETTIER_BASE = 'https://cdn.jsdelivr.net/npm/prettier@3.3.3/';
+  let prettierReady = null;
+  function loadScript(src){
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('load ' + src));
+      document.head.appendChild(s);
+    });
+  }
+  function loadPrettier(){
+    if(!prettierReady){
+      prettierReady = loadScript(PRETTIER_BASE + 'standalone.js')
+        .then(() => Promise.all(['html','postcss','babel','estree'].map(n => loadScript(PRETTIER_BASE + 'plugins/' + n + '.js'))))
+        .catch(e => { prettierReady = null; throw e; });
+    }
+    return prettierReady;
+  }
+  async function formatCode(lang){
+    const cm = cmByLang[lang];
+    const src = cm.getValue();
+    if(!src.trim()){ toast('Тут поки немає коду'); return; }
+    try{ await loadPrettier(); }
+    catch(e){ toast('Не вдалося завантажити форматувальник — перевір інтернет', 3500); return; }
+    try{
+      const out = (await prettier.format(src, {
+        parser: { html:'html', css:'css', js:'babel' }[lang],
+        plugins: Object.values(window.prettierPlugins || {}),
+        tabWidth: 2, printWidth: 90
+      })).replace(/\n+$/, '');
+      if(out === src.replace(/\n+$/, '')){ toast('Код уже впорядкований 👌'); return; }
+      const line = cm.getCursor().line;
+      const last = cm.lastLine();
+      cm.operation(() => {
+        cm.replaceRange(out, { line:0, ch:0 }, { line:last, ch:cm.getLine(last).length }, '+format');
+        cm.setCursor({ line: Math.min(line, cm.lastLine()), ch: 0 });
+      });
+      toast('Код упорядковано');
+    }catch(e){
+      const msg = String(e && e.message || e).split('\n')[0];
+      const pos = msg.match(/\((\d+):(\d+)\)/);
+      toast(pos ? `Не вдалося впорядкувати: помилка в рядку ${pos[1]}` : 'Не вдалося впорядкувати: ' + msg, 4000);
+    }
+  }
 
   // ---------- CodeMirror setup ----------
+  function runNow(){ updatePreview(); }
   function initEditors(){
     const cmOptions = {
       theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dracula' : 'idea',
       lineNumbers:true,
-      lineWrapping:true,
+      lineWrapping: wrapToggle.checked,
       matchBrackets:true,
       autoCloseBrackets:true,
       styleActiveLine:true,
       tabSize:2,
       indentUnit:2,
+      keyMap:'sublime',
+      foldGutter:true,
+      gutters:['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
       viewportMargin:Infinity
     };
-    const searchKeys = {
+    const baseKeys = lang => ({
       'Ctrl-F': 'findPersistent', 'Cmd-F': 'findPersistent',
       'Ctrl-H': 'replace', 'Cmd-Alt-F': 'replace',
-      'Shift-Ctrl-F': 'replaceAll', 'Shift-Cmd-Alt-F': 'replaceAll'
-    };
+      'Shift-Ctrl-F': 'replaceAll', 'Shift-Cmd-Alt-F': 'replaceAll',
+      'Ctrl-/': 'toggleComment', 'Cmd-/': 'toggleComment',
+      'Ctrl-Enter': runNow, 'Cmd-Enter': runNow,
+      'Shift-Alt-F': () => formatCode(lang),
+      'Tab': smartTab,
+      'Shift-Tab': 'indentLess'
+    });
     cmHtml = CodeMirror.fromTextArea(document.getElementById('cm-html'), {...cmOptions, mode:'htmlmixed', autoCloseTags:true, matchTags:{bothTags:true},
-      extraKeys:{ ...searchKeys, 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.html, { completeSingle:false }) }});
+      extraKeys:{ ...baseKeys('html'), 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.html, { completeSingle:false }) }});
     cmCss  = CodeMirror.fromTextArea(document.getElementById('cm-css'),  {...cmOptions, mode:'css',
-      extraKeys:{ ...searchKeys, 'Ctrl-Space': cm => attachFontPick(CodeMirror.showHint(cm, cssSmartHint, { completeSingle:false })) }});
+      extraKeys:{ ...baseKeys('css'), 'Ctrl-Space': cm => attachFontPick(CodeMirror.showHint(cm, cssSmartHint, { completeSingle:false })) }});
     cmJs   = CodeMirror.fromTextArea(document.getElementById('cm-js'),   {...cmOptions, mode:'javascript',
-      extraKeys:{ ...searchKeys, 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.javascript, { completeSingle:false }) }});
+      extraKeys:{ ...baseKeys('js'), 'Ctrl-Space': cm => CodeMirror.showHint(cm, CodeMirror.hint.javascript, { completeSingle:false }) }});
     cmByLang = { html: cmHtml, css: cmCss, js: cmJs };
 
     paneEls = {
@@ -972,16 +1959,25 @@
 
     [cmHtml, cmCss, cmJs].forEach(cm => {
       cm.on('change', () => {
-        isDirty = true;
-        updateDirtyIndicator();
-        clearTimeout(previewTimer);
-        previewTimer = setTimeout(updatePreview, 350);
+        if(loading) return;
+        markDirty();
+        if(autorun){
+          clearTimeout(previewTimer);
+          previewTimer = setTimeout(updatePreview, 400);
+        } else {
+          previewStale = true;
+          runBtn.classList.add('pending');
+        }
       });
     });
+    cmCss.on('change', scheduleSwatches);
 
     cmHtml.on('inputRead', (cm, change) => {
       if(cm.state.completionActive || !change.text[0]) return;
-      if(/[<\/a-zA-Z]/.test(change.text[0])){
+      // only inside a tag (<di…, attributes) — in plain text Tab belongs to Emmet
+      const ch = change.text[0];
+      const tok = cm.getTokenAt(cm.getCursor());
+      if(ch === '<' || (/[\/a-zA-Z-]/.test(ch) && tok.type && /tag|attribute/.test(tok.type))){
         CodeMirror.showHint(cm, CodeMirror.hint.html, { completeSingle:false });
       }
     });
@@ -1001,45 +1997,64 @@
     document.querySelectorAll('[data-download]').forEach(btn => {
       btn.addEventListener('click', () => downloadSingle(btn.dataset.download));
     });
+    document.querySelectorAll('[data-format]').forEach(btn => {
+      btn.addEventListener('click', () => formatCode(btn.dataset.format));
+    });
   }
 
   function refreshAll(){ cmHtml.refresh(); cmCss.refresh(); cmJs.refresh(); }
 
-  // Overrides console.log/warn/error/info inside the preview iframe and
-  // forwards them (plus uncaught errors / rejected promises) to the parent
-  // page via postMessage, so they can be shown in our console panel.
-  const CONSOLE_BRIDGE_SCRIPT = '<script>(function(){'
-    + 'function send(level,args){try{window.parent.postMessage({__edvaultConsole:true,level:level,args:args.map(function(a){'
-    + 'try{return typeof a==="object"&&a!==null?JSON.stringify(a):String(a);}catch(e){return String(a);}'
-    + '})},"*");}catch(e){}}'
-    + '["log","info","warn","error"].forEach(function(level){var orig=console[level];console[level]=function(){'
-    + 'send(level,Array.prototype.slice.call(arguments));if(orig)orig.apply(console,arguments);};});'
-    + 'window.onerror=function(msg,src,line){send("error",[msg+" (рядок "+line+")"]);return false;};'
-    + 'window.addEventListener("unhandledrejection",function(e){var r=e.reason;send("error",["Unhandled promise rejection: "+(r&&r.message?r.message:r)]);});'
-    + '})();<\/script>';
-
-  function fontLinkTags(){
-    return Array.from(usedFonts).map(f =>
-      `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${f.replace(/ /g, '+')}:wght@400;700&display=swap">`
-      + `\n<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${f.replace(/ /g, '+')}&display=swap">`
-    ).join('\n');
-  }
-
-  function buildDoc(project){
-    if(project && project.code) return project.code; // legacy single-field projects
-    const html = cmHtml.getValue(), css = cmCss.getValue(), js = cmJs.getValue();
-    const fonts = fontLinkTags();
-    return '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n'
-      + CONSOLE_BRIDGE_SCRIPT + '\n'
-      + (fonts ? fonts + '\n' : '')
-      + '<style>\n' + css + '\n</style>\n</head>\n<body>\n'
-      + html + '\n<script>\n'
-      + js + '\n<\/script>\n</body>\n</html>';
-  }
+  // ---------- Preview ----------
   function updatePreview(){
+    clearTimeout(previewTimer);
     clearConsole();
-    previewFrame.srcdoc = buildDoc();
+    clearErrorMarks();
+    const p = currentData();
+    const { head, tail } = docParts(p, { bridge:true });
+    jsStartLine = head.split('\n').length;
+    previewFrame.srcdoc = head + p.js + tail;
+    previewStale = false;
+    runBtn.classList.remove('pending');
   }
+  runBtn.addEventListener('click', updatePreview);
+  newtabBtn.addEventListener('click', () => {
+    const p = currentData();
+    const url = URL.createObjectURL(new Blob([composeDoc(p, { title: p.name || 'Проєкт' })], { type:'text/html' }));
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  });
+
+  // Device sizes: the iframe gets the real device width (so media queries
+  // work) and is scaled down to fit when the pane is narrower.
+  const DEVICES = { full:null, phone:375, tablet:768, laptop:1280 };
+  let device = 'full';
+  try{ const d = localStorage.getItem('edvault-we-device'); if(d && d in DEVICES) device = d; }catch(e){}
+  function applyDevice(){
+    deviceSeg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.device === device));
+    // on narrow screens the switcher is hidden, so the preview is always full width
+    const W = innerWidth > 900 ? DEVICES[device] : null;
+    if(!W){
+      previewStage.classList.remove('device');
+      previewFrame.style.width = previewFrame.style.height = previewFrame.style.transform = previewFrame.style.marginLeft = '';
+      deviceLabel.textContent = '';
+      return;
+    }
+    previewStage.classList.add('device');
+    const sw = previewStage.clientWidth - 28, sh = previewStage.clientHeight - 28;
+    const s = Math.min(1, sw / W);
+    previewFrame.style.width = W + 'px';
+    previewFrame.style.height = Math.max(100, sh / s) + 'px';
+    previewFrame.style.marginLeft = (-W / 2) + 'px';
+    previewFrame.style.transform = `scale(${s})`;
+    deviceLabel.textContent = W + ' px' + (s < 0.995 ? ` · ${Math.round(s * 100)}%` : '');
+  }
+  deviceSeg.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-device]'); if(!b) return;
+    device = b.dataset.device;
+    try{ localStorage.setItem('edvault-we-device', device); }catch(err){}
+    applyDevice();
+  });
+  new ResizeObserver(() => { if(DEVICES[device]) applyDevice(); }).observe(previewStage);
 
   // ---------- Downloads ----------
   function slugify(str){
@@ -1048,42 +2063,42 @@
       .replace(/^-+|-+$/g, '') || 'project';
   }
   function triggerDownload(filename, content, mime){
-    const blob = new Blob([content], { type: mime });
+    const blob = content instanceof Blob ? content : new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename;
     document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   function downloadSingle(lang){
     const filename = lang === 'html' ? 'index.html' : lang === 'css' ? 'style.css' : 'script.js';
     const mime = lang === 'html' ? 'text/html' : lang === 'css' ? 'text/css' : 'text/javascript';
     triggerDownload(filename, cmByLang[lang].getValue(), mime);
   }
-  async function downloadZip(){
-    const slug = slugify(nameInput.value);
-    const html = cmHtml.getValue(), css = cmCss.getValue(), js = cmJs.getValue();
-    const fonts = fontLinkTags();
-    const indexHtml = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<title>' + escapeHtml(nameInput.value || 'project')
+  function downloadHtml(p){
+    triggerDownload(slugify(p.name) + '.html', composeDoc(p, { title: p.name || 'project' }), 'text/html');
+  }
+  async function downloadZip(p){
+    if(p.code){ downloadHtml(p); return; }
+    const fonts = fontLinkTags(p.fonts);
+    const indexHtml = '<!DOCTYPE html>\n<html lang="uk">\n<head>\n<meta charset="UTF-8">\n'
+      + '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>' + escapeHtml(p.name || 'project')
       + '</title>\n' + (fonts ? fonts + '\n' : '')
       + '<link rel="stylesheet" href="style.css">\n</head>\n<body>\n'
-      + html + '\n<script src="script.js"><\/script>\n</body>\n</html>';
-
+      + (p.html || '') + '\n<script src="script.js"><\/script>\n</body>\n</html>';
     const zip = new JSZip();
     zip.file('index.html', indexHtml);
-    zip.file('style.css', css);
-    zip.file('script.js', js);
-    const blob = await zip.generateAsync({ type:'blob' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `${slug}.zip`;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
+    zip.file('style.css', p.css || '');
+    zip.file('script.js', p.js || '');
+    triggerDownload(slugify(p.name) + '.zip', await zip.generateAsync({ type:'blob' }));
   }
-  downloadZipBtn.addEventListener('click', downloadZip);
+  downloadZipBtn.addEventListener('click', () => downloadZip(currentData()));
+  downloadHtmlBtn.addEventListener('click', () => downloadHtml(currentData()));
 
   // ---------- Console panel ----------
   let errorCount = 0;
+  const consoleHistory = [];
+  let historyPos = 0;
 
   function renderEmptyConsoleIfNeeded(){
     if(!consoleBody.children.length){
@@ -1097,13 +2112,44 @@
     consoleBadge.textContent = '0';
     renderEmptyConsoleIfNeeded();
   }
-  function addConsoleLine(level, args){
+  function clearErrorMarks(){
+    if(!cmJs) return;
+    errorLineHandles.forEach(h => cmJs.removeLineClass(h, 'background', 'cm-error-line'));
+    errorLineHandles = [];
+  }
+  function revealLang(lang){
+    if(!visible[lang]){ visible[lang] = true; applyVisibility(); }
+    if(editorBody.dataset.layout !== 'grid' && activeTab !== lang){ activeTab = lang; renderLangTabs(); updateCodeLayout(); }
+  }
+  function jumpToJsLine(n){
+    revealLang('js');
+    requestAnimationFrame(() => {
+      cmJs.focus();
+      cmJs.setCursor({ line: n - 1, ch: 0 });
+      cmJs.scrollIntoView({ line: n - 1, ch: 0 }, 80);
+    });
+  }
+  function addConsoleLine(level, args, docLine){
+    if(level === 'clear'){ clearConsole(); return; }
     const empty = consoleBody.querySelector('.console-empty');
     if(empty) empty.remove();
     const line = document.createElement('div');
     line.className = 'console-line console-' + level;
-    const prefix = level === 'error' ? '✕ ' : level === 'warn' ? '⚠ ' : '';
-    line.textContent = prefix + args.join(' ');
+    const prefix = level === 'error' ? '✕ ' : level === 'warn' ? '⚠ ' : level === 'result' ? '← ' : level === 'input' ? '› ' : '';
+    const text = document.createElement('span');
+    text.className = 'console-text';
+    text.textContent = prefix + args.join(' ');
+    line.appendChild(text);
+    const jsLine = docLine ? docLine - jsStartLine + 1 : 0;
+    if(jsLine >= 1 && cmJs && jsLine <= cmJs.lineCount()){
+      const loc = document.createElement('span');
+      loc.className = 'console-loc';
+      loc.textContent = 'JS:' + jsLine;
+      loc.title = 'Перейти до рядка ' + jsLine;
+      loc.addEventListener('click', () => jumpToJsLine(jsLine));
+      line.appendChild(loc);
+      if(level === 'error') errorLineHandles.push(cmJs.addLineClass(jsLine - 1, 'background', 'cm-error-line'));
+    }
     consoleBody.appendChild(line);
     consoleBody.scrollTop = consoleBody.scrollHeight;
     if(level === 'error'){
@@ -1114,27 +2160,48 @@
   }
   window.addEventListener('message', (e) => {
     const data = e.data;
-    if(!data || !data.__edvaultConsole) return;
-    addConsoleLine(data.level, data.args);
+    if(!data || !data.__edvaultConsole || e.source !== previewFrame.contentWindow) return;
+    addConsoleLine(data.level, data.args || [], data.line);
   });
 
+  function setConsoleOpen(open){
+    consolePanel.classList.toggle('hidden', !open);
+    consoleToggleBtn.classList.toggle('active', open);
+    if(open) renderEmptyConsoleIfNeeded();
+    requestAnimationFrame(() => { refreshAll(); if(DEVICES[device]) applyDevice(); });
+  }
   consoleToggleBtn.addEventListener('click', () => {
-    const showing = consolePanel.classList.toggle('hidden') === false;
-    consoleToggleBtn.classList.toggle('active', showing);
-    if(showing) renderEmptyConsoleIfNeeded();
-    requestAnimationFrame(refreshAll);
+    const open = consolePanel.classList.contains('hidden');
+    setConsoleOpen(open);
+    if(open) consoleInput.focus();
   });
   consoleClearBtn.addEventListener('click', clearConsole);
+  consoleInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      const code = consoleInput.value.trim();
+      if(!code) return;
+      consoleHistory.push(code); historyPos = consoleHistory.length;
+      addConsoleLine('input', [code]);
+      consoleInput.value = '';
+      try{ previewFrame.contentWindow.postMessage({ __edvaultEval:true, code }, '*'); }catch(err){}
+    } else if(e.key === 'ArrowUp' && consoleHistory.length){
+      historyPos = Math.max(0, historyPos - 1); consoleInput.value = consoleHistory[historyPos]; e.preventDefault();
+    } else if(e.key === 'ArrowDown' && consoleHistory.length){
+      historyPos = Math.min(consoleHistory.length, historyPos + 1); consoleInput.value = consoleHistory[historyPos] || ''; e.preventDefault();
+    }
+  });
   clearConsole();
 
   // ---------- Fullscreen preview ----------
-  fullscreenBtn.addEventListener('click', () => {
-    const isFull = viewEditor.classList.toggle('preview-fullscreen');
-    fullscreenBtn.title = isFull ? 'Вийти з повного екрана' : 'На весь екран';
-    fullscreenBtn.innerHTML = isFull
-      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h4v4M4 14l5 5M20 10h-4V6M20 10l-5-5M4 10h4V6M4 10l5-5M20 14h-4v4M20 14l-5 5"/></svg>'
-      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>';
-  });
+  const FS_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>';
+  const FS_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>';
+  function setFullscreen(on){
+    viewEditor.classList.toggle('preview-fullscreen', on);
+    fullscreenBtn.title = on ? 'Вийти з повного екрана (Esc)' : 'На весь екран';
+    fullscreenBtn.innerHTML = on ? FS_OFF : FS_ON;
+    requestAnimationFrame(() => { if(DEVICES[device]) applyDevice(); });
+  }
+  fullscreenBtn.addEventListener('click', () => setFullscreen(!viewEditor.classList.contains('preview-fullscreen')));
 
   // ---------- Language visibility + pane layout ----------
   function applyVisibility(){
@@ -1227,6 +2294,7 @@
       if(visible[l] && visibleCount === 1) return; // keep at least one visible
       visible[l] = !visible[l];
       applyVisibility();
+      markDirty();
     });
   });
 
@@ -1238,22 +2306,21 @@
     optRight.classList.toggle('active', mode === 'split');
     optLeft.classList.toggle('active', mode === 'split-rev');
     updateCodeLayout();
+    requestAnimationFrame(() => { if(DEVICES[device]) applyDevice(); });
   }
-  optGrid.addEventListener('click', () => setLayout('grid'));
-  optRight.addEventListener('click', () => setLayout('split'));
-  optLeft.addEventListener('click', () => setLayout('split-rev'));
+  optGrid.addEventListener('click', () => { setLayout('grid'); markDirty(); });
+  optRight.addEventListener('click', () => { setLayout('split'); markDirty(); });
+  optLeft.addEventListener('click', () => { setLayout('split-rev'); markDirty(); });
 
   // ---------- Settings dropdown ----------
+  function closeSettings(){ settingsPanel.classList.add('hidden'); settingsBtn.classList.remove('active'); }
   settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsPanel.classList.toggle('hidden');
     settingsBtn.classList.toggle('active', !settingsPanel.classList.contains('hidden'));
   });
   document.addEventListener('click', (e) => {
-    if(!settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && e.target !== settingsBtn){
-      settingsPanel.classList.add('hidden');
-      settingsBtn.classList.remove('active');
-    }
+    if(!settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && !settingsBtn.contains(e.target)) closeSettings();
   });
 
   // ---------- Theme (light/dark) ----------
@@ -1262,6 +2329,7 @@
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     try{ localStorage.setItem('edvault-theme', dark ? 'dark' : 'light'); }catch(e){}
     themeToggle.checked = dark;
+    catalogThemeBtn.innerHTML = svg(dark ? ICONS.sun : ICONS.moon);
     if(cmByLang){
       const cmTheme = dark ? 'dracula' : 'idea';
       [cmHtml, cmCss, cmJs].forEach(cm => cm.setOption('theme', cmTheme));
@@ -1269,13 +2337,26 @@
     }
   }
   themeToggle.addEventListener('change', () => applyTheme(themeToggle.checked));
+  catalogThemeBtn.addEventListener('click', () => applyTheme(!isDark()));
   applyTheme(isDark());
 
   // ---------- Line wrap toggle ----------
+  try{ wrapToggle.checked = localStorage.getItem('edvault-we-wrap') !== '0'; }catch(e){}
   wrapToggle.addEventListener('change', () => {
     const wrap = wrapToggle.checked;
-    [cmHtml, cmCss, cmJs].forEach(cm => cm.setOption('lineWrapping', wrap));
-    requestAnimationFrame(refreshAll);
+    try{ localStorage.setItem('edvault-we-wrap', wrap ? '1' : '0'); }catch(e){}
+    [cmHtml, cmCss, cmJs].forEach(cm => cm && cm.setOption('lineWrapping', wrap));
+    if(cmHtml) requestAnimationFrame(refreshAll);
+  });
+
+  // ---------- Auto-run toggle ----------
+  try{ autorun = localStorage.getItem('edvault-we-autorun') !== '0'; }catch(e){}
+  autorunToggle.checked = autorun;
+  autorunToggle.addEventListener('change', () => {
+    autorun = autorunToggle.checked;
+    try{ localStorage.setItem('edvault-we-autorun', autorun ? '1' : '0'); }catch(e){}
+    if(autorun && previewStale) updatePreview();
+    runBtn.title = autorun ? 'Оновити перегляд (Ctrl+Enter)' : 'Запустити код (Ctrl+Enter)';
   });
 
   // ---------- Font size ----------
@@ -1303,8 +2384,9 @@
     dragging = true;
     const layout = editorBody.dataset.layout;
     const p = pointOf(e);
-    startPos = layout === 'grid' ? p.clientY : p.clientX;
-    startSize = layout === 'grid' ? codeZone.getBoundingClientRect().height : codeZone.getBoundingClientRect().width;
+    const vertical = layout === 'grid' || innerWidth <= 900;
+    startPos = vertical ? p.clientY : p.clientX;
+    startSize = vertical ? codeZone.getBoundingClientRect().height : codeZone.getBoundingClientRect().width;
     resizer.classList.add('dragging');
     document.body.style.userSelect = 'none';
     previewFrame.style.pointerEvents = 'none';
@@ -1315,7 +2397,7 @@
     const rect = editorBody.getBoundingClientRect();
     const p = pointOf(e);
     let newSize;
-    if(layout === 'grid'){
+    if(layout === 'grid' || innerWidth <= 900){
       const delta = p.clientY - startPos;
       newSize = Math.max(120, Math.min(rect.height - 100, startSize + delta));
     } else {
@@ -1323,6 +2405,7 @@
       newSize = Math.max(220, Math.min(rect.width - 220, startSize + delta));
     }
     codeZone.style.flexBasis = newSize + 'px';
+    if(DEVICES[device]) applyDevice();
   }
   function dragEnd(){
     if(!dragging) return;
@@ -1339,122 +2422,194 @@
   window.addEventListener('touchmove', dragMove, { passive:true });
   window.addEventListener('touchend', dragEnd);
 
-  // ---------- Editor open/close ----------
-  function updateDirtyIndicator(){
-    unsavedDot.classList.toggle('hidden', !isDirty);
+  // ---------- Saving (automatic + Ctrl+S) ----------
+  function setSaveStatus(state){
+    saveStatus.classList.toggle('pending', state === 'pending');
+    if(state === 'pending') saveStatus.textContent = 'Не збережено';
+    else if(state === 'saved') saveStatus.innerHTML = svg(ICONS.check) + 'Збережено';
+    else if(state === 'error') saveStatus.textContent = '⚠ Не збережено';
+    else saveStatus.textContent = '';
+  }
+  function markDirty(){
+    if(loading) return;
+    isDirty = true;
+    setSaveStatus('pending');
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => saveProject({ silent:true }), 900);
+  }
+  function updateDirtyIndicator(){ setSaveStatus(isDirty ? 'pending' : ''); }
+
+  function injectGoogleFont(font){
+    if(usedFonts.has(font)) return;
+    usedFonts.add(font);
+    markDirty();
+    updatePreview();
   }
 
-  function openEditor(project){
-    if(!cmHtml) initEditors();
+  function saveProject(opts = {}){
+    clearTimeout(autosaveTimer);
+    const projects = loadProjects();
+    let name = nameInput.value.trim();
+    if(!name){
+      // while the field is being cleared to type a new name, keep the stored one
+      const existing = currentEditId && projects.find(p => p.id === currentEditId);
+      name = existing ? existing.name : uniqueName('Новий проєкт');
+      if(!opts.silent || !existing) nameInput.value = name;
+    }
 
-    currentEditId = project ? project.id : null;
-    nameInput.value = project ? project.name : '';
+    const data = { ...currentData(), name, ui:{ layout: editorBody.dataset.layout, visible:{ ...visible } }, updated: Date.now() };
+
+    if(currentEditId && projects.some(p => p.id === currentEditId)){
+      const idx = projects.findIndex(p => p.id === currentEditId);
+      projects[idx] = { ...projects[idx], ...data };
+      delete projects[idx].code;
+    } else {
+      currentEditId = currentEditId || newId();
+      projects.push({ id: currentEditId, created: Date.now(), ...data });
+    }
+    try{ saveProjects(projects); }
+    catch(e){
+      setSaveStatus('error');
+      toast('Не вдалося зберегти: у браузері закінчилося місце. Видали старі проєкти або завантаж цей як .zip', 5000);
+      return false;
+    }
+    isDirty = false;
+    setSaveStatus('saved');
+    if(!opts.silent) flashSaved();
+    return true;
+  }
+
+  function flashSaved(){
+    const label = saveBtn.querySelector('.save-label');
+    label.textContent = 'Збережено';
+    saveBtn.classList.add('saved-flash');
+    clearTimeout(flashSaved._t);
+    flashSaved._t = setTimeout(() => {
+      label.textContent = 'Зберегти';
+      saveBtn.classList.remove('saved-flash');
+    }, 1300);
+  }
+
+  saveBtn.addEventListener('click', () => saveProject());
+  nameInput.addEventListener('input', markDirty);
+  nameInput.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); nameInput.blur(); } });
+
+  // ---------- Editor open/close ----------
+  function openEditor(project, opts = {}){
+    if(!cmHtml) initEditors();
+    closeMenu();
+
+    loading = true;
+    currentEditId = project && project.id ? project.id : null;
+    nameInput.value = project ? (project.name || '') : '';
 
     if(project && project.code){
       cmHtml.setValue(project.code);
       cmCss.setValue('');
       cmJs.setValue('');
     } else {
-      cmHtml.setValue(project ? (project.html || '') : '<div id="app">\n  Привіт, Edvault!\n</div>');
-      cmCss.setValue(project ? (project.css || '') : 'body{\n  font-family: sans-serif;\n  text-align: center;\n  margin-top: 60px;\n}');
+      cmHtml.setValue(project ? (project.html || '') : '');
+      cmCss.setValue(project ? (project.css || '') : '');
       cmJs.setValue(project ? (project.js || '') : '');
     }
+    [cmHtml, cmCss, cmJs].forEach(cm => { cm.clearHistory(); cm.setCursor({ line:0, ch:0 }); });
 
-    visible = { html:true, css:true, js:true };
+    const ui = (project && project.ui) || {};
+    visible = { html:true, css:true, js:true, ...(ui.visible || {}) };
+    if(!visible.html && !visible.css && !visible.js) visible = { html:true, css:true, js:true };
     activeTab = 'html';
     paneFlexBasis = { html:null, css:null, js:null };
     usedFonts = new Set(project && Array.isArray(project.fonts) ? project.fonts : []);
-    settingsPanel.classList.add('hidden');
-    settingsBtn.classList.remove('active');
-    consolePanel.classList.add('hidden');
-    consoleToggleBtn.classList.remove('active');
+    closeSettings();
+    setConsoleOpen(false);
     clearConsole();
-    viewEditor.classList.remove('preview-fullscreen');
-    fullscreenBtn.title = 'На весь екран';
-    fullscreenBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>';
+    setFullscreen(false);
     applyVisibility();
-    setLayout('grid');
+    setLayout(['grid','split','split-rev'].includes(ui.layout) ? ui.layout : 'grid');
 
     viewCatalog.classList.add('hidden');
     viewEditor.classList.remove('hidden');
+    loading = false;
 
-    // setValue() above triggers 'change' (marks dirty) — clear it now that loading is done
     isDirty = false;
-    updateDirtyIndicator();
+    setSaveStatus(currentEditId ? 'saved' : '');
+    if(opts.isNew) saveProject({ silent:true });
 
     requestAnimationFrame(() => {
       refreshAll();
       updatePreview();
-      nameInput.focus();
+      refreshSwatches();
+      applyDevice();
+      if(opts.isNew || !currentEditId){ cmHtml.focus(); } else { cmHtml.focus(); }
     });
   }
 
   function closeEditor(){
+    if(isDirty) saveProject({ silent:true });
+    setFullscreen(false);
+    previewFrame.srcdoc = '';
     viewEditor.classList.add('hidden');
     viewCatalog.classList.remove('hidden');
     renderCatalog();
   }
-  backBtn.addEventListener('click', () => {
-    if(isDirty && !confirm('Є незбережені зміни. Вийти без збереження?')) return;
-    closeEditor();
+  backBtn.addEventListener('click', closeEditor);
+
+  // Data lives in localStorage, so a synchronous save on leave is safe.
+  window.addEventListener('pagehide', () => { if(!viewEditor.classList.contains('hidden') && isDirty) saveProject({ silent:true }); });
+  document.addEventListener('visibilitychange', () => { if(document.hidden && !viewEditor.classList.contains('hidden') && isDirty) saveProject({ silent:true }); });
+
+  // ---------- Share button ----------
+  document.getElementById('share-btn').addEventListener('click', () => {
+    const p = currentData();
+    p.name = p.name || 'Проєкт';
+    openShare(p);
   });
 
-  function saveProject(){
-    const name = nameInput.value.trim();
-    if(!name){ alert('Введи назву проєкту'); nameInput.focus(); return false; }
-
-    const projects = loadProjects();
-    const data = { name, html: cmHtml.getValue(), css: cmCss.getValue(), js: cmJs.getValue(), fonts: Array.from(usedFonts), updated: Date.now() };
-
-    if(currentEditId){
-      const idx = projects.findIndex(p => p.id === currentEditId);
-      if(idx !== -1){
-        projects[idx] = { ...projects[idx], ...data };
-        delete projects[idx].code;
-      }
-    } else {
-      const newId = Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-      projects.push({ id: newId, created: Date.now(), ...data });
-      currentEditId = newId;
-    }
-    saveProjects(projects);
-    isDirty = false;
-    updateDirtyIndicator();
-    flashSaved();
-    return true;
-  }
-
-  function flashSaved(){
-    const label = saveBtn.querySelector('.save-label');
-    const original = label.textContent;
-    label.textContent = 'Збережено';
-    saveBtn.classList.add('saved-flash');
-    clearTimeout(flashSaved._t);
-    flashSaved._t = setTimeout(() => {
-      label.textContent = original;
-      saveBtn.classList.remove('saved-flash');
-    }, 1300);
-  }
-
-  saveBtn.addEventListener('click', saveProject);
-
-  nameInput.addEventListener('input', () => { isDirty = true; updateDirtyIndicator(); });
-
-  window.addEventListener('beforeunload', (e) => {
-    if(!viewEditor.classList.contains('hidden') && isDirty){
-      e.preventDefault();
-      e.returnValue = '';
-    }
+  // ---------- Shortcuts help ----------
+  const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
+  document.getElementById('shortcuts-btn').addEventListener('click', () => {
+    closeSettings();
+    const row = (label, keys) => `<span>${label}</span><span>${keys.split(' ').map(k => `<kbd>${k.replace('Mod', MOD)}</kbd>`).join(' ')}</span>`;
+    const box = openModal(`<h3 class="modal-title">Гарячі клавіші та підказки</h3>
+      <div class="kbd-list">
+        <div class="kbd-sec">Основне</div>
+        ${row('Зберегти (і так зберігається само)', 'Mod+S')}
+        ${row('Оновити / запустити перегляд', 'Mod+Enter')}
+        ${row('Упорядкувати код', 'Shift+Alt+F')}
+        ${row('Підказки коду', 'Ctrl+Space')}
+        <div class="kbd-sec">Редагування</div>
+        ${row('Закоментувати рядок', 'Mod+/')}
+        ${row('Виділити наступне таке ж слово', 'Mod+D')}
+        ${row('Перемістити рядок вгору / вниз', 'Alt+↑ Alt+↓')}
+        ${row('Дублювати рядок', 'Mod+Shift+D')}
+        ${row('Видалити рядок', 'Mod+Shift+K')}
+        ${row('Пошук / заміна', 'Mod+F Mod+H')}
+        <div class="kbd-sec">Швидкий HTML (Emmet)</div>
+        ${row('Список із 3 пунктів', 'ul>li*3 Tab')}
+        ${row('Блок з класом і заголовком', 'div.card>h2 Tab')}
+        ${row('Текст усередині', 'p{Привіт} Tab')}
+        ${row('Сусідні елементи', 'h1+p Tab')}
+        ${row('Нумерація', 'li.item$*3 Tab')}
+        <div class="kbd-sec">CSS</div>
+        <span>Клацни на кольоровий квадратик біля кольору, щоб вибрати інший</span><span></span>
+      </div>
+      <div class="modal-actions" style="margin-top:18px"><button class="retry-btn" data-x>Зрозуміло</button></div>`, 'modal-md');
+    box.querySelector('[data-x]').onclick = closeModal;
   });
 
+  // ---------- Global keys ----------
   document.addEventListener('keydown', (e) => {
-    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !viewEditor.classList.contains('hidden')){
+    const inEditor = !viewEditor.classList.contains('hidden');
+    if((e.ctrlKey || e.metaKey) && e.code === 'KeyS' && inEditor){
       e.preventDefault();
       saveProject();
+    } else if((e.ctrlKey || e.metaKey) && e.key === 'Enter' && inEditor){
+      e.preventDefault();
+      updatePreview();
     }
   });
 
-  // ---------- Import files ----------
+  // ---------- Import files into the open project ----------
   const importBtn = document.getElementById('import-btn');
   const importInput = document.getElementById('import-input');
   importBtn.addEventListener('click', () => importInput.click());
@@ -1465,31 +2620,50 @@
     for(const file of files){
       const ext = file.name.split('.').pop().toLowerCase();
       const text = await file.text();
-      if(ext === 'html' || ext === 'htm'){ cmHtml.setValue(text); imported.push('HTML'); }
+      if(ext === 'html' || ext === 'htm'){
+        const parts = await parseProjectHtml(text, null);
+        cmHtml.setValue(parts.html);
+        if(parts.css) cmCss.setValue(parts.css);
+        if(parts.js) cmJs.setValue(parts.js);
+        parts.fonts.forEach(f => usedFonts.add(f));
+        imported.push('HTML');
+      }
       else if(ext === 'css'){ cmCss.setValue(text); imported.push('CSS'); }
       else if(ext === 'js'){ cmJs.setValue(text); imported.push('JS'); }
     }
     importInput.value = '';
-    settingsPanel.classList.add('hidden');
-    settingsBtn.classList.remove('active');
+    closeSettings();
     updatePreview();
-    if(!imported.length) alert('Підтримуються тільки файли .html, .css, .js');
+    if(!imported.length) toast('Підтримуються тільки файли .html, .css, .js');
+    else toast('Імпортовано: ' + imported.join(', '));
   });
 
   document.addEventListener('keydown', (e) => {
-    if(e.key !== 'Escape' || viewEditor.classList.contains('hidden')) return;
-    if(!settingsPanel.classList.contains('hidden')){
-      settingsPanel.classList.add('hidden');
-      settingsBtn.classList.remove('active');
-    } else if(viewEditor.classList.contains('preview-fullscreen')){
-      fullscreenBtn.click();
-    } else {
-      if(isDirty && !confirm('Є незбережені зміни. Вийти без збереження?')) return;
-      closeEditor();
-    }
+    if(e.key !== 'Escape') return;
+    if(menuEl){ closeMenu(); return; }
+    if(isModalOpen()){ closeModal(); return; }
+    if(viewEditor.classList.contains('hidden')) return;
+    if(!settingsPanel.classList.contains('hidden')) closeSettings();
+    else if(viewEditor.classList.contains('preview-fullscreen')) setFullscreen(false);
   });
 
+  // ---------- Start ----------
   renderCatalog();
+  window.addEventListener('hashchange', openSharedFromHash);
+  openSharedFromHash();
+  async function openSharedFromHash(){
+    const m = location.hash.match(/^#p=([\w-]+)/);
+    if(!m) return;
+    history.replaceState(null, '', location.pathname + location.search);
+    try{
+      const p = await decodeShare(m[1]);
+      p.name = uniqueName(p.name);
+      openEditor(p, { isNew:true });
+      toast('Відкрито проєкт за посиланням — копію збережено у твої проєкти', 4000);
+    }catch(e){
+      toast('Посилання пошкоджене або неповне', 4000);
+    }
+  }
 </script>
 
 </body>
