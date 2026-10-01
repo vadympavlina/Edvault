@@ -2,6 +2,7 @@
 import { S, media, uid, emit, layout, clipAt, srcTime, clipDur, musicDur, mainEnd, duration, commit, select, findSel, rippleShift, outputSize, ASPECTS } from './state.js';
 import { seek } from './player.js';
 import { toast } from './ui.js';
+import { addMedia, peakIn, PEAKS_RATE } from './media.js';
 
 const FPS_EPS = 0.05;
 
@@ -67,6 +68,7 @@ export function splitAt(t = S.t) {
   if (!l || t <= l.start + FPS_EPS || t >= l.end - FPS_EPS) { toast('Поставте курсор усередину кліпу, щоб розрізати'); return false; }
   const c = l.clip, st = srcTime(l, t);
   const b = { ...structuredClone(c), id: uid('c'), in: st, fadeIn: 0 };
+  delete b.tr; // розріз — без переходу
   c.out = st; c.fadeOut = 0;
   p.clips.splice(p.clips.indexOf(c) + 1, 0, b);
   commit();
@@ -110,6 +112,31 @@ export function duplicateSel() {
 }
 
 // ── вирізання діапазону [a, b) з основної доріжки ──
+// без запису в історію — щоб кілька вирізань (паузи) були одним кроком «скасувати»
+function cutRangeRaw(a, b) {
+  const p = S.project;
+  const out = [];
+  for (const l of layout()) {
+    const c = l.clip, sp = c.speed || 1;
+    if (l.end <= a || l.start >= b) { out.push(c); continue; }
+    if (l.start < a) out.push({ ...structuredClone(c), out: c.in + (a - l.start) * sp, fadeOut: 0 });
+    if (l.end > b) out.push({ ...structuredClone(c), id: l.start < a ? uid('c') : c.id, in: c.in + (b - l.start) * sp, fadeIn: 0, tr: l.start < a ? undefined : c.tr });
+  }
+  p.clips = out;
+  rippleShift(a, -(b - a));
+}
+export function cutRanges(list) {
+  if (!list.length) return 0;
+  const sorted = list.slice().sort((x, y) => y[0] - x[0]); // з кінця, щоб попередні позиції не зсувалися
+  let total = 0;
+  for (const [a, b] of sorted) { cutRangeRaw(a, b); total += b - a; }
+  S.markIn = S.markOut = null;
+  select(null);
+  commit();
+  seek(Math.min(S.t, mainEnd()));
+  emit('did-cut');
+  return total;
+}
 export function cutRange(a, b) {
   if (a == null || b == null) { toast('Спочатку позначте початок (I) і кінець (O) шматка'); return false; }
   if (b < a) [a, b] = [b, a];
@@ -150,7 +177,9 @@ export function addOverlay(type, extra = {}) {
   const { W, H } = outputSize();
   const base = { id: uid('o'), type, start: Math.min(S.t, Math.max(0, duration() - 0.5)), dur: 4, fade: type === 'text' };
   let o;
-  if (type === 'text') o = { ...base, ...structuredClone(TEXT_PRESETS[extra.preset || 'plain'].o) };
+  if (type === 'text') o = { ...base, ...structuredClone(TEXT_PRESETS[extra.preset || 'plain'].o), anim: 'fade' };
+  else if (type === 'emoji') { const w = 0.13; o = { ...base, emoji: extra.emoji || '⭐', x: 0.78, y: 0.08, w, h: w * W / H, anim: 'pop', dur: 3 }; }
+  else if (type === 'progress') o = { ...base, start: 0, dur: Math.max(1, mainEnd() || duration() || 10), x: 0, y: 0.985, w: 1, h: 0.015, color: '#4F6BF4', fade: false };
   else if (type === 'rect') o = { ...base, x: 0.3, y: 0.3, w: 0.4, h: 0.3, color: '#ef4444', stroke: 8, radius: 16, fill: false };
   else if (type === 'arrow') o = { ...base, x: 0.28, y: 0.3, w: 0.18, h: 0.16 * W / H, color: '#ef4444', stroke: 10 };
   else if (type === 'blur') o = { ...base, x: 0.35, y: 0.35, w: 0.3, h: 0.2, strength: 20, pixel: false, dur: 5 };
@@ -208,3 +237,114 @@ export function trimMusicToVideo(x) {
 
 export function clipLabel(c) { const m = media.get(c.mediaId); return m ? m.name : 'Кліп'; }
 export { clipDur };
+
+// ── чарівні дії ──
+
+// Пошук тиші в основній доріжці. level: 'soft' | 'mid' | 'hard'; minLen — найкоротша пауза, с; pad — запас по краях, с
+export function findSilences({ level = 'mid', minLen = 0.8, pad = 0.15 } = {}) {
+  const K = { soft: 0.07, mid: 0.12, hard: 0.2 }[level] || 0.12;
+  const found = [];
+  let missing = 0;
+  for (const l of layout()) {
+    const c = l.clip, m = media.get(c.mediaId);
+    if (!m || m.kind !== 'video' || c.muted) continue;
+    if (!m.peaks) { if (m.hasAudio) missing++; continue; }
+    const sp = c.speed || 1;
+    const i0 = Math.floor(c.in * PEAKS_RATE), i1 = Math.min(m.peaks.length, Math.ceil(c.out * PEAKS_RATE));
+    if (i1 - i0 < 5) continue;
+    // поріг відносно гучності мовлення в цьому кліпі (95-й перцентиль)
+    const arr = Array.from(m.peaks.subarray(i0, i1)).sort((a, b) => a - b);
+    const loud = arr[Math.floor(arr.length * 0.95)] || 0;
+    if (loud < 0.01) continue;
+    const thr = loud * K;
+    let runStart = null;
+    const flush = (iEnd) => {
+      if (runStart == null) return;
+      const sa = runStart / PEAKS_RATE, sb = iEnd / PEAKS_RATE;
+      runStart = null;
+      // у час таймлайну
+      const ta = l.start + (sa - c.in) / sp + pad, tb = l.start + (sb - c.in) / sp - pad;
+      // паузи на самому початку / в кінці кліпу прибираємо повністю
+      const a = sa <= c.in + 0.02 ? l.start : ta, b = sb >= c.out - 0.02 ? l.end : tb;
+      if (b - a >= minLen - 2 * pad && b - a > 0.15) found.push([Math.max(l.start, a), Math.min(l.end, b)]);
+    };
+    for (let i = i0; i < i1; i++) {
+      if (m.peaks[i] < thr) { if (runStart == null) runStart = i; }
+      else flush(i);
+    }
+    flush(i1);
+  }
+  // не дозволяємо вирізати все відео
+  const total = found.reduce((s, [a, b]) => s + b - a, 0);
+  return { list: total < mainEnd() - 0.5 ? found : [], total, missing };
+}
+
+// Заставка: кольоровий фон + великий заголовок на кількох секундах на початку чи в позиції курсора
+export const CARD_STYLES = {
+  blue: ['#4F6BF4', '#8b5cf6'], sunset: ['#f97316', '#ec4899'], green: ['#10b981', '#0ea5e9'], dark: ['#0f172a', '#334155'], light: ['#f8fafc', '#e2e8f0'],
+};
+export async function addTitleCard(style = 'blue', text = 'Назва уроку') {
+  const { W, H } = outputSize();
+  const [c1, c2] = CARD_STYLES[style] || CARD_STYLES.blue;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, c1); gr.addColorStop(1, c2);
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  // легкі кола для глибини
+  g.globalAlpha = 0.12; g.fillStyle = '#ffffff';
+  g.beginPath(); g.arc(W * 0.85, H * 0.15, Math.min(W, H) * 0.35, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.arc(W * 0.1, H * 0.95, Math.min(W, H) * 0.25, 0, Math.PI * 2); g.fill();
+  const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+  const m = await addMedia(blob, 'Заставка.png');
+  const p = S.project;
+  const L = layout();
+  // вставляємо на межі кліпу, найближчій до курсора
+  let idx = p.clips.length, at = mainEnd();
+  const cur = L.find(x => S.t >= x.start && S.t < x.end);
+  if (cur) { const i = L.indexOf(cur); if (S.t - cur.start < cur.end - S.t) { idx = i; at = cur.start; } else { idx = i + 1; at = cur.end; } }
+  const dur = 3;
+  const c = { ...newClip(m), out: dur };
+  p.clips.splice(idx, 0, c);
+  rippleShift(at, dur);
+  const dark = style === 'light';
+  p.overlays.push({ id: uid('o'), type: 'text', start: at, dur, text, size: 120, weight: 800, color: dark ? '#1a1d23' : '#ffffff', bg: dark ? 'none' : 'shadow', align: 'center', x: 0.08, y: 0.38, w: 0.84, anim: 'up' });
+  commit();
+  seek(at + 0.6);
+  select('overlay', p.overlays[p.overlays.length - 1].id);
+  return c;
+}
+
+// Вирівняти гучність: найгучніший момент → ~90%
+export function normalizeSel() {
+  const s = S.sel, o = findSel();
+  if (!o) return false;
+  const m = media.get(o.mediaId);
+  if (!m || !m.peaks) { toast(m && m.analyzing ? 'Ще аналізуємо звук — спробуйте за мить' : 'У цьому файлі немає звуку'); return false; }
+  const peak = s.kind === 'music' ? peakIn(m, o.in, o.out) : peakIn(m, o.in, o.out);
+  if (!peak || peak < 0.005) { toast('Тут майже тиша — нічого вирівнювати'); return false; }
+  const v = Math.max(0.1, Math.min(2, Math.round((0.9 / peak) * 20) / 20));
+  o.volume = v;
+  if (s.kind === 'clip') o.muted = false;
+  commit();
+  toast(`Гучність: ${Math.round(v * 100)}%`, 'ok');
+  return true;
+}
+
+// Переходи між усіма кліпами: вмикає або (якщо вже всюди) прибирає
+export function transitionsAll(type = 'fade') {
+  const cl = S.project.clips.slice(1);
+  if (!cl.length) { toast('Потрібно хоча б два кліпи'); return; }
+  const all = cl.every(c => c.tr);
+  cl.forEach(c => { if (all) delete c.tr; else if (!c.tr) c.tr = { type, d: 0.6 }; });
+  commit();
+  toast(all ? 'Переходи прибрано' : 'Переходи додано між усіма кліпами', 'ok');
+}
+
+// Озвучення: записаний голос лягає на звукову доріжку з місця початку запису
+export function addVoice(m, start) {
+  const x = { id: uid('a'), mediaId: m.id, start, in: 0, out: m.duration, volume: 1, fadeIn: 0, fadeOut: 0, voice: true };
+  S.project.music.push(x);
+  commit();
+  select('music', x.id);
+  return x;
+}

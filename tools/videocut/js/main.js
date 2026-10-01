@@ -5,7 +5,7 @@ import { initPlayer, resizeCanvas, seek, toggle, pause, play, snapshot, requestD
 import { initTimeline, render as renderTimeline, zoomBy, zoomFit, setZoom } from './timeline.js';
 import { initLibrary, initInspector, importCaptionFile, showTab } from './panels.js';
 import { initPreviewLayer, renderHandles } from './preview.js';
-import { addToTimeline, addOverlay, splitAt, deleteSel, duplicateSel, cutRange, addCaption } from './ops.js';
+import { addToTimeline, addOverlay, splitAt, deleteSel, duplicateSel, cutRange, addCaption, findSilences, cutRanges, addVoice } from './ops.js';
 import { exportVideo, exportAudio, exportSize, detectCodecs, canExport } from './export.js';
 import { DB, takeHandoff } from './db.js';
 import { $, icon, hydrateIcons, initTips, initTheme, toast, fmt, openModal, closeModal, anyModalOpen, confirmDialog, downloadBlob, safeName, fmtBytes } from './ui.js';
@@ -177,6 +177,10 @@ document.addEventListener('keydown', e => {
     }
     return;
   }
+  if (rec) { // під час запису голосу — лише зупинка
+    if (e.code === 'Space' || e.key === 'Escape') { e.preventDefault(); stopVoice(); }
+    return;
+  }
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.code === 'KeyZ') { if (typing) return; e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
@@ -203,6 +207,7 @@ document.addEventListener('keydown', e => {
     case 'KeyT': showTab('text'); addOverlay('text', { preset: 'plain' }); emit('focus-inspector'); break;
     case 'KeyC': showTab('captions'); addCaption(''); break;
     case 'KeyF': toggleFullscreen(); break;
+    case 'KeyR': openVoice(); break;
     case 'Equal': case 'NumpadAdd': zoomBy(1.5); break;
     case 'Minus': case 'NumpadSubtract': zoomBy(1 / 1.5); break;
     case 'KeyZ': if (e.shiftKey) zoomFit(); break;
@@ -405,3 +410,125 @@ if (window.matchMedia('(max-width: 980px)').matches) toast('Редактор н�
 
 // для автотестів
 window.VideoCut = { S, media, seek, commit, exportVideo, exportAudio, duration, layout };
+
+// ══════════ Прибрати паузи ══════════
+const silOpt = { level: 'mid', minLen: 0.8 };
+let silFound = [];
+function silSeg(id, key, conv) {
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    silOpt[key] = conv(b.dataset.v);
+    analyzeSilences();
+  });
+}
+silSeg('silLevel', 'level', v => v);
+silSeg('silMin', 'minLen', Number);
+function analyzeSilences() {
+  const r = findSilences({ level: silOpt.level, minLen: silOpt.minLen, pad: 0.15 });
+  silFound = r.list;
+  S.silPreview = silFound;
+  emit('silences');
+  const total = silFound.reduce((a, [x, y]) => a + y - x, 0);
+  let html;
+  if (r.missing && !silFound.length) html = '<span class="warn">Звук ще аналізується — зачекайте кілька секунд і відкрийте це вікно знову.</span>';
+  else if (!silFound.length) html = 'Пауз такої довжини не знайдено. Спробуйте коротшу паузу або сильніший режим.';
+  else html = `Знайдено <b>${silFound.length}</b> ${silFound.length === 1 ? 'паузу' : silFound.length < 5 ? 'паузи' : 'пауз'} · разом <b>${fmt(total, true)}</b>. Відео стане <b>${fmt(mainEnd() - total, true)}</b> замість ${fmt(mainEnd(), true)}.`;
+  $('silInfo').innerHTML = html;
+  $('silApply').disabled = !silFound.length;
+  $('silApply').lastChild.textContent = silFound.length ? `Прибрати ${silFound.length}` : 'Прибрати';
+}
+function openSilences() {
+  if (!S.project.clips.length) { toast('Спочатку додайте відео'); return; }
+  pause();
+  openModal('silModal');
+  analyzeSilences();
+  if (duration() > 0) zoomFit();
+}
+function clearSilPreview() { if (S.silPreview) { S.silPreview = null; emit('silences'); } }
+$('btnSilences').addEventListener('click', openSilences);
+on('open-silences', openSilences);
+$('silApply').addEventListener('click', () => {
+  if (!silFound.length) return;
+  const n = silFound.length;
+  const total = cutRanges(silFound);
+  silFound = [];
+  closeModal('silModal');
+  clearSilPreview();
+  toast(`Прибрано ${n} ${n === 1 ? 'паузу' : n < 5 ? 'паузи' : 'пауз'} · ${fmt(total, true)}`, 'ok', 4000);
+});
+new MutationObserver(() => { if (!$('silModal').classList.contains('open')) clearSilPreview(); }).observe($('silModal'), { attributes: true, attributeFilter: ['class'] });
+
+// ══════════ Озвучення (запис голосу) ══════════
+let rec = null; // { recorder, stream, chunks, start, mime, t0, timer }
+function openVoice() {
+  if (rec) { stopVoice(); return; }
+  if (!duration()) { toast('Спочатку додайте відео, яке будете озвучувати'); return; }
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { toast('Цей браузер не вміє записувати звук. Спробуйте Chrome або Edge.', 'err', 5000); return; }
+  pause();
+  if (S.t >= duration() - 0.5) seek(0);
+  $('voFrom').textContent = fmt(S.t, true);
+  $('voInfo').textContent = 'Браузер попросить дозвіл на мікрофон.';
+  openModal('voModal');
+}
+on('open-voice', openVoice);
+$('btnVoice').addEventListener('click', openVoice);
+$('btnRecStop').addEventListener('click', () => stopVoice());
+$('voStart').addEventListener('click', async () => {
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (e) {
+    $('voInfo').innerHTML = '<span class="warn">Немає доступу до мікрофона. Дозвольте його в адресному рядку браузера й спробуйте ще раз.</span>';
+    return;
+  }
+  closeModal('voModal');
+  const mute = $('voMute').checked;
+  // відлік 3-2-1
+  const cnt = $('recCount');
+  cnt.hidden = false;
+  for (const n of [3, 2, 1]) { cnt.textContent = n; cnt.classList.remove('pop'); void cnt.offsetWidth; cnt.classList.add('pop'); await new Promise(r => setTimeout(r, 800)); }
+  cnt.hidden = true;
+  const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const recorder = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 128000 } : {});
+  rec = { recorder, stream, chunks: [], start: S.t, mime: recorder.mimeType || mime, t0: performance.now() };
+  recorder.ondataavailable = e => { if (e.data && e.data.size) rec.chunks.push(e.data); };
+  recorder.start(250);
+  S.recMute = mute;
+  document.body.classList.add('recording');
+  $('recBadge').hidden = false;
+  rec.timer = setInterval(() => { $('recTime').textContent = fmt((performance.now() - rec.t0) / 1000); }, 200);
+  play();
+});
+// відео дограло до кінця — завершуємо запис
+on('play', () => { if (rec && !S.playing && !rec.stopping) stopVoice(); });
+
+async function stopVoice() {
+  if (!rec || rec.stopping) return;
+  const r = rec;
+  r.stopping = true;
+  clearInterval(r.timer);
+  const done = new Promise(res => { r.recorder.onstop = res; });
+  try { r.recorder.stop(); } catch (e) { /* ignore */ }
+  pause();
+  await done;
+  r.stream.getTracks().forEach(t => t.stop());
+  S.recMute = false;
+  document.body.classList.remove('recording');
+  $('recBadge').hidden = true;
+  rec = null;
+  const blob = new Blob(r.chunks, { type: r.mime || 'audio/webm' });
+  if (blob.size < 1000) { toast('Запис занадто короткий'); return; }
+  const ext = /mp4/.test(r.mime) ? 'm4a' : /ogg/.test(r.mime) ? 'ogg' : 'webm';
+  try {
+    toast('Обробляємо запис…', '', 20000);
+    const m = await addMedia(blob, `Голос ${fmt(r.start).replace(':', '-')}.${ext}`);
+    addVoice(m, r.start);
+    seek(r.start);
+    toast('Голос додано на звукову доріжку. Відтворіть, щоб послухати', 'ok', 4500);
+  } catch (e) {
+    console.error(e);
+    toast('Не вдалося зберегти запис: ' + (e.message || e), 'err', 6000);
+  }
+}
+window.addEventListener('beforeunload', e => { if (rec) { e.preventDefault(); e.returnValue = ''; } });

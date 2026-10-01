@@ -1,8 +1,66 @@
 // Малювання кадру сцени — однаково для перегляду й експорту.
 // provider(layoutItem, sourceTime) → {src: CanvasImageSource | VideoSample, w, h} | null
 import { S, media, layout, clipAt, srcTime } from './state.js';
+import { tailFrame } from './media.js';
 
 export const FONT_STACK = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+const EMOJI_FONT = "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
+
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const smooth = p => p * p * (3 - 2 * p);
+const easeOut = p => 1 - Math.pow(1 - p, 3);
+const easeBack = p => { const c = 1.7; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+
+// ── кольорові фільтри кліпів ──
+export const LOOKS = {
+  none: { name: 'Без фільтра' },
+  vivid: { name: 'Яскравий', f: 'saturate(1.45) contrast(1.08)' },
+  warm: { name: 'Теплий', f: 'saturate(1.12) brightness(1.02)', tint: ['#ff8a3d', 0.22] },
+  cool: { name: 'Холодний', f: 'saturate(1.02)', tint: ['#3d8bff', 0.22] },
+  bw: { name: 'Чорно-білий', f: 'grayscale(1) contrast(1.12)' },
+  vintage: { name: 'Ретро', f: 'sepia(.5) contrast(.92) brightness(1.04) saturate(.9)', vignette: 0.45 },
+  drama: { name: 'Драма', f: 'contrast(1.32) saturate(.82) brightness(.96)', vignette: 0.38 },
+  bright: { name: 'Світліше', f: 'brightness(1.18) contrast(1.04)' },
+};
+export const FILTERS_OK = (() => {
+  try { const c = document.createElement('canvas').getContext('2d'); c.filter = 'blur(2px)'; return c.filter === 'blur(2px)'; } catch (e) { return false; }
+})();
+export function lookFilter(c) {
+  const parts = [];
+  const L = LOOKS[c.look];
+  if (L && L.f) parts.push(L.f);
+  if (c.bri != null && Math.abs(c.bri - 1) > 1e-3) parts.push(`brightness(${c.bri})`);
+  if (c.con != null && Math.abs(c.con - 1) > 1e-3) parts.push(`contrast(${c.con})`);
+  if (c.sat != null && Math.abs(c.sat - 1) > 1e-3) parts.push(`saturate(${c.sat})`);
+  return parts.length ? parts.join(' ') : 'none';
+}
+// тонування й віньєтка поверх уже намальованого кадру
+export function applyLookOverlay(ctx, c, W, H) {
+  const L = LOOKS[c.look];
+  if (!L) return;
+  if (L.tint) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'soft-light';
+    ctx.fillStyle = hexA(L.tint[0], L.tint[1] * 2.2);
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+  if (L.vignette) {
+    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) / 2);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, `rgba(0,0,0,${L.vignette})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+}
+
+// ── переходи між кліпами ──
+export const TRANSITIONS = {
+  fade: 'Розчинення',
+  black: 'Через чорне',
+  slide: 'Зсув',
+  wipe: 'Шторка',
+  zoom: 'Наближення',
+};
 
 // висоти текстових блоків (для рамки виділення), обчислюються під час малювання
 export const textBoxes = new WeakMap();
@@ -55,7 +113,7 @@ export function fadeAlpha(t, start, dur, fin, fout) {
   return Math.max(0, Math.min(1, a));
 }
 
-export function drawText(ctx, o, W, H, k) {
+export function drawText(ctx, o, W, H, k, reveal = Infinity) {
   const size = (o.size || 64) * k;
   ctx.font = `${o.weight || 700} ${size}px ${FONT_STACK}`;
   ctx.textBaseline = 'alphabetic';
@@ -77,10 +135,20 @@ export function drawText(ctx, o, W, H, k) {
   if (o.bg === 'shadow') { ctx.shadowColor = 'rgba(0,0,0,.65)'; ctx.shadowBlur = size * 0.22; ctx.shadowOffsetY = size * 0.05; }
   if (o.bg === 'outline') { ctx.lineJoin = 'round'; ctx.lineWidth = size * 0.14; ctx.strokeStyle = o.bgColor || '#000000'; }
   ctx.fillStyle = o.color || '#ffffff';
+  let left = reveal;
   lines.forEach((l, i) => {
+    if (left <= 0) return;
+    const part = left >= l.length ? l : l.slice(0, Math.floor(left));
+    left -= l.length + 1;
     const ly = y + pad + lh * i + size * 0.95;
-    if (o.bg === 'outline') ctx.strokeText(l, tx, ly);
-    ctx.fillText(l, tx, ly);
+    // при «друкуванні» вирівнюємо за повним рядком, щоб текст не стрибав
+    let px = tx;
+    if (part.length < l.length && align !== 'left') {
+      const full = ctx.measureText(l).width, cur = ctx.measureText(part).width;
+      px = align === 'center' ? tx - full / 2 + cur / 2 : tx - full + cur;
+    }
+    if (o.bg === 'outline') ctx.strokeText(part, px, ly);
+    ctx.fillText(part, px, ly);
   });
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   ctx.textAlign = 'left';
@@ -128,9 +196,26 @@ function drawBlur(ctx, o, W, H) {
   ctx.imageSmoothingEnabled = true;
 }
 
-export function drawOverlay(ctx, o, W, H, k) {
+export function drawOverlay(ctx, o, W, H, k, x = {}) {
   switch (o.type) {
-    case 'text': drawText(ctx, o, W, H, k); break;
+    case 'text': drawText(ctx, o, W, H, k, x.reveal ?? Infinity); break;
+    case 'emoji': {
+      const bx = o.x * W, by = o.y * H, bw = o.w * W, bh = o.h * H;
+      const s = Math.min(Math.abs(bw), Math.abs(bh));
+      ctx.font = `${s * 0.86}px ${EMOJI_FONT}`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(o.emoji || '⭐', bx + bw / 2, by + bh / 2 + s * 0.04);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      break;
+    }
+    case 'progress': {
+      const bx = o.x * W, by = o.y * H, bw = o.w * W, bh = Math.max(2, o.h * H);
+      const p = clamp01(((x.t ?? o.start) - o.start) / Math.max(0.01, o.dur));
+      ctx.fillStyle = hexA(o.track || '#ffffff', 0.28);
+      roundRectPath(ctx, bx, by, bw, bh, bh / 2); ctx.fill();
+      if (p > 0) { ctx.fillStyle = o.color || '#4F6BF4'; roundRectPath(ctx, bx, by, Math.max(bh, bw * p), bh, bh / 2); ctx.fill(); }
+      break;
+    }
     case 'rect': {
       let x = o.x * W, y = o.y * H, w = o.w * W, h = o.h * H;
       const lw = (o.stroke || 8) * k;
@@ -192,8 +277,7 @@ function drawCaption(ctx, c, W, H, k, style) {
 }
 
 // Малює кадр основної доріжки з урахуванням вписування, зуму й затемнення
-export function drawClipFrame(ctx, l, f, W, H, t) {
-  const c = l.clip;
+function drawFitted(ctx, c, f, W, H) {
   const r = (c.fit === 'cover' ? Math.max : Math.min)(W / f.w, H / f.h);
   const dw0 = f.w * r, dh0 = f.h * r;
   const z = Math.max(1, c.zoom || 1);
@@ -206,8 +290,16 @@ export function drawClipFrame(ctx, l, f, W, H, t) {
     if (dw >= W) x = Math.min(0, Math.max(W - dw, x));
     if (dh >= H) y = Math.min(0, Math.max(H - dh, y));
   }
+  const filt = FILTERS_OK ? lookFilter(c) : 'none';
+  if (filt !== 'none') ctx.filter = filt;
   if (f.src && typeof f.src.draw === 'function' && !(f.src instanceof HTMLCanvasElement)) f.src.draw(ctx, x, y, dw, dh);
   else ctx.drawImage(f.src, x, y, dw, dh);
+  if (filt !== 'none') ctx.filter = 'none';
+  applyLookOverlay(ctx, c, W, H);
+}
+export function drawClipFrame(ctx, l, f, W, H, t) {
+  const c = l.clip;
+  drawFitted(ctx, c, f, W, H);
   const a = 1 - fadeAlpha(t, l.start, l.end - l.start, c.fadeIn || 0, c.fadeOut || 0);
   if (a > 0.001) { ctx.fillStyle = `rgba(0,0,0,${a})`; ctx.fillRect(0, 0, W, H); }
 }
@@ -221,17 +313,80 @@ export function renderScene(ctx, W, H, t, provider, L = layout(), opts = {}) {
   const l = clipAt(t, L);
   if (l) {
     const f = provider(l, srcTime(l, t));
-    if (f && f.w && f.h) drawClipFrame(ctx, l, f, W, H, t);
+    const tr = l.clip.tr;
+    const idx = tr ? L.indexOf(l) : -1;
+    if (tr && idx > 0 && t < l.start + (tr.d || 0.6)) {
+      const prev = L[idx - 1];
+      const tail = (opts.tailOf || tailFrame)(prev.clip);
+      const pf = tail ? { src: tail, w: tail.naturalWidth || tail.width, h: tail.naturalHeight || tail.height } : null;
+      drawTransition(ctx, tr, smooth(clamp01((t - l.start) / (tr.d || 0.6))), prev, pf, l, f, W, H, t);
+    } else if (f && f.w && f.h) drawClipFrame(ctx, l, f, W, H, t);
   }
   for (const o of p.overlays) {
     if (t < o.start || t >= o.start + o.dur) continue;
-    const fd = o.fade && !opts.editing ? Math.min(0.4, o.dur / 3) : 0;
-    const a = fadeAlpha(t, o.start, o.dur, fd, fd);
-    if (a <= 0) continue;
-    ctx.globalAlpha = a;
-    drawOverlay(ctx, o, W, H, k);
-    ctx.globalAlpha = 1;
+    drawAnimated(ctx, o, W, H, k, t, opts.editing);
   }
   const cap = p.captions.find(c => t >= c.start && t < c.start + c.dur);
   if (cap && cap.text.trim()) drawCaption(ctx, cap, W, H, k, p.captionStyle || {});
+}
+
+// Перехід: попередній кліп «застигає» на останньому кадрі й поступається новому
+function drawTransition(ctx, tr, p, prev, pf, l, f, W, H, t) {
+  const drawNew = () => { if (f && f.w && f.h) drawClipFrame(ctx, l, f, W, H, t); };
+  const drawOld = () => { if (pf && pf.w && pf.h) drawFitted(ctx, prev.clip, pf, W, H); else { ctx.fillStyle = S.project.bg || '#000'; ctx.fillRect(0, 0, W, H); } };
+  switch (tr.type) {
+    case 'black':
+      if (p < 0.5) { drawOld(); ctx.fillStyle = `rgba(0,0,0,${p * 2})`; ctx.fillRect(0, 0, W, H); }
+      else { drawNew(); ctx.fillStyle = `rgba(0,0,0,${(1 - p) * 2})`; ctx.fillRect(0, 0, W, H); }
+      break;
+    case 'slide':
+      ctx.save(); ctx.translate(-p * W, 0); drawOld(); ctx.restore();
+      ctx.save(); ctx.translate((1 - p) * W, 0); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip(); drawNew(); ctx.restore();
+      break;
+    case 'wipe':
+      drawNew();
+      ctx.save(); ctx.beginPath(); ctx.rect(p * W, 0, W, H); ctx.clip(); drawOld(); ctx.restore();
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; if (p > 0 && p < 1) ctx.fillRect(p * W - 2, 0, 4, H);
+      break;
+    case 'zoom':
+      drawNew();
+      ctx.save(); ctx.globalAlpha = 1 - p;
+      ctx.translate(W / 2, H / 2); ctx.scale(1 + p * 0.35, 1 + p * 0.35); ctx.translate(-W / 2, -H / 2);
+      drawOld(); ctx.restore();
+      break;
+    default: // fade
+      drawNew();
+      ctx.save(); ctx.globalAlpha = 1 - p; drawOld(); ctx.restore();
+  }
+}
+
+// Анімація появи елементів: плавно, знизу, пружинка, друк
+export const ANIMS = { none: 'Одразу', fade: 'Плавно', up: 'Знизу', pop: 'Пружинка', type: 'Друк' };
+export const animOf = o => o.anim || (o.fade ? 'fade' : 'none');
+function drawAnimated(ctx, o, W, H, k, t, editing) {
+  const anim = editing ? 'none' : animOf(o);
+  const x = { t };
+  if (anim === 'none') { drawOverlay(ctx, o, W, H, k, x); return; }
+  const inD = Math.min(0.5, o.dur / 3), outD = Math.min(0.35, o.dur / 4);
+  const pin = clamp01((t - o.start) / inD), pout = clamp01((o.start + o.dur - t) / outD);
+  let alpha = Math.min(anim === 'type' ? 1 : easeOut(pin), pout);
+  ctx.save();
+  if (anim === 'up') ctx.translate(0, (1 - easeOut(pin)) * H * 0.05);
+  else if (anim === 'pop') {
+    const b = boxCenter(o, W, H);
+    const s = 0.4 + 0.6 * easeBack(pin);
+    ctx.translate(b.x, b.y); ctx.scale(s, s); ctx.translate(-b.x, -b.y);
+  } else if (anim === 'type' && o.type === 'text') {
+    const len = String(o.text || '').length;
+    const typeDur = Math.max(0.3, Math.min(2.2, o.dur * 0.6, len * 0.055));
+    x.reveal = Math.floor(len * clamp01((t - o.start) / typeDur) + 1e-6);
+  } else if (anim === 'type') alpha = Math.min(easeOut(pin), pout);
+  if (alpha <= 0) { ctx.restore(); return; }
+  ctx.globalAlpha = alpha;
+  drawOverlay(ctx, o, W, H, k, x);
+  ctx.restore();
+}
+function boxCenter(o, W, H) {
+  const h = o.type === 'text' ? (textBoxes.get(o) || 0.1) : o.h;
+  return { x: (o.x + o.w / 2) * W, y: (o.y + h / 2) * H };
 }

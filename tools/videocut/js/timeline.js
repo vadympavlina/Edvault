@@ -6,12 +6,14 @@ import { seek } from './player.js';
 import { $, esc, icon, clamp, fmt } from './ui.js';
 
 const ROW = 28, CC_H = 30, V_H = 66, A_H = 44, RULER_H = 26;
-const OV_LABEL = { text: 'Текст', rect: 'Рамка', arrow: 'Стрілка', blur: 'Розмиття', spot: 'Прожектор', image: 'Зображення' };
-const OV_ICON = { text: 'text', rect: 'rect', arrow: 'arrow', blur: 'blur', spot: 'spot', image: 'image' };
+const OV_LABEL = { text: 'Текст', rect: 'Рамка', arrow: 'Стрілка', blur: 'Розмиття', spot: 'Прожектор', image: 'Зображення', emoji: 'Емодзі', progress: 'Прогрес' };
+const OV_ICON = { text: 'text', rect: 'rect', arrow: 'arrow', blur: 'blur', spot: 'spot', image: 'image', emoji: 'smile', progress: 'progress' };
+const TR_NAMES = { fade: 'Розчинення', black: 'Через чорне', slide: 'Зсув', wipe: 'Шторка', zoom: 'Наближення' };
 
 let scroll, inner, lanes, heads, ruler, playheadEl, rangeEl, insertEl;
 let vCanvas, aCanvas;
 let ovRows = 1;
+let muRows = 1, muRowOf = new Map();
 
 export function initTimeline() {
   scroll = $('tlScroll'); inner = $('tlInner'); lanes = $('tlLanes'); heads = $('tlHeads');
@@ -23,6 +25,7 @@ export function initTimeline() {
   on('peaks', drawCanvases);
   on('time', () => { placePlayhead(); if (S.playing) follow(); });
   on('marks', () => { placeRange(); drawRuler(); });
+  on('silences', render);
   scroll.addEventListener('scroll', () => { heads.scrollTop = scroll.scrollTop; drawCanvases(); drawRuler(); });
   window.addEventListener('resize', () => { render(); });
   scroll.addEventListener('wheel', onWheel, { passive: false });
@@ -105,36 +108,41 @@ export function render() {
   const ovH = n * ROW + 6;
 
   const ov = p.overlays.map(o => {
-    const label = o.type === 'text' ? (o.text || '').split('\n')[0] : OV_LABEL[o.type];
+    const label = o.type === 'text' ? (o.text || '').split('\n')[0] : o.type === 'emoji' ? (o.emoji || '') + ' ' + OV_LABEL.emoji : OV_LABEL[o.type];
     return `<div class="it ov ov-${o.type}${selCls('overlay', o.id)}" data-kind="overlay" data-id="${o.id}" style="left:${o.start * pps}px;width:${Math.max(4, o.dur * pps)}px;top:${3 + rowOf.get(o.id) * ROW}px">${icon(OV_ICON[o.type] || 'shapes')}<span>${esc(label)}</span>${hnd}</div>`;
   }).join('');
   const cc = p.captions.map(c => `<div class="it cc${selCls('caption', c.id)}" data-kind="caption" data-id="${c.id}" style="left:${c.start * pps}px;width:${Math.max(4, c.dur * pps)}px"><span>${esc(c.text)}</span>${hnd}</div>`).join('');
-  const clips = layout().map(l => {
+  const clips = layout().map((l, idx) => {
     const c = l.clip, m = media.get(c.mediaId);
     const badges = [];
+    if (c.look && c.look !== 'none') badges.push('фільтр');
     if ((c.speed || 1) !== 1) badges.push(`${String(c.speed).replace('.', ',')}×`);
     if (c.muted) badges.push('без звуку');
     if ((c.zoom || 1) > 1.001) badges.push('зум');
     const fi = c.fadeIn ? `<b class="fade fi" style="width:${Math.min(c.fadeIn * pps, (l.end - l.start) * pps / 2)}px"></b>` : '';
     const fo = c.fadeOut ? `<b class="fade fo" style="width:${Math.min(c.fadeOut * pps, (l.end - l.start) * pps / 2)}px"></b>` : '';
-    return `<div class="it clip${selCls('clip', c.id)}${m ? '' : ' missing'}" data-kind="clip" data-id="${c.id}" style="left:${l.start * pps}px;width:${Math.max(4, (l.end - l.start) * pps)}px">${fi}${fo}<span class="lbl">${esc(m ? m.name : 'Файл відсутній')}${badges.length ? ' · ' + badges.join(' · ') : ''}</span>${hnd}</div>`;
+    const trm = c.tr && idx > 0 ? `<b class="tr-zone" style="width:${Math.min((c.tr.d || 0.6) * pps, (l.end - l.start) * pps)}px" title="Перехід: ${TR_NAMES[c.tr.type] || ''}"></b>` : '';
+    return `<div class="it clip${selCls('clip', c.id)}${m ? '' : ' missing'}" data-kind="clip" data-id="${c.id}" style="left:${l.start * pps}px;width:${Math.max(4, (l.end - l.start) * pps)}px">${fi}${fo}${trm}<span class="lbl">${esc(m ? m.name : 'Файл відсутній')}${badges.length ? ' · ' + badges.join(' · ') : ''}</span>${hnd}</div>`;
   }).join('');
+  const mr = assignRows(p.music.map(x => ({ id: x.id, start: x.start, dur: musicDur(x) })));
+  muRows = mr.n; muRowOf = mr.rowOf;
   const mu = p.music.map(x => {
     const m = media.get(x.mediaId);
-    return `<div class="it mu${selCls('music', x.id)}" data-kind="music" data-id="${x.id}" style="left:${x.start * pps}px;width:${Math.max(4, musicDur(x) * pps)}px"><span class="lbl">${icon('music')}${esc(m ? m.name : 'Файл відсутній')}</span>${hnd}</div>`;
+    return `<div class="it mu${x.voice ? ' voice' : ''}${selCls('music', x.id)}" data-kind="music" data-id="${x.id}" style="left:${x.start * pps}px;width:${Math.max(4, musicDur(x) * pps)}px;top:${4 + (muRowOf.get(x.id) || 0) * A_H}px"><span class="lbl">${icon(x.voice ? 'mic' : 'music')}${esc(x.voice ? 'Голос' : m ? m.name : 'Файл відсутній')}</span>${hnd}</div>`;
   }).join('');
+  const sil = (S.silPreview || []).map(([a, b]) => `<div class="sil" style="left:${a * pps}px;width:${Math.max(2, (b - a) * pps)}px"></div>`).join('');
 
   const empty = (cond, text) => (cond ? `<div class="lane-empty">${text}</div>` : '');
   // основне відео — одразу під лінійкою, щоб завжди було видно
   lanes.innerHTML =
-    `<div class="lane lane-v" style="height:${V_H}px"><canvas class="lane-canvas" id="tlVCanvas"></canvas>${empty(!p.clips.length, 'Перетягніть сюди відео або фото')}${clips}</div>` +
-    `<div class="lane lane-a" style="height:${A_H}px"><canvas class="lane-canvas" id="tlACanvas"></canvas>${empty(!p.music.length, 'Музика та озвучення')}${mu}</div>` +
+    `<div class="lane lane-v" style="height:${V_H}px"><canvas class="lane-canvas" id="tlVCanvas"></canvas>${empty(!p.clips.length, 'Перетягніть сюди відео або фото')}${clips}${sil}</div>` +
+    `<div class="lane lane-a" style="height:${A_H * muRows}px"><canvas class="lane-canvas" id="tlACanvas"></canvas>${empty(!p.music.length, 'Музика та озвучення')}${mu}</div>` +
     `<div class="lane lane-cc" style="height:${CC_H}px">${empty(!p.captions.length, 'Субтитри — вкладка «Субтитри» ліворуч')}${cc}</div>` +
     `<div class="lane lane-ov" style="height:${ovH}px">${empty(!p.overlays.length, 'Текст, стрілки, розмиття — вкладки «Текст» і «Елементи»')}${ov}</div>`;
   heads.innerHTML =
     `<div class="head" style="height:${RULER_H}px"></div>` +
     `<div class="head head-v" style="height:${V_H}px">${icon('video')}<span>Відео</span></div>` +
-    `<div class="head" style="height:${A_H}px">${icon('music')}<span>Музика</span></div>` +
+    `<div class="head" style="height:${A_H * muRows}px">${icon('music')}<span>Звук</span></div>` +
     `<div class="head" style="height:${CC_H}px">${icon('cc')}<span>Субтитри</span></div>` +
     `<div class="head" style="height:${ovH}px">${icon('text')}<span>Графіка</span></div><div style="height:40px"></div>`;
   vCanvas = $('tlVCanvas'); aCanvas = $('tlACanvas');
@@ -214,11 +222,13 @@ function drawCanvases() {
     }
     gv.restore();
   }
-  const ga = sizeCanvas(aCanvas, A_H);
+  const ga = sizeCanvas(aCanvas, A_H * muRows);
+  const waveA = getComputedStyle(document.documentElement).getPropertyValue('--wave-a').trim() || '#10b981';
   for (const mu of S.project.music) {
     const x0 = mu.start * pps - sl, x1 = (mu.start + musicDur(mu)) * pps - sl;
     if (x1 < 0 || x0 > w) continue;
-    drawWave(ga, media.get(mu.mediaId), mu.in, 1, x0, Math.min(x1, w), 6, A_H - 12, getComputedStyle(document.documentElement).getPropertyValue('--wave-a').trim() || '#10b981', pps);
+    const top = (muRowOf.get(mu.id) || 0) * A_H;
+    drawWave(ga, media.get(mu.mediaId), mu.in, 1, x0, Math.min(x1, w), top + 6, A_H - 12, mu.voice ? '#f97316' : waveA, pps);
   }
 }
 function g_clip(g, x, y, w, h, r) {
