@@ -4,12 +4,16 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Ccircle cx='16' cy='16' r='9' fill='white'/%3E%3Cpath d='M16 7a9 9 0 0 0 0 18 4.5 4.5 0 0 1 0-9 4.5 4.5 0 0 0 0-9Z' fill='%234F6BF4'/%3E%3C/svg%3E">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Кольори та контраст · Edvault</title>
+<title>Кольори · Edvault</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-
+<script>
+  try{
+    var t = localStorage.getItem('edvault-theme') || localStorage.getItem('edvault-color-theme');
+    if(t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  }catch(e){}
+</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
     --bg: #f0f2f5; --surface: #ffffff; --surface2: #f7f8fa;
     --border: #e2e5ea; --border2: #d0d5dd;
@@ -19,6 +23,7 @@
     --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
     --shadow-md: 0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
     --shadow-lg: 0 24px 60px rgba(0,0,0,.14), 0 4px 16px rgba(0,0,0,.08);
+    --checker: repeating-conic-gradient(#e6e8ec 0 25%, #fff 0 50%) 0 0 / 14px 14px;
   }
   html[data-theme="dark"] {
     --bg: #14171c; --surface: #1c212a; --surface2: #232933; --border: #2a313d; --border2: #384152;
@@ -28,524 +33,1417 @@
     --shadow-sm: 0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.25);
     --shadow-md: 0 4px 16px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.3);
     --shadow-lg: 0 24px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.35);
+    --checker: repeating-conic-gradient(#2a303b 0 25%, #222731 0 50%) 0 0 / 14px 14px;
   }
-  html[data-theme="dark"] body{ background: var(--bg); }
-
-  html, body { height: 100%; }
-  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  html, body { min-height: 100%; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
-  .hidden{ display:none !important; }
+  .hidden { display: none !important; }
+  button { font-family: inherit; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
 
-  /* topbar */
+  /* ---------- topbar ---------- */
   .topbar {
-    min-height: 64px; background: var(--surface); border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-    padding: 10px clamp(16px, 4vw, 28px); position: sticky; top: 0; z-index: 30;
+    background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px clamp(12px, 3vw, 24px);
   }
-  .topbar-left { display: flex; align-items: center; gap: clamp(9px, 2vw, 12px); min-width: 0; }
+  .topbar-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 9px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text2); font-size: 13px; font-weight: 600; text-decoration: none; transition: all .13s ease; flex-shrink: 0;
+  }
+  .back-link:hover { border-color: var(--border2); background: var(--surface2); color: var(--text); }
+  .back-link svg { width: 14px; height: 14px; }
+  .topbar-sep { width: 1px; height: 26px; background: var(--border); flex-shrink: 0; }
   .topbar-logo { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(79,107,244,.3); flex-shrink: 0; }
-  .topbar-logo svg { width: 18px; height: 18px; }
+  .topbar-logo svg { width: 20px; height: 20px; }
   .topbar-text h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; line-height: 1.2; white-space: nowrap; }
   .topbar-text p { font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 1px; white-space: nowrap; }
-  .topbar-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; background: var(--accent-light); color: var(--accent); letter-spacing: .03em; flex-shrink: 0; }
-
+  .tabs { display: flex; gap: 3px; padding: 3px; border-radius: 11px; background: var(--surface2); border: 1px solid var(--border); margin: 0 auto; overflow-x: auto; max-width: 100%; }
+  .tab {
+    display: flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 8px; border: none; background: none;
+    color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all .12s ease;
+  }
+  .tab svg { width: 15px; height: 15px; }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
   .view-btn {
     width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--border); background: var(--surface);
-    color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
-    transition: all .13s ease; flex-shrink: 0;
+    color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .13s ease; flex-shrink: 0;
   }
-  .view-btn:hover, .view-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .view-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
   .view-btn svg { width: 15px; height: 15px; }
 
-  .retry-btn {
-    display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 10px; border: none;
-    background: var(--accent); color: #fff; font-family: inherit; font-size: 13px; font-weight: 700;
-    cursor: pointer; transition: background .13s; flex-shrink: 0;
+  /* ---------- common ---------- */
+  .main { max-width: 1240px; margin: 0 auto; padding: clamp(18px, 3vw, 28px) clamp(12px, 3vw, 24px) 80px; }
+  .card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 18px; padding: 20px; box-shadow: var(--shadow-sm); }
+  .card + .card { margin-top: 18px; }
+  .grid2 > .card + .card { margin-top: 0; }
+  .card-title { font-size: 15px; font-weight: 800; letter-spacing: -.2px; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .card-title svg { width: 17px; height: 17px; color: var(--accent); }
+  .card-title .sub { font-size: 12.5px; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+  .card-title .grow { flex: 1; }
+  .label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 8px; }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: 9px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text2); font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all .13s ease; white-space: nowrap;
   }
-  .retry-btn:hover { background: var(--accent-hover); }
-  .retry-btn svg{ width:14px; height:14px; }
-  .retry-btn.flash{ background: var(--success) !important; }
-
-  /* main layout */
-  .main { max-width: 1180px; width: 100%; margin: 0 auto; padding: clamp(24px, 5vw, 40px) clamp(16px, 4vw, 28px) clamp(56px, 10vw, 100px); }
-  .grid-2col { display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; align-items: start; }
-  @media (max-width: 900px){ .grid-2col{ grid-template-columns: 1fr; } }
-
-  .card {
-    background: var(--surface); border: 1.5px solid var(--border); border-radius: 18px; padding: 22px;
-    box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 18px;
+  .btn:hover { border-color: var(--border2); background: var(--surface2); color: var(--text); }
+  .btn svg { width: 14px; height: 14px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn.sm { padding: 6px 10px; font-size: 12px; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .seg { display: flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--surface2); border: 1px solid var(--border); flex-wrap: wrap; }
+  .seg button { padding: 6px 11px; border-radius: 7px; border: none; background: none; color: var(--text2); font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .seg button.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
+  .input {
+    padding: 8px 10px; border-radius: 9px; border: 1.5px solid var(--border2); background: var(--surface); color: var(--text);
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; outline: none; min-width: 0;
   }
-  .card-title { font-size: 15px; font-weight: 800; letter-spacing: -0.2px; display: flex; align-items: center; gap: 8px; }
-  .card-title svg{ width:17px; height:17px; color: var(--accent); }
-
-  /* base color row */
-  .base-color-row{ display:flex; align-items:center; gap:10px; }
-  .big-swatch{
-    width:52px; height:52px; border-radius:12px; border:1.5px solid var(--border2); flex-shrink:0; cursor:pointer; padding:0;
+  .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.12); }
+  .native-color { width: 38px; height: 38px; border-radius: 9px; border: 1.5px solid var(--border2); padding: 0; cursor: pointer; background: none; flex-shrink: 0; overflow: hidden; }
+  .native-color::-webkit-color-swatch-wrapper { padding: 0; }
+  .native-color::-webkit-color-swatch { border: none; }
+  .select {
+    padding: 7px 10px; border-radius: 9px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text);
+    font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
   }
-  .hex-input{
-    flex:1; padding:10px 12px; border-radius:9px; border:1.5px solid var(--border2); background:var(--surface);
-    font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; color:var(--text); outline:none;
-  }
-  .hex-input:focus{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,107,244,.1); }
+  .hint { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
 
-  /* swatches */
-  .swatch-row{ display:flex; gap:6px; flex-wrap:wrap; }
-  .swatch{ flex:1; min-width:52px; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; background:none; border:none; }
-  .swatch-color{ width:100%; height:52px; border-radius:9px; border:1.5px solid var(--border); transition:transform .12s ease; }
-  .swatch:hover .swatch-color{ transform: scale(1.06); box-shadow: var(--shadow-sm); }
-  .swatch-label{ font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--muted); font-weight:700; text-align:center; line-height:1.3; }
-
-  .tab-row{ display:flex; gap:6px; flex-wrap:wrap; }
-  .tab-btn{
-    padding:7px 13px; border-radius:9px; border:1.5px solid var(--border); background:var(--surface);
-    color:var(--text2); font-size:12px; font-weight:700; cursor:pointer; transition: all .13s ease;
+  /* ---------- swatches ---------- */
+  .shades { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px; }
+  @media (max-width: 640px) { .shades { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+  .sw {
+    position: relative; border: none; border-radius: 10px; height: 64px; cursor: pointer; padding: 6px; text-align: left;
+    display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; transition: transform .1s ease; overflow: hidden;
   }
-  .tab-btn:hover{ border-color:var(--border2); background:var(--surface2); }
-  .tab-btn.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .sw:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .sw b { font-size: 11px; font-weight: 800; }
+  .sw span { font-size: 9.5px; font-family: 'JetBrains Mono', monospace; font-weight: 600; opacity: .85; }
+  .sw.is-base::after { content: ''; position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .sw-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; }
 
-  .panel-label{ font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  /* ---------- picker tab ---------- */
+  .picker-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; }
+  @media (max-width: 900px) { .picker-wrap { grid-template-columns: minmax(0, 1fr); } }
+  .sv-box { position: relative; height: 260px; border-radius: 14px; overflow: hidden; cursor: crosshair; touch-action: none; }
+  .sv-box canvas { width: 100%; height: 100%; display: block; }
+  .knob {
+    position: absolute; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.3); pointer-events: none;
+  }
+  .hue-bar { position: relative; height: 16px; border-radius: 9px; margin-top: 14px; cursor: pointer; touch-action: none;
+    background: linear-gradient(90deg, #f00, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00); }
+  .hue-bar .knob { top: 50%; }
+  .big-preview { height: 110px; border-radius: 14px; display: flex; align-items: flex-end; justify-content: space-between; padding: 12px 14px; border: 1px solid var(--border); }
+  .big-preview .name { font-size: 15px; font-weight: 800; }
+  .big-preview .ratio { font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; opacity: .9; text-align: right; line-height: 1.5; }
+  .formats { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .fmt { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+  .fmt label { font-size: 11px; font-weight: 800; color: var(--muted); }
+  .fmt .input { width: 100%; padding: 7px 9px; font-size: 12.5px; }
+  .icon-btn {
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text2);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+  .icon-btn:hover { background: var(--surface2); color: var(--text); }
+  .icon-btn svg { width: 14px; height: 14px; }
+  .harmony-wrap { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; align-items: center; }
+  @media (max-width: 640px) { .harmony-wrap { grid-template-columns: minmax(0, 1fr); } .harmony-wrap canvas { margin: 0 auto; } }
+  #wheel { width: 190px; height: 190px; display: block; }
 
-  .action-row{ display:flex; gap:8px; flex-wrap:wrap; }
-  .ghost-btn{
-    display:inline-flex; align-items:center; gap:6px; padding:8px 13px; border-radius:9px; border:1.5px solid var(--border);
-    background:var(--surface); color:var(--text2); font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
-    transition: all .13s ease;
+  /* ---------- palette tab ---------- */
+  .pal-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .pal-toolbar .grow { flex: 1; }
+  .pal { display: flex; height: min(56vh, 460px); min-height: 300px; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow-md); }
+  .pal-col { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 16px 8px; gap: 8px; transition: flex .2s ease; }
+  .pal-col .hex { font-family: 'JetBrains Mono', monospace; font-size: clamp(13px, 1.6vw, 19px); font-weight: 800; letter-spacing: .02em; cursor: pointer; background: none; border: none; color: inherit; }
+  .pal-col .cname { font-size: 11.5px; font-weight: 600; opacity: .8; text-align: center; }
+  .pal-tools { display: flex; flex-direction: column; gap: 4px; opacity: 0; transition: opacity .15s ease; margin-bottom: auto; }
+  .pal-col:hover .pal-tools, .pal-col.locked .pal-tools .lock { opacity: 1; }
+  .pal-col:hover .pal-tools { opacity: 1; }
+  @media (hover: none) { .pal-tools { opacity: 1; } }
+  .pal-tools button, .pal-tools label {
+    width: 36px; height: 36px; border-radius: 10px; border: none; background: transparent; color: inherit; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; position: relative;
   }
-  .ghost-btn:hover{ border-color:var(--border2); background:var(--surface2); color:var(--text); }
-  .ghost-btn svg{ width:13px; height:13px; }
+  .pal-tools button:hover, .pal-tools label:hover { background: rgba(127,127,127,.22); }
+  .pal-tools svg { width: 18px; height: 18px; }
+  .pal-tools input[type=color] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .pal-col.locked .lock { opacity: 1; }
+  .lock-badge { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); display: none; }
+  .pal-col.locked .lock-badge { display: block; }
+  .lock-badge svg { width: 18px; height: 18px; }
+  .pal-add {
+    position: absolute; top: 50%; right: -16px; transform: translateY(-50%); z-index: 2; width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: #fff; color: #333; box-shadow: var(--shadow-md); cursor: pointer; opacity: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .pal-col:hover .pal-add { opacity: 1; }
+  .pal-add svg { width: 16px; height: 16px; }
+  .pal-col.drag-over { outline: 3px dashed rgba(255,255,255,.9); outline-offset: -8px; }
+  @media (max-width: 640px) {
+    .pal { flex-direction: column; height: auto; }
+    .pal-col { flex-direction: row; justify-content: space-between; min-height: 72px; padding: 10px 14px; }
+    .pal-tools { flex-direction: row; margin: 0; order: 3; }
+    .pal-add, .lock-badge { display: none !important; }
+  }
+  .library { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .lib-item { border: 1.5px solid var(--border); border-radius: 13px; overflow: hidden; cursor: pointer; background: var(--surface); position: relative; transition: all .13s ease; }
+  .lib-item:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .lib-strip { display: flex; height: 54px; }
+  .lib-strip span { flex: 1; }
+  .lib-name { padding: 8px 10px; font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 30px; }
+  .lib-del { position: absolute; right: 6px; bottom: 5px; width: 24px; height: 24px; border-radius: 7px; border: none; background: none; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .lib-del:hover { background: var(--danger); color: #fff; }
+  .lib-del svg { width: 13px; height: 13px; }
+  .cb-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px; align-items: center; margin-top: 8px; }
+  .cb-row .cb-name { font-size: 12.5px; font-weight: 700; color: var(--text2); }
+  .cb-row .cb-name small { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+  .cb-strip { display: flex; height: 34px; border-radius: 9px; overflow: hidden; }
+  .cb-strip span { flex: 1; }
 
-  /* contrast card */
-  .contrast-pickers{ display:flex; gap:10px; align-items:center; }
-  .color-field{ flex:1; display:flex; align-items:center; gap:8px; }
-  .color-field label{ font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; width:38px; flex-shrink:0; }
-  .color-field input[type=color]{ width:34px; height:34px; border-radius:8px; border:1.5px solid var(--border2); cursor:pointer; padding:0; flex-shrink:0; }
-  .color-field input[type=text]{
-    flex:1; min-width:0; padding:8px 10px; border-radius:8px; border:1.5px solid var(--border2); background:var(--surface);
-    font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:700; color:var(--text); outline:none;
-  }
-  .swap-btn{
-    width:32px; height:32px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface); color:var(--text2);
-    cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: all .13s ease;
-  }
-  .swap-btn:hover{ background:var(--accent); border-color:var(--accent); color:#fff; }
-  .swap-btn svg{ width:14px; height:14px; }
+  /* ---------- contrast tab ---------- */
+  .pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: end; }
+  .pair .field { display: flex; flex-direction: column; gap: 6px; }
+  .pair .field .row { flex-wrap: nowrap; }
+  .pair .field .input { flex: 1; width: 100%; }
+  .preview-box { border-radius: 16px; padding: 26px; border: 1px solid var(--border); margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .preview-box h3 { font-size: 26px; font-weight: 800; letter-spacing: -.4px; }
+  .preview-box p { font-size: 15px; line-height: 1.6; }
+  .preview-box small { font-size: 12.5px; }
+  .preview-box .pv-btn { align-self: flex-start; padding: 9px 16px; border-radius: 10px; font-weight: 700; font-size: 14px; border: 2px solid currentColor; background: transparent; color: inherit; }
+  .score { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .score .num { font-size: 44px; font-weight: 900; font-family: 'JetBrains Mono', monospace; letter-spacing: -1.5px; line-height: 1; }
+  .score .verdict { font-size: 15px; font-weight: 800; }
+  .score .verdict small { display: block; font-size: 12.5px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+  .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; margin-top: 14px; }
+  .badge { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-radius: 10px; font-size: 12.5px; font-weight: 700; border: 1.5px solid var(--border); }
+  .badge svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .badge small { display: block; font-weight: 500; font-size: 11px; opacity: .8; }
+  .badge.pass { background: rgba(16,185,129,.1); color: var(--success); border-color: rgba(16,185,129,.35); }
+  .badge.fail { background: rgba(239,68,68,.08); color: var(--danger); border-color: rgba(239,68,68,.3); }
+  .fixes { display: flex; flex-direction: column; gap: 8px; }
+  .fix { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 11px; border: 1px solid var(--border); }
+  .fix .chip { width: 46px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+  .fix .info { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; }
+  .fix .info small { display: block; font-family: 'JetBrains Mono', monospace; color: var(--muted); font-size: 11px; }
+  .matrix-wrap { overflow-x: auto; }
+  table.matrix { border-collapse: separate; border-spacing: 4px; }
+  table.matrix th { width: 30px; height: 30px; }
+  table.matrix th span { display: block; width: 26px; height: 26px; border-radius: 7px; margin: auto; border: 1px solid rgba(0,0,0,.12); }
+  table.matrix td { width: 66px; height: 46px; border-radius: 9px; text-align: center; font-size: 12px; font-weight: 800; cursor: pointer; position: relative; }
+  table.matrix td small { display: block; font-size: 9.5px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  table.matrix td.bad { opacity: .35; }
+  table.matrix td.same { visibility: hidden; }
 
-  .contrast-preview{
-    border-radius:14px; padding:26px; display:flex; flex-direction:column; gap:8px; align-items:flex-start;
-    border:1.5px solid var(--border); transition: background .15s ease, color .15s ease;
+  /* ---------- gradient tab ---------- */
+  .grad-preview { height: 260px; border-radius: 18px; box-shadow: var(--shadow-md); position: relative; }
+  .grad-bar { position: relative; height: 34px; border-radius: 10px; margin: 22px 10px 34px; cursor: copy; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); }
+  .stop-knob {
+    position: absolute; top: 100%; width: 20px; height: 26px; transform: translateX(-50%); cursor: grab; touch-action: none;
   }
-  .contrast-preview .big{ font-size:26px; font-weight:800; letter-spacing:-0.3px; }
-  .contrast-preview .normal{ font-size:14.5px; font-weight:500; }
+  .stop-knob::before { content: ''; position: absolute; left: 50%; top: -6px; width: 2px; height: 8px; background: var(--text2); transform: translateX(-50%); }
+  .stop-knob span { position: absolute; left: 0; top: 2px; width: 20px; height: 20px; border-radius: 6px; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--border2), var(--shadow-sm); }
+  .stop-knob.active span { box-shadow: 0 0 0 2.5px var(--accent), var(--shadow-sm); }
+  .stops { display: flex; flex-direction: column; gap: 6px; }
+  .stop-row { display: grid; grid-template-columns: 38px 110px minmax(0, 1fr) 56px 32px; gap: 8px; align-items: center; padding: 4px; border-radius: 10px; }
+  .stop-row.active { background: var(--accent-light); }
+  .stop-row input[type=range] { width: 100%; accent-color: var(--accent); }
+  .angle-row { display: flex; align-items: center; gap: 10px; }
+  .angle-row input[type=range] { flex: 1; accent-color: var(--accent); }
+  .code-box {
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.6; padding: 12px 14px; border-radius: 11px;
+    background: var(--surface2); border: 1px solid var(--border); white-space: pre-wrap; word-break: break-all; color: var(--text);
+  }
+  .presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; }
+  .presets button { height: 44px; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; }
+  .presets button:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
-  .ratio-row{ display:flex; align-items:baseline; gap:10px; }
-  .ratio-number{ font-size:36px; font-weight:900; font-family:'JetBrains Mono',monospace; letter-spacing:-1px; }
-  .ratio-sub{ font-size:12px; color:var(--muted); font-weight:600; }
+  /* ---------- image tab ---------- */
+  .drop {
+    border: 2px dashed var(--border2); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--text2);
+    cursor: pointer; transition: all .13s ease; background: var(--surface2);
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .drop svg { width: 34px; height: 34px; margin-bottom: 8px; }
+  .drop b { display: block; font-size: 15px; margin-bottom: 4px; }
+  .img-stage { position: relative; border-radius: 14px; overflow: hidden; background: var(--checker); display: flex; justify-content: center; cursor: crosshair; }
+  .img-stage canvas { max-width: 100%; max-height: 520px; display: block; }
+  .loupe {
+    position: fixed; pointer-events: none; z-index: 60; width: 96px; height: 96px; border-radius: 50%; border: 3px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.3), var(--shadow-lg); overflow: hidden; display: none; image-rendering: pixelated;
+  }
+  .loupe canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+  .loupe-label { position: fixed; pointer-events: none; z-index: 61; font: 700 11px 'JetBrains Mono', monospace; padding: 3px 7px; border-radius: 6px; background: #111; color: #fff; display: none; transform: translateX(-50%); }
+  .extracted { display: flex; height: 90px; border-radius: 14px; overflow: hidden; margin-top: 4px; }
+  .extracted button { flex: 1; border: none; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end; padding: 8px; font: 700 11px 'JetBrains Mono', monospace; }
+  .extracted button small { font-size: 9.5px; opacity: .8; font-family: 'Inter', sans-serif; font-weight: 600; }
+  .picked-list { display: flex; gap: 6px; flex-wrap: wrap; }
+  .picked-list button { width: 34px; height: 34px; border-radius: 9px; border: 1px solid rgba(0,0,0,.15); cursor: pointer; }
 
-  .badge-row{ display:flex; gap:8px; flex-wrap:wrap; }
-  .wcag-badge{
-    display:flex; align-items:center; gap:6px; padding:6px 11px; border-radius:8px; font-size:11.5px; font-weight:700;
-    border:1.5px solid var(--border);
+  /* ---------- modal / toast ---------- */
+  .modal-overlay { position: fixed; inset: 0; z-index: 150; background: rgba(15,18,25,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal { width: 100%; max-width: 560px; max-height: 90vh; overflow: auto; background: var(--surface); border: 1.5px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 22px; }
+  .modal.sm { max-width: 400px; }
+  .modal h3 { font-size: 18px; font-weight: 800; letter-spacing: -.3px; margin-bottom: 4px; }
+  .modal .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); z-index: 300; background: #1a1d23; color: #fff;
+    padding: 10px 16px; border-radius: 11px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none;
+    transition: all .2s ease; max-width: calc(100vw - 32px); display: flex; align-items: center; gap: 8px;
   }
-  .wcag-badge svg{ width:13px; height:13px; flex-shrink:0; }
-  .wcag-badge.pass{ background:rgba(16,185,129,.1); color:var(--success); border-color:rgba(16,185,129,.35); }
-  .wcag-badge.fail{ background:rgba(239,68,68,.1); color:var(--danger); border-color:rgba(239,68,68,.35); }
-
-  /* saved palettes */
-  .saved-row{ display:flex; gap:10px; flex-wrap:wrap; }
-  .saved-chip{
-    position:relative; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;
-    padding:8px; border-radius:12px; border:1.5px solid var(--border); background:var(--surface2); transition: all .13s ease;
-  }
-  .saved-chip:hover{ border-color:var(--accent); }
-  .saved-chip .dots{ display:flex; gap:2px; }
-  .saved-chip .dot{ width:14px; height:14px; border-radius:4px; }
-  .saved-chip .name{ font-size:10px; font-weight:700; color:var(--text2); max-width:74px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .saved-del{
-    position:absolute; top:-6px; right:-6px; width:16px; height:16px; border-radius:50%; background:var(--danger); color:#fff;
-    border:2px solid var(--bg); font-size:10px; line-height:1; display:flex; align-items:center; justify-content:center;
-    cursor:pointer; opacity:0; transition:opacity .12s ease;
-  }
-  .saved-chip:hover .saved-del{ opacity:1; }
-  .empty-hint{ font-size:12.5px; color:var(--muted); }
-
-  .copy-toast{
-    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(10px);
-    background: var(--text); color: var(--bg); padding: 9px 18px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
-    font-family: 'JetBrains Mono', monospace; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none;
-    transition: all .18s ease; z-index: 50;
-  }
-  .copy-toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; box-shadow: 0 0 0 1px rgba(255,255,255,.4); }
+  html[data-theme="dark"] .toast { background: #e8ecf1; color: #14171c; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (max-width: 760px) { .hide-sm { display: none !important; } .tab span { display: none; } .tab { padding: 8px 11px; } }
 </style>
 </head>
 <body>
-
 <div class="topbar">
   <div class="topbar-left">
-    <div class="topbar-logo">
-      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" fill="white"/><path d="M12 5a7 7 0 0 0 0 14 3.5 3.5 0 0 1 0-7 3.5 3.5 0 0 0 0-7Z" fill="#4F6BF4"/></svg>
+    <a class="back-link" href="../tools.html" title="До всіх інструментів Edvault">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      <span class="hide-sm">Інструменти</span>
+    </a>
+    <div class="topbar-sep hide-sm"></div>
+    <div class="topbar-logo hide-sm">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" fill="white"/><path d="M12 4a8 8 0 0 0 0 16 4 4 0 0 1 0-8 4 4 0 0 0 0-8Z" fill="#4F6BF4"/></svg>
     </div>
-    <div class="topbar-text">
-      <h1>Edvault</h1>
-      <p>Кольори та контраст</p>
+    <div class="topbar-text hide-sm">
+      <h1>Кольори</h1>
+      <p>Палітри, контраст і градієнти</p>
     </div>
   </div>
-  <div style="display:flex; align-items:center; gap:8px;">
-    <button class="view-btn" id="theme-toggle-btn" title="Темна тема">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
-    </button>
-    <div class="topbar-badge">Дизайн</div>
-  </div>
+  <nav class="tabs" id="tabs"></nav>
+  <button class="view-btn" id="theme-btn" title="Світла / темна тема"></button>
 </div>
 
 <div class="main">
-  <div class="grid-2col">
 
-    <!-- ===== Palette generator ===== -->
+  <!-- ============ PICKER ============ -->
+  <section data-tab="picker">
     <div class="card">
-      <div class="card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C22 6.012 17.461 2 12 2Z"/></svg>
-        Генератор палітри
-      </div>
-
-      <div class="base-color-row">
-        <input type="color" class="big-swatch" id="base-color" value="#4F6BF4">
-        <input type="text" class="hex-input" id="base-hex" value="#4F6BF4" maxlength="7">
-      </div>
-
-      <div>
-        <div class="panel-label" style="margin-bottom:8px;">Шкала відтінків</div>
-        <div class="swatch-row" id="shade-row"></div>
-      </div>
-
-      <div>
-        <div class="panel-label" style="margin-bottom:8px;">Гармонія</div>
-        <div class="tab-row" id="harmony-tabs">
-          <button class="tab-btn active" data-h="mono">Монохромна</button>
-          <button class="tab-btn" data-h="analogous">Аналогова</button>
-          <button class="tab-btn" data-h="complementary">Компліментарна</button>
-          <button class="tab-btn" data-h="triadic">Тріада</button>
+      <div class="picker-wrap">
+        <div>
+          <div class="sv-box" id="sv-box"><canvas id="sv-canvas"></canvas><div class="knob" id="sv-knob"></div></div>
+          <div class="hue-bar" id="hue-bar"><div class="knob" id="hue-knob"></div></div>
+          <div class="row" style="margin-top:14px">
+            <button class="btn" id="eyedrop-btn"></button>
+            <button class="btn" id="random-btn"></button>
+            <span class="grow" style="flex:1"></span>
+            <button class="btn" id="to-palette-btn"></button>
+            <button class="btn" id="to-contrast-btn"></button>
+          </div>
         </div>
-        <div class="swatch-row" id="harmony-row" style="margin-top:10px;"></div>
-      </div>
-
-      <div class="action-row">
-        <button class="ghost-btn" id="copy-css-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4M6 8l-4 4 4 4M14.5 4l-5 16"/></svg>
-          Скопіювати CSS-змінні
-        </button>
-        <button class="ghost-btn" id="save-palette-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
-          Зберегти палітру
-        </button>
-      </div>
-
-      <div>
-        <div class="panel-label" style="margin-bottom:8px;">Збережені палітри</div>
-        <div class="saved-row" id="saved-row"></div>
+        <div>
+          <div class="big-preview" id="big-preview"><div class="name" id="color-name"></div><div class="ratio" id="color-ratio"></div></div>
+          <div class="formats" id="formats"></div>
+        </div>
       </div>
     </div>
 
-    <!-- ===== Contrast checker ===== -->
     <div class="card">
-      <div class="card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20Z" fill="currentColor" stroke="none"/></svg>
-        Перевірка контрасту
-      </div>
-
-      <div class="contrast-pickers">
-        <div class="color-field">
-          <label>Текст</label>
-          <input type="color" id="fg-color" value="#1a1d23">
-          <input type="text" id="fg-hex" value="#1a1d23">
-        </div>
-        <button class="swap-btn" id="swap-btn" title="Поміняти місцями">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
-        </button>
-        <div class="color-field">
-          <label>Фон</label>
-          <input type="color" id="bg-color" value="#ffffff">
-          <input type="text" id="bg-hex" value="#ffffff">
-        </div>
-      </div>
-
-      <div class="contrast-preview" id="contrast-preview">
-        <div class="big">Приклад тексту Aa</div>
-        <div class="normal">Так виглядатиме звичайний текст цього розміру та кольору на цьому фоні.</div>
-      </div>
-
-      <div class="ratio-row">
-        <div class="ratio-number" id="ratio-number">1.00</div>
-        <div class="ratio-sub">коефіцієнт контрастності (WCAG)</div>
-      </div>
-
-      <div class="badge-row" id="badge-row"></div>
+      <div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18"/></svg>Шкала відтінків <span class="sub">— клацни, щоб скопіювати. Крапка — твій колір</span><span class="grow"></span><button class="btn sm" id="copy-shades-btn"></button></div>
+      <div class="shades" id="shades"></div>
     </div>
 
-  </div>
+    <div class="card">
+      <div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="6" cy="16" r="1.5" fill="currentColor"/><circle cx="18" cy="16" r="1.5" fill="currentColor"/></svg>Гармонія кольорів<span class="grow"></span><button class="btn sm" id="harmony-to-palette"></button></div>
+      <div class="seg" id="harmony-seg" style="margin-bottom:14px"></div>
+      <div class="harmony-wrap">
+        <canvas id="wheel" width="380" height="380"></canvas>
+        <div>
+          <div class="sw-row" id="harmony-row"></div>
+          <p class="hint" id="harmony-hint" style="margin-top:10px"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PALETTE ============ -->
+  <section data-tab="palette" class="hidden">
+    <div class="pal-toolbar">
+      <button class="btn primary" id="gen-btn"></button>
+      <select class="select" id="gen-mode"></select>
+      <button class="btn" id="pal-undo" title="Попередня палітра"></button>
+      <span class="hint hide-sm">або натисни <b>пробіл</b>. Замок 🔒 залишає колір</span>
+      <span class="grow"></span>
+      <button class="btn" id="pal-save"></button>
+      <button class="btn" id="pal-export"></button>
+    </div>
+    <div class="pal" id="pal"></div>
+
+    <div class="grid2" style="margin-top:18px">
+      <div class="card">
+        <div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Як бачать палітру люди з дальтонізмом</div>
+        <div id="cb-list"></div>
+        <p class="hint" style="margin-top:10px">Якщо кольори в рядку зливаються — не передавай важливу інформацію лише кольором: додай підпис, іконку чи візерунок.</p>
+      </div>
+      <div class="card">
+        <div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Мої палітри</div>
+        <div class="library" id="library"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONTRAST ============ -->
+  <section data-tab="contrast" class="hidden">
+    <div class="grid2">
+      <div class="card">
+        <div class="pair">
+          <div class="field"><div class="label">Текст</div><div class="row"><input type="color" class="native-color" id="fg-color"><input class="input" id="fg-hex" maxlength="7"></div></div>
+          <button class="icon-btn" id="swap-btn" title="Поміняти місцями" style="margin-bottom:3px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4 3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg></button>
+          <div class="field"><div class="label">Фон</div><div class="row"><input type="color" class="native-color" id="bg-color"><input class="input" id="bg-hex" maxlength="7"></div></div>
+        </div>
+        <div class="preview-box" id="preview-box">
+          <h3>Заголовок уроку</h3>
+          <p>Так виглядатиме звичайний текст цього кольору на цьому фоні. Учні мають легко читати його навіть з останньої парти.</p>
+          <small>Дрібний підпис або примітка</small>
+          <button class="pv-btn" tabindex="-1">Кнопка</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="score"><div class="num" id="ratio-num">1.00</div><div class="verdict" id="verdict"></div></div>
+        <div class="badges" id="badges"></div>
+        <div class="label" style="margin-top:18px" id="fix-label">Як виправити</div>
+        <div class="fixes" id="fixes"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Контраст усіх пар у палітрі <span class="sub">— рядок: текст, стовпець: фон. Клацни, щоб перевірити пару</span></div>
+      <div class="matrix-wrap"><table class="matrix" id="matrix"></table></div>
+    </div>
+  </section>
+
+  <!-- ============ GRADIENT ============ -->
+  <section data-tab="gradient" class="hidden">
+    <div class="grad-preview" id="grad-preview"></div>
+    <div class="grid2" style="margin-top:18px">
+      <div class="card">
+        <div class="row" style="margin-bottom:10px">
+          <div class="seg" id="grad-type"></div>
+          <span style="flex:1"></span>
+          <button class="btn sm" id="grad-random"></button>
+          <button class="btn sm" id="grad-reverse"></button>
+        </div>
+        <div class="angle-row" id="angle-row"><span class="label" style="margin:0">Кут</span><input type="range" min="0" max="360" id="grad-angle"><span class="mono" id="angle-val" style="width:44px;text-align:right;font-size:12.5px;font-weight:700"></span></div>
+        <div class="grad-bar" id="grad-bar" title="Клацни, щоб додати колір"></div>
+        <div class="stops" id="stops"></div>
+      </div>
+      <div class="card">
+        <div class="label">CSS</div>
+        <div class="code-box" id="grad-code"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="grad-copy"></button>
+          <button class="btn" id="grad-png"></button>
+        </div>
+        <div class="label" style="margin-top:18px">Готові варіанти</div>
+        <div class="presets" id="grad-presets"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ IMAGE ============ -->
+  <section data-tab="image" class="hidden">
+    <div class="card" id="img-drop-card">
+      <div class="drop" id="drop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+        <b>Перетягни сюди фото або клацни, щоб вибрати</b>
+        Можна також вставити картинку з буфера (Ctrl+V). Фото нікуди не завантажується.
+      </div>
+      <input type="file" id="img-input" accept="image/*" class="hidden">
+    </div>
+    <div class="grid2 hidden" id="img-work">
+      <div class="card">
+        <div class="card-title">Фото <span class="sub">— наведи і клацни, щоб узяти колір</span><span class="grow"></span><button class="btn sm" id="img-change"></button></div>
+        <div class="img-stage" id="img-stage"><canvas id="img-canvas"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Головні кольори фото<span class="grow"></span><select class="select" id="img-count"><option value="4">4</option><option value="5">5</option><option value="6" selected>6</option><option value="8">8</option></select></div>
+        <div class="extracted" id="extracted"></div>
+        <div class="row" style="margin-top:12px"><button class="btn primary" id="img-to-palette"></button></div>
+        <div class="label" style="margin-top:18px">Взяті піпеткою</div>
+        <div class="picked-list" id="picked"><span class="hint">Клацни на фото, щоб узяти колір</span></div>
+      </div>
+    </div>
+  </section>
 </div>
 
-<div class="copy-toast" id="copy-toast"></div>
+<div class="loupe" id="loupe"><canvas id="loupe-canvas" width="11" height="11"></canvas></div>
+<div class="loupe-label" id="loupe-label"></div>
+<div class="modal-overlay hidden" id="modal"><div class="modal"></div></div>
+<div class="toast" id="toast"></div>
 
 <script>
-  const THEME_KEY = 'edvault-color-theme';
-  const STORAGE_KEY = 'edvault-saved-palettes';
+(() => {
+  const $ = id => document.getElementById(id);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const STATE_KEY = 'edvault-color-state';
+  const LIB_KEY = 'edvault-saved-palettes';
 
-  try{ if(localStorage.getItem(THEME_KEY) === 'dark') document.documentElement.setAttribute('data-theme','dark'); }catch(e){}
+  // ---------- Icons ----------
+  const I = {
+    copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    picker: '<path d="m2 22 1-4 9.5-9.5"/><path d="M14.5 6.5 18 3l3 3-3.5 3.5"/><path d="m14.5 6.5 3 3L7 20l-4 1 1-4Z"/>',
+    dice: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="16" cy="16" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    contrast: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor"/>',
+    lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    unlock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    drag: '<circle cx="9" cy="6" r="1.4" fill="currentColor"/><circle cx="15" cy="6" r="1.4" fill="currentColor"/><circle cx="9" cy="12" r="1.4" fill="currentColor"/><circle cx="15" cy="12" r="1.4" fill="currentColor"/><circle cx="9" cy="18" r="1.4" fill="currentColor"/><circle cx="15" cy="18" r="1.4" fill="currentColor"/>',
+    edit: '<circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 0 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4A5.6 5.6 0 0 0 22 10c0-4.4-4.5-8-10-8Z"/>',
+    undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+    save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    swap: '<path d="M7 16V4M7 4 3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+    moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    cross: '<path d="M18 6 6 18M6 6l12 12"/>',
+    wand: '<path d="m15 4 5 5L9 20H4v-5Z"/><path d="M13 6l5 5"/>',
+    grad: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 15 15 3M9 21 21 9" opacity=".6"/>',
+    image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
+    palette: '<rect x="2" y="4" width="4" height="16" rx="1"/><rect x="7" y="4" width="4" height="16" rx="1"/><rect x="12" y="4" width="4" height="16" rx="1"/><rect x="17" y="4" width="5" height="16" rx="1"/>',
+    drop: '<path d="M12 2.7 6.3 8.4a8 8 0 1 0 11.4 0Z"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'
+  };
+  const svg = (p, sw = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 
-  const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  // ---------- Colour math (sRGB, HSL, HSV, OKLab/OKLCH) ----------
+  function normHex(c){
+    if(c == null) return null;
+    c = String(c).trim().toLowerCase();
+    if(/^#?[0-9a-f]{3}$/.test(c)){ c = c.replace('#', ''); return '#' + c.split('').map(x => x + x).join(''); }
+    if(/^#?[0-9a-f]{6}$/.test(c)) return '#' + c.replace('#', '');
+    return null;
+  }
+  function hexToRgb(h){ const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  function rgbToHex(r, g, b){ return '#' + [r, g, b].map(v => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0')).join(''); }
+  function rgbToHsl(r, g, b){
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b); let h = 0, s = 0; const l = (max + min) / 2;
+    if(max !== min){
+      const d = max - min; s = l > .5 ? d / (2 - max - min) : d / (max + min);
+      h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60;
+    }
+    return [h, s * 100, l * 100];
+  }
+  function hslToRgb(h, s, l){
+    h = ((h % 360) + 360) % 360 / 360; s /= 100; l /= 100;
+    if(s === 0) return [l * 255, l * 255, l * 255];
+    const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    const f = t => { t = (t + 1) % 1; return t < 1/6 ? p + (q - p) * 6 * t : t < 1/2 ? q : t < 2/3 ? p + (q - p) * (2/3 - t) * 6 : p; };
+    return [f(h + 1/3) * 255, f(h) * 255, f(h - 1/3) * 255];
+  }
+  function rgbToHsv(r, g, b){
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min; let h = 0;
+    if(d){ h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+    return [h, max ? d / max : 0, max];
+  }
+  function hsvToRgb(h, s, v){
+    h = ((h % 360) + 360) % 360 / 60;
+    const c = v * s, x = c * (1 - Math.abs(h % 2 - 1)), m = v - c;
+    const [r, g, b] = h < 1 ? [c, x, 0] : h < 2 ? [x, c, 0] : h < 3 ? [0, c, x] : h < 4 ? [0, x, c] : h < 5 ? [x, 0, c] : [c, 0, x];
+    return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+  }
+  const toLin = c => { c /= 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; };
+  const fromLin = c => 255 * (c <= .0031308 ? 12.92 * c : 1.055 * Math.pow(Math.max(c, 0), 1 / 2.4) - .055);
+  function rgbToOklab(r, g, b){
+    r = toLin(r); g = toLin(g); b = toLin(b);
+    const l = Math.cbrt(.4122214708 * r + .5363325363 * g + .0514459929 * b);
+    const m = Math.cbrt(.2119034982 * r + .6806995451 * g + .1073969566 * b);
+    const s = Math.cbrt(.0883024619 * r + .2817188376 * g + .6299787005 * b);
+    return [.2104542553 * l + .7936177850 * m - .0040720468 * s, 1.9779984951 * l - 2.4285922050 * m + .4505937099 * s, .0259040371 * l + .7827717662 * m - .8086757660 * s];
+  }
+  function oklabToLinear(L, a, b){
+    const l = (L + .3963377774 * a + .2158037573 * b) ** 3, m = (L - .1055613458 * a - .0638541728 * b) ** 3, s = (L - .0894841775 * a - 1.2914855480 * b) ** 3;
+    return [4.0767416621 * l - 3.3077115913 * m + .2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - .3413193965 * s, -.0041960863 * l - .7034186147 * m + 1.7076147010 * s];
+  }
+  function hexToOklch(h){
+    const [L, a, b] = rgbToOklab(...hexToRgb(h));
+    let H = Math.atan2(b, a) * 180 / Math.PI; if(H < 0) H += 360;
+    return [L, Math.hypot(a, b), H];
+  }
+  // OKLCH -> hex, reducing chroma until the colour fits in sRGB
+  function oklchToHex(L, C, H){
+    L = clamp(L, 0, 1);
+    const hr = H * Math.PI / 180;
+    let lo = 0, hi = Math.max(0, C), rgb = oklabToLinear(L, hi * Math.cos(hr), hi * Math.sin(hr));
+    const ok = v => v.every(x => x >= -1e-4 && x <= 1 + 1e-4);
+    if(!ok(rgb)){
+      for(let i = 0; i < 22; i++){
+        const mid = (lo + hi) / 2, t = oklabToLinear(L, mid * Math.cos(hr), mid * Math.sin(hr));
+        if(ok(t)){ lo = mid; rgb = t; } else hi = mid;
+      }
+      rgb = oklabToLinear(L, lo * Math.cos(hr), lo * Math.sin(hr));
+    }
+    return rgbToHex(...rgb.map(fromLin));
+  }
+  function luminance(h){ const [r, g, b] = hexToRgb(h).map(toLin); return .2126 * r + .7152 * g + .0722 * b; }
+  function contrast(a, b){ const l1 = luminance(a), l2 = luminance(b); return (Math.max(l1, l2) + .05) / (Math.min(l1, l2) + .05); }
+  const textOn = h => contrast(h, '#ffffff') >= contrast(h, '#111111') ? '#ffffff' : '#111111';
+  function cmyk(r, g, b){
+    const k = 1 - Math.max(r, g, b) / 255;
+    if(k >= 1) return [0, 0, 0, 100];
+    return [(1 - r / 255 - k) / (1 - k), (1 - g / 255 - k) / (1 - k), (1 - b / 255 - k) / (1 - k), k].map(v => Math.round(v * 100));
+  }
+  function deltaE(h1, h2){ const a = rgbToOklab(...hexToRgb(h1)), b = rgbToOklab(...hexToRgb(h2)); return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]); }
+
+  // ---------- Ukrainian colour names (nearest in OKLab) ----------
+  const NAMES = [
+    ['#000000','чорний'],['#ffffff','білий'],['#808080','сірий'],['#c0c0c0','сріблястий'],['#d3d3d3','світло-сірий'],['#36454f','графітовий'],['#2f2f2f','антрацитовий'],
+    ['#ff0000','червоний'],['#dc143c','малиновий'],['#b22222','цегляний'],['#800000','бордовий'],['#8b0000','темно-червоний'],['#7b1e3a','вишневий'],['#ff7f50','кораловий'],['#fa8072','лососевий'],['#ff6347','томатний'],
+    ['#ffc0cb','рожевий'],['#ff69b4','яскраво-рожевий'],['#ff1493','фуксія'],['#ffb6c1','ніжно-рожевий'],['#e0b0ff','бузковий'],['#e6e6fa','лавандовий'],
+    ['#ffa500','помаранчевий'],['#ff8c00','темно-помаранчевий'],['#ffdab9','персиковий'],['#ffe4b5','кремовий'],['#fffdd0','вершковий'],['#f5f5dc','бежевий'],['#f4a460','пісочний'],['#d2b48c','світло-коричневий'],
+    ['#ffff00','жовтий'],['#ffd700','золотий'],['#fff44f','лимонний'],['#f0e68c','хакі світлий'],['#bdb76b','хакі'],['#808000','оливковий'],
+    ['#a52a2a','коричневий'],['#8b4513','шоколадний'],['#d2691e','рудий'],['#c68642','карамельний'],['#5c4033','темно-коричневий'],['#cd7f32','бронзовий'],['#b87333','мідний'],
+    ['#00ff00','лаймовий'],['#7cfc00','салатовий'],['#adff2f','жовто-зелений'],['#008000','зелений'],['#006400','темно-зелений'],['#228b22','лісовий зелений'],['#50c878','смарагдовий'],['#98ff98','м’ятний'],['#8fbc8f','шавлієвий'],['#2e8b57','морська зелень'],['#556b2f','болотний'],
+    ['#40e0d0','бірюзовий'],['#008080','бірюзово-синій'],['#00ffff','ціан'],['#7fffd4','аквамариновий'],['#afeeee','блідо-бірюзовий'],
+    ['#87ceeb','небесний'],['#add8e6','блакитний'],['#00bfff','яскраво-блакитний'],['#4682b4','сталевий синій'],['#0000ff','синій'],['#4169e1','королівський синій'],['#1e90ff','волошковий'],['#000080','темно-синій'],['#191970','опівнічний синій'],['#4f6bf4','синій Edvault'],
+    ['#4b0082','індиго'],['#8a2be2','фіолетовий'],['#9400d3','темно-фіолетовий'],['#800080','пурпуровий'],['#da70d6','орхідейний'],['#dda0dd','сливовий'],['#c8a2c8','ліловий'],['#673ab7','аметистовий']
+  ].map(([h, n]) => [rgbToOklab(...hexToRgb(h)), n]);
+  function colorName(h){
+    const p = rgbToOklab(...hexToRgb(h)); let best = '', bd = Infinity;
+    for(const [q, n] of NAMES){
+      // weight lightness a bit less so "dark/light" variants of a hue group well
+      const d = (p[0] - q[0]) ** 2 * .7 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2;
+      if(d < bd){ bd = d; best = n; }
+    }
+    return best;
+  }
+
+  // ---------- Colour-blindness simulation (Machado et al. 2009) ----------
+  const CB = {
+    protan: { name:'Протанопія', note:'не розрізняє червоний (~1% чоловіків)', m:[[.152286,1.052583,-.204868],[.114503,.786281,.099216],[-.003882,-.048116,1.051998]] },
+    deutan: { name:'Дейтеранопія', note:'не розрізняє зелений (~1–5% чоловіків)', m:[[.367322,.860646,-.227968],[.280085,.672501,.047413],[-.011820,.042940,.968881]] },
+    tritan: { name:'Тританопія', note:'не розрізняє синій і жовтий (рідко)', m:[[1.255528,-.076749,-.178779],[-.078411,.930809,.147602],[.004733,.691367,.303900]] },
+    achro: { name:'Ахроматопсія', note:'бачить лише відтінки сірого' }
+  };
+  function simulate(h, kind){
+    const lin = hexToRgb(h).map(toLin);
+    if(kind === 'achro'){ const y = .2126 * lin[0] + .7152 * lin[1] + .0722 * lin[2]; const v = fromLin(y); return rgbToHex(v, v, v); }
+    const m = CB[kind].m;
+    return rgbToHex(...m.map(row => fromLin(clamp(row[0] * lin[0] + row[1] * lin[1] + row[2] * lin[2], 0, 1))));
+  }
+
+  // ---------- UI helpers ----------
+  const toastEl = $('toast');
+  function toast(msg, swatch, ms = 1800){
+    toastEl.innerHTML = (swatch ? `<i style="background:${swatch}"></i>` : '') + `<span></span>`;
+    toastEl.querySelector('span').textContent = msg;
+    toastEl.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => toastEl.classList.remove('show'), ms);
+  }
+  async function copy(text, msg, swatch){
+    try{ await navigator.clipboard.writeText(text); }
+    catch(e){
+      const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(err){} ta.remove();
+    }
+    toast(msg || ('Скопійовано ' + text), swatch);
+  }
+  const modalEl = $('modal'), modalBox = modalEl.querySelector('.modal');
+  let modalOnClose = null;
+  function openModal(html, cls = ''){ modalBox.className = 'modal ' + cls; modalBox.innerHTML = html; modalEl.classList.remove('hidden'); return modalBox; }
+  function closeModal(){ if(modalEl.classList.contains('hidden')) return; modalEl.classList.add('hidden'); modalBox.innerHTML = ''; const f = modalOnClose; modalOnClose = null; if(f) f(); }
+  modalEl.addEventListener('mousedown', e => { if(e.target === modalEl) closeModal(); });
+  const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  function download(blob, name){
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+  function swatchBtn(hex, label, extraCls = ''){
+    const b = document.createElement('button');
+    b.className = 'sw ' + extraCls; b.style.background = hex; b.style.color = textOn(hex);
+    b.innerHTML = (label != null ? `<b>${escapeHtml(label)}</b>` : '') + `<span>${hex.toUpperCase()}</span>`;
+    b.title = 'Клацни — скопіювати. Подвійний клік — зробити основним';
+    b.onclick = () => copy(hex.toUpperCase(), null, hex);
+    b.ondblclick = () => { setBase(hex); toast('Основний колір змінено', hex); };
+    return b;
+  }
+
+  // ---------- State ----------
+  let saved = {};
+  try{ saved = JSON.parse(localStorage.getItem(STATE_KEY) || '{}') || {}; }catch(e){}
+  const state = {
+    tab: saved.tab || 'picker',
+    base: normHex(saved.base) || '#4f6bf4',
+    harmony: saved.harmony || 'analogous',
+    palette: Array.isArray(saved.palette) && saved.palette.length ? saved.palette.map(p => ({ hex: normHex(p.hex) || '#888888', locked: !!p.locked })) : null,
+    genMode: saved.genMode || 'auto',
+    fg: normHex(saved.fg) || '#1a1d23',
+    bg: normHex(saved.bg) || '#ffffff',
+    grad: saved.grad || null
+  };
+  let saveTimer = null;
+  function persist(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try{ localStorage.setItem(STATE_KEY, JSON.stringify({ tab: state.tab, base: state.base, harmony: state.harmony, palette: state.palette, genMode: state.genMode, fg: state.fg, bg: state.bg, grad: state.grad })); }catch(e){}
+    }, 250);
+  }
+
+  // ---------- Tabs ----------
+  const TABS = [
+    { id:'picker', label:'Колір', icon:I.drop },
+    { id:'palette', label:'Палітра', icon:I.palette },
+    { id:'contrast', label:'Контраст', icon:I.contrast },
+    { id:'gradient', label:'Градієнт', icon:I.grad },
+    { id:'image', label:'З фото', icon:I.image }
+  ];
+  const tabsEl = $('tabs');
+  TABS.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'tab'; b.dataset.tab = t.id; b.innerHTML = svg(t.icon) + `<span>${t.label}</span>`; b.title = t.label;
+    b.onclick = () => showTab(t.id);
+    tabsEl.appendChild(b);
+  });
+  const onShow = {};
+  function showTab(id){
+    state.tab = id;
+    tabsEl.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+    document.querySelectorAll('section[data-tab]').forEach(s => s.classList.toggle('hidden', s.dataset.tab !== id));
+    if(onShow[id]) onShow[id]();
+    persist();
+  }
+
+  // ---------- Theme ----------
   function applyTheme(dark){
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    try{ localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); }catch(e){}
-    themeToggleBtn.classList.toggle('active', dark);
+    try{ localStorage.setItem('edvault-theme', dark ? 'dark' : 'light'); }catch(e){}
+    $('theme-btn').innerHTML = svg(dark ? I.sun : I.moon);
   }
-  themeToggleBtn.addEventListener('click', () => applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark'));
+  $('theme-btn').onclick = () => applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
   applyTheme(document.documentElement.getAttribute('data-theme') === 'dark');
 
-  // ---------- Color math ----------
-  function hexToRgb(hex){
-    hex = hex.replace('#','').trim();
-    if(hex.length === 3) hex = hex.split('').map(c => c+c).join('');
-    const num = parseInt(hex, 16);
-    return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+  // =====================================================================
+  // PICKER TAB
+  // =====================================================================
+  const svBox = $('sv-box'), svCanvas = $('sv-canvas'), svKnob = $('sv-knob'), hueBar = $('hue-bar'), hueKnob = $('hue-knob');
+  let hsv = rgbToHsv(...hexToRgb(state.base));
+  function drawSV(){
+    const r = svBox.getBoundingClientRect();
+    const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+    if(svCanvas.width !== w || svCanvas.height !== h){ svCanvas.width = w; svCanvas.height = h; }
+    const g = svCanvas.getContext('2d');
+    g.fillStyle = rgbToHex(...hsvToRgb(hsv[0], 1, 1)); g.fillRect(0, 0, w, h);
+    const wg = g.createLinearGradient(0, 0, w, 0); wg.addColorStop(0, '#fff'); wg.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = wg; g.fillRect(0, 0, w, h);
+    const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, 'rgba(0,0,0,0)'); bg.addColorStop(1, '#000');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    svKnob.style.left = (hsv[1] * 100) + '%'; svKnob.style.top = ((1 - hsv[2]) * 100) + '%';
+    svKnob.style.background = state.base;
+    hueKnob.style.left = (hsv[0] / 360 * 100) + '%';
+    hueKnob.style.background = rgbToHex(...hsvToRgb(hsv[0], 1, 1));
   }
-  function rgbToHex(r,g,b){
-    return '#' + [r,g,b].map(v => Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+  new ResizeObserver(() => { if(state.tab === 'picker') drawSV(); }).observe(svBox);
+  function dragOn(el, fn){
+    el.addEventListener('pointerdown', e => {
+      el.setPointerCapture(e.pointerId); fn(e);
+      const mv = ev => fn(ev);
+      const up = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+      el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    });
   }
-  function rgbToHsl(r,g,b){
-    r/=255; g/=255; b/=255;
-    const max=Math.max(r,g,b), min=Math.min(r,g,b);
-    let h, s, l=(max+min)/2;
-    if(max===min){ h=s=0; }
-    else{
-      const d = max-min;
-      s = l>0.5 ? d/(2-max-min) : d/(max+min);
-      switch(max){
-        case r: h=(g-b)/d + (g<b?6:0); break;
-        case g: h=(b-r)/d + 2; break;
-        default: h=(r-g)/d + 4;
+  dragOn(svBox, e => {
+    const r = svBox.getBoundingClientRect();
+    hsv = [hsv[0], clamp((e.clientX - r.left) / r.width, 0, 1), 1 - clamp((e.clientY - r.top) / r.height, 0, 1)];
+    setBase(rgbToHex(...hsvToRgb(...hsv)), true);
+  });
+  dragOn(hueBar, e => {
+    const r = hueBar.getBoundingClientRect();
+    hsv = [clamp((e.clientX - r.left) / r.width, 0, .9999) * 360, hsv[1], hsv[2]];
+    setBase(rgbToHex(...hsvToRgb(...hsv)), true);
+  });
+
+  const FORMATS = [
+    { id:'hex', label:'HEX', get: h => h.toUpperCase(), parse: v => normHex(v) },
+    { id:'rgb', label:'RGB', get: h => `rgb(${hexToRgb(h).join(', ')})`, parse: v => { const m = v.match(/-?\d+(\.\d+)?/g); return m && m.length >= 3 ? rgbToHex(+m[0], +m[1], +m[2]) : null; } },
+    { id:'hsl', label:'HSL', get: h => { const [a, b, c] = rgbToHsl(...hexToRgb(h)); return `hsl(${Math.round(a)}, ${Math.round(b)}%, ${Math.round(c)}%)`; }, parse: v => { const m = v.match(/-?\d+(\.\d+)?/g); return m && m.length >= 3 ? rgbToHex(...hslToRgb(+m[0], clamp(+m[1], 0, 100), clamp(+m[2], 0, 100))) : null; } },
+    { id:'oklch', label:'OKLCH', get: h => { const [L, C, H] = hexToOklch(h); return `oklch(${(L * 100).toFixed(1)}% ${C.toFixed(3)} ${C < .002 ? 0 : H.toFixed(1)})`; }, parse: v => { const m = v.match(/-?\d+(\.\d+)?/g); if(!m || m.length < 3) return null; let L = +m[0]; if(/%/.test(v) || L > 1) L /= 100; return oklchToHex(L, +m[1], +m[2]); } },
+    { id:'cmyk', label:'CMYK', get: h => { const c = cmyk(...hexToRgb(h)); return `${c[0]}% ${c[1]}% ${c[2]}% ${c[3]}%`; }, readonly: true }
+  ];
+  const fmtEl = $('formats');
+  FORMATS.forEach(f => {
+    const row = document.createElement('div'); row.className = 'fmt';
+    row.innerHTML = `<label>${f.label}</label><input class="input" data-f="${f.id}" spellcheck="false" ${f.readonly ? 'readonly title="Для друку — приблизно"' : ''}><button class="icon-btn" title="Копіювати">${svg(I.copy)}</button>`;
+    const inp = row.querySelector('input');
+    inp.addEventListener('change', () => { const h = f.parse && f.parse(inp.value); if(h) setBase(h); else inp.value = f.get(state.base); });
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter') inp.blur(); });
+    row.querySelector('button').onclick = () => copy(inp.value, null, state.base);
+    fmtEl.appendChild(row);
+  });
+
+  function renderPicker(fromDrag){
+    const h = state.base;
+    if(!fromDrag) hsv = rgbToHsv(...hexToRgb(h));
+    drawSV();
+    const bp = $('big-preview'); bp.style.background = h; bp.style.color = textOn(h);
+    $('color-name').textContent = '≈ ' + colorName(h);
+    $('color-ratio').innerHTML = `з білим ${contrast(h, '#ffffff').toFixed(2)}<br>з чорним ${contrast(h, '#000000').toFixed(2)}`;
+    FORMATS.forEach(f => { const inp = fmtEl.querySelector(`[data-f="${f.id}"]`); if(document.activeElement !== inp) inp.value = f.get(h); });
+    renderShades(); renderHarmony();
+  }
+  function setBase(h, fromDrag){
+    h = normHex(h); if(!h) return;
+    state.base = h; persist();
+    renderPicker(fromDrag);
+  }
+
+  // shades 50–950 in OKLCH (perceptually even), the base colour sits on its closest step
+  const STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+  const STEP_L = [.975, .935, .87, .79, .705, .62, .54, .46, .38, .3, .22];
+  const STEP_C = [.22, .38, .6, .82, .95, 1, .95, .86, .74, .6, .48];
+  function shadesOf(h){
+    const [L, C, H] = hexToOklch(h);
+    let bestI = 0; STEP_L.forEach((l, i) => { if(Math.abs(l - L) < Math.abs(STEP_L[bestI] - L)) bestI = i; });
+    return STEPS.map((s, i) => ({ step: s, hex: i === bestI ? h : oklchToHex(STEP_L[i], C * STEP_C[i] / STEP_C[bestI] * (C < .02 ? 1 : 1), H), base: i === bestI }));
+  }
+  function renderShades(){
+    const el = $('shades'); el.innerHTML = '';
+    shadesOf(state.base).forEach(s => el.appendChild(swatchBtn(s.hex, s.step, s.base ? 'is-base' : '')));
+  }
+  $('copy-shades-btn').innerHTML = svg(I.copy) + 'CSS-змінні';
+  $('copy-shades-btn').onclick = () => {
+    const name = colorName(state.base).split(' ').pop().replace(/[^a-zа-яіїєґ]/gi, '') || 'color';
+    const slug = /[а-я]/i.test(name) ? 'brand' : name;
+    copy(':root {\n' + shadesOf(state.base).map(s => `  --${slug}-${s.step}: ${s.hex};`).join('\n') + '\n}', 'CSS-змінні скопійовано');
+  };
+
+  const HARMONIES = {
+    analogous: { name:'Аналогова', hint:'Сусідні кольори на колі — спокійно й гармонійно. Добре для фонів і ілюстрацій.', offs:[-30, -15, 0, 15, 30] },
+    complementary: { name:'Контрастна', hint:'Протилежні кольори — максимальний контраст. Один зроби головним, інший — для акцентів.', offs:[0, 180], extra:true },
+    split: { name:'Розщеплена', hint:'Колір і два сусіди його протилежності — яскраво, але м’якше за контрастну.', offs:[0, 150, 210] },
+    triadic: { name:'Тріада', hint:'Три кольори через 120° — жваво й збалансовано. Один основний, два — для дрібниць.', offs:[0, 120, 240] },
+    tetradic: { name:'Квадрат', hint:'Чотири кольори через 90° — багато варіантів, потребує обережності.', offs:[0, 90, 180, 270] },
+    mono: { name:'Монохромна', hint:'Один відтінок різної яскравості — завжди стильно й читабельно.', mono:true }
+  };
+  function harmonyColors(h, kind){
+    const [L, C, H] = hexToOklch(h), hm = HARMONIES[kind];
+    if(hm.mono) return [.9, .75, L, .45, .3].map((l, i) => i === 2 ? h : oklchToHex(l, C * (l > .85 ? .45 : .9), H));
+    const out = hm.offs.map(o => o === 0 ? h : oklchToHex(L, C, H + o));
+    if(hm.extra){ out.push(oklchToHex(Math.min(.95, L + .25), C * .5, H), oklchToHex(Math.min(.95, L + .25), C * .5, H + 180)); }
+    return out;
+  }
+  const hSeg = $('harmony-seg');
+  Object.entries(HARMONIES).forEach(([k, v]) => {
+    const b = document.createElement('button'); b.textContent = v.name; b.dataset.k = k;
+    b.onclick = () => { state.harmony = k; persist(); renderHarmony(); };
+    hSeg.appendChild(b);
+  });
+  const wheel = $('wheel'), wctx = wheel.getContext('2d');
+  let wheelImg = null;
+  function buildWheel(){
+    const S = wheel.width, R = S / 2, img = wctx.createImageData(S, S);
+    for(let y = 0; y < S; y++) for(let x = 0; x < S; x++){
+      const dx = x - R, dy = y - R, d = Math.hypot(dx, dy);
+      if(d > R - 2) continue;
+      const hue = (Math.atan2(dy, dx) * 180 / Math.PI + 450) % 360; // 0° at the top
+      const [r, g, b] = hsvToRgb(hue, d / R, 1);
+      const i = (y * S + x) * 4; img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b; img.data[i + 3] = 255;
+    }
+    wheelImg = img;
+  }
+  function renderHarmony(){
+    hSeg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.k === state.harmony));
+    const cols = harmonyColors(state.base, state.harmony);
+    const row = $('harmony-row'); row.innerHTML = '';
+    cols.forEach(c => row.appendChild(swatchBtn(c, null)));
+    $('harmony-hint').textContent = HARMONIES[state.harmony].hint;
+    if(!wheelImg) buildWheel();
+    wctx.putImageData(wheelImg, 0, 0);
+    const S = wheel.width, R = S / 2;
+    const pts = cols.map(c => { const [hh, s] = rgbToHsv(...hexToRgb(c)); const a = (hh - 90) * Math.PI / 180, d = Math.max(.12, s) * (R - 14); return [R + Math.cos(a) * d, R + Math.sin(a) * d, c]; });
+    wctx.strokeStyle = 'rgba(255,255,255,.9)'; wctx.lineWidth = 3;
+    pts.forEach(([x, y]) => { wctx.beginPath(); wctx.moveTo(R, R); wctx.lineTo(x, y); wctx.stroke(); });
+    pts.forEach(([x, y, c], i) => {
+      wctx.beginPath(); wctx.arc(x, y, i === 0 || c === state.base ? 15 : 11, 0, Math.PI * 2);
+      wctx.fillStyle = c; wctx.fill(); wctx.lineWidth = 4; wctx.strokeStyle = '#fff'; wctx.stroke();
+      wctx.lineWidth = 1; wctx.strokeStyle = 'rgba(0,0,0,.35)'; wctx.stroke();
+    });
+  }
+  $('harmony-to-palette').innerHTML = svg(I.palette) + 'У палітру';
+  $('harmony-to-palette').onclick = () => { setPalette(harmonyColors(state.base, state.harmony).slice(0, 8)); showTab('palette'); toast('Гармонію перенесено в палітру'); };
+
+  $('eyedrop-btn').innerHTML = svg(I.picker) + 'Піпетка з екрана';
+  if(!('EyeDropper' in window)){ $('eyedrop-btn').title = 'Твій браузер не підтримує піпетку з екрана (є в Chrome та Edge)'; }
+  $('eyedrop-btn').onclick = async () => {
+    if(!('EyeDropper' in window)){ toast('Піпетка з екрана працює в Chrome та Edge. Можна взяти колір з фото на вкладці «З фото»', null, 3500); return; }
+    try{ const r = await new window.EyeDropper().open(); setBase(r.sRGBHex); toast('Колір узято', r.sRGBHex); }catch(e){}
+  };
+  $('random-btn').innerHTML = svg(I.dice) + 'Випадковий';
+  $('random-btn').onclick = () => setBase(oklchToHex(.45 + Math.random() * .35, .08 + Math.random() * .14, Math.random() * 360));
+  $('to-palette-btn').innerHTML = svg(I.plus) + 'У палітру';
+  $('to-palette-btn').onclick = () => {
+    if(!state.palette) setPalette(generatePalette([], state.genMode));
+    if(state.palette.length >= 10){ toast('У палітрі вже 10 кольорів'); return; }
+    pushHistory(); state.palette.push({ hex: state.base, locked: true }); persist(); renderPalette();
+    toast('Додано в палітру', state.base);
+  };
+  $('to-contrast-btn').innerHTML = svg(I.contrast) + 'Перевірити контраст';
+  $('to-contrast-btn').onclick = () => { state.fg = state.base; showTab('contrast'); };
+  onShow.picker = () => renderPicker();
+
+  // =====================================================================
+  // PALETTE TAB
+  // =====================================================================
+  const GEN_MODES = {
+    auto: 'Будь-яка гармонія', analogous: 'Аналогова', complementary: 'Контрастна', triadic: 'Тріада',
+    mono: 'Монохромна', pastel: 'Пастельна', bright: 'Яскрава', dark: 'Темна тема', earth: 'Природні'
+  };
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  function generatePalette(current, mode){
+    const n = current.length || 5;
+    const anchor = current.find(p => p.locked);
+    let H0 = anchor ? hexToOklch(anchor.hex)[2] : rnd(0, 360);
+    let kind = mode === 'auto' ? ['analogous', 'complementary', 'triadic', 'mono', 'split'][Math.floor(Math.random() * 5)] : mode;
+    const hueFor = i => {
+      switch(kind){
+        case 'analogous': return H0 + (i - 2) * rnd(14, 26);
+        case 'complementary': return H0 + (i % 2 ? 180 : 0) + rnd(-10, 10);
+        case 'triadic': return H0 + (i % 3) * 120 + rnd(-8, 8);
+        case 'split': return H0 + [0, 150, 210, 0, 180][i % 5] + rnd(-6, 6);
+        case 'mono': return H0 + rnd(-6, 6);
+        case 'earth': return rnd(25, 110);
+        default: return H0 + (i - 2) * rnd(20, 50);
       }
-      h/=6;
-    }
-    return { h:h*360, s:s*100, l:l*100 };
+    };
+    // a pleasant spread of lightness from light to dark
+    const Ls = Array.from({ length: n }, (_, i) => {
+      const t = n === 1 ? .5 : i / (n - 1);
+      if(kind === 'pastel') return .93 - t * .16;
+      if(kind === 'dark') return .2 + t * .55;
+      return .94 - t * .66 + rnd(-.03, .03);
+    });
+    const Cfor = (L) => {
+      if(kind === 'pastel') return rnd(.04, .09);
+      if(kind === 'bright') return rnd(.17, .26);
+      if(kind === 'earth') return rnd(.03, .1);
+      if(kind === 'mono') return rnd(.05, .13);
+      return (L > .88 || L < .3 ? rnd(.02, .07) : rnd(.08, .18));
+    };
+    const order = Ls.slice().sort(() => Math.random() - .5);
+    return Array.from({ length: n }, (_, i) => {
+      if(current[i] && current[i].locked) return { ...current[i] };
+      const L = kind === 'bright' ? rnd(.55, .8) : order[i];
+      return { hex: oklchToHex(L, Cfor(L), hueFor(i)), locked: false };
+    });
   }
-  function hslToRgb(h,s,l){
-    h=((h%360)+360)%360/360; s/=100; l/=100;
-    let r,g,b;
-    if(s===0){ r=g=b=l; }
-    else{
-      const hue2rgb=(p,q,t)=>{
-        if(t<0)t+=1; if(t>1)t-=1;
-        if(t<1/6) return p+(q-p)*6*t;
-        if(t<1/2) return q;
-        if(t<2/3) return p+(q-p)*(2/3-t)*6;
-        return p;
+  let palHistory = [], future = [];
+  function pushHistory(){ if(state.palette){ palHistory.push(state.palette.map(p => ({ ...p }))); if(palHistory.length > 50) palHistory.shift(); future = []; } updateUndo(); }
+  function updateUndo(){ $('pal-undo').disabled = !palHistory.length; }
+  function setPalette(hexes, keepLocks){
+    pushHistory();
+    state.palette = hexes.map(h => ({ hex: normHex(h) || '#888888', locked: !!keepLocks }));
+    persist(); renderPalette();
+  }
+  function regenerate(){
+    pushHistory();
+    state.palette = generatePalette(state.palette || [], state.genMode);
+    persist(); renderPalette();
+  }
+  const genMode = $('gen-mode');
+  genMode.innerHTML = Object.entries(GEN_MODES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+  genMode.value = state.genMode;
+  genMode.onchange = () => { state.genMode = genMode.value; persist(); regenerate(); };
+  $('gen-btn').innerHTML = svg(I.dice) + 'Нова палітра';
+  $('gen-btn').onclick = regenerate;
+  $('pal-undo').innerHTML = svg(I.undo) + '<span class="hide-sm">Назад</span>';
+  $('pal-undo').onclick = () => { if(!palHistory.length) return; future.push(state.palette); state.palette = palHistory.pop(); persist(); renderPalette(); updateUndo(); };
+
+  const palEl = $('pal');
+  let dragFrom = null;
+  function renderPalette(){
+    if(!state.palette) state.palette = generatePalette([{}, {}, {}, {}, {}].map(() => ({})), state.genMode);
+    palEl.innerHTML = '';
+    state.palette.forEach((p, i) => {
+      const col = document.createElement('div');
+      col.className = 'pal-col' + (p.locked ? ' locked' : '');
+      col.style.background = p.hex; col.style.color = textOn(p.hex);
+      col.draggable = true;
+      col.innerHTML = `
+        <div class="lock-badge">${svg(I.lock)}</div>
+        <div class="pal-tools">
+          <button class="lock" title="${p.locked ? 'Розблокувати' : 'Зафіксувати — не змінюватиметься'}">${svg(p.locked ? I.lock : I.unlock)}</button>
+          <label title="Змінити колір">${svg(I.edit)}<input type="color" value="${p.hex}"></label>
+          <button class="cp" title="Копіювати">${svg(I.copy)}</button>
+          <button class="ct" title="Перевірити контраст з першим кольором">${svg(I.contrast)}</button>
+          ${state.palette.length > 2 ? `<button class="rm" title="Прибрати">${svg(I.x)}</button>` : ''}
+        </div>
+        <button class="hex" title="Клацни, щоб скопіювати">${p.hex.toUpperCase().slice(1)}</button>
+        <div class="cname">${escapeHtml(colorName(p.hex))}</div>
+        ${state.palette.length < 10 ? `<button class="pal-add" title="Додати колір сюди">${svg(I.plus, 2.5)}</button>` : ''}`;
+      col.querySelector('.lock').onclick = () => { p.locked = !p.locked; persist(); renderPalette(); };
+      const ci = col.querySelector('input[type=color]');
+      ci.oninput = () => { p.hex = ci.value; col.style.background = p.hex; col.style.color = textOn(p.hex); col.querySelector('.hex').textContent = p.hex.toUpperCase().slice(1); col.querySelector('.cname').textContent = colorName(p.hex); };
+      ci.onchange = () => { pushHistory(); p.locked = true; persist(); renderPalette(); };
+      col.querySelector('.cp').onclick = () => copy(p.hex.toUpperCase(), null, p.hex);
+      col.querySelector('.hex').onclick = () => copy(p.hex.toUpperCase(), null, p.hex);
+      col.querySelector('.ct').onclick = () => { state.fg = p.hex; state.bg = state.palette[0].hex === p.hex ? (state.palette[state.palette.length - 1].hex) : state.palette[0].hex; showTab('contrast'); };
+      const rm = col.querySelector('.rm'); if(rm) rm.onclick = () => { pushHistory(); state.palette.splice(i, 1); persist(); renderPalette(); };
+      const add = col.querySelector('.pal-add');
+      if(add) add.onclick = () => {
+        pushHistory();
+        const a = p.hex, b = (state.palette[i + 1] || p).hex;
+        const la = hexToOklch(a), lb = hexToOklch(b);
+        let dh = lb[2] - la[2]; if(dh > 180) dh -= 360; if(dh < -180) dh += 360;
+        const mid = a === b ? oklchToHex(clamp(la[0] - .12, .1, .95), la[1], la[2]) : oklchToHex((la[0] + lb[0]) / 2, (la[1] + lb[1]) / 2, la[2] + dh / 2);
+        state.palette.splice(i + 1, 0, { hex: mid, locked: false }); persist(); renderPalette();
       };
-      const q = l<0.5 ? l*(1+s) : l+s-l*s;
-      const p = 2*l-q;
-      r=hue2rgb(p,q,h+1/3); g=hue2rgb(p,q,h); b=hue2rgb(p,q,h-1/3);
-    }
-    return { r:r*255, g:g*255, b:b*255 };
-  }
-  function hexToHsl(hex){ const {r,g,b}=hexToRgb(hex); return rgbToHsl(r,g,b); }
-  function hslToHex(h,s,l){ const {r,g,b}=hslToRgb(h,s,l); return rgbToHex(r,g,b); }
-  function isValidHex(hex){ return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex.trim()); }
-
-  // ---------- Shade scale ----------
-  const SHADE_STEPS = [50,100,200,300,400,500,600,700,800,900];
-  const SHADE_LIGHTNESS = [97,93,85,74,62,50,42,33,25,15];
-  function generateShades(hex){
-    const { h, s } = hexToHsl(hex);
-    return SHADE_STEPS.map((step, i) => {
-      const targetL = SHADE_LIGHTNESS[i];
-      const satFactor = 1 - Math.abs(targetL-50)/50*0.22;
-      return { label: String(step), hex: hslToHex(h, Math.max(0, Math.min(100, s*satFactor)), targetL) };
-    });
-  }
-
-  // ---------- Harmony schemes ----------
-  function harmonyMono(hex){
-    const { h, s } = hexToHsl(hex);
-    return [20,35,50,65,80].map(l => ({ label: l+'%', hex: hslToHex(h, s, l) }));
-  }
-  function harmonyAnalogous(hex){
-    const { h, s, l } = hexToHsl(hex);
-    return [-30,-15,0,15,30].map(d => ({ label: (d>0?'+':'')+d+'°', hex: hslToHex(h+d, s, l) }));
-  }
-  function harmonyComplementary(hex){
-    const { h, s, l } = hexToHsl(hex);
-    return [
-      { label:'база темна', hex: hslToHex(h, s, Math.max(10,l-20)) },
-      { label:'база', hex: hslToHex(h, s, l) },
-      { label:'база світла', hex: hslToHex(h, s, Math.min(95,l+20)) },
-      { label:'компл.', hex: hslToHex(h+180, s, l) },
-      { label:'компл. темна', hex: hslToHex(h+180, s, Math.max(10,l-20)) }
-    ];
-  }
-  function harmonyTriadic(hex){
-    const { h, s, l } = hexToHsl(hex);
-    return [
-      { label:'база', hex: hslToHex(h, s, l) },
-      { label:'база світла', hex: hslToHex(h, s, Math.min(95,l+18)) },
-      { label:'+120°', hex: hslToHex(h+120, s, l) },
-      { label:'+120° світла', hex: hslToHex(h+120, s, Math.min(95,l+18)) },
-      { label:'+240°', hex: hslToHex(h+240, s, l) }
-    ];
-  }
-  const HARMONY_FN = { mono: harmonyMono, analogous: harmonyAnalogous, complementary: harmonyComplementary, triadic: harmonyTriadic };
-  let currentHarmony = 'mono';
-
-  // ---------- Copy toast ----------
-  const copyToast = document.getElementById('copy-toast');
-  function showToast(text){
-    copyToast.textContent = text;
-    copyToast.classList.add('show');
-    clearTimeout(copyToast._t);
-    copyToast._t = setTimeout(() => copyToast.classList.remove('show'), 1400);
-  }
-  async function copyText(text, toastMsg){
-    try{ await navigator.clipboard.writeText(text); showToast(toastMsg || ('Скопійовано ' + text)); }
-    catch(e){ showToast('Не вдалось скопіювати'); }
-  }
-  function makeSwatch(item){
-    const btn = document.createElement('button');
-    btn.className = 'swatch';
-    btn.innerHTML = `<span class="swatch-color" style="background:${item.hex}"></span><span class="swatch-label">${item.label}<br>${item.hex}</span>`;
-    btn.addEventListener('click', () => copyText(item.hex));
-    return btn;
-  }
-
-  // ---------- Palette generator wiring ----------
-  const baseColorInput = document.getElementById('base-color');
-  const baseHexInput = document.getElementById('base-hex');
-  const shadeRow = document.getElementById('shade-row');
-  const harmonyRow = document.getElementById('harmony-row');
-  const harmonyTabs = document.querySelectorAll('#harmony-tabs .tab-btn');
-  const copyCssBtn = document.getElementById('copy-css-btn');
-  const savePaletteBtn = document.getElementById('save-palette-btn');
-  const savedRow = document.getElementById('saved-row');
-
-  function renderPaletteSection(){
-    const hex = baseHexInput.value;
-    shadeRow.innerHTML = '';
-    generateShades(hex).forEach(item => shadeRow.appendChild(makeSwatch(item)));
-    harmonyRow.innerHTML = '';
-    HARMONY_FN[currentHarmony](hex).forEach(item => harmonyRow.appendChild(makeSwatch(item)));
-  }
-  function setBaseColor(hex){
-    if(!isValidHex(hex)) return;
-    baseColorInput.value = hex;
-    baseHexInput.value = hex;
-    renderPaletteSection();
-  }
-  baseColorInput.addEventListener('input', () => setBaseColor(baseColorInput.value));
-  baseHexInput.addEventListener('input', () => { if(isValidHex(baseHexInput.value)) setBaseColor(baseHexInput.value); });
-  harmonyTabs.forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentHarmony = btn.dataset.h;
-      harmonyTabs.forEach(b => b.classList.toggle('active', b === btn));
-      renderPaletteSection();
-    });
-  });
-
-  copyCssBtn.addEventListener('click', () => {
-    const shades = generateShades(baseHexInput.value);
-    const css = ':root {\n' + shades.map(s => `  --color-${s.label}: ${s.hex};`).join('\n') + '\n}';
-    copyText(css, 'CSS-змінні скопійовано');
-  });
-
-  function loadPalettes(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }catch(e){ return []; } }
-  function savePalettes(list){ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
-  function renderSaved(){
-    const palettes = loadPalettes();
-    savedRow.innerHTML = '';
-    if(!palettes.length){
-      savedRow.innerHTML = '<div class="empty-hint">Поки що нічого не збережено</div>';
-      return;
-    }
-    palettes.forEach(p => {
-      const chip = document.createElement('div');
-      chip.className = 'saved-chip';
-      const dots = generateShades(p.hex).filter((_,i)=>[1,3,5,7,9].includes(i)).map(s => `<span class="dot" style="background:${s.hex}"></span>`).join('');
-      chip.innerHTML = `<div class="dots">${dots}</div><div class="name">${p.name}</div><button class="saved-del">×</button>`;
-      chip.addEventListener('click', (e) => { if(e.target.closest('.saved-del')) return; setBaseColor(p.hex); });
-      chip.querySelector('.saved-del').addEventListener('click', (e) => {
-        e.stopPropagation();
-        savePalettes(loadPalettes().filter(x => x.id !== p.id));
-        renderSaved();
+      col.addEventListener('dragstart', e => { dragFrom = i; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); });
+      col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
+      col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+      col.addEventListener('drop', e => {
+        e.preventDefault(); col.classList.remove('drag-over');
+        if(dragFrom == null || dragFrom === i) return;
+        pushHistory(); const [m] = state.palette.splice(dragFrom, 1); state.palette.splice(i, 0, m); dragFrom = null; persist(); renderPalette();
       });
-      savedRow.appendChild(chip);
+      palEl.appendChild(col);
+    });
+    renderCB(); updateUndo();
+    if(state.tab === 'contrast') renderMatrix();
+  }
+  function renderCB(){
+    const el = $('cb-list'); el.innerHTML = '';
+    const hexes = state.palette.map(p => p.hex);
+    const rows = [['normal', 'Звичайний зір', '']].concat(Object.entries(CB).map(([k, v]) => [k, v.name, v.note]));
+    rows.forEach(([k, name, note]) => {
+      const r = document.createElement('div'); r.className = 'cb-row';
+      r.innerHTML = `<div class="cb-name">${name}${note ? `<small>${note}</small>` : ''}</div><div class="cb-strip">${hexes.map(h => `<span style="background:${k === 'normal' ? h : simulate(h, k)}"></span>`).join('')}</div>`;
+      el.appendChild(r);
     });
   }
-  savePaletteBtn.addEventListener('click', () => {
-    const hex = baseHexInput.value;
-    const palettes = loadPalettes();
-    palettes.unshift({ id: Date.now().toString(36), name: hex, hex, created: Date.now() });
-    if(palettes.length > 20) palettes.pop();
-    savePalettes(palettes);
-    renderSaved();
-    savePaletteBtn.classList.add('flash');
-    setTimeout(() => savePaletteBtn.classList.remove('flash'), 800);
-  });
 
-  // ---------- Contrast checker wiring ----------
-  const fgColorInput = document.getElementById('fg-color');
-  const fgHexInput = document.getElementById('fg-hex');
-  const bgColorInput = document.getElementById('bg-color');
-  const bgHexInput = document.getElementById('bg-hex');
-  const swapBtn = document.getElementById('swap-btn');
-  const contrastPreview = document.getElementById('contrast-preview');
-  const ratioNumber = document.getElementById('ratio-number');
-  const badgeRow = document.getElementById('badge-row');
-
-  function relLuminance(hex){
-    const { r, g, b } = hexToRgb(hex);
-    const [rs, gs, bs] = [r,g,b].map(c => {
-      c /= 255;
-      return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4);
+  // library
+  function loadLib(){
+    let list = [];
+    try{ list = JSON.parse(localStorage.getItem(LIB_KEY) || '[]') || []; }catch(e){}
+    // older versions stored a single base colour per entry
+    return list.map(p => p.colors ? p : { id: p.id, name: p.name, colors: [.94, .8, .62, .46, .3].map(l => { const [, C, H] = hexToOklch(p.hex || '#4f6bf4'); return oklchToHex(l, C, H); }), created: p.created });
+  }
+  function saveLib(list){ try{ localStorage.setItem(LIB_KEY, JSON.stringify(list)); }catch(e){ toast('Не вдалося зберегти'); } }
+  function renderLibrary(){
+    const el = $('library'), list = loadLib(); el.innerHTML = '';
+    if(!list.length){ el.innerHTML = '<p class="hint" style="grid-column:1/-1">Тут з’являться збережені палітри. Натисни «Зберегти», щоб додати поточну.</p>'; return; }
+    list.forEach(p => {
+      const it = document.createElement('div'); it.className = 'lib-item'; it.title = 'Відкрити палітру';
+      it.innerHTML = `<div class="lib-strip">${p.colors.map(c => `<span style="background:${c}"></span>`).join('')}</div><div class="lib-name">${escapeHtml(p.name)}</div><button class="lib-del" title="Видалити">${svg(I.trash)}</button>`;
+      it.onclick = e => { if(e.target.closest('.lib-del')) return; setPalette(p.colors); toast('Палітру відкрито'); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+      it.querySelector('.lib-del').onclick = e => { e.stopPropagation(); saveLib(loadLib().filter(x => x.id !== p.id)); renderLibrary(); toast('Палітру видалено'); };
+      el.appendChild(it);
     });
-    return 0.2126*rs + 0.7152*gs + 0.0722*bs;
   }
-  function contrastRatio(hex1, hex2){
-    const l1 = relLuminance(hex1), l2 = relLuminance(hex2);
-    const lighter = Math.max(l1,l2), darker = Math.min(l1,l2);
-    return (lighter+0.05)/(darker+0.05);
+  $('pal-save').innerHTML = svg(I.save) + '<span class="hide-sm">Зберегти</span>';
+  $('pal-save').onclick = () => {
+    const list = loadLib();
+    const def = 'Палітра ' + (list.length + 1);
+    const box = openModal(`<h3>Зберегти палітру</h3><div style="display:flex;height:46px;border-radius:10px;overflow:hidden;margin:12px 0">${state.palette.map(p => `<span style="flex:1;background:${p.hex}"></span>`).join('')}</div>
+      <input class="input" id="lib-name" value="${escapeHtml(def)}" maxlength="40" style="width:100%;font-family:Inter,sans-serif">
+      <div class="actions"><button class="btn" data-x>Скасувати</button><button class="btn primary" data-ok>Зберегти</button></div>`, 'sm');
+    const inp = box.querySelector('#lib-name');
+    const ok = () => {
+      const l = loadLib(); l.unshift({ id: Date.now().toString(36), name: inp.value.trim() || def, colors: state.palette.map(p => p.hex), created: Date.now() });
+      saveLib(l.slice(0, 60)); closeModal(); renderLibrary(); toast('Палітру збережено');
+    };
+    box.querySelector('[data-x]').onclick = closeModal; box.querySelector('[data-ok]').onclick = ok;
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter') ok(); });
+    setTimeout(() => inp.select(), 0);
+  };
+
+  // export
+  function exportText(kind){
+    const hexes = state.palette.map(p => p.hex);
+    if(kind === 'css') return ':root {\n' + hexes.map((h, i) => `  --color-${i + 1}: ${h};`).join('\n') + '\n}';
+    if(kind === 'scss') return hexes.map((h, i) => `$color-${i + 1}: ${h};`).join('\n');
+    if(kind === 'tailwind') return `// tailwind.config.js\ntheme: {\n  extend: {\n    colors: {\n      palette: {\n${hexes.map((h, i) => `        ${(i + 1) * 100}: '${h}',`).join('\n')}\n      }\n    }\n  }\n}`;
+    if(kind === 'json') return JSON.stringify(hexes, null, 2);
+    if(kind === 'list') return hexes.map(h => h.toUpperCase()).join(', ');
+    if(kind === 'link') return location.origin + location.pathname + '#palette=' + hexes.map(h => h.slice(1)).join('-');
+    return '';
   }
-  const CHECK_ICON = '<polyline points="20 6 9 17 4 12"/>';
-  const CROSS_ICON = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
-  function badge(label, pass){
-    return `<div class="wcag-badge ${pass?'pass':'fail'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${pass?CHECK_ICON:CROSS_ICON}</svg>${label}</div>`;
+  async function palettePng(){
+    const hexes = state.palette.map(p => p.hex), W = 1600, H = 900, w = W / hexes.length;
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+    hexes.forEach((h, i) => {
+      g.fillStyle = h; g.fillRect(i * w, 0, w + 1, H);
+      g.fillStyle = textOn(h); g.textAlign = 'center';
+      g.font = '700 38px "JetBrains Mono", monospace'; g.fillText(h.toUpperCase(), i * w + w / 2, H - 90);
+      g.font = '500 26px Inter, sans-serif'; g.globalAlpha = .8; g.fillText(colorName(h), i * w + w / 2, H - 50); g.globalAlpha = 1;
+    });
+    return new Promise(r => c.toBlob(r, 'image/png'));
   }
-  function updateContrast(){
-    const fg = fgHexInput.value, bg = bgHexInput.value;
-    if(!isValidHex(fg) || !isValidHex(bg)) return;
-    contrastPreview.style.color = fg;
-    contrastPreview.style.background = bg;
-    const ratio = contrastRatio(fg, bg);
-    ratioNumber.textContent = ratio.toFixed(2) + ':1';
-    badgeRow.innerHTML =
-      badge('AA звичайний текст (4.5)', ratio>=4.5) +
-      badge('AA великий текст (3.0)', ratio>=3.0) +
-      badge('AAA звичайний текст (7.0)', ratio>=7.0) +
-      badge('AAA великий текст (4.5)', ratio>=4.5);
+  $('pal-export').innerHTML = svg(I.download) + '<span class="hide-sm">Експорт</span>';
+  $('pal-export').onclick = () => {
+    let kind = 'css';
+    const KINDS = { css:'CSS', scss:'SCSS', tailwind:'Tailwind', json:'JSON', list:'Список', link:'Посилання' };
+    const box = openModal(`<h3>Експорт палітри</h3><p class="hint" style="margin-bottom:12px">Скопіюй код у свій проєкт або збережи картинку для презентації.</p>
+      <div class="seg" id="ex-kind">${Object.entries(KINDS).map(([k, v]) => `<button data-k="${k}">${v}</button>`).join('')}</div>
+      <div class="code-box" id="ex-code" style="margin-top:12px;max-height:240px;overflow:auto"></div>
+      <div class="actions"><button class="btn" id="ex-png">${svg(I.image)}Картинка PNG</button><button class="btn primary" id="ex-copy">${svg(I.copy)}Копіювати</button></div>`);
+    const draw = () => { box.querySelectorAll('[data-k]').forEach(b => b.classList.toggle('active', b.dataset.k === kind)); box.querySelector('#ex-code').textContent = exportText(kind); };
+    box.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { kind = b.dataset.k; draw(); });
+    box.querySelector('#ex-copy').onclick = () => copy(exportText(kind), kind === 'link' ? 'Посилання скопійовано' : 'Скопійовано');
+    box.querySelector('#ex-png').onclick = async () => { download(await palettePng(), 'palette.png'); toast('Картинку збережено'); };
+    draw();
+  };
+  onShow.palette = () => { renderPalette(); renderLibrary(); };
+
+  // =====================================================================
+  // CONTRAST TAB
+  // =====================================================================
+  function setPair(fg, bg){
+    if(fg) state.fg = normHex(fg) || state.fg;
+    if(bg) state.bg = normHex(bg) || state.bg;
+    persist(); renderContrast();
   }
-  function setFg(hex){ if(!isValidHex(hex)) return; fgColorInput.value=hex; fgHexInput.value=hex; updateContrast(); }
-  function setBg(hex){ if(!isValidHex(hex)) return; bgColorInput.value=hex; bgHexInput.value=hex; updateContrast(); }
-  fgColorInput.addEventListener('input', () => setFg(fgColorInput.value));
-  fgHexInput.addEventListener('input', () => { if(isValidHex(fgHexInput.value)) setFg(fgHexInput.value); });
-  bgColorInput.addEventListener('input', () => setBg(bgColorInput.value));
-  bgHexInput.addEventListener('input', () => { if(isValidHex(bgHexInput.value)) setBg(bgHexInput.value); });
-  swapBtn.addEventListener('click', () => {
-    const fg = fgHexInput.value, bg = bgHexInput.value;
-    setFg(bg); setBg(fg);
+  [['fg', 'fg-color', 'fg-hex'], ['bg', 'bg-color', 'bg-hex']].forEach(([k, ci, hi]) => {
+    $(ci).addEventListener('input', () => setPair(k === 'fg' ? $(ci).value : null, k === 'bg' ? $(ci).value : null));
+    $(hi).addEventListener('input', () => { const h = normHex($(hi).value); if(h) setPair(k === 'fg' ? h : null, k === 'bg' ? h : null); });
+    $(hi).addEventListener('blur', () => { $(hi).value = state[k].toUpperCase(); });
+  });
+  $('swap-btn').onclick = () => setPair(state.bg, state.fg);
+  // adjust lightness of `h` (keeping hue) until it reaches `target` contrast against `other`
+  function fixToward(h, other, target){
+    const [L, C, H] = hexToOklch(h);
+    const res = [];
+    for(const dir of [-1, 1]){
+      let lo = L, hi = dir < 0 ? 0 : 1, found = null;
+      if(contrast(oklchToHex(hi, C, H), other) < target) continue;
+      for(let i = 0; i < 24; i++){
+        const mid = (lo + hi) / 2, c = oklchToHex(mid, C, H);
+        if(contrast(c, other) >= target){ found = c; hi = mid; } else lo = mid;
+      }
+      if(found) res.push(found);
+    }
+    res.sort((a, b) => deltaE(a, h) - deltaE(b, h));
+    return res[0] || null;
+  }
+  function renderContrast(){
+    const { fg, bg } = state;
+    $('fg-color').value = fg; $('bg-color').value = bg;
+    if(document.activeElement !== $('fg-hex')) $('fg-hex').value = fg.toUpperCase();
+    if(document.activeElement !== $('bg-hex')) $('bg-hex').value = bg.toUpperCase();
+    const pb = $('preview-box'); pb.style.background = bg; pb.style.color = fg;
+    const r = contrast(fg, bg);
+    $('ratio-num').textContent = (Math.floor(r * 100) / 100).toFixed(2) + ':1';
+    const v = r >= 7 ? ['Чудово', 'Легко читається всіма, навіть дрібний текст', 'var(--success)']
+      : r >= 4.5 ? ['Добре', 'Підходить для звичайного тексту (рівень AA)', 'var(--success)']
+      : r >= 3 ? ['Лише для великого тексту', 'Заголовки від 24px або жирний від 19px. Для звичайного тексту замало', 'var(--warn)']
+      : ['Погано читається', 'Текст зливається з фоном — зміни один з кольорів', 'var(--danger)'];
+    $('verdict').innerHTML = `<span style="color:${v[2]}">${v[0]}</span><small>${v[1]}</small>`;
+    $('ratio-num').style.color = v[2];
+    const B = (ok, t, s) => `<div class="badge ${ok ? 'pass' : 'fail'}">${svg(ok ? I.check : I.cross, 2.6)}<div>${t}<small>${s}</small></div></div>`;
+    $('badges').innerHTML =
+      B(r >= 4.5, 'AA · звичайний текст', 'потрібно 4.5:1') + B(r >= 3, 'AA · великий текст', 'потрібно 3:1') +
+      B(r >= 7, 'AAA · звичайний текст', 'потрібно 7:1') + B(r >= 4.5, 'AAA · великий текст', 'потрібно 4.5:1') +
+      B(r >= 3, 'Кнопки та іконки', 'потрібно 3:1');
+    const fixes = $('fixes'); fixes.innerHTML = '';
+    const opts = [];
+    if(r < 7){
+      [[4.5, 'AA'], [7, 'AAA']].forEach(([t, lvl]) => {
+        if(r >= t) return;
+        const f1 = fixToward(fg, bg, t); if(f1) opts.push({ fg: f1, bg, text: `Змінити колір тексту → ${lvl}` });
+        const f2 = fixToward(bg, fg, t); if(f2) opts.push({ fg, bg: f2, text: `Змінити колір фону → ${lvl}` });
+      });
+    }
+    $('fix-label').classList.toggle('hidden', !opts.length);
+    opts.forEach(o => {
+      const d = document.createElement('div'); d.className = 'fix';
+      d.innerHTML = `<div class="chip" style="background:${o.bg};color:${o.fg}">Аа</div><div class="info">${o.text}<small>${o.fg.toUpperCase()} на ${o.bg.toUpperCase()} · ${contrast(o.fg, o.bg).toFixed(2)}:1</small></div><button class="btn sm">${svg(I.wand)}Застосувати</button>`;
+      d.querySelector('button').onclick = () => { setPair(o.fg, o.bg); toast('Виправлено'); };
+      fixes.appendChild(d);
+    });
+    renderMatrix();
+  }
+  function renderMatrix(){
+    const hexes = (state.palette || []).map(p => p.hex);
+    const t = $('matrix');
+    if(hexes.length < 2){ t.innerHTML = '<tr><td class="hint">Створи палітру на вкладці «Палітра»</td></tr>'; return; }
+    let html = '<tr><th></th>' + hexes.map(h => `<th title="Фон ${h}"><span style="background:${h}"></span></th>`).join('') + '</tr>';
+    hexes.forEach(f => {
+      html += `<tr><th title="Текст ${f}"><span style="background:${f}"></span></th>`;
+      hexes.forEach(b => {
+        if(f === b){ html += '<td class="same"></td>'; return; }
+        const r = contrast(f, b), lvl = r >= 7 ? 'AAA' : r >= 4.5 ? 'AA' : r >= 3 ? 'AA+' : '—';
+        html += `<td data-f="${f}" data-b="${b}" class="${r < 3 ? 'bad' : ''}" style="background:${b};color:${f}" title="${lvl === 'AA+' ? 'Лише великий текст' : lvl}">${r.toFixed(1)}<small>${lvl}</small></td>`;
+      });
+      html += '</tr>';
+    });
+    t.innerHTML = html;
+    t.querySelectorAll('td[data-f]').forEach(td => td.onclick = () => { setPair(td.dataset.f, td.dataset.b); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  }
+  onShow.contrast = () => { if(!state.palette) renderPalette(); renderContrast(); };
+
+  // =====================================================================
+  // GRADIENT TAB
+  // =====================================================================
+  const GRAD_PRESETS = [
+    ['#4f6bf4', '#a855f7'], ['#f97316', '#ec4899'], ['#22c55e', '#06b6d4'], ['#fde68a', '#f472b6', '#818cf8'],
+    ['#0f172a', '#334155'], ['#ff9a9e', '#fecfef'], ['#a1c4fd', '#c2e9fb'], ['#43e97b', '#38f9d7'],
+    ['#fa709a', '#fee140'], ['#30cfd0', '#330867'], ['#f6d365', '#fda085'], ['#667eea', '#764ba2']
+  ];
+  let grad = state.grad && Array.isArray(state.grad.stops) ? state.grad : { type: 'linear', angle: 135, stops: [{ c: '#4f6bf4', p: 0 }, { c: '#a855f7', p: 100 }] };
+  let activeStop = 0;
+  const gradCss = () => {
+    const stops = grad.stops.slice().sort((a, b) => a.p - b.p).map(s => `${s.c} ${Math.round(s.p)}%`).join(', ');
+    if(grad.type === 'radial') return `radial-gradient(circle at center, ${stops})`;
+    if(grad.type === 'conic') return `conic-gradient(from ${grad.angle}deg at center, ${stops})`;
+    return `linear-gradient(${grad.angle}deg, ${stops})`;
+  };
+  const gtSeg = $('grad-type');
+  [['linear', 'Лінійний'], ['radial', 'Радіальний'], ['conic', 'Конічний']].forEach(([k, v]) => {
+    const b = document.createElement('button'); b.textContent = v; b.dataset.k = k;
+    b.onclick = () => { grad.type = k; renderGradient(); };
+    gtSeg.appendChild(b);
+  });
+  $('grad-angle').oninput = e => { grad.angle = +e.target.value; renderGradient(true); };
+  function renderGradient(light){
+    state.grad = grad; persist();
+    const css = gradCss();
+    $('grad-preview').style.background = css;
+    $('grad-code').textContent = `background: ${css};`;
+    gtSeg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.k === grad.type));
+    $('angle-row').style.visibility = grad.type === 'radial' ? 'hidden' : '';
+    $('grad-angle').value = grad.angle; $('angle-val').textContent = grad.angle + '°';
+    const bar = $('grad-bar');
+    bar.style.background = `linear-gradient(90deg, ${grad.stops.slice().sort((a, b) => a.p - b.p).map(s => `${s.c} ${s.p}%`).join(', ')})`;
+    if(light) return;
+    bar.innerHTML = '';
+    grad.stops.forEach((s, i) => {
+      const k = document.createElement('div'); k.className = 'stop-knob' + (i === activeStop ? ' active' : ''); k.style.left = s.p + '%';
+      k.innerHTML = `<span style="background:${s.c}"></span>`;
+      k.addEventListener('pointerdown', e => {
+        e.stopPropagation(); activeStop = i; k.setPointerCapture(e.pointerId);
+        bar.querySelectorAll('.stop-knob').forEach((x, j) => x.classList.toggle('active', j === i));
+        const mv = ev => { const r = bar.getBoundingClientRect(); s.p = Math.round(clamp((ev.clientX - r.left) / r.width * 100, 0, 100)); k.style.left = s.p + '%'; renderGradient(true); syncStopRow(i); };
+        const up = () => { k.removeEventListener('pointermove', mv); k.removeEventListener('pointerup', up); renderGradient(); };
+        k.addEventListener('pointermove', mv); k.addEventListener('pointerup', up);
+      });
+      bar.appendChild(k);
+    });
+    const list = $('stops'); list.innerHTML = '';
+    grad.stops.forEach((s, i) => {
+      const row = document.createElement('div'); row.className = 'stop-row' + (i === activeStop ? ' active' : ''); row.dataset.i = i;
+      row.innerHTML = `<input type="color" class="native-color" value="${s.c}"><input class="input" value="${s.c.toUpperCase()}" maxlength="7"><input type="range" min="0" max="100" value="${s.p}"><span class="mono" style="font-size:12px;font-weight:700">${s.p}%</span>
+        <button class="icon-btn" title="Прибрати" ${grad.stops.length <= 2 ? 'disabled style="opacity:.3"' : ''}>${svg(I.x)}</button>`;
+      const [nc, hx, rg] = row.querySelectorAll('input');
+      nc.oninput = () => { s.c = nc.value; hx.value = s.c.toUpperCase(); renderGradient(true); bar.querySelectorAll('.stop-knob span')[i].style.background = s.c; };
+      hx.oninput = () => { const h = normHex(hx.value); if(h){ s.c = h; nc.value = h; renderGradient(true); bar.querySelectorAll('.stop-knob span')[i].style.background = h; } };
+      rg.oninput = () => { s.p = +rg.value; row.querySelector('span').textContent = s.p + '%'; bar.querySelectorAll('.stop-knob')[i].style.left = s.p + '%'; renderGradient(true); };
+      row.querySelector('button').onclick = () => { if(grad.stops.length <= 2) return; grad.stops.splice(i, 1); activeStop = 0; renderGradient(); };
+      row.addEventListener('focusin', () => { activeStop = i; list.querySelectorAll('.stop-row').forEach((x, j) => x.classList.toggle('active', j === i)); bar.querySelectorAll('.stop-knob').forEach((x, j) => x.classList.toggle('active', j === i)); });
+      list.appendChild(row);
+    });
+  }
+  function syncStopRow(i){ const row = $('stops').children[i]; if(!row) return; row.querySelector('input[type=range]').value = grad.stops[i].p; row.querySelector('span').textContent = grad.stops[i].p + '%'; }
+  $('grad-bar').addEventListener('pointerdown', e => {
+    if(e.target.closest('.stop-knob')) return;
+    const r = e.currentTarget.getBoundingClientRect(), p = Math.round(clamp((e.clientX - r.left) / r.width * 100, 0, 100));
+    // colour at that point = mix of the neighbouring stops
+    const st = grad.stops.slice().sort((a, b) => a.p - b.p);
+    let a = st[0], b = st[st.length - 1];
+    for(let i = 0; i < st.length - 1; i++) if(p >= st[i].p && p <= st[i + 1].p){ a = st[i]; b = st[i + 1]; break; }
+    const t = b.p === a.p ? 0 : (p - a.p) / (b.p - a.p), A = hexToRgb(a.c), Bc = hexToRgb(b.c);
+    grad.stops.push({ c: rgbToHex(...A.map((v, k) => v + (Bc[k] - v) * t)), p });
+    activeStop = grad.stops.length - 1; renderGradient();
+  });
+  $('grad-random').innerHTML = svg(I.dice) + 'Випадковий';
+  $('grad-random').onclick = () => {
+    const H = rnd(0, 360), n = Math.random() < .35 ? 3 : 2;
+    grad.stops = Array.from({ length: n }, (_, i) => ({ c: oklchToHex(rnd(.55, .85), rnd(.1, .2), H + i * rnd(30, 90)), p: Math.round(i / (n - 1) * 100) }));
+    grad.angle = [90, 120, 135, 160, 180, 45][Math.floor(Math.random() * 6)]; activeStop = 0; renderGradient();
+  };
+  $('grad-reverse').innerHTML = svg(I.swap) + 'Обернути';
+  $('grad-reverse').onclick = () => { grad.stops.forEach(s => s.p = 100 - s.p); renderGradient(); };
+  $('grad-copy').innerHTML = svg(I.copy) + 'Копіювати CSS';
+  $('grad-copy').onclick = () => copy(`background: ${gradCss()};`, 'CSS скопійовано');
+  $('grad-png').innerHTML = svg(I.image) + 'PNG 1920×1080';
+  $('grad-png').title = 'Фон для слайдів чи робочого столу';
+  $('grad-png').onclick = () => {
+    const W = 1920, H = 1080, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+    const st = grad.stops.slice().sort((a, b) => a.p - b.p);
+    let gr;
+    if(grad.type === 'radial') gr = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.hypot(W, H) / 2);
+    else if(grad.type === 'conic' && g.createConicGradient) gr = g.createConicGradient((grad.angle - 90) * Math.PI / 180, W / 2, H / 2);
+    else {
+      // same geometry as CSS linear-gradient(angle)
+      const a = (grad.type === 'conic' ? 90 : grad.angle) * Math.PI / 180, dx = Math.sin(a), dy = -Math.cos(a);
+      const len = Math.abs(W * dx) + Math.abs(H * dy);
+      gr = g.createLinearGradient(W / 2 - dx * len / 2, H / 2 - dy * len / 2, W / 2 + dx * len / 2, H / 2 + dy * len / 2);
+    }
+    st.forEach(s => gr.addColorStop(s.p / 100, s.c));
+    g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    c.toBlob(b => { download(b, 'gradient.png'); toast('Картинку збережено'); }, 'image/png');
+  };
+  const presetsEl = $('grad-presets');
+  GRAD_PRESETS.forEach(p => {
+    const b = document.createElement('button');
+    b.style.background = `linear-gradient(135deg, ${p.join(', ')})`;
+    b.onclick = () => { grad.stops = p.map((c, i) => ({ c, p: Math.round(i / (p.length - 1) * 100) })); activeStop = 0; renderGradient(); };
+    presetsEl.appendChild(b);
+  });
+  onShow.gradient = () => renderGradient();
+
+  // =====================================================================
+  // IMAGE TAB
+  // =====================================================================
+  const imgCanvas = $('img-canvas'), imgCtx = imgCanvas.getContext('2d', { willReadFrequently: true });
+  let imgLoaded = false, extracted = [], picked = [];
+  function loadImage(file){
+    if(!file || !/^image\//.test(file.type)){ toast('Це не картинка'); return; }
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const max = 1400, k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      imgCanvas.width = Math.round(img.naturalWidth * k); imgCanvas.height = Math.round(img.naturalHeight * k);
+      imgCtx.drawImage(img, 0, 0, imgCanvas.width, imgCanvas.height);
+      URL.revokeObjectURL(url);
+      imgLoaded = true; picked = [];
+      $('img-drop-card').classList.add('hidden'); $('img-work').classList.remove('hidden');
+      renderPicked(); extract();
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast('Не вдалося відкрити картинку'); };
+    img.src = url;
+  }
+  function extract(){
+    const k = +$('img-count').value;
+    // sample a small copy of the image
+    const S = 120, sc = Math.min(1, S / Math.max(imgCanvas.width, imgCanvas.height));
+    const w = Math.max(1, Math.round(imgCanvas.width * sc)), h = Math.max(1, Math.round(imgCanvas.height * sc));
+    const t = document.createElement('canvas'); t.width = w; t.height = h; const tg = t.getContext('2d');
+    tg.drawImage(imgCanvas, 0, 0, w, h);
+    const d = tg.getImageData(0, 0, w, h).data, pts = [];
+    for(let i = 0; i < d.length; i += 4) if(d[i + 3] > 200) pts.push(rgbToOklab(d[i], d[i + 1], d[i + 2]));
+    if(!pts.length) return;
+    // k-means++ in OKLab
+    const dist = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+    const cents = [pts[Math.floor(Math.random() * pts.length)].slice()];
+    while(cents.length < k){
+      const ds = pts.map(p => Math.min(...cents.map(c => dist(p, c))));
+      const sum = ds.reduce((a, b) => a + b, 0); let r = Math.random() * sum, i = 0;
+      while(i < ds.length - 1 && (r -= ds[i]) > 0) i++;
+      cents.push(pts[i].slice());
+    }
+    let assign = new Array(pts.length).fill(0);
+    for(let it = 0; it < 14; it++){
+      pts.forEach((p, i) => { let b = 0, bd = Infinity; cents.forEach((c, j) => { const dd = dist(p, c); if(dd < bd){ bd = dd; b = j; } }); assign[i] = b; });
+      const acc = cents.map(() => [0, 0, 0, 0]);
+      pts.forEach((p, i) => { const a = acc[assign[i]]; a[0] += p[0]; a[1] += p[1]; a[2] += p[2]; a[3]++; });
+      acc.forEach((a, j) => { if(a[3]) cents[j] = [a[0] / a[3], a[1] / a[3], a[2] / a[3]]; });
+    }
+    const counts = cents.map((_, j) => assign.filter(a => a === j).length);
+    extracted = cents.map((c, j) => {
+      const lin = oklabToLinear(...c);
+      return { hex: rgbToHex(...lin.map(v => fromLin(clamp(v, 0, 1)))), share: counts[j] / pts.length };
+    }).filter(e => e.share > 0).sort((a, b) => b.share - a.share);
+    const el = $('extracted'); el.innerHTML = '';
+    extracted.forEach(e => {
+      const b = document.createElement('button');
+      b.style.background = e.hex; b.style.color = textOn(e.hex); b.style.flex = String(Math.max(.6, e.share * 6));
+      b.innerHTML = `${e.hex.toUpperCase()}<small>${Math.round(e.share * 100)}%</small>`;
+      b.title = 'Клацни — скопіювати'; b.onclick = () => copy(e.hex.toUpperCase(), null, e.hex);
+      el.appendChild(b);
+    });
+  }
+  $('img-count').onchange = () => { if(imgLoaded) extract(); };
+  function renderPicked(){
+    const el = $('picked'); el.innerHTML = '';
+    if(!picked.length){ el.innerHTML = '<span class="hint">Клацни на фото, щоб узяти колір</span>'; return; }
+    picked.forEach(h => {
+      const b = document.createElement('button'); b.style.background = h; b.title = h.toUpperCase() + ' — клацни, щоб скопіювати';
+      b.onclick = () => copy(h.toUpperCase(), null, h); el.appendChild(b);
+    });
+  }
+  const loupe = $('loupe'), loupeCtx = $('loupe-canvas').getContext('2d'), loupeLabel = $('loupe-label');
+  function pixelAt(e){
+    const r = imgCanvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * imgCanvas.width), y = Math.floor((e.clientY - r.top) / r.height * imgCanvas.height);
+    if(x < 0 || y < 0 || x >= imgCanvas.width || y >= imgCanvas.height) return null;
+    return { x, y };
+  }
+  imgCanvas.addEventListener('pointermove', e => {
+    const p = pixelAt(e); if(!p){ loupe.style.display = loupeLabel.style.display = 'none'; return; }
+    loupeCtx.imageSmoothingEnabled = false;
+    loupeCtx.clearRect(0, 0, 11, 11);
+    loupeCtx.drawImage(imgCanvas, p.x - 5, p.y - 5, 11, 11, 0, 0, 11, 11);
+    loupeCtx.strokeStyle = 'rgba(255,255,255,.9)'; loupeCtx.lineWidth = .15; loupeCtx.strokeRect(5, 5, 1, 1);
+    const [r, g, b] = imgCtx.getImageData(p.x, p.y, 1, 1).data;
+    const hex = rgbToHex(r, g, b);
+    loupe.style.display = 'block'; loupe.style.left = (e.clientX + 18) + 'px'; loupe.style.top = (e.clientY - 110) + 'px';
+    loupeLabel.style.display = 'block'; loupeLabel.textContent = hex.toUpperCase(); loupeLabel.style.left = (e.clientX + 66) + 'px'; loupeLabel.style.top = (e.clientY - 8) + 'px';
+  });
+  imgCanvas.addEventListener('pointerleave', () => { loupe.style.display = loupeLabel.style.display = 'none'; });
+  imgCanvas.addEventListener('click', e => {
+    const p = pixelAt(e); if(!p) return;
+    const [r, g, b] = imgCtx.getImageData(p.x, p.y, 1, 1).data, hex = rgbToHex(r, g, b);
+    picked = [hex, ...picked.filter(x => x !== hex)].slice(0, 16); renderPicked();
+    state.base = hex; persist();
+    copy(hex.toUpperCase(), 'Взято ' + hex.toUpperCase() + ' (скопійовано)', hex);
+  });
+  const drop = $('drop'), imgInput = $('img-input');
+  drop.onclick = () => imgInput.click();
+  $('img-change').innerHTML = svg(I.upload) + 'Інше фото';
+  $('img-change').onclick = () => imgInput.click();
+  imgInput.onchange = () => { const f = imgInput.files[0]; imgInput.value = ''; if(f) loadImage(f); };
+  ['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => { if(state.tab === 'image' && e.dataTransfer && [...e.dataTransfer.types].includes('Files')){ e.preventDefault(); drop.classList.add('over'); } }));
+  ['dragleave', 'drop'].forEach(ev => document.addEventListener(ev, () => drop.classList.remove('over')));
+  document.addEventListener('drop', e => {
+    if(state.tab !== 'image' || !e.dataTransfer || !e.dataTransfer.files.length) return;
+    e.preventDefault(); loadImage(e.dataTransfer.files[0]);
+  });
+  document.addEventListener('paste', e => {
+    const item = [...(e.clipboardData ? e.clipboardData.items : [])].find(i => i.type.startsWith('image/'));
+    if(!item) return;
+    e.preventDefault(); showTab('image'); loadImage(item.getAsFile());
+  });
+  $('img-to-palette').innerHTML = svg(I.palette) + 'Зробити палітрою';
+  $('img-to-palette').onclick = () => {
+    const cols = (picked.length >= 3 ? picked.slice(0, 8) : extracted.map(e => e.hex)).slice();
+    // order from light to dark so the palette reads well
+    cols.sort((a, b) => hexToOklch(b)[0] - hexToOklch(a)[0]);
+    setPalette(cols); showTab('palette'); toast('Палітру з фото створено');
+  };
+
+  // =====================================================================
+  // KEYS, LINKS, START
+  // =====================================================================
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ closeModal(); return; }
+    if(!modalEl.classList.contains('hidden')) return;
+    const tag = (e.target.tagName || '').toLowerCase();
+    if(tag === 'input' || tag === 'select' || tag === 'textarea' || e.ctrlKey || e.metaKey || e.altKey) return;
+    if(e.code === 'Space' && state.tab === 'palette'){ e.preventDefault(); regenerate(); }
+    else if(e.code === 'Space' && state.tab === 'picker'){ e.preventDefault(); $('random-btn').click(); }
+    else if(e.code === 'Space' && state.tab === 'gradient'){ e.preventDefault(); $('grad-random').click(); }
   });
 
-  // ---------- Init ----------
-  renderPaletteSection();
-  renderSaved();
-  updateContrast();
+  function readHash(){
+    const m = location.hash.match(/^#palette=([0-9a-f-]+)/i);
+    if(!m) return false;
+    const cols = m[1].split('-').map(normHex).filter(Boolean).slice(0, 10);
+    palHistory.length = 0;
+    if(cols.length){ state.palette = cols.map(h => ({ hex: h, locked: false })); persist(); }
+    window.history.replaceState(null, '', location.pathname + location.search);
+    return cols.length > 0;
+  }
+  window.addEventListener('hashchange', () => { if(readHash()){ showTab('palette'); toast('Відкрито палітру з посилання'); } });
+  window.addEventListener('resize', () => { if(state.tab === 'picker') drawSV(); });
+
+  const fromLink = readHash();
+  if(!state.palette) state.palette = generatePalette([{}, {}, {}, {}, {}], state.genMode);
+  showTab(fromLink ? 'palette' : state.tab);
+  if(fromLink) toast('Відкрито палітру з посилання');
+  window.__colorTool = { state, contrast, oklchToHex, hexToOklch, simulate, colorName };
+})();
 </script>
 
 </body>

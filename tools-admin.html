@@ -336,7 +336,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
 
     <div class="banner warn" id="externalBanner" hidden>
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-      <div class="grow"><b id="externalBannerTitle">Зовнішні інструменти</b><br>Зовнішні посилання більше не підтримуються й не показуються на сайті. Їх можна прибрати з бази.</div>
+      <div class="grow"><b id="externalBannerTitle">Зовнішні інструменти</b><br>Зовнішні посилання та видалені інструменти (наприклад, MailCraft) не показуються на сайті. Їх можна прибрати з бази.</div>
       <div class="banner-actions"><button class="btn btn-sm btn-danger" id="btnDeleteExternal">Видалити всі</button></div>
     </div>
 
@@ -494,7 +494,9 @@ const CATEGORY_LABELS = { media: 'Медіа', class: 'Клас', creative: 'Т�
 const catLabel = c => CATEGORY_LABELS[c] || (c ? c.charAt(0).toUpperCase() + c.slice(1) : '');
 
 // Файли, що вже лежать у папці tools/ (підказки для поля «Файл»)
-const KNOWN_FILES = ['text-craft.html', 'whiteboard.html', 'screen-recorder.html', 'snap-editor.html', 'videocut.html', 'vote.html', 'class-manager.html', 'mailcraft.html', 'web-editor.html', 'pixel-editor.html', 'color-tool.html'];
+// інструменти, які прибрано з сайту: їхні записи в базі вважаються застарілими
+const REMOVED_FILES = ['mailcraft.html'];
+const KNOWN_FILES = ['text-craft.html', 'whiteboard.html', 'screen-recorder.html', 'snap-editor.html', 'videocut.html', 'vote.html', 'class-manager.html', 'web-editor.html', 'pixel-editor.html', 'color-tool.html'];
 
 const PALETTE = ['#4F6BF4', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#10b981', '#0ea5e9', '#14b8a6', '#64748b'];
 
@@ -846,6 +848,9 @@ $('btnHideRules').addEventListener('click', () => { $('rulesBanner').hidden = tr
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const isHex = v => /^#[0-9a-f]{6}$/i.test(v);
 const isExternal = t => t.type === 'external';
+const isRemoved = t => !isExternal(t) && REMOVED_FILES.includes(t.file);
+// застарілі записи: зовнішні посилання та інструменти, яких більше немає на сайті
+const isStale = t => isExternal(t) || isRemoved(t);
 function deriveAccentShades(hex) {
   const rgb = (isHex(hex) ? hex : '#4F6BF4').slice(1).match(/.{2}/g).map(x => parseInt(x, 16));
   const mix = rgb.map(c => Math.round(c + (255 - c) * 0.72));
@@ -894,6 +899,7 @@ function rowHtml(t, i, n) {
   const hidden = t.hidden === true;
   const meta = ext
     ? `<span class="chip warn">${ICONS.link}Зовнішній — не показується</span>`
+    : isRemoved(t) ? `<span class="chip warn">Інструмент видалено — не показується</span>`
     : `${t.category ? `<span class="chip cat">${esc(catLabel(t.category))}</span>` : ''}
        ${hidden ? '<span class="chip hidden-chip">Прихований</span>' : ''}
        <a class="chip file" href="tools/${esc(t.file)}" target="_blank" rel="noopener" title="Відкрити інструмент">${esc(t.file)}</a>`;
@@ -916,14 +922,14 @@ function rowHtml(t, i, n) {
 }
 
 function render() {
-  const internal = TOOLS.filter(t => !isExternal(t));
+  const internal = TOOLS.filter(t => !isStale(t));
   const shown = internal.filter(t => t.hidden !== true).length;
   $('tools-count').textContent = internal.length
     ? `${internal.length} ${pluralTools(internal.length)} · на сайті ${shown}` + (internal.length - shown ? `, приховано ${internal.length - shown}` : '')
     : 'У базі ще немає інструментів';
-  const ext = TOOLS.filter(isExternal);
+  const ext = TOOLS.filter(isStale);
   $('externalBanner').hidden = !ext.length;
-  $('externalBannerTitle').textContent = 'У базі ' + ext.length + ' ' + (ext.length === 1 ? 'зовнішній інструмент' : ext.length < 5 ? 'зовнішні інструменти' : 'зовнішніх інструментів');
+  $('externalBannerTitle').textContent = 'У базі ' + ext.length + ' ' + (ext.length === 1 ? 'застарілий запис' : ext.length < 5 ? 'застарілі записи' : 'застарілих записів');
 
   if (!TOOLS.length) { setListState('empty'); return; }
   setListState('ready');
@@ -1018,12 +1024,12 @@ $('list').addEventListener('click', async e => {
 });
 
 $('btnDeleteExternal').addEventListener('click', async () => {
-  const ext = TOOLS.filter(isExternal);
+  const ext = TOOLS.filter(isStale);
   if (!ext.length) return;
-  if (!(await confirmDialog('Видалити зовнішні інструменти?', `З бази буде прибрано: ${ext.map(t => t.name || t.id).join(', ')}.`, 'Видалити всі'))) return;
+  if (!(await confirmDialog('Прибрати застарілі записи?', `З бази буде прибрано: ${ext.map(t => t.name || t.id).join(', ')}.`, 'Видалити всі'))) return;
   const updates = {};
   ext.forEach(t => { updates[t.id] = null; });
-  try { await update(ref(db, 'tools'), updates); toast('Зовнішні інструменти видалено', 'ok'); loadTools(); }
+  try { await update(ref(db, 'tools'), updates); toast('Застарілі записи прибрано', 'ok'); loadTools(); }
   catch (err) { console.error(err); toast('Не вдалося видалити — перевірте Firebase Rules', 'err'); }
 });
 
