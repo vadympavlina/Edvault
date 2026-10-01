@@ -217,6 +217,38 @@
 }
 .tc-content figure.tc-figure[data-align="left"] figcaption{text-align:left}
 .tc-content figure.tc-figure[data-align="right"] figcaption{text-align:right}
+/* Фото збоку, текст обтікає */
+.tc-content figure.tc-figure[data-wrap]{width:var(--w,40%);max-width:70%;margin:.35em 0 1em;align-items:stretch}
+.tc-content figure.tc-figure[data-wrap="left"]{float:left;margin-right:1.6em}
+.tc-content figure.tc-figure[data-wrap="right"]{float:right;margin-left:1.6em}
+.tc-content figure.tc-figure[data-wrap] img{width:100%}
+.tc-content figure.tc-figure[data-wrap] figcaption{text-align:left}
+.tc-content::after{content:'';display:block;clear:both}
+.tc-content h1,.tc-content hr{clear:both}
+.tc-content ul,.tc-content ol,.tc-content blockquote,.tc-content .tc-block,.tc-content pre.tc-code{display:flow-root}
+@media (max-width:640px){.tc-content figure.tc-figure[data-wrap]{float:none;width:auto;max-width:100%;margin:1.2em 0}}
+
+/* ── Таблиці: ширина стовпців, смуги, кольори клітинок ── */
+.tc-content table.tc-fixed{table-layout:fixed}
+.tc-content table.tc-striped tr:nth-child(even)>*{background:color-mix(in srgb,var(--text) 4.5%,transparent)}
+.tc-content table td[data-bg="yellow"]{background:color-mix(in srgb,#facc15 26%,transparent)!important}
+.tc-content table td[data-bg="green"]{background:color-mix(in srgb,#22c55e 20%,transparent)!important}
+.tc-content table td[data-bg="blue"]{background:color-mix(in srgb,#3b82f6 18%,transparent)!important}
+.tc-content table td[data-bg="red"]{background:color-mix(in srgb,#ef4444 17%,transparent)!important}
+.tc-content table td[data-bg="purple"]{background:color-mix(in srgb,#a855f7 17%,transparent)!important}
+.tc-content table td[data-bg="gray"]{background:color-mix(in srgb,#64748b 16%,transparent)!important}
+.tc-content table td[data-valign="middle"]{vertical-align:middle}
+
+/* ── Розгортальний блок («Відповідь», «Підказка») ── */
+.tc-content .tc-toggle{position:relative;margin:1.1em 0;padding:11px 18px 12px 44px;border:1px solid var(--border2);border-radius:12px;background:var(--surface2)}
+.tc-content .tc-toggle::before{content:'';position:absolute;left:18px;top:17px;width:8px;height:8px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(45deg);transition:transform .15s}
+.tc-content .tc-toggle[data-collapsed]::before,.tc-content details.tc-toggle:not([open])::before{transform:rotate(-45deg);top:19px}
+.tc-content .tc-toggle>:first-child,.tc-content .tc-toggle>summary{font-family:var(--font-ui);font-weight:700;color:var(--text);margin:0}
+.tc-content details.tc-toggle>summary{cursor:pointer;list-style:none}
+.tc-content details.tc-toggle>summary::-webkit-details-marker{display:none}
+.tc-content .tc-toggle>:nth-child(2){margin-top:.7em}
+.tc-content .tc-toggle>:last-child{margin-bottom:0}
+.tc-content .tc-toggle[data-collapsed]>:not(:first-child){display:none}
 
 /* ── Шапка документа (банер) ── */
 .doc-header{position:relative;overflow:hidden;color:#fff;border-radius:var(--r-lg) var(--r-lg) 0 0;
@@ -427,6 +459,18 @@ svg{flex-shrink:0}
 .editor>p:only-child:has(>br:only-child)::before{content:'Почніть писати… Натисніть «/», щоб вставити блок';color:var(--muted);opacity:.7;pointer-events:none;font-style:italic}
 .editor .tc-callout>p:only-child:has(>br:only-child)::before{content:'Текст блоку…';color:var(--muted);pointer-events:none}
 .editor .tc-prompt>p:only-child:has(>br:only-child)::before{content:'Текст промпту…';color:var(--muted);pointer-events:none}
+.editor .tc-toggle>p:first-child:has(>br:only-child)::before{content:'Назва, наприклад «Відповідь»';color:var(--muted);pointer-events:none}
+.editor .tc-toggle>p:nth-child(2):last-child:has(>br:only-child)::before{content:'Прихований текст — учні побачать його, коли натиснуть на назву';color:var(--muted);pointer-events:none;font-weight:400}
+.editor .tc-toggle::before{cursor:pointer}
+.editor.col-resize,.editor.col-resize *{cursor:col-resize!important}
+.editor.row-resize,.editor.row-resize *{cursor:row-resize!important}
+.editor figure.tc-figure img{cursor:pointer}
+body.fig-dragging,body.fig-dragging *{cursor:grabbing!important;user-select:none!important}
+#figDrop{position:fixed;z-index:2460;display:none;height:4px;margin-top:-2px;border-radius:4px;background:var(--accent);box-shadow:0 0 0 3px var(--accent-light);pointer-events:none}
+.menu-hint{padding:4px 10px 8px;font-size:12px;line-height:1.45;color:var(--muted);max-width:250px}
+.cell-swatches{display:flex;gap:6px;padding:4px 10px 8px}
+.cell-swatches button{width:24px;height:24px;border-radius:7px;border:1px solid var(--border2);cursor:pointer}
+.cell-swatches button.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
 .editor blockquote>p:only-child:has(>br:only-child)::before{content:'Цитата…';color:var(--muted);pointer-events:none}
 .editor figcaption:empty::before,.editor figcaption:has(>br:only-child)::before{content:'Підпис до зображення (необов’язково)';color:var(--muted);opacity:.7;pointer-events:none}
 .editor pre.tc-code[data-empty]>code::before{content:'// Вставте або введіть код…';color:var(--code-label);opacity:.7;pointer-events:none}
@@ -733,6 +777,7 @@ svg{flex-shrink:0}
 
 /* ═══════════ ДРУК / PDF ═══════════ */
 @media print{
+  .editor .tc-toggle[data-collapsed]>*{display:revert!important}
   @page{margin:16mm 14mm}
   html,body{height:auto;overflow:visible;background:#fff !important;display:block}
   .topbar,.toolbar-wrap,.toc,.statusbar,.fbar,.pop,.toast,#tip,.back-top,.overlay,.drawer,.drawer-overlay,#figOutline,#figHandle,.doc-header-edit,.drop-hint{display:none !important}
@@ -854,6 +899,7 @@ svg{flex-shrink:0}
 <div id="figOutline"></div>
 <div id="figHandle" title="Потягніть, щоб змінити розмір"></div>
 <div id="figSizeBadge"></div>
+<div id="figDrop"></div>
 <div class="pop" id="pop"></div>
 <div class="pop" id="slashPop"></div>
 
@@ -1035,6 +1081,15 @@ const I = {
   ol:'<path d="M10 6h11M10 12h11M10 18h11"/><path d="M4 5h1v4"/><path d="M4 9h2"/><path d="M6 19H4c0-1 2-2 2-3s-1-1.5-2-1"/>',
   checklist:'<rect x="3" y="4" width="6" height="6" rx="1.5"/><path d="m3.5 17 2 2 3.5-4"/><path d="M13 7h8M13 17h8"/>',
   alignLeft:'<path d="M21 6H3M15 12H3M17 18H3"/>',
+  wrapLeft:'<rect x="3" y="4" width="9" height="9" rx="1.5"/><path d="M15 5h6M15 9h6M15 13h6M3 17h18M3 21h13"/>',
+  wrapRight:'<rect x="12" y="4" width="9" height="9" rx="1.5"/><path d="M3 5h6M3 9h6M3 13h6M3 17h18M3 21h13"/>',
+  tRows:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.5h18"/>',
+  tCols:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>',
+  tCell:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 12h18M12 4v16"/><path d="M12 12h9v8h-7a2 2 0 0 1-2-2z" fill="currentColor" opacity=".3" stroke="none"/>',
+  tLook:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18" stroke-width="3"/><path d="M9 9v11"/>',
+  merge:'<path d="M4 6v12M20 6v12"/><path d="M7 12h3M14 12h3"/><path d="m8 9 3 3-3 3M16 9l-3 3 3 3"/>',
+  unmerge:'<path d="M12 5v14"/><path d="M4 12h5M15 12h5"/><path d="m7 9-3 3 3 3M17 9l3 3-3 3"/>',
+  toggleBlock:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="m9 10 3 3 3-3"/>',
   alignCenter:'<path d="M21 6H3M17 12H7M19 18H5"/>',
   alignRight:'<path d="M21 6H3M21 12H9M21 18H7"/>',
   alignJustify:'<path d="M3 6h18M3 12h18M3 18h18"/>',
@@ -1497,7 +1552,10 @@ function normalize() {
       // блок усередині іншого блоку/списку — розгортаємо, вкладеність не підтримується
       if (b.parentNode && b.parentNode.closest && (b.parentNode.closest('.tc-block') || b.parentNode.closest('li,td,th,blockquote'))) { unwrap(b); return; }
     }
-    if (b.classList.contains('tc-callout')) {
+    if (b.classList.contains('tc-toggle')) {
+      if (b.classList.contains('tc-callout') || b.classList.contains('tc-prompt')) { b.className = 'tc-block tc-toggle'; changed = true; }
+      if (b.hasAttribute('data-type')) { b.removeAttribute('data-type'); changed = true; }
+    } else if (b.classList.contains('tc-callout')) {
       if (!CALLOUT_TYPES[b.dataset.type]) { b.dataset.type = 'tip'; changed = true; }
       if (b.classList.contains('tc-prompt')) b.classList.remove('tc-prompt');
     } else if (!b.classList.contains('tc-prompt')) {
@@ -1505,6 +1563,7 @@ function normalize() {
     }
     fixContainer(b, 'tc');
     if (!b.firstChild) { b.appendChild(emptyP()); changed = true; }
+    if (b.classList.contains('tc-toggle') && b.children.length < 2) { b.appendChild(emptyP()); changed = true; }
   });
   $$('blockquote', editor).forEach(q => {
     fixContainer(q, 'quote');
@@ -1695,8 +1754,10 @@ function textToParagraphs(text) {
 }
 
 /* ═══════════════════════════ СТВОРЕННЯ БЛОКІВ ═══════════════════════════ */
+function toggleTitle(text) { const t = document.createElement('p'); t.textContent = text || 'Відповідь'; return t; }
 function makeTcBlock(kind, sub) {
   const b = document.createElement('div');
+  if (kind === 'toggle') { b.className = 'tc-block tc-toggle'; b.appendChild(toggleTitle()); b.appendChild(emptyP()); return b; }
   if (kind === 'prompt') b.className = 'tc-block tc-prompt';
   else { b.className = 'tc-block tc-callout'; b.dataset.type = CALLOUT_TYPES[sub] ? sub : 'tip'; }
   b.appendChild(emptyP());
@@ -1942,6 +2003,7 @@ function buildBlockFrom(kind, sub, nodes) {
   };
   nodes.forEach(add);
   if (!block.firstChild) block.appendChild(emptyP());
+  if (kind === 'toggle') block.insertBefore(toggleTitle(), block.firstChild);
   return block;
 }
 // Змінює тип існуючого блоку. Повторне застосування того ж типу — прибирає оформлення.
@@ -1956,6 +2018,13 @@ function convertBlock(block, kind, sub) {
     return;
   }
   const isPrompt = block.classList.contains('tc-prompt');
+  if (kind === 'toggle') {
+    if (block.classList.contains('tc-toggle')) { unwrapBlock(block); return; }
+    block.className = 'tc-block tc-toggle';
+    block.removeAttribute('data-type');
+    block.insertBefore(toggleTitle(), block.firstChild);
+    return;
+  }
   if (kind === 'code') {
     const pre = makeCodeBlock(plainText(block), '');
     block.replaceWith(pre);
@@ -1966,9 +2035,11 @@ function convertBlock(block, kind, sub) {
     if (isPrompt) { unwrapBlock(block); return; }
     block.className = 'tc-block tc-prompt';
     block.removeAttribute('data-type');
+    block.removeAttribute('data-collapsed');
     return;
   }
   // callout
+  block.removeAttribute('data-collapsed');
   const type = CALLOUT_TYPES[sub] ? sub : 'tip';
   if (!isPrompt && block.dataset.type === type) { unwrapBlock(block); return; }
   block.className = 'tc-block tc-callout';
@@ -2001,7 +2072,7 @@ function doInsertNewBlock(kind, sub) {
   }
   const block = kind === 'code' ? makeCodeBlock('', '') : makeTcBlock(kind, sub);
   insertBlocks([block]);
-  placeCaretInBlock(block, 'start');
+  if (kind === 'toggle') caretStart(block.children[1]); else placeCaretInBlock(block, 'start');
 }
 
 /* ═══════════════════════════ ТЕКСТОВІ КОМАНДИ ═══════════════════════════ */
@@ -2812,14 +2883,28 @@ function cleanNode(n, ctx) {
         const w = parseInt((n.getAttribute('style') || '').replace(/.*--w\s*:\s*/, ''), 10);
         if (w >= 5 && w <= 100) fig.style.setProperty('--w', w + '%');
         if (n.dataset.align === 'left' || n.dataset.align === 'right') fig.dataset.align = n.dataset.align;
+        if (n.dataset.wrap === 'left' || n.dataset.wrap === 'right') fig.dataset.wrap = n.dataset.wrap;
       }
       return fig;
     }
     case 'HR': return document.createElement('hr');
+    case 'DETAILS': {
+      const b = document.createElement('div');
+      b.className = 'tc-block tc-toggle';
+      const sum = n.querySelector(':scope > summary');
+      const t = document.createElement('p');
+      if (sum) { t.appendChild(flattenInline(sum, ctx)); sum.remove(); }
+      if (!t.textContent.trim()) t.textContent = 'Відповідь';
+      b.appendChild(t);
+      b.appendChild(kids());
+      if (b.children.length < 2) b.appendChild(emptyP());
+      return b;
+    }
     case 'DIV':
       if (ctx.own && n.classList.contains('tc-block')) {
         const b = document.createElement('div');
-        if (n.classList.contains('tc-prompt')) b.className = 'tc-block tc-prompt';
+        if (n.classList.contains('tc-toggle')) b.className = 'tc-block tc-toggle';
+        else if (n.classList.contains('tc-prompt')) b.className = 'tc-block tc-prompt';
         else { b.className = 'tc-block tc-callout'; b.dataset.type = CALLOUT_TYPES[n.dataset.type] ? n.dataset.type : 'tip'; }
         b.appendChild(kids());
         return b;
@@ -2886,11 +2971,20 @@ function cleanTable(t, ctx) {
   const table = document.createElement('table');
   const hasHead = !!t.tHead || (rows[0] && Array.from(rows[0].cells).every(c => c.tagName === 'TH')) || ctx.legacy;
   if (ctx.own && !ctx.legacy ? t.classList.contains('tc-has-header') : hasHead) table.className = 'tc-has-header';
+  if (ctx.own && t.classList.contains('tc-striped')) table.classList.add('tc-striped');
+  if (ctx.own) {
+    const ws = Array.from(t.querySelectorAll(':scope > colgroup > col')).map(c => parseFloat(c.style.width) || 0);
+    if (ws.length && ws.every(w => w > 0)) setColWidths(table, ws);
+  }
   const tb = document.createElement('tbody');
   rows.forEach(row => {
     const tr = document.createElement('tr');
+    const rh = parseInt(row.style && row.style.height, 10);
+    if (ctx.own && rh >= 20 && rh <= 2000) tr.style.height = rh + 'px';
     Array.from(row.cells).forEach(cell => {
       const td = document.createElement('td');
+      if (ctx.own && CELL_BG.some(([v]) => v && v === cell.dataset.bg)) td.dataset.bg = cell.dataset.bg;
+      if (ctx.own && cell.dataset.valign === 'middle') td.dataset.valign = 'middle';
       const cs = parseInt(cell.getAttribute('colspan'), 10), rs = parseInt(cell.getAttribute('rowspan'), 10);
       if (cs > 1) td.setAttribute('colspan', cs);
       if (rs > 1) td.setAttribute('rowspan', rs);
@@ -3305,6 +3399,11 @@ function blockMd(el, opts) {
   if (t === 'PRE') return '```' + (el.dataset.lang || '') + '\n' + (el.textContent || '').replace(/\n$/, '') + '\n```';
   if (t === 'UL' || t === 'OL') return listMd(el, '', opts);
   if (t === 'BLOCKQUOTE') return Array.from(el.children).map(c => blockMd(c, opts)).filter(Boolean).join('\n\n').split('\n').map(l => '> ' + l).join('\n');
+  if (isTcBlock(el) && el.classList.contains('tc-toggle')) {
+    const [title, ...rest] = Array.from(el.children);
+    const body = rest.map(c => blockMd(c, opts)).filter(Boolean).join('\n\n');
+    return '<details>\n<summary>' + esc((title ? title.textContent : '').trim() || 'Відповідь') + '</summary>\n\n' + body + '\n\n</details>';
+  }
   if (isTcBlock(el)) {
     const body = Array.from(el.children).map(c => blockMd(c, opts)).filter(Boolean).join('\n\n');
     if (el.classList.contains('tc-prompt')) return '```\n' + plainText(el) + '\n```';
@@ -3348,50 +3447,301 @@ function toMarkdown(root, opts) {
 }
 
 /* ═══════════════════════════ ТАБЛИЦІ ═══════════════════════════ */
+// Сітка таблиці з урахуванням об'єднаних клітинок: grid[рядок][стовпець] = клітинка
+function tableGrid(table) {
+  const grid = [], pos = new Map();
+  Array.from(table.rows).forEach((tr, r) => {
+    grid[r] = grid[r] || [];
+    let c = 0;
+    Array.from(tr.cells).forEach(cell => {
+      while (grid[r][c]) c++;
+      const cs = Math.max(1, cell.colSpan || 1), rs = Math.max(1, cell.rowSpan || 1);
+      for (let i = 0; i < rs; i++) for (let j = 0; j < cs; j++) { grid[r + i] = grid[r + i] || []; grid[r + i][c + j] = cell; }
+      pos.set(cell, { r, c, cs, rs });
+      c += cs;
+    });
+  });
+  const rows = table.rows.length;
+  grid.length = rows;
+  const cols = Math.max(1, ...grid.map(row => (row ? row.length : 0)));
+  return { grid, pos, rows, cols };
+}
+const newCell = () => { const td = document.createElement('td'); td.appendChild(document.createElement('br')); return td; };
+// вставити клітинку в рядок так, щоб вона стала в стовпець col
+function putCell(tr, cell, col, pos) {
+  const ref = Array.from(tr.cells).find(c => pos.has(c) && pos.get(c).c > col);
+  if (ref) ref.before(cell); else tr.appendChild(cell);
+}
+function cellIsEmpty(c) { return !c.textContent.replace(/​/g, '').trim() && !c.querySelector('img'); }
+function moveCellContent(from, to) {
+  if (cellIsEmpty(from)) return;
+  if (cellIsEmpty(to)) { to.innerHTML = ''; } else to.appendChild(document.createElement('br'));
+  while (from.firstChild) to.appendChild(from.firstChild);
+}
+// ── ширина стовпців: <colgroup> зі значеннями у відсотках ──
+function colWidths(table) {
+  const cg = table.querySelector(':scope > colgroup');
+  return cg ? Array.from(cg.children).map(c => parseFloat(c.style.width) || 0) : null;
+}
+function setColWidths(table, ws) {
+  let cg = table.querySelector(':scope > colgroup');
+  if (!ws) { if (cg) cg.remove(); table.classList.remove('tc-fixed'); return; }
+  const sum = ws.reduce((a, b) => a + b, 0) || 1;
+  if (!cg) { cg = document.createElement('colgroup'); table.insertBefore(cg, table.firstChild); }
+  cg.innerHTML = '';
+  ws.forEach(w => { const col = document.createElement('col'); col.style.width = (Math.round(w / sum * 1000) / 10) + '%'; cg.appendChild(col); });
+  table.classList.add('tc-fixed');
+}
+function measuredWidths(table) {
+  const { grid, cols } = tableGrid(table);
+  const tw = table.getBoundingClientRect().width || 1;
+  const ws = [];
+  for (let c = 0; c < cols; c++) {
+    let w = 0;
+    for (const row of grid) { const cell = row && row[c]; if (cell && (cell.colSpan || 1) === 1) { w = cell.getBoundingClientRect().width; break; } }
+    ws.push(w || tw / cols);
+  }
+  return ws.map(w => w / tw * 100);
+}
+
 function tableAction(action) {
   const r = getRange();
   const cell = r && closestIn(r.startContainer, 'td,th');
   const table = cell ? cell.closest('table') : UI.currentTable;
   if (!table || !editor.contains(table)) return;
-  const row = cell ? cell.parentNode : table.rows[0];
-  const ci = cell ? cell.cellIndex : 0;
-  const cols = Math.max(...Array.from(table.rows).map(x => x.cells.length));
-  const newCell = () => { const td = document.createElement('td'); td.appendChild(document.createElement('br')); return td; };
+  const G = tableGrid(table);
+  const p = (cell && G.pos.get(cell)) || { r: 0, c: 0, cs: 1, rs: 1 };
+  const rowsEls = Array.from(table.rows);
+  let msg = '';
   mutate(() => {
     let focus = null;
+    const ws = colWidths(table);
     if (action === 'rowAbove' || action === 'rowBelow') {
+      const at = action === 'rowAbove' ? p.r : p.r + p.rs; // новий рядок стане рядком з цим індексом
       const tr = document.createElement('tr');
-      for (let k = 0; k < cols; k++) tr.appendChild(newCell());
-      if (action === 'rowAbove') row.before(tr); else row.after(tr);
-      focus = tr.cells[Math.min(ci, tr.cells.length - 1)];
+      const seen = new Set();
+      for (let c = 0; c < G.cols; c++) {
+        const above = at > 0 ? G.grid[at - 1] && G.grid[at - 1][c] : null;
+        const below = G.grid[at] && G.grid[at][c];
+        if (above && above === below) { if (!seen.has(above)) { above.rowSpan = (above.rowSpan || 1) + 1; seen.add(above); } continue; }
+        tr.appendChild(newCell());
+      }
+      if (at >= rowsEls.length) rowsEls[rowsEls.length - 1].after(tr); else rowsEls[at].before(tr);
+      focus = tr.cells[0] || cell;
     } else if (action === 'colLeft' || action === 'colRight') {
-      Array.from(table.rows).forEach(tr => {
+      const at = action === 'colLeft' ? p.c : p.c + p.cs; // новий стовпець стане стовпцем з цим індексом
+      const seen = new Set();
+      rowsEls.forEach((tr, ri) => {
+        const row = G.grid[ri] || [];
+        const left = at > 0 ? row[at - 1] : null, right = row[at];
+        if (left && left === right) { if (!seen.has(left)) { left.colSpan = (left.colSpan || 1) + 1; seen.add(left); } return; }
+        if (right && G.pos.get(right).r !== ri && seen.has(right)) return;
         const c = newCell();
-        const ref = tr.cells[Math.min(ci, tr.cells.length - 1)];
-        if (!ref) tr.appendChild(c); else if (action === 'colLeft') ref.before(c); else ref.after(c);
-        if (tr === row) focus = c;
+        putCell(tr, c, at - 1, G.pos);
+        if (ri === p.r) focus = c;
       });
+      if (ws) { const avg = 100 / (ws.length + 1); ws.splice(at, 0, avg); setColWidths(table, ws); }
     } else if (action === 'delRow') {
-      if (table.rows.length <= 1) { action = 'delTable'; }
-      else { const next = row.nextElementSibling || row.previousElementSibling; row.remove(); focus = next && next.cells[Math.min(ci, next.cells.length - 1)]; }
+      if (rowsEls.length <= 1) { action = 'delTable'; }
+      else {
+        const R = p.r, tr = rowsEls[R];
+        const seen = new Set();
+        for (let c = 0; c < G.cols; c++) {
+          const x = G.grid[R] && G.grid[R][c];
+          if (!x || seen.has(x)) continue;
+          seen.add(x);
+          const xp = G.pos.get(x);
+          if (xp.rs > 1) {
+            x.rowSpan = xp.rs - 1;
+            if (xp.r === R) putCell(rowsEls[R + 1], x, xp.c - 1, G.pos); // клітинка «спускається» в наступний рядок
+          }
+        }
+        const next = rowsEls[R + 1] || rowsEls[R - 1];
+        tr.remove();
+        focus = next && next.cells[0];
+      }
     } else if (action === 'delCol') {
-      if (cols <= 1) { action = 'delTable'; }
-      else { Array.from(table.rows).forEach(tr => { const c = tr.cells[ci]; if (c) c.remove(); }); focus = row.cells[Math.min(ci, row.cells.length - 1)]; }
+      if (G.cols <= 1) { action = 'delTable'; }
+      else {
+        const C = p.c;
+        const seen = new Set();
+        G.grid.forEach(row => {
+          const x = row && row[C];
+          if (!x || seen.has(x)) return;
+          seen.add(x);
+          if ((x.colSpan || 1) > 1) x.colSpan = x.colSpan - 1; else x.remove();
+        });
+        Array.from(table.rows).forEach(tr => { if (!tr.cells.length) tr.remove(); });
+        if (ws) { ws.splice(C, 1); setColWidths(table, ws.length ? ws : null); }
+        const row = table.rows[Math.min(p.r, table.rows.length - 1)];
+        focus = row && row.cells[Math.min(Math.max(0, C - 1), row.cells.length - 1)];
+      }
+    } else if (action === 'mergeRight') {
+      const nb = G.grid[p.r] && G.grid[p.r][p.c + p.cs];
+      const np = nb && G.pos.get(nb);
+      if (!nb || np.r !== p.r || np.rs !== p.rs) { msg = 'Праворуч немає клітинки такої ж висоти'; return; }
+      moveCellContent(nb, cell);
+      cell.colSpan = p.cs + np.cs;
+      nb.remove();
+      focus = cell;
+    } else if (action === 'mergeDown') {
+      const nb = G.grid[p.r + p.rs] && G.grid[p.r + p.rs][p.c];
+      const np = nb && G.pos.get(nb);
+      if (!nb || np.c !== p.c || np.cs !== p.cs) { msg = 'Знизу немає клітинки такої ж ширини'; return; }
+      moveCellContent(nb, cell);
+      cell.rowSpan = p.rs + np.rs;
+      nb.remove();
+      Array.from(table.rows).forEach(tr => { if (!tr.cells.length) { tr.remove(); cell.rowSpan = Math.max(1, cell.rowSpan - 1); } });
+      focus = cell;
+    } else if (action === 'unmerge') {
+      if (p.cs === 1 && p.rs === 1) { msg = 'Ця клітинка не об’єднана'; return; }
+      for (let i = 0; i < p.rs; i++) {
+        for (let j = 0; j < p.cs; j++) {
+          if (!i && !j) continue;
+          const nc = newCell();
+          if (cell.dataset.bg) nc.dataset.bg = cell.dataset.bg;
+          putCell(rowsEls[p.r + i], nc, p.c + j - 1 + 0.5, G.pos);
+        }
+      }
+      cell.removeAttribute('colspan'); cell.removeAttribute('rowspan');
+      focus = cell;
     } else if (action === 'header') {
       table.classList.toggle('tc-has-header');
-      if (!table.className) table.removeAttribute('class');
+      focus = cell;
+    } else if (action === 'striped') {
+      table.classList.toggle('tc-striped');
+      focus = cell;
+    } else if (action === 'colsEqual') {
+      setColWidths(table, Array(G.cols).fill(1));
+      focus = cell;
+    } else if (action === 'colsAuto') {
+      setColWidths(table, null);
+      focus = cell;
+    } else if (action === 'valign') {
+      if (cell.dataset.valign) cell.removeAttribute('data-valign'); else cell.dataset.valign = 'middle';
+      focus = cell;
+    } else if (action.startsWith('bg:')) {
+      const v = action.slice(3);
+      if (v) cell.dataset.bg = v; else cell.removeAttribute('data-bg');
+      focus = cell;
+    } else if (action.startsWith('rowbg:')) {
+      const v = action.slice(6);
+      Array.from(rowsEls[p.r].cells).forEach(c => { if (v) c.dataset.bg = v; else c.removeAttribute('data-bg'); });
       focus = cell;
     }
+    if (!table.className) table.removeAttribute('class');
     if (action === 'delTable') {
-      const p = emptyP();
-      table.replaceWith(p);
-      caretStart(p);
+      const pp = emptyP();
+      table.replaceWith(pp);
+      caretStart(pp);
       UI.currentTable = null;
       return;
     }
     if (focus) caretEnd(focus);
   });
+  if (msg) toast(msg);
 }
+const CELL_BG = [['', 'Без кольору', 'var(--surface)'], ['yellow', 'Жовтий', '#fde68a'], ['green', 'Зелений', '#bbf7d0'], ['blue', 'Блакитний', '#bfdbfe'], ['red', 'Червоний', '#fecaca'], ['purple', 'Фіолетовий', '#e9d5ff'], ['gray', 'Сірий', '#e2e8f0']];
+function openTableMenu(kind, anchor) {
+  const r = getRange();
+  const cell = r && closestIn(r.startContainer, 'td,th');
+  const table = cell ? cell.closest('table') : UI.currentTable;
+  if (!table) return;
+  let html = '';
+  if (kind === 'rows') {
+    html = '<div class="menu-label">Рядки</div>' + menuItem('rowAbove', 'Додати рядок вище', { icon: 'rowAbove' }) + menuItem('rowBelow', 'Додати рядок нижче', { icon: 'rowBelow' }) +
+      '<div class="menu-sep"></div>' + menuItem('delRow', 'Видалити рядок', { icon: 'delRow', danger: true }) +
+      '<div class="menu-hint">Висоту рядка можна змінити, потягнувши його нижню межу.</div>';
+  } else if (kind === 'cols') {
+    html = '<div class="menu-label">Стовпці</div>' + menuItem('colLeft', 'Додати стовпець ліворуч', { icon: 'colLeft' }) + menuItem('colRight', 'Додати стовпець праворуч', { icon: 'colRight' }) +
+      '<div class="menu-sep"></div>' + menuItem('colsEqual', 'Однакова ширина стовпців', { icon: 'tCols' }) + menuItem('colsAuto', 'Ширина за вмістом', { icon: 'expand' }) +
+      '<div class="menu-sep"></div>' + menuItem('delCol', 'Видалити стовпець', { icon: 'delCol', danger: true }) +
+      '<div class="menu-hint">Ширину стовпця змінюйте, потягнувши межу між стовпцями.</div>';
+  } else if (kind === 'cell') {
+    const bg = cell ? cell.dataset.bg || '' : '';
+    const merged = cell && ((cell.colSpan || 1) > 1 || (cell.rowSpan || 1) > 1);
+    html = '<div class="menu-label">Клітинка</div>' + menuItem('mergeRight', 'Об’єднати з правою', { icon: 'merge' }) + menuItem('mergeDown', 'Об’єднати з нижньою', { icon: 'merge' }) +
+      (merged ? menuItem('unmerge', 'Роз’єднати', { icon: 'unmerge' }) : '') +
+      menuItem('valign', 'Текст по центру по висоті', { icon: 'alignCenter', on: cell && !!cell.dataset.valign }) +
+      '<div class="menu-label">Колір клітинки</div><div class="cell-swatches">' + CELL_BG.map(([v, n, c]) => '<button data-v="bg:' + v + '" data-tip="' + n + '" style="background:' + c + '" class="' + (bg === v ? 'on' : '') + '"></button>').join('') + '</div>' +
+      '<div class="menu-label">Колір усього рядка</div><div class="cell-swatches">' + CELL_BG.map(([v, n, c]) => '<button data-v="rowbg:' + v + '" data-tip="' + n + '" style="background:' + c + '"></button>').join('') + '</div>';
+  } else if (kind === 'look') {
+    html = '<div class="menu-label">Вигляд таблиці</div>' + menuItem('header', 'Рядок-заголовок', { icon: 'headerRow', on: table.classList.contains('tc-has-header') }) +
+      menuItem('striped', 'Смугасті рядки', { icon: 'tRows', on: table.classList.contains('tc-striped') }) +
+      '<div class="menu-sep"></div>' + menuItem('delTable', 'Видалити таблицю', { icon: 'trash', danger: true });
+  }
+  Pop.open(anchor, html, v => { tableAction(v); }, { minWidth: 240 });
+}
+
+// ── Зміна ширини стовпця й висоти рядка мишкою ──
+(function () {
+  const EDGE = 5;
+  let hover = null, drag = null;
+  function edgeAt(e) {
+    const cell = e.target.closest && e.target.closest('td,th');
+    if (!cell || !editor.contains(cell)) return null;
+    const table = cell.closest('table');
+    const rc = cell.getBoundingClientRect();
+    const G = tableGrid(table);
+    const p = G.pos.get(cell);
+    if (!p) return null;
+    if (Math.abs(e.clientX - rc.right) <= EDGE && p.c + p.cs < G.cols) return { kind: 'col', table, b: p.c + p.cs };
+    if (Math.abs(e.clientX - rc.left) <= EDGE && p.c > 0) return { kind: 'col', table, b: p.c };
+    if (Math.abs(e.clientY - rc.bottom) <= EDGE) return { kind: 'row', table, row: table.rows[p.r + p.rs - 1] };
+    return null;
+  }
+  editor.addEventListener('mousemove', e => {
+    if (drag || e.buttons) return;
+    hover = edgeAt(e);
+    editor.classList.toggle('col-resize', !!hover && hover.kind === 'col');
+    editor.classList.toggle('row-resize', !!hover && hover.kind === 'row');
+  });
+  editor.addEventListener('mouseleave', () => { if (!drag) { hover = null; editor.classList.remove('col-resize', 'row-resize'); } });
+  editor.addEventListener('mousedown', e => {
+    if (!hover || e.button !== 0) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    History.commit();
+    const h = hover;
+    if (h.kind === 'col') {
+      const ws = colWidths(h.table) || measuredWidths(h.table);
+      setColWidths(h.table, ws);
+      drag = { ...h, x0: e.clientX, ws: colWidths(h.table), tw: h.table.getBoundingClientRect().width };
+    } else {
+      drag = { ...h, y0: e.clientY, h0: h.row.getBoundingClientRect().height };
+    }
+  }, true);
+  document.addEventListener('mousemove', e => {
+    if (!drag) return;
+    if (drag.kind === 'col') {
+      const d = (e.clientX - drag.x0) / drag.tw * 100;
+      const ws = drag.ws.slice();
+      const a = drag.b - 1, b2 = drag.b;
+      const total = ws[a] + ws[b2];
+      ws[a] = clamp(drag.ws[a] + d, 5, total - 5);
+      ws[b2] = total - ws[a];
+      setColWidths(drag.table, ws);
+    } else {
+      drag.row.style.height = Math.max(24, Math.round(drag.h0 + e.clientY - drag.y0)) + 'px';
+    }
+    UI.refreshSoon();
+  });
+  document.addEventListener('mouseup', () => {
+    if (!drag) return;
+    drag = null;
+    editor.classList.remove('col-resize', 'row-resize');
+    History.commit();
+  });
+  // подвійний клік по межі рядка — повернути автоматичну висоту
+  editor.addEventListener('dblclick', e => {
+    const h = edgeAt(e);
+    if (!h) return;
+    e.preventDefault();
+    mutate(() => {
+      if (h.kind === 'row') { h.row.style.height = ''; if (!h.row.getAttribute('style')) h.row.removeAttribute('style'); }
+      else setColWidths(h.table, Array(tableGrid(h.table).cols).fill(1));
+    });
+  });
+})();
 function tableTab(cell, back) {
   const table = cell.closest('table');
   const cells = $$('td,th', table);
@@ -3407,6 +3757,15 @@ function tableTab(cell, back) {
       caretStart(tr.cells[0]);
     });
   }
+}
+
+function toggleCollapsed(b) {
+  mutate(() => {
+    if (b.hasAttribute('data-collapsed')) b.removeAttribute('data-collapsed'); else b.setAttribute('data-collapsed', '');
+    if (b.hasAttribute('data-collapsed')) caretEnd(b.firstElementChild);
+  });
+  UI.blockBarKey = '';
+  UI.refreshSoon();
 }
 
 /* ═══════════════════════════ ПОСИЛАННЯ ═══════════════════════════ */
@@ -3482,6 +3841,7 @@ const BLOCK_ITEMS = [
   { id: 'callout:warn', label: 'Увага', icon: 'warn', cls: 'c-warn', kw: 'callout warning увага попередження' },
   { id: 'callout:error', label: 'Помилка / не робити', icon: 'error', cls: 'c-error', kw: 'callout error помилка не робити' },
   { id: 'callout:note', label: 'Нотатка', icon: 'note', cls: 'c-note', kw: 'callout note нотатка замітка' },
+  { id: 'toggle', label: 'Розгортальний блок', sub: 'Відповідь чи підказка — відкривається кліком', icon: 'toggleBlock', cls: 'c-tip', kw: 'toggle details розгорнути відповідь підказка прихований спойлер' },
   { id: 'prompt', label: 'Промпт', sub: 'Блок з кнопкою «Копіювати»', icon: 'prompt', cls: 'c-prompt', kw: 'prompt промпт ai chatgpt claude' },
   { id: 'codeblock', label: 'Блок коду', icon: 'codeblock', cls: 'c-code', kw: 'code код програма' },
   { id: 'table', label: 'Таблиця', sub: '3 × 3', icon: 'table', kw: 'table таблиця' },
@@ -3494,6 +3854,7 @@ function applyItem(id) {
   if (id === 'ul' || id === 'ol' || id === 'check') return doToggleList(id);
   if (id.startsWith('callout:')) return doInsertNewBlock('callout', id.split(':')[1]);
   if (id === 'prompt') return doInsertNewBlock('prompt');
+  if (id === 'toggle') return doInsertNewBlock('toggle');
   if (id === 'codeblock') return doInsertNewBlock('code');
   if (id === 'table') return doInsertTable(3, 3);
   if (id === 'hr') return doInsertHr();
@@ -3738,6 +4099,7 @@ const CMD = {
   alignJustify: () => blockTextCmd(() => exec('justifyFull')),
 };
 Object.keys(CALLOUT_TYPES).forEach(t => { CMD['callout:' + t] = () => blockCmd('callout', t); });
+CMD.toggle = () => blockCmd('toggle');
 function run(name) {
   if (name !== 'undo' && name !== 'redo') UI.deselectFigure();
   const f = CMD[name];
@@ -3758,6 +4120,7 @@ function convertSelection(v) {
   }
   if (v === 'quote') { CMD.quote(); return; }
   if (v === 'prompt') { blockCmd('prompt'); return; }
+  if (v === 'toggle') { blockCmd('toggle'); return; }
   if (v === 'code') { blockCmd('code'); return; }
   if (v.startsWith('callout:')) blockCmd('callout', v.split(':')[1]);
 }
@@ -3766,6 +4129,7 @@ function convertMenuHtml() {
     menuItem('p', 'Звичайний текст', { icon: 'text' }) +
     menuItem('quote', 'Цитата', { icon: 'quote' }) +
     Object.keys(CALLOUT_TYPES).map(t => menuItem('callout:' + t, CALLOUT_TYPES[t].label, { icon: CALLOUT_TYPES[t].icon, cls: 'c-' + t })).join('') +
+    menuItem('toggle', 'Розгортальний блок', { icon: 'toggleBlock', sub: 'відкривається кліком' }) +
     menuItem('prompt', 'Промпт', { icon: 'prompt', cls: 'c-prompt', sub: 'з кнопкою «Копіювати»' }) +
     menuItem('code', 'Блок коду', { icon: 'codeblock', cls: 'c-code' });
 }
@@ -3839,14 +4203,12 @@ const UI = {
     this.currentTable = cell ? cell.closest('table') : null;
     if (this.currentTable && !showSel) {
       if (!tbar.innerHTML) tbar.innerHTML = bar([
-        { b: 'rowAbove', icon: 'rowAbove', tip: 'Рядок вище' }, { b: 'rowBelow', icon: 'rowBelow', tip: 'Рядок нижче' },
-        { b: 'colLeft', icon: 'colLeft', tip: 'Стовпець ліворуч' }, { b: 'colRight', icon: 'colRight', tip: 'Стовпець праворуч' }, '|',
-        { b: 'header', icon: 'headerRow', tip: 'Рядок-заголовок (увімк./вимк.)' }, '|',
-        { b: 'delRow', icon: 'delRow', tip: 'Видалити рядок', cls: 'danger' }, { b: 'delCol', icon: 'delCol', tip: 'Видалити стовпець', cls: 'danger' },
-        { b: 'delTable', icon: 'trash', tip: 'Видалити таблицю', cls: 'danger' },
+        { b: 'm:rows', icon: 'tRows', label: 'Рядки', tip: 'Додати чи видалити рядок' },
+        { b: 'm:cols', icon: 'tCols', label: 'Стовпці', tip: 'Додати, видалити, ширина' },
+        { b: 'm:cell', icon: 'tCell', label: 'Клітинка', tip: 'Об’єднати, колір' },
+        { b: 'm:look', icon: 'tLook', label: 'Вигляд', tip: 'Заголовок, смуги' }, '|',
+        { b: 'rowBelow', icon: 'rowBelow', tip: 'Швидко: рядок нижче' }, { b: 'colRight', icon: 'colRight', tip: 'Швидко: стовпець праворуч' },
       ]);
-      const hb = tbar.querySelector('[data-b="header"]');
-      if (hb) hb.classList.toggle('on', this.currentTable.classList.contains('tc-has-header'));
       const tr = this.currentTable.getBoundingClientRect();
       const area = scrollArea.getBoundingClientRect();
       if (visibleInArea(tr)) {
@@ -3939,6 +4301,15 @@ const UI = {
         { b: 'unwrap', icon: 'text', tip: 'Перетворити на звичайний текст' },
         { b: 'delete', icon: 'trash', tip: 'Видалити блок', cls: 'danger' },
       ];
+    } else if (b.classList.contains('tc-toggle')) {
+      const col = b.hasAttribute('data-collapsed');
+      key = 'toggle:' + col;
+      items = [
+        { b: 'collapse', icon: 'chevron', label: col ? 'Розгорнути' : 'Згорнути', tip: 'Лише для зручності редагування — у збереженому HTML блок завжди згорнутий' },
+        { b: 'convert', icon: 'more', tip: 'Змінити тип блоку' },
+        { b: 'unwrap', icon: 'text', tip: 'Прибрати оформлення (текст залишиться)' },
+        { b: 'delete', icon: 'trash', tip: 'Видалити блок разом з текстом', cls: 'danger' },
+      ];
     } else if (b.classList.contains('tc-prompt')) {
       key = 'prompt';
       items = [
@@ -3972,12 +4343,14 @@ const UI = {
     window.getSelection().removeAllRanges();
     const w = parseInt(fig.style.getPropertyValue('--w'), 10) || 0;
     const al = fig.dataset.align || 'center';
+    const wrap = fig.dataset.wrap || '';
+    const sizes = wrap ? [['w25', 'S', 25], ['w35', 'M', 35], ['w50', 'L', 50], ['w65', 'XL', 65]] : [['w25', 'S', 25], ['w50', 'M', 50], ['w75', 'L', 75], ['w100', 'XL', 100]];
     $('#imgBar').innerHTML = bar([
-      { b: 'w25', label: 'S', tip: 'Ширина 25%', on: w === 25 }, { b: 'w50', label: 'M', tip: 'Ширина 50%', on: w === 50 },
-      { b: 'w75', label: 'L', tip: 'Ширина 75%', on: w === 75 }, { b: 'w100', label: 'XL', tip: 'На всю ширину', on: w === 100 },
-      { b: 'w0', label: 'Авто', tip: 'Оригінальний розмір', on: !w }, '|',
-      { b: 'aleft', icon: 'alignLeft', tip: 'Ліворуч', on: al === 'left' }, { b: 'acenter', icon: 'alignCenter', tip: 'По центру', on: al === 'center' },
-      { b: 'aright', icon: 'alignRight', tip: 'Праворуч', on: al === 'right' }, '|',
+      ...sizes.map(([b, label, n]) => ({ b, label, tip: 'Ширина ' + n + '%', on: w === n })),
+      ...(wrap ? [] : [{ b: 'w0', label: 'Авто', tip: 'Оригінальний розмір', on: !w }]), '|',
+      { b: 'wrapleft', icon: 'wrapLeft', tip: 'Фото ліворуч, текст праворуч', on: wrap === 'left' },
+      { b: 'acenter', icon: 'alignCenter', tip: 'Окремо, по центру', on: !wrap && al === 'center' },
+      { b: 'wrapright', icon: 'wrapRight', tip: 'Фото праворуч, текст ліворуч', on: wrap === 'right' }, '|',
       { b: 'caption', icon: 'text', tip: 'Додати підпис' }, { b: 'view', icon: 'expand', tip: 'Переглянути' },
       { b: 'delete', icon: 'trash', tip: 'Видалити зображення', cls: 'danger' },
     ]);
@@ -4115,6 +4488,7 @@ $('#blockBar').addEventListener('click', async e => {
         else if (val === 'quote') { const q = document.createElement('blockquote'); b.before(q); Array.from(b.childNodes).forEach(c => q.appendChild(c)); b.remove(); }
         else if (val === 'code') convertBlock(b, 'code');
         else if (val === 'prompt') convertBlock(b, 'prompt');
+        else if (val === 'toggle') convertBlock(b, 'toggle');
         else convertBlock(b, 'callout', val.split(':')[1]);
       });
       UI.blockBarKey = '';
@@ -4122,6 +4496,7 @@ $('#blockBar').addEventListener('click', async e => {
     return;
   }
   if (v === 'unwrap') { mutate(() => unwrapBlock(b)); UI.hoverBlock = null; return; }
+  if (v === 'collapse') { toggleCollapsed(b); return; }
   if (v === 'toPrompt') { mutate(() => convertBlock(b, 'prompt')); UI.blockBarKey = ''; return; }
   if (v === 'delete') {
     UI.hoverBlock = null;
@@ -4135,7 +4510,12 @@ $('#blockBar').addEventListener('click', async e => {
   }
   if (v.startsWith('type:')) { mutate(() => { b.dataset.type = v.slice(5); }); UI.blockBarKey = ''; UI.refreshSoon(); }
 });
-$('#tableBar').addEventListener('click', e => { const b = e.target.closest('[data-b]'); if (b) tableAction(b.dataset.b); });
+$('#tableBar').addEventListener('click', e => {
+  const b = e.target.closest('[data-b]');
+  if (!b) return;
+  if (b.dataset.b.startsWith('m:')) openTableMenu(b.dataset.b.slice(2), b);
+  else tableAction(b.dataset.b);
+});
 $('#linkBar').addEventListener('click', async e => {
   const b = e.target.closest('[data-b]');
   const a = $('#linkBar')._a;
@@ -4155,10 +4535,20 @@ $('#imgBar').addEventListener('click', e => {
   if (v === 'view') { openLightbox(fig.querySelector('img').src); return; }
   if (v === 'caption') { const cap = fig.querySelector('figcaption'); UI.deselectFigure(); caretEnd(cap); return; }
   const f = fig;
+  let hint = false;
   mutate(() => {
+    if (v === 'wrapleft' || v === 'wrapright') {
+      hint = !f.dataset.wrap;
+      f.dataset.wrap = v === 'wrapleft' ? 'left' : 'right';
+      f.removeAttribute('data-align');
+      const cur = parseInt(f.style.getPropertyValue('--w'), 10) || 0;
+      if (!cur || cur > 65) f.style.setProperty('--w', '40%');
+      return;
+    }
     if (v[0] === 'w') { const n = +v.slice(1); if (n) f.style.setProperty('--w', n + '%'); else f.style.removeProperty('--w'); if (!f.getAttribute('style')) f.removeAttribute('style'); }
-    if (v[0] === 'a') { const al = v.slice(1); if (al === 'center') f.removeAttribute('data-align'); else f.dataset.align = al; }
+    if (v[0] === 'a') { f.removeAttribute('data-wrap'); const al = v.slice(1); if (al === 'center') f.removeAttribute('data-align'); else f.dataset.align = al; }
   });
+  if (hint) toast('Текст тепер обтікає фото. Перетягніть фото мишкою до потрібного абзацу');
   UI.selectedFigure = null;
   UI.selectFigure(f);
 });
@@ -4172,7 +4562,9 @@ $('#imgBar').addEventListener('click', e => {
     e.preventDefault();
     History.commit();
     const img = fig.querySelector('img');
-    drag = { fig, startX: e.clientX, startW: img.getBoundingClientRect().width, figW: fig.getBoundingClientRect().width, align: fig.dataset.align || 'center' };
+    const cs = getComputedStyle(editor);
+    const contentW = editor.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    drag = { fig, startX: e.clientX, startW: img.getBoundingClientRect().width, figW: fig.dataset.wrap ? contentW : fig.getBoundingClientRect().width, align: fig.dataset.wrap || fig.dataset.align || 'center', wrap: !!fig.dataset.wrap };
     h.setPointerCapture(e.pointerId);
   });
   h.addEventListener('pointermove', e => {
@@ -4180,7 +4572,7 @@ $('#imgBar').addEventListener('click', e => {
     const dx = e.clientX - drag.startX;
     const factor = drag.align === 'center' ? 2 : (drag.align === 'right' ? -1 : 1);
     const px = drag.startW + dx * factor;
-    const pct = clamp(Math.round(px / drag.figW * 100 / 5) * 5, 10, 100);
+    const pct = clamp(Math.round(px / drag.figW * 100 / 5) * 5, drag.wrap ? 15 : 10, drag.wrap ? 70 : 100);
     drag.fig.style.setProperty('--w', pct + '%');
     badge.textContent = pct + '%';
     badge.style.display = 'block';
@@ -4252,7 +4644,8 @@ function openAlignPop(anchor) {
     v => run(v));
 }
 function openCalloutPop(anchor) {
-  Pop.open(anchor, '<div class="menu-label">Виділений блок</div>' + Object.keys(CALLOUT_TYPES).map(t => menuItem('callout:' + t, CALLOUT_TYPES[t].label, { icon: CALLOUT_TYPES[t].icon, cls: 'c-' + t })).join(''), v => run(v), { minWidth: 230 });
+  Pop.open(anchor, '<div class="menu-label">Виділений блок</div>' + Object.keys(CALLOUT_TYPES).map(t => menuItem('callout:' + t, CALLOUT_TYPES[t].label, { icon: CALLOUT_TYPES[t].icon, cls: 'c-' + t })).join('') +
+    '<div class="menu-sep"></div>' + menuItem('toggle', 'Розгортальний блок', { icon: 'toggleBlock', sub: 'Відповідь чи підказка — відкривається кліком' }), v => run(v), { minWidth: 240 });
 }
 function openFontSizePop(anchor) {
   const cur = currentFontSize();
@@ -4975,6 +5368,17 @@ function exportClone() {
     if (!img.hasAttribute('alt')) img.setAttribute('alt', '');
   });
   $$('[data-empty]', c).forEach(el => el.removeAttribute('data-empty'));
+  $$('.tc-toggle', c).forEach(b => {
+    const d = document.createElement('details');
+    d.className = 'tc-block tc-toggle';
+    const sum = document.createElement('summary');
+    const title = b.firstElementChild;
+    if (title) { while (title.firstChild) sum.appendChild(title.firstChild); title.remove(); }
+    if (!sum.textContent.trim()) sum.textContent = 'Відповідь';
+    d.appendChild(sum);
+    while (b.firstChild) d.appendChild(b.firstChild);
+    b.replaceWith(d);
+  });
   $$('figcaption', c).forEach(f => { if (isEmptyBlock(f)) f.remove(); });
   while (c.firstElementChild && isSplittable(c.firstElementChild) && isEmptyBlock(c.firstElementChild)) c.firstElementChild.remove();
   while (c.lastElementChild && isSplittable(c.lastElementChild) && isEmptyBlock(c.lastElementChild)) c.lastElementChild.remove();
@@ -5048,6 +5452,7 @@ const EXPORT_JS = `
     if(e.target.closest&&e.target.closest('#xLightbox'))document.getElementById('xLightbox').classList.remove('open');
   });
   document.addEventListener('keydown',function(e){if(e.key==='Escape')document.getElementById('xLightbox').classList.remove('open')});
+  window.addEventListener('beforeprint',function(){[].forEach.call(document.querySelectorAll('details.tc-toggle'),function(d){d.open=true})});
   var links=[].slice.call(document.querySelectorAll('.x-toc a')),heads=links.map(function(a){return document.getElementById(a.getAttribute('href').slice(1))});
   var bar=document.getElementById('xProgress'),top=document.getElementById('xTop'),sch=false;
   function upd(){sch=false;var d=document.documentElement,max=d.scrollHeight-d.clientHeight;bar.style.width=(max>0?Math.min(100,d.scrollTop/max*100):0)+'%';top.classList.toggle('show',d.scrollTop>600);
@@ -5225,10 +5630,17 @@ editor.addEventListener('mousedown', e => {
   const img = e.target.closest && e.target.closest('img');
   if (img && editor.contains(img)) {
     e.preventDefault();
-    UI.selectFigure(img.closest('figure'));
+    const fig = img.closest('figure');
+    UI.selectFigure(fig);
+    if (e.button === 0 && fig) startFigureDrag(e, fig);
     return;
   }
   if (UI.selectedFigure) UI.deselectFigure();
+  const tg = e.target.closest && e.target.closest('.tc-toggle');
+  if (tg && editor.contains(tg) && e.target === tg) {
+    const rect = tg.getBoundingClientRect();
+    if (e.clientX < rect.left + 40 && e.clientY < rect.top + 40) { e.preventDefault(); toggleCollapsed(tg); return; }
+  }
   const li = e.target.closest && e.target.closest('ul.tc-checklist > li');
   if (li && editor.contains(li) && e.target === li) {
     const rect = li.getBoundingClientRect();
@@ -5246,6 +5658,56 @@ editor.addEventListener('click', e => {
   if (a && editor.contains(a) && (e.ctrlKey || e.metaKey)) { e.preventDefault(); window.open(a.href, '_blank', 'noopener'); }
 });
 editor.addEventListener('dblclick', e => { const img = e.target.closest && e.target.closest('img'); if (img) openLightbox(img.src); });
+// Перетягування фото мишкою в інше місце документа.
+// Для фото з обтіканням ліва/права половина сторінки ще й вибирає бік.
+function startFigureDrag(e0, fig) {
+  const x0 = e0.clientX, y0 = e0.clientY;
+  const line = $('#figDrop');
+  let active = false, target = null, side = fig.dataset.wrap || '';
+  const blocks = () => Array.from(editor.children).filter(c => c !== fig);
+  const move = e => {
+    if (!active) {
+      if (Math.hypot(e.clientX - x0, e.clientY - y0) < 6) return;
+      active = true;
+      document.body.classList.add('fig-dragging');
+      $('#imgBar').classList.remove('show');
+    }
+    const ed = editor.getBoundingClientRect();
+    const cs = getComputedStyle(editor);
+    const left = ed.left + parseFloat(cs.paddingLeft), right = ed.right - parseFloat(cs.paddingRight);
+    target = null;
+    let y = null;
+    const list = blocks();
+    for (const c of list) { const r = c.getBoundingClientRect(); if (e.clientY < r.top + r.height / 2) { target = c; y = r.top - 4; break; } }
+    if (!target && list.length) y = list[list.length - 1].getBoundingClientRect().bottom + 4;
+    if (fig.dataset.wrap) side = e.clientX < (left + right) / 2 ? 'left' : 'right';
+    const w = fig.dataset.wrap ? (right - left) * 0.42 : right - left;
+    line.style.top = y + 'px';
+    line.style.width = w + 'px';
+    line.style.left = (fig.dataset.wrap && side === 'right' ? right - w : left) + 'px';
+    line.style.display = 'block';
+    // автопрокрутка біля країв
+    const area = scrollArea.getBoundingClientRect();
+    if (e.clientY < area.top + 40) scrollArea.scrollTop -= 14; else if (e.clientY > area.bottom - 40) scrollArea.scrollTop += 14;
+  };
+  const up = () => {
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    line.style.display = 'none';
+    document.body.classList.remove('fig-dragging');
+    if (!active) return;
+    const sameSpot = target === fig.nextElementSibling || (!target && !fig.nextElementSibling);
+    if (sameSpot && side === (fig.dataset.wrap || '')) { UI.positionFigure(); return; }
+    mutate(() => {
+      if (target) target.before(fig); else editor.appendChild(fig);
+      if (fig.dataset.wrap) fig.dataset.wrap = side;
+    });
+    UI.selectedFigure = null;
+    UI.selectFigure(fig);
+  };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
 let internalDrag = false;
 editor.addEventListener('dragstart', () => { internalDrag = true; });
 document.addEventListener('dragend', () => { internalDrag = false; });
