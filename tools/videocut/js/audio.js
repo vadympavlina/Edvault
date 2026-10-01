@@ -71,7 +71,9 @@ export async function renderBlock(t0, t1, { speechOnly = false } = {}) {
     const o0 = Math.round((a - t0) * SR), o1 = Math.round((b - t0) * SR);
     if (o1 <= o0) continue;
     if (s.duck && !env) env = duckEnvelope(t0, t1);
-    const gain = s.duck ? (j => s.vol * fadeAlpha(t0 + j / SR, s.start, s.end - s.start, s.fin, s.fout) * env.at(t0 + j / SR)) : (j => s.vol * fadeAlpha(t0 + j / SR, s.start, s.end - s.start, s.fin, s.fout));
+    // без плавних появ/зникнень у цьому блоці й без приглушення — сталий множник (швидше)
+    const fades = (s.fin > 0 && a < s.start + s.fin) || (s.fout > 0 && b > s.end - s.fout);
+    const gain = !fades && !s.duck ? (() => s.vol) : s.duck ? (j => s.vol * fadeAlpha(t0 + j / SR, s.start, s.end - s.start, s.fin, s.fout) * env.at(t0 + j / SR)) : (j => s.vol * fadeAlpha(t0 + j / SR, s.start, s.end - s.start, s.fin, s.fout));
     if (Math.abs(s.speed - 1) < 1e-3) {
       const from = s.srcIn + (a - s.start);
       const [L, R] = await readPCM(s.m, from, from + (o1 - o0) / SR + 1 / SR);

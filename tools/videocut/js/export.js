@@ -5,7 +5,7 @@ import {
   QUALITY_LOW, QUALITY_MEDIUM, QUALITY_HIGH, QUALITY_VERY_HIGH,
 } from '../vendor/mediabunny.min.mjs';
 import { S, media, layout, clipAt, srcTime, duration, outputSize } from './state.js';
-import { renderScene } from './render.js';
+import { renderScene, staticKey } from './render.js';
 import { renderBlock, hasAnyAudio, resetAudioSinks } from './audio.js';
 import { ensureTail } from './media.js';
 
@@ -68,7 +68,7 @@ export async function exportVideo(opts) {
   const fps = opts.fps || S.project.fps || 30;
   const [a, b] = opts.range || [0, duration()];
   const total = Math.max(0, b - a);
-  if (total <= 0) throw new Error('Немає що експортувати — таймлайн порожній.');
+  if (!(total > 0)) throw new Error('Немає що експортувати — таймлайн порожній.');
   const { v: vcodec, a: acodec } = await detectCodecs(opts.format, W, H);
   if (!vcodec) throw new Error('Браузер не вміє кодувати відео у формат ' + opts.format.toUpperCase() + '. Спробуйте інший формат або Chrome/Edge.');
 
@@ -132,10 +132,23 @@ export async function exportVideo(opts) {
   const BLOCK = 1;
   const t0 = performance.now();
   let lastClipId = null;
+  // однакові кадри поспіль (фото, заставка, стоп-кадр) кодуємо один раз з довшою тривалістю
+  let pend = null;
+  const flush = async () => { if (pend) { const p = pend; pend = null; await vsrc.add(p.ts, p.dur); } };
+  const report = i => {
+    if (i % 5 === 0 || i === frames - 1) {
+      const p = (i + 1) / frames;
+      const el = (performance.now() - t0) / 1000;
+      opts.onProgress?.(p, { eta: p > 0.02 ? el / p - el : null, speed: (i + 1) / fps / el });
+    }
+  };
   try {
     for (let i = 0; i < frames; i++) {
       if (opts.signal?.aborted) throw new DOMException('Експорт скасовано', 'AbortError');
       const t = a + i / fps;
+      const key = staticKey(t, L);
+      if (pend && key && key === pend.key && pend.dur < 2 - 1e-6) { pend.dur += 1 / fps; report(i); continue; }
+      await flush();
       // звук випереджає відео на блок — так мультиплексор не накопичує дані
       while (withAudio && audioDone < Math.min(b, t + BLOCK)) {
         const e = Math.min(b, audioDone + BLOCK);
@@ -151,13 +164,13 @@ export async function exportVideo(opts) {
       if (l) { const r = readerFor(l); frame = r ? await r.at(srcTime(l, t)) : null; }
       if (hasOv) await prepareOv(t);
       renderScene(ctx, W, H, t, () => frame, L, { tailOf, ovFrame });
-      await vsrc.add(i / fps, 1 / fps);
-      if (i % 5 === 0 || i === frames - 1) {
-        const p = (i + 1) / frames;
-        const el = (performance.now() - t0) / 1000;
-        opts.onProgress?.(p, { eta: p > 0.02 ? el / p - el : null, speed: (i + 1) / fps / el });
-      }
+      if (key) pend = { ts: i / fps, dur: 1 / fps, key };
+      else await vsrc.add(i / fps, 1 / fps);
+      report(i);
     }
+    // WebM не зберігає тривалість останнього кадру — закриваємо довгий кадр ще одним у самому кінці
+    if (pend && pend.dur > 1.5 / fps) { const p = pend; pend = null; await vsrc.add(p.ts, p.dur - 1 / fps); await vsrc.add(p.ts + p.dur - 1 / fps, 1 / fps); }
+    await flush();
     while (withAudio && audioDone < b - 1e-6) { const e = Math.min(b, audioDone + BLOCK); await asrc.add(await renderBlock(audioDone, e)); audioDone = e; }
     vsrc.close(); asrc?.close();
     await output.finalize();

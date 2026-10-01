@@ -75,7 +75,11 @@ export async function addMedia(blob, name, opts = {}) {
   }
 
   media.set(id, m);
-  if (opts.persist !== false) DB.putBlob(id, blob).catch(e => console.warn('Не вдалося зберегти файл у браузері', e));
+  if (opts.persist !== false) {
+    // просимо браузер не видаляти збережені файли при нестачі місця
+    if (navigator.storage && navigator.storage.persist && !addMedia.asked) { addMedia.asked = true; navigator.storage.persist().catch(() => {}); }
+    DB.putBlob(id, blob).catch(e => { console.warn('Не вдалося зберегти файл у браузері', e); emit('storage-error', { name, e }); });
+  }
   emit('media');
   if (m.kind !== 'image') queue(() => analyze(m));
   return m;
