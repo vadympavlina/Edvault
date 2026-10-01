@@ -4,8 +4,10 @@
 //   clips    — основна відеодоріжка, кліпи йдуть підряд без проміжків
 //              {id, mediaId, in, out, speed, volume, muted, fadeIn, fadeOut, fit, zoom, zx, zy}
 //   overlays — текст, фігури, розмиття, картинки поверх відео {id, type, start, dur, x, y, w, h, fade, …}
-//   captions — субтитри {id, start, dur, text}
+//   captions — субтитри {id, start, dur, text}; їхній вигляд — captionStyle (див. cc.js)
 //   music    — окрема аудіодоріжка {id, mediaId, start, in, out, volume, fadeIn, fadeOut}
+
+import { CC_DEFAULT } from './cc.js';
 
 export const uid = (p = 'x') => p + Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 7);
 
@@ -15,7 +17,7 @@ export function newProject() {
   return {
     v: 1, name: 'Новий проєкт', aspect: '16:9', fps: 30, bg: '#000000',
     clips: [], overlays: [], captions: [], music: [],
-    captionStyle: { size: 46, color: '#ffffff', bg: 'box', pos: 'bottom' },
+    captionStyle: { ...CC_DEFAULT },
   };
 }
 

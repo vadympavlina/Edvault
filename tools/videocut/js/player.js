@@ -1,5 +1,6 @@
 // Перегляд: відтворення через <video>/<audio> з синхронізацією за таймлайном.
 import { S, media, emit, on, layout, clipAt, srcTime, duration, musicDur, outputSize } from './state.js';
+import { capStyle, loadCcFont, onCcFont } from './cc.js';
 import { renderScene, fadeAlpha } from './render.js';
 import { duckGain } from './duck.js';
 
@@ -12,7 +13,8 @@ let seekPending = new Set();
 export function initPlayer(cv) {
   canvas = cv;
   ctx = canvas.getContext('2d');
-  on('project', () => { if (!S.playing) requestDraw(); });
+  on('project', () => { if (S.project.captions.length) loadCcFont(capStyle(S.project)); if (!S.playing) requestDraw(); });
+  onCcFont(() => { if (!S.playing) requestDraw(); });
   on('media', () => { if (!S.playing) requestDraw(); });
   on('tails', () => { if (!S.playing) requestDraw(); });
 }

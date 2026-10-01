@@ -4,8 +4,9 @@ import { MOTIONS, textBoxes, LOOKS, lookFilter, applyLookOverlay, FILTERS_OK, TR
 import { addToTimeline, addOverlay, TEXT_PRESETS, splitAt, duplicateSel, deleteSel, moveZ, addCaption, setCaptions, trimMusicToVideo, CARD_STYLES, addTitleCard, normalizeSel, transitionsAll, freezeFrame } from './ops.js';
 import { removeMedia, thumbAt } from './media.js';
 import { seek } from './player.js';
-import { parseSubtitles, toSrt } from './srt.js';
-import { $, esc, icon, fmt, fmtShort, parseTime, toast, confirmDialog, downloadBlob, safeName, fmtBytes } from './ui.js';
+import { parseSubtitles } from './srt.js';
+import { renderCapTab, markActiveCaption, capTabClick, capTabInput, capTabChange, capTabToggle, captionInspector, ccAction, speedHtml } from './cc-panel.js';
+import { $, esc, icon, fmt, fmtShort, parseTime, toast, confirmDialog, downloadBlob, safeName, fmtBytes, balanceSegs } from './ui.js';
 
 const COLORS = ['#ffffff', '#1a1d23', '#ef4444', '#f59e0b', '#ffd43b', '#10b981', '#0ea5e9', '#4F6BF4', '#8b5cf6', '#ec4899'];
 const EMOJIS = ['👍', '👏', '✅', '❌', '⭐', '🔥', '❗', '❓', '💡', '📌', '👉', '👆', '😀', '😮', '🤔', '🎉', '❤️', '⚠️', '🏆', '📝', '🎯', '🚀', '⏰', '🔍'];
@@ -24,6 +25,8 @@ export function initLibrary() {
   });
   $('libBody').addEventListener('input', onLibInput);
   $('libBody').addEventListener('change', onLibChange);
+  $('libBody').addEventListener('toggle', capTabToggle, true);
+  on('show-tab', t => { showTab(t); document.body.classList.add('show-lib'); });
   on('media', () => { if (tab === 'media' || tab === 'elements') renderLibrary(); });
   on('thumbs', () => { if (tab === 'media') renderLibrary(); });
   on('project', d => { if (tab === 'captions' && !(d && d.from === 'lib')) renderLibrary(); });
@@ -40,7 +43,6 @@ function thumbURL(m) {
 const thumbCache = new Map();
 
 function renderLibrary() {
-  lastCapKey = '';
   $('libTabs').querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const body = $('libBody');
   if (tab === 'media') {
@@ -88,43 +90,7 @@ function renderLibrary() {
     <div class="lib-sub">Зображення поверх відео</div>
     ${imgs.length ? `<div class="mgrid">${imgs.map(m => `<button class="mcard img-pick" data-img="${m.id}" title="${esc(m.name)}"><div class="mthumb">${m.thumbs[0] ? `<img src="${m.thumbs[0].c.toDataURL()}" alt="">` : icon('image')}</div><div class="mname">${esc(m.name)}</div></button>`).join('')}</div>` : ''}
     <button class="btn btn-outline btn-block" id="btnAddLogo">${icon('image')} Логотип або картинка…</button>`;
-  } else if (tab === 'captions') {
-    const cs = S.project.captionStyle;
-    const caps = S.project.captions.slice().sort((a, b) => a.start - b.start);
-    body.innerHTML = `
-      <button class="auto-cc" id="btnAutoCap" ${S.project.clips.length ? '' : 'disabled'}>${icon('wand')}<span><b>Створити субтитри автоматично</b><small>Розпізнавання мови прямо в браузері</small></span></button>
-      <div class="row2">
-        <button class="btn btn-primary btn-grow" id="btnAddCap">${icon('plus')} Субтитр тут</button>
-        <button class="btn btn-outline btn-icon" id="btnImpCap" data-tip="Імпорт .srt / .vtt">${icon('upload')}</button>
-        <button class="btn btn-outline btn-icon" id="btnExpCap" data-tip="Зберегти .srt" ${caps.length ? '' : 'disabled'}>${icon('download')}</button>
-      </div>
-      <details class="cap-style"><summary>Вигляд субтитрів</summary>
-        <div class="field"><label>Розмір <span class="aux">${cs.size}</span></label><input type="range" min="24" max="96" value="${cs.size}" data-cs="size"></div>
-        <div class="field"><label>Фон</label><div class="seg">${[['box', 'Плашка'], ['outline', 'Контур']].map(([v, n]) => `<button data-cs-bg="${v}" class="${cs.bg === v ? 'on' : ''}">${n}</button>`).join('')}</div></div>
-        <div class="field"><label>Розташування</label><div class="seg">${[['bottom', 'Знизу'], ['top', 'Вгорі']].map(([v, n]) => `<button data-cs-pos="${v}" class="${cs.pos === v ? 'on' : ''}">${n}</button>`).join('')}</div></div>
-        <div class="field"><label>Колір</label>${swatches(cs.color, 'cs-color')}</div>
-      </details>
-      ${caps.length ? `<div class="caps">${caps.map(c => `<div class="cap" data-id="${c.id}">
-        <button class="cap-t" data-seek="${c.start}">${fmt(c.start, true)}</button>
-        <textarea rows="2" data-cap="${c.id}" spellcheck="true">${esc(c.text)}</textarea>
-        <button class="btn btn-sm btn-icon" data-cap-del="${c.id}" data-tip="Видалити">${icon('x')}</button>
-      </div>`).join('')}</div>` : '<p class="lib-hint">Поставте курсор на потрібне місце, натисніть «Субтитр тут» і введіть текст. Enter у полі — наступний субтитр.<br><br>Є готовий файл субтитрів? Імпортуйте .srt або .vtt.</p>'}`;
-    markActiveCaption();
-  }
-}
-
-let lastCapKey = '';
-function markActiveCaption() {
-  const t = S.t;
-  const cur = S.project.captions.find(c => t >= c.start && t < c.start + c.dur);
-  const key = (cur ? cur.id : '') + '|' + (S.sel ? S.sel.id : '') + '|' + S.project.captions.length;
-  if (key === lastCapKey && document.querySelector('#libBody .cap')) return;
-  lastCapKey = key;
-  document.querySelectorAll('#libBody .cap').forEach(el => {
-    const c = S.project.captions.find(x => x.id === el.dataset.id);
-    el.classList.toggle('now', !!c && t >= c.start && t < c.start + c.dur);
-    el.classList.toggle('sel', !!S.sel && S.sel.id === el.dataset.id);
-  });
+  } else if (tab === 'captions') renderCapTab(body);
 }
 
 async function onLibClick(e) {
@@ -156,28 +122,7 @@ async function onLibClick(e) {
     return;
   }
   if (b.id === 'btnAddLogo') { $('fileInput').dataset.target = 'logo'; $('fileInput').click(); return; }
-  if (b.id === 'btnAddCap') {
-    const c = addCaption('');
-    renderLibrary();
-    const ta = document.querySelector(`#libBody textarea[data-cap="${c.id}"]`);
-    if (ta) { ta.focus(); ta.select(); }
-    return;
-  }
-  if (b.id === 'btnImpCap') return $('capInput').click();
-  if (b.id === 'btnAutoCap') { emit('open-asr'); return; }
-  if (b.id === 'btnExpCap') {
-    downloadBlob(new Blob([toSrt(S.project.captions)], { type: 'application/x-subrip' }), safeName(S.project.name) + '.srt');
-    return;
-  }
-  if (b.dataset.seek) { seek(+b.dataset.seek); const c = S.project.captions.find(x => Math.abs(x.start - +b.dataset.seek) < 1e-6); if (c) select('caption', c.id); return; }
-  if (b.dataset.capDel) {
-    S.project.captions = S.project.captions.filter(c => c.id !== b.dataset.capDel);
-    if (S.sel && S.sel.id === b.dataset.capDel) select(null);
-    commit(); return;
-  }
-  if (b.dataset.csBg) { S.project.captionStyle.bg = b.dataset.csBg; commit(); return; }
-  if (b.dataset.csPos) { S.project.captionStyle.pos = b.dataset.csPos; commit(); return; }
-  if (b.dataset.sw === 'cs-color') { S.project.captionStyle.color = b.dataset.c; commit(); }
+  if (tab === 'captions') await capTabClick(b);
 }
 
 let capTimer = 0;
@@ -188,11 +133,10 @@ function onLibInput(e) {
     if (c) { c.text = ta.value; emit('project', { live: true, from: 'lib' }); clearTimeout(capTimer); capTimer = setTimeout(() => { commit(); }, 600); }
     return;
   }
-  const r = e.target.closest('[data-cs]');
-  if (r) { S.project.captionStyle[r.dataset.cs] = +r.value; r.previousElementSibling.querySelector('.aux').textContent = r.value; emit('project', { live: true, from: 'lib' }); }
+  capTabInput(e);
 }
 function onLibChange(e) {
-  if (e.target.matches('[data-cs]')) commit();
+  capTabChange(e);
 }
 // Enter у полі субтитру — новий субтитр після поточного
 document.addEventListener('keydown', e => {
@@ -268,15 +212,6 @@ function renderInspector() {
   else if (s.kind === 'caption') el.innerHTML = captionPanel(o);
   else if (s.kind === 'music') el.innerHTML = musicPanel(o);
   balanceSegs(el);
-}
-// перемикач, що не вміщається в рядок, ділимо на рівні ряди замість «хвоста» з однієї кнопки
-function balanceSegs(el) {
-  el.querySelectorAll('.seg').forEach(g => {
-    const b = g.children;
-    if (b.length < 3 || b[b.length - 1].offsetTop === b[0].offsetTop) return;
-    g.classList.add('seg-rows');
-    g.style.gridTemplateColumns = `repeat(${Math.ceil(b.length / 2)}, 1fr)`;
-  });
 }
 
 function head(ic, title, sub) {
@@ -456,13 +391,7 @@ function overlayPanel(o) {
       <button class="btn btn-outline btn-sm btn-block" data-a="front">${icon('front')}Перенести наперед</button>`);
 }
 
-function captionPanel(c) {
-  return head('cc', 'Субтитр', `${fmt(c.start, true)} – ${fmt(c.start + c.dur, true)}`) +
-    `<div class="field"><textarea class="input" rows="3" data-f="text" spellcheck="true" placeholder="Що говориться в цей момент">${esc(c.text)}</textarea></div>
-    <div class="insp-row">${timeField('start', 'Початок', c.start)}${timeField('dur', 'Тривалість', c.dur)}</div>
-    <p class="hint">Час можна змінити й перетягуванням країв на таймлайні. Вигляд усіх субтитрів — у вкладці «Субтитри».</p>
-    ${actions(act('dup', 'copy', 'Дублювати'), act('del', 'trash', 'Видалити'))}`;
-}
+function captionPanel(c) { return captionInspector(c, head, timeField, actions, act); }
 
 function musicPanel(x) {
   const m = media.get(x.mediaId);
@@ -493,6 +422,7 @@ function onInput(e) {
     else o[f] = v;
     const show = box().querySelector(`[data-show="${f}"]`);
     if (show) show.textContent = t.dataset.pct ? Math.round(v * 100) + '%' : t.dataset.unit === '%' ? Math.round(v * 100) + '%' : t.dataset.unit === '×' ? v.toFixed(2).replace('.', ',') + '×' : String(v).replace('.', ',') + (t.dataset.unit || '');
+    if (S.sel.kind === 'caption') { const sp = box().querySelector('[data-cc-speed]'); if (sp) sp.innerHTML = speedHtml(o); }
     emit('project', { live: true, from: 'insp' });
     softCommit();
     return;
@@ -518,7 +448,6 @@ function onChange(e) {
 }
 function setColor(o, key, val) {
   if (key.startsWith('p:')) S.project[key.slice(2)] = val;
-  else if (key === 'cs-color') S.project.captionStyle.color = val;
   else o[key] = val;
   emit('project', { live: true, from: 'insp' });
   softCommit();
@@ -566,6 +495,7 @@ function onClick(e) {
     if (o.type === 'video' && f === 'shape') { const { W, H } = outputSize(); const m = media.get(o.mediaId); const bottom = o.y + o.h > 0.75; o.h = v === 'circle' ? o.w * W / H : o.w * W / H * (m && m.width ? m.height / m.width : 9 / 16); if (bottom) o.y = Math.min(o.y, 0.95 - o.h); }
     commit(); return;
   }
+  if (b.dataset.a && ccAction(b.dataset.a, o)) return;
   switch (b.dataset.a) {
     case 'deselect': select(null); break;
     case 'split': splitAt(); break;

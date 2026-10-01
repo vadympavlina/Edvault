@@ -1,5 +1,6 @@
 // Автоматичні субтитри: збираємо голос із таймлайну (16 кГц моно), ділимо на шматки по тиші й віддаємо Whisper у Worker.
-import { S, emit, mainEnd, duration } from './state.js';
+import { S, emit, mainEnd, duration, outputSize } from './state.js';
+import { capStyle, capMaxChars, splitCaption, tidyCaptions } from './cc.js';
 import { renderBlock, resetAudioSinks } from './audio.js';
 import { setCaptions } from './ops.js';
 import { $, fmt, toast, openModal, closeModal } from './ui.js';
@@ -48,8 +49,8 @@ export function splitParts(a, maxLen = 28) {
   return parts;
 }
 
-// фрази Whisper → субтитри по 1–2 короткі рядки
-export function toCaptions(chunks, offset, partLen) {
+// фрази Whisper → субтитри, що вміщаються в задану кількість символів
+export function toCaptions(chunks, offset, partLen, max = 74) {
   const out = [];
   for (const c of chunks) {
     const text = (c.text || '').replace(/\s+/g, ' ').trim();
@@ -57,15 +58,7 @@ export function toCaptions(chunks, offset, partLen) {
     let [a, b] = c.timestamp || [0, null];
     a = (a ?? 0); b = b == null ? partLen : b;
     if (b <= a) b = a + Math.max(1, text.length * 0.06);
-    const words = text.split(' ');
-    const n = Math.max(1, Math.ceil(text.length / 74));
-    const per = Math.ceil(words.length / n);
-    for (let i = 0; i < n; i++) {
-      const w = words.slice(i * per, (i + 1) * per);
-      if (!w.length) continue;
-      const s0 = a + (b - a) * (i * per) / words.length, s1 = a + (b - a) * Math.min(words.length, (i + 1) * per) / words.length;
-      out.push({ start: offset + s0, dur: Math.max(0.6, s1 - s0), text: w.join(' ') });
-    }
+    for (const x of splitCaption({ start: offset + a, dur: b - a, text }, max)) out.push({ ...x, dur: Math.max(0.6, x.dur) });
   }
   return out;
 }
@@ -113,6 +106,8 @@ async function start() {
     setProg(0.1, `Завантажуємо модель розпізнавання (${model.size}, лише перший раз)…`);
     if (!worker) worker = new Worker(new URL('./asr-worker.js', import.meta.url), { type: 'module' });
     const caps = [];
+    const { W, H } = outputSize();
+    const maxChars = capMaxChars(capStyle(S.project), W, H);
     let doneLen = 0;
     const files = new Map();
     await new Promise((resolve, reject) => {
@@ -127,7 +122,7 @@ async function start() {
         } else if (d.type === 'ready') {
           setProg(0.3, d.device === 'webgpu' ? 'Розпізнаємо мову (з відеокартою)…' : 'Розпізнаємо мову…');
         } else if (d.type === 'part') {
-          caps.push(...toCaptions(d.chunks.length ? d.chunks : [{ text: d.text, timestamp: [0, d.len] }], d.offset, d.len));
+          caps.push(...toCaptions(d.chunks.length ? d.chunks : [{ text: d.text, timestamp: [0, d.len] }], d.offset, d.len, maxChars));
           doneLen += parts[d.i].audio.length;
           setProg(0.3 + 0.7 * doneLen / total, `Розпізнано ${fmt(d.offset + d.len)} з ${fmt(mainEnd())}…`);
         } else if (d.type === 'done') resolve();
@@ -138,8 +133,7 @@ async function start() {
     });
     if (run.cancelled) return;
     // не даємо субтитрам перекриватися
-    caps.sort((a, b) => a.start - b.start);
-    for (let i = 0; i < caps.length - 1; i++) if (caps[i].start + caps[i].dur > caps[i + 1].start) caps[i].dur = Math.max(0.3, caps[i + 1].start - caps[i].start);
+    tidyCaptions(caps);
     setCaptions(caps, true);
     closeModal('asrModal');
     toast(caps.length ? `Готово: ${caps.length} субтитрів. Перевірте текст — його можна виправити у вкладці «Субтитри»` : 'Мовлення не розпізнано', caps.length ? 'ok' : 'err', 6000);
