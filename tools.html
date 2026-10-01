@@ -310,6 +310,8 @@ function cardVars(t) {
   return `--a:${a};--al:${safeColor(t.accentLight) || 'rgba(79,107,244,.1)'};--ab:${safeColor(t.accentBorder) || '#d6dcfd'}`;
 }
 const hrefOf = t => 'tools/' + t.file;
+// інструменти, які прибрано з сайту (запис у базі міг лишитися)
+const REMOVED_FILES = ['mailcraft.html'];
 const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
 
 function cardHtml(t, i) {
@@ -336,7 +338,7 @@ function setTools(data) {
   state.tools = Object.entries(data || {})
     .map(([id, v]) => ({ id, ...v }))
     // зовнішні посилання більше не підтримуються — показуємо лише інструменти з папки tools/
-    .filter(t => t && t.name && t.file && t.type !== 'external' && t.category !== 'external' && t.hidden !== true)
+    .filter(t => t && t.name && t.file && t.type !== 'external' && t.category !== 'external' && t.hidden !== true && !REMOVED_FILES.includes(t.file))
     .sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || String(a.name).localeCompare(String(b.name), 'uk'));
   const cats = new Set(state.tools.map(t => t.category));
   if (state.filter !== 'all' && !cats.has(state.filter)) state.filter = 'all';
