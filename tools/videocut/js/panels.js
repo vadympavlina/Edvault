@@ -236,8 +236,6 @@ export function initInspector() {
   box().addEventListener('change', onChange);
   box().addEventListener('click', onClick);
   box().addEventListener('toggle', e => { const d = e.target.closest && e.target.closest('details[data-more]'); if (d) { if (d.open) openMore.add(d.dataset.more); else openMore.delete(d.dataset.more); if (d.open && d.classList.contains('fold') && !d.querySelector('.fold-body')) renderInspector(); } }, true);
-  on('exported', () => markProgress('exported'));
-  on('did-cut', () => markProgress('cut'));
   renderInspector();
 }
 
@@ -264,11 +262,21 @@ const more = (key, html) => `<details class="more" data-more="${key}" ${openMore
 function renderInspector() {
   const el = box();
   const o = findSel(), s = S.sel;
-  if (!o) { el.innerHTML = projectPanel(); return; }
+  if (!o) { el.innerHTML = projectPanel(); balanceSegs(el); return; }
   if (s.kind === 'clip') el.innerHTML = clipPanel(o);
   else if (s.kind === 'overlay') el.innerHTML = overlayPanel(o);
   else if (s.kind === 'caption') el.innerHTML = captionPanel(o);
   else if (s.kind === 'music') el.innerHTML = musicPanel(o);
+  balanceSegs(el);
+}
+// перемикач, що не вміщається в рядок, ділимо на рівні ряди замість «хвоста» з однієї кнопки
+function balanceSegs(el) {
+  el.querySelectorAll('.seg').forEach(g => {
+    const b = g.children;
+    if (b.length < 3 || b[b.length - 1].offsetTop === b[0].offsetTop) return;
+    g.classList.add('seg-rows');
+    g.style.gridTemplateColumns = `repeat(${Math.ceil(b.length / 2)}, 1fr)`;
+  });
 }
 
 function head(ic, title, sub) {
@@ -276,33 +284,14 @@ function head(ic, title, sub) {
     <button class="btn btn-icon btn-sm" data-a="deselect" data-tip="Готово (Esc)">${icon('x')}</button></div>`;
 }
 
-// ── Проєкт: покрокова підказка + формат ──
-// прогрес покрокової підказки (зберігається в браузері)
-export const progress = (() => { try { return JSON.parse(localStorage.getItem('ev_vc_guide')) || {}; } catch (e) { return {}; } })();
-function markProgress(k) {
-  if (progress[k]) return;
-  progress[k] = true;
-  try { localStorage.setItem('ev_vc_guide', JSON.stringify(progress)); } catch (e) { /* ignore */ }
-  if (!S.sel) renderInspector();
-}
+// ── Проєкт: швидкі дії + формат ──
 function projectPanel() {
   const p = S.project;
   const hasClips = p.clips.length > 0;
-  const steps = [
-    { done: hasClips, title: 'Додайте відео', text: 'Перетягніть файл у вікно або виберіть на комп’ютері.', btns: `<button class="btn btn-sm btn-primary" data-a="import">${icon('upload')}Вибрати файли</button>` },
-    { done: !!progress.cut, title: 'Приберіть зайве', text: 'Поставте червону лінію на таймлайні туди, де починається зайве, і натисніть «Розрізати». Потім клацніть непотрібний шматок і «Видалити».', btns: hasClips ? `<button class="btn btn-sm btn-outline" data-a="split">${icon('split')}Розрізати тут</button>` : '' },
-    { done: p.overlays.length > 0 || p.captions.length > 0, title: 'Додайте підписи', text: 'Заголовок, стрілка на важливе, розмиття пароля чи субтитри.', btns: `<button class="btn btn-sm btn-outline" data-a="tab" data-v="text">${icon('text')}Текст</button><button class="btn btn-sm btn-outline" data-a="tab" data-v="elements">${icon('shapes')}Стрілка, розмиття</button>` },
-    { done: !!progress.exported, title: 'Збережіть відео', text: 'Готовий файл MP4 завантажиться на комп’ютер.', btns: hasClips ? `<button class="btn btn-sm btn-outline" data-a="export">${icon('download')}Експорт</button>` : '' },
-  ];
-  const cur = steps.findIndex(x => !x.done);
   const FORMATS = [['16:9', 'YouTube, урок', 'r169'], ['9:16', 'Reels, Shorts', 'r916'], ['1:1', 'Квадрат', 'r11'], ['4:3', 'Класичний', 'r43']];
-  return `<div class="insp-head"><span class="insp-ico">${icon('film')}</span><div><b>Як змонтувати відео</b><small>${cur < 0 ? 'Усе готово!' : `Крок ${cur + 1} з ${steps.length}`}</small></div></div>
-    <ol class="guide">${steps.map((x, i) => `<li class="${x.done ? 'done' : ''}${i === cur ? ' now' : ''}">
-      <span class="g-num">${x.done ? icon('check') : i + 1}</span>
-      <div><b>${x.title}</b>${i === cur || (!x.done && i < cur + 2) ? `<p>${x.text}</p>${x.btns ? `<div class="g-btns">${x.btns}</div>` : ''}` : ''}</div>
-    </li>`).join('')}</ol>
-    ${hasClips ? `<div class="sep"></div>
-    <div class="quick-title">Швидкі дії</div>
+  return `<div class="insp-head"><span class="insp-ico">${icon('film')}</span><div><b>Проєкт</b><small>${hasClips ? fmtShort(duration()) : 'Додайте відео, фото чи аудіо'}</small></div></div>
+    ${hasClips ? '' : `<button class="btn btn-primary btn-block" data-a="import">${icon('upload')}Вибрати файли</button><div class="sep"></div>`}
+    ${hasClips ? `<div class="quick-title">Швидкі дії</div>
     <div class="quick">
       <button class="quick-card" data-a="silences">${icon('wand')}<b>Прибрати паузи</b><small>Автоматично вирізати тишу</small></button>
       <button class="quick-card" data-a="voice">${icon('mic')}<b>Озвучити</b><small>Записати голос під відео</small></button>

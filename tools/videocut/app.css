@@ -203,8 +203,10 @@ textarea.input{height:auto;padding:8px 10px;resize:vertical;line-height:1.45}
 .half{flex:1}
 .inline{display:flex;align-items:center;gap:8px}
 .seg{display:flex;gap:2px;padding:2px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;flex-wrap:wrap}
-.seg button{flex:1;min-width:0;height:28px;padding:0 6px;border-radius:7px;font-size:12px;font-weight:500;color:var(--text2);display:flex;align-items:center;justify-content:center;white-space:nowrap}
+.seg button{flex:1 0 auto;min-width:0;height:28px;padding:0 8px;border-radius:7px;font-size:12px;font-weight:500;color:var(--text2);display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
 .seg button:hover:not(:disabled){color:var(--text)}
+.seg-rows{display:grid}
+.seg-rows button{white-space:normal;line-height:1.2;text-align:center}
 .seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm)}
 .seg .ico{width:15px;height:15px}
 .seg-wide button{height:auto;min-height:40px;flex-direction:column;gap:1px;padding:6px 4px;font-size:13px;font-weight:600}
@@ -234,18 +236,6 @@ details.more summary::before{content:'';width:6px;height:6px;border-right:1.5px 
 details.more[open] summary::before{transform:rotate(45deg)}
 details.more summary:hover{color:var(--text)}
 .more-body{padding-top:12px}
-.guide{list-style:none;margin:0 0 4px;padding:0;display:flex;flex-direction:column;gap:4px}
-.guide li{display:flex;gap:10px;padding:10px;border-radius:12px;border:1px solid transparent}
-.guide li.now{background:var(--accent-light);border-color:var(--accent-border)}
-.guide li > div{flex:1;min-width:0}
-.guide b{display:block;font-size:13.5px;font-weight:600;margin-top:2px}
-.guide li.done b{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--border2)}
-.guide p{margin:4px 0 0;font-size:12.5px;line-height:1.5;color:var(--text2)}
-.g-num{width:24px;height:24px;border-radius:50%;background:var(--surface3);color:var(--text2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.guide li.now .g-num{background:var(--accent);color:var(--on-accent)}
-.guide li.done .g-num{background:color-mix(in srgb,var(--success) 18%,transparent);color:var(--success)}
-.g-num .ico{width:13px;height:13px}
-.g-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .fmt-cards{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .fmt-card{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--surface2)}
 .fmt-card:hover{border-color:var(--border2)}
