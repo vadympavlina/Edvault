@@ -1,5 +1,6 @@
 // Операції редагування — кожна змінює проєкт і записує крок в історію.
 import { S, media, uid, emit, layout, clipAt, srcTime, clipDur, musicDur, mainEnd, duration, commit, select, findSel, rippleShift, outputSize, ASPECTS } from './state.js';
+import { applyLayout } from './layer.js';
 import { seek } from './player.js';
 import { toast } from './ui.js';
 import { addMedia, peakIn, PEAKS_RATE, grabFrame } from './media.js';
@@ -29,9 +30,9 @@ export function addToTimeline(m, { silent = false, at = null } = {}) {
   return c;
 }
 
-export function addMusic(m, silent) {
+export function addMusic(m, silent, at = null) {
   const p = S.project;
-  const start = p.music.length ? Math.min(S.t, duration()) : 0;
+  const start = at != null ? Math.max(0, at) : p.music.length ? Math.min(S.t, duration()) : 0;
   const len = mainEnd() > 0 ? Math.min(m.duration, Math.max(1, mainEnd() - start)) : m.duration;
   const x = { id: uid('a'), mediaId: m.id, start, in: 0, out: len, volume: mainEnd() > 0 ? 0.5 : 1, fadeIn: 0.5, fadeOut: 1.5, duck: mainEnd() > 0 };
   p.music.push(x);
@@ -46,6 +47,7 @@ function splitList(list, id, t) {
   const o = list[i];
   if (!o || t <= o.start + 0.1 || t >= o.start + o.dur - 0.1) return false;
   const b = { ...structuredClone(o), id: uid(o.id[0]), start: t, dur: o.start + o.dur - t };
+  if (o.type === 'video') b.in = (o.in || 0) + (t - o.start); // друга половина відео продовжується з того ж місця
   o.dur = t - o.start;
   list.splice(i + 1, 0, b);
   return b;
@@ -183,7 +185,9 @@ export function addOverlay(type, extra = {}) {
     const m = media.get(extra.mediaId);
     const w = 0.24, h = w * W / H; // коло
     const start = extra.start ?? S.t;
-    o = { ...base, mediaId: extra.mediaId, in: 0, start, dur: m ? m.duration : 5, x: 0.97 - w, y: 0.95 - h, w, h, shape: 'circle', border: '#ffffff', volume: 1, muted: false, fade: true, anim: 'pop', flip: false };
+    base.start = start;
+    o = { ...base, mediaId: extra.mediaId, in: 0, start, dur: m ? m.duration : 5, x: 0.97 - w, y: 0.95 - h, w, h, shape: 'circle', border: '#ffffff', volume: 1, muted: false, fade: true, anim: 'pop', flip: false, shadow: true, opacity: 1 };
+    if (extra.shape && extra.shape !== 'circle') { o.shape = extra.shape; o.border = 'none'; o.anim = 'fade'; }
   }
   else if (type === 'progress') o = { ...base, start: 0, dur: Math.max(1, mainEnd() || duration() || 10), x: 0, y: 0.985, w: 1, h: 0.015, color: '#4F6BF4', fade: false };
   else if (type === 'rect') o = { ...base, x: 0.3, y: 0.3, w: 0.4, h: 0.3, color: '#ef4444', stroke: 8, radius: 16, fill: false };
@@ -192,14 +196,29 @@ export function addOverlay(type, extra = {}) {
   else if (type === 'spot') o = { ...base, x: 0.3, y: 0.25, w: 0.4, h: 0.45, dim: 0.62, shape: 'rect', dur: 5, fade: true };
   else if (type === 'image') {
     const m = media.get(extra.mediaId);
+    if (extra.start != null) base.start = extra.start;
     const w = 0.22, h = m ? w * (W / H) * (m.height / m.width) : 0.2;
-    o = { ...base, mediaId: extra.mediaId, x: 0.74, y: 0.05, w, h, radius: 0, dur: Math.max(4, duration() - base.start) };
+    o = { ...base, mediaId: extra.mediaId, x: 0.74, y: 0.05, w, h, radius: 0, dur: extra.dur || Math.max(4, duration() - base.start) };
   }
   if (!o) return null;
   if (S.t >= duration() && duration() === 0) o.start = 0;
+  if (o.type === 'video' || o.type === 'image') {
+    if (extra.shape) o.shape = extra.shape;
+    if (o.type === 'image' && !o.shape) o.shape = 'rect';
+    applyLayout(o, extra.layout || 'corner');
+    if (extra.cx != null) { o.x = Math.min(1 - o.w, Math.max(0, extra.cx - o.w / 2)); o.y = Math.min(1 - o.h, Math.max(0, extra.cy - o.h / 2)); }
+  }
   p.overlays.push(o);
   commit();
   select('overlay', o.id);
+  return o;
+}
+
+// відео чи фото поверх основного (доріжка «Відео 2»); аудіо — на музичну доріжку
+export function addLayerAt(m, { start = S.t, cx = null, cy = null, layout = 'corner' } = {}) {
+  if (m.kind === 'audio') return addMusic(m, false, start);
+  const o = addOverlay(m.kind === 'video' ? 'video' : 'image', { mediaId: m.id, start, shape: 'rect', layout, cx, cy, dur: m.kind === 'image' ? 5 : undefined });
+  if (o) toast('Додано поверх відео — тягніть кути, щоб змінити розмір, а бокові маркери — щоб обрізати', 'ok', 4500);
   return o;
 }
 
