@@ -2063,7 +2063,15 @@
   function bindPageEvents(page) {
     const el = page.interactCanvas;
     el.addEventListener('pointerdown', (e) => onPointerDown(page, e));
-    el.addEventListener('pointermove', (e) => { if (state.tool === 'laser' && page.id === state.activePageId) { laserAdd(page, getPos(e, el)); return; } onPointerMove(page, e); });
+    el.addEventListener('pointermove', (e) => {
+      if (state.tool === 'laser' && page.id === state.activePageId) {
+        // усі проміжні точки за кадр — слід плавний навіть при швидкому русі
+        const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+        for (const ce of (evs.length ? evs : [e])) laserAdd(page, getPos(ce, el));
+        return;
+      }
+      onPointerMove(page, e);
+    });
     el.addEventListener('pointerleave', () => { if (state.tool === 'laser') laser.pts.push(null); });
     el.addEventListener('dblclick', (e) => onDoubleClick(page, e));
     el.addEventListener('contextmenu', (e) => onContextMenu(page, e)); // ПКМ по об'єкту (додано)
@@ -3502,39 +3510,95 @@
 
   // ═══════════════════════ ЛАЗЕРНА УКАЗКА ═══════════════════════
   const laser = { pts: [], page: null, raf: null };
+  const LASER_LIFE = 700;   // скільки живе слід, мс
   function laserAdd(page, pos) {
+    if (laser.page && laser.page !== page) laserClear();
     laser.page = page;
-    laser.pts.push({ x: pos.x, y: pos.y, t: performance.now() });
+    const now = performance.now();
+    const last = laser.pts[laser.pts.length - 1];
+    // відкидаємо майже однакові точки — інакше слід «тремтить»
+    if (last && Math.hypot(last.x - pos.x, last.y - pos.y) < 0.6 / state.zoom) { last.t = now; }
+    else laser.pts.push({ x: pos.x, y: pos.y, t: now });
     if (!laser.raf) laser.raf = requestAnimationFrame(laserTick);
   }
   function laserClear() {
     if (laser.page) laser.page.previewCtx.clearRect(0, 0, laser.page.w, laser.page.h);
     laser.pts = [];
   }
+  // згладжування Чайкіна: прибирає «злами» між рідкими точками миші
+  function laserSmooth(run) {
+    if (run.length < 3) return run;
+    const out = [run[0]];
+    for (let i = 0; i < run.length - 1; i++) {
+      const a = run[i], b = run[i + 1];
+      out.push({ x: a.x * .75 + b.x * .25, y: a.y * .75 + b.y * .25, t: a.t * .75 + b.t * .25 });
+      out.push({ x: a.x * .25 + b.x * .75, y: a.y * .25 + b.y * .75, t: a.t * .25 + b.t * .75 });
+    }
+    out.push(run[run.length - 1]);
+    return out;
+  }
+  // суцільна «стрічка», що звужується до хвоста (без швів між сегментами)
+  function laserRibbon(c, pts, widthAt) {
+    const n = pts.length;
+    const L = [], R = [];
+    for (let i = 0; i < n; i++) {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+      let dx = b.x - a.x, dy = b.y - a.y; const len = Math.hypot(dx, dy) || 1;
+      dx /= len; dy /= len;
+      const w = widthAt(pts[i]) / 2;
+      L.push([pts[i].x - dy * w, pts[i].y + dx * w]);
+      R.push([pts[i].x + dy * w, pts[i].y - dx * w]);
+    }
+    c.beginPath();
+    c.moveTo(L[0][0], L[0][1]);
+    for (let i = 1; i < n; i++) c.lineTo(L[i][0], L[i][1]);
+    const head = pts[n - 1], hw = widthAt(head) / 2;
+    const ang = Math.atan2(L[n - 1][1] - head.y, L[n - 1][0] - head.x);
+    c.arc(head.x, head.y, hw, ang, ang + Math.PI, true);
+    for (let i = n - 1; i >= 0; i--) c.lineTo(R[i][0], R[i][1]);
+    c.closePath();
+    c.fill();
+  }
   function laserTick() {
     const page = laser.page;
     const now = performance.now();
-    laser.pts = laser.pts.filter(p => p === null || now - p.t < 650);
+    laser.pts = laser.pts.filter(p => p === null || now - p.t < LASER_LIFE);
     while (laser.pts.length && laser.pts[0] === null) laser.pts.shift();
     if (!page || state.tool !== 'laser') { laser.raf = null; return; }
     const c = page.previewCtx;
     c.clearRect(0, 0, page.w, page.h);
     const pts = laser.pts;
     if (!pts.length) { laser.raf = null; return; }
-    const r = Math.max(5, 7 / state.zoom);
+    const r = 4.5 / state.zoom;               // однакова товщина на екрані за будь-якого масштабу
+    const life = p => Math.max(0, 1 - (now - p.t) / LASER_LIFE);
+    const ease = k => k * k * (3 - 2 * k);
+    // розбиваємо на неперервні відрізки (null = курсор виходив за полотно)
+    const runs = []; let cur = [];
+    for (const p of pts) { if (p) cur.push(p); else { if (cur.length) runs.push(cur); cur = []; } }
+    if (cur.length) runs.push(cur);
     c.save();
-    c.lineCap = 'round'; c.lineJoin = 'round';
-    c.shadowColor = 'rgba(239,68,68,.75)'; c.shadowBlur = r * 2;
-    for (let i = 1; i < pts.length; i++) {
-      const p0 = pts[i - 1], p1 = pts[i];
-      if (!p0 || !p1) continue;
-      const age = (now - p1.t) / 650;
-      c.strokeStyle = 'rgba(239,68,68,' + (0.85 * (1 - age)).toFixed(3) + ')';
-      c.lineWidth = r * (1.2 - age * 0.8);
-      c.beginPath(); c.moveTo(p0.x, p0.y); c.lineTo(p1.x, p1.y); c.stroke();
+    for (const raw of runs) {
+      if (raw.length < 2) continue;
+      const run = laserSmooth(laserSmooth(raw));
+      c.fillStyle = 'rgba(255,40,40,.10)'; laserRibbon(c, run, p => r * 5.5 * ease(life(p)));
+      c.fillStyle = 'rgba(255,45,45,.22)'; laserRibbon(c, run, p => r * 3.2 * ease(life(p)));
+      c.fillStyle = 'rgba(255,50,50,.95)'; laserRibbon(c, run, p => r * 1.7 * ease(life(p)));
+      c.fillStyle = 'rgba(255,225,225,.95)'; laserRibbon(c, run, p => r * 0.6 * ease(life(p)));
     }
+    // «точка» лазера — м'яке світіння + яскраве ядро; щойно рух зупинився, вона лишається
     const last = pts[pts.length - 1];
-    if (last) { c.fillStyle = '#ff3b3b'; c.beginPath(); c.arc(last.x, last.y, r, 0, Math.PI * 2); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(last.x, last.y, r * 0.35, 0, Math.PI * 2); c.fill(); }
+    if (last) {
+      const R = r * 4.5;
+      const g = c.createRadialGradient(last.x, last.y, 0, last.x, last.y, R);
+      g.addColorStop(0, 'rgba(255,60,60,.55)');
+      g.addColorStop(0.35, 'rgba(255,40,40,.22)');
+      g.addColorStop(1, 'rgba(255,40,40,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(last.x, last.y, R, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ff2e2e'; c.beginPath(); c.arc(last.x, last.y, r * 1.25, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#fff4f4'; c.beginPath(); c.arc(last.x, last.y, r * 0.55, 0, Math.PI * 2); c.fill();
+      // не даємо точці зникнути, поки курсор нерухомий
+      last.t = Math.max(last.t, now - LASER_LIFE * 0.5);
+    }
     c.restore();
     laser.raf = requestAnimationFrame(laserTick);
   }
