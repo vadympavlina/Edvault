@@ -7,6 +7,7 @@ import {
 import { S, media, layout, clipAt, srcTime, duration, outputSize } from './state.js';
 import { renderScene } from './render.js';
 import { renderBlock, hasAnyAudio, resetAudioSinks } from './audio.js';
+import { ensureTail } from './media.js';
 
 const QUALITY = { low: QUALITY_LOW, medium: QUALITY_MEDIUM, high: QUALITY_HIGH, max: QUALITY_VERY_HIGH };
 
@@ -86,6 +87,13 @@ export async function exportVideo(opts) {
   await output.start();
 
   const L = layout();
+  // останні кадри кліпів, після яких іде перехід
+  const tails = new Map();
+  for (let i = 1; i < L.length; i++) {
+    if (!L[i].clip.tr || L[i].end <= a || L[i].start >= b) continue;
+    tails.set(L[i - 1].clip.id, await ensureTail(L[i - 1].clip));
+  }
+  const tailOf = c => tails.get(c.id) || null;
   const readers = new Map(); // clip.id → ClipFrames|ElementFrames
   const readerFor = l => {
     let r = readers.get(l.clip.id);
@@ -123,7 +131,7 @@ export async function exportVideo(opts) {
       lastClipId = l ? l.clip.id : null;
       let frame = null;
       if (l) { const r = readerFor(l); frame = r ? await r.at(srcTime(l, t)) : null; }
-      renderScene(ctx, W, H, t - 0, () => frame, L);
+      renderScene(ctx, W, H, t, () => frame, L, { tailOf });
       await vsrc.add(i / fps, 1 / fps);
       if (i % 5 === 0 || i === frames - 1) {
         const p = (i + 1) / frames;

@@ -61,6 +61,8 @@
   <main class="center">
     <div class="stage" id="stage">
       <canvas id="pv"></canvas>
+      <div class="rec-count" id="recCount" hidden></div>
+      <div class="rec-badge" id="recBadge" hidden><i></i><b id="recTime">00:00</b><span>Іде запис</span><button class="btn btn-sm" id="btnRecStop"><span data-icon="stop"></span>Стоп</button></div>
       <div class="pv-layer" id="pvLayer"></div>
       <div class="stage-empty" id="stageEmpty">
         <div class="se-ico"><span data-icon="film"></span></div>
@@ -80,6 +82,7 @@
         <button class="btn btn-icon" id="btnEnd" data-tip="У кінець" data-key="End"><span data-icon="next"></span></button>
       </div>
       <div class="tr-right">
+        <button class="btn btn-sm btn-rec" id="btnVoice" data-tip="Записати голос під відео"><span data-icon="mic"></span><span class="hide-md">Озвучити</span></button>
         <button class="btn btn-icon" id="btnSnap" data-tip="Зберегти кадр як PNG"><span data-icon="camera"></span></button>
         <button class="btn btn-icon" id="btnFull" data-tip="На весь екран" data-key="F"><span data-icon="full"></span></button>
       </div>
@@ -99,6 +102,8 @@
     <button class="btn btn-sm btn-icon" id="btnMarkIn" data-tip="Початок шматка" data-key="I"><span data-icon="bracketL"></span></button>
     <button class="btn btn-sm btn-icon" id="btnMarkOut" data-tip="Кінець шматка" data-key="O"><span data-icon="bracketR"></span></button>
     <button class="btn btn-sm" id="btnCutRange" data-tip="Вирізати позначений шматок з відео" data-key="X" disabled><span data-icon="scissors"></span><span class="hide-md">Вирізати шматок</span></button>
+    <div class="sep"></div>
+    <button class="btn btn-sm" id="btnSilences" data-tip="Автоматично вирізати тишу й паузи"><span data-icon="wand"></span><span class="hide-md">Прибрати паузи</span></button>
     <div class="sep"></div>
     <button class="btn btn-sm btn-icon on" id="btnSnapToggle" data-tip="Прилипання до країв і курсора"><span data-icon="magnet"></span></button>
     <div class="grow"></div>
@@ -164,6 +169,35 @@
   </div>
 </div>
 
+<!-- Прибрати паузи -->
+<div class="overlay" id="silModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="silTitle">
+    <div class="modal-head"><h3 id="silTitle">Прибрати паузи</h3><button class="btn btn-icon" data-close><span data-icon="x"></span></button></div>
+    <p class="msg">Редактор знайде місця, де ніхто не говорить, і виріже їх. Знайдені паузи підсвічено червоним на таймлайні — перевірте перед тим, як прибирати. Скасувати можна через <kbd>Ctrl</kbd>+<kbd>Z</kbd>.</p>
+    <div class="field"><label>Що вважати тишею</label><div class="seg seg-wide" id="silLevel">
+      <button data-v="soft">Лише повна тиша<small>обережно</small></button>
+      <button data-v="mid" class="on">Тиша й шум<small>рекомендовано</small></button>
+      <button data-v="hard">І тихі звуки<small>агресивно</small></button>
+    </div></div>
+    <div class="field"><label>Найкоротша пауза</label><div class="seg" id="silMin">
+      <button data-v="0.5">0,5 с</button><button data-v="0.8" class="on">0,8 с</button><button data-v="1.5">1,5 с</button><button data-v="3">3 с</button>
+    </div></div>
+    <div class="ex-info" id="silInfo"></div>
+    <div class="modal-actions"><button class="btn btn-outline" data-close>Скасувати</button><button class="btn btn-primary" id="silApply" disabled><span data-icon="scissors"></span>Прибрати</button></div>
+  </div>
+</div>
+
+<!-- Озвучення -->
+<div class="overlay" id="voModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="voTitle">
+    <div class="modal-head"><h3 id="voTitle">Озвучити відео</h3><button class="btn btn-icon" data-close><span data-icon="x"></span></button></div>
+    <p class="msg">Запис почнеться з позиції курсора <b id="voFrom">00:00</b>. Після відліку 3-2-1 відео гратиме, а ви коментуєте. Натисніть «Стоп» або пробіл, щоб завершити — голос з’явиться на звуковій доріжці.</p>
+    <label class="check"><input type="checkbox" id="voMute" checked> Вимкнути звук відео під час запису <small>— щоб він не потрапив у мікрофон, якщо ви без навушників</small></label>
+    <div class="ex-info" id="voInfo">Браузер попросить дозвіл на мікрофон.</div>
+    <div class="modal-actions"><button class="btn btn-outline" data-close>Скасувати</button><button class="btn btn-primary btn-rec-solid" id="voStart"><span data-icon="mic"></span>Почати запис</button></div>
+  </div>
+</div>
+
 <!-- Довідка -->
 <div class="overlay" id="helpModal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -183,6 +217,7 @@
       <span>Дублювати</span><span><kbd>Ctrl</kbd> <kbd>D</kbd></span>
       <span>Скасувати / повторити</span><span><kbd>Ctrl</kbd> <kbd>Z</kbd> · <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd></span>
       <span>Додати текст / субтитр</span><span><kbd>T</kbd> <kbd>C</kbd></span>
+      <span>Записати голос / зупинити запис</span><span><kbd>R</kbd> · <kbd>Пробіл</kbd></span>
       <span>Зняти виділення</span><span><kbd>Esc</kbd></span>
       <span class="grp">Таймлайн</span>
       <span>Наблизити / віддалити</span><span><kbd>+</kbd> <kbd>−</kbd> або <kbd>Ctrl</kbd> + коліщатко</span>

@@ -169,3 +169,61 @@ export function thumbAt(m, t) {
   for (const th of a) { const d = Math.abs(th.t - t); if (d < bd) { bd = d; best = th; } }
   return best.c;
 }
+
+// ── останній кадр кліпу (для переходу до наступного) ──
+// Кешується за файлом і точкою виходу; рахується у фоні й повідомляє подією 'tails'.
+const tails = new Map(); // key → HTMLCanvasElement | null | 'pending'
+const tailKey = c => c.mediaId + '@' + (+c.out).toFixed(3);
+
+async function grabFrame(m, t) {
+  const maxW = 1280;
+  const w = Math.min(maxW, m.width || maxW), h = Math.max(2, Math.round(w * (m.height || 720) / (m.width || 1280)));
+  if (m.vt && m.canDecodeV) {
+    try {
+      const sink = new CanvasSink(m.vt, { width: w, height: h, fit: 'fill', poolSize: 0 });
+      const r = await sink.getCanvas(Math.max(0, t));
+      if (r) return r.canvas;
+    } catch (e) { console.warn('Кадр через WebCodecs не вийшов', e); }
+  }
+  const v = document.createElement('video');
+  v.muted = true; v.preload = 'auto'; v.src = m.url;
+  try {
+    await new Promise((res, rej) => { if (v.readyState >= 1) res(); else { v.addEventListener('loadedmetadata', res, { once: true }); v.addEventListener('error', rej, { once: true }); } });
+    await new Promise(r => { v.addEventListener('seeked', r, { once: true }); v.currentTime = Math.max(0, t); setTimeout(r, 3000); });
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d').drawImage(v, 0, 0, w, h);
+    return c;
+  } catch (e) { return null; } finally { v.removeAttribute('src'); v.load(); }
+}
+
+// миттєво: кадр або null (тоді запускає обчислення у фоні)
+export function tailFrame(c) {
+  const m = media.get(c.mediaId);
+  if (!m) return null;
+  if (m.kind === 'image') return m.el;
+  const k = tailKey(c), v = tails.get(k);
+  if (v !== undefined) return v === 'pending' ? null : v;
+  tails.set(k, 'pending');
+  grabFrame(m, c.out - 0.04).then(cv => { tails.set(k, cv || null); emit('tails'); }).catch(() => tails.set(k, null));
+  return null;
+}
+// дочекатися кадру (для експорту)
+export async function ensureTail(c) {
+  const m = media.get(c.mediaId);
+  if (!m) return null;
+  if (m.kind === 'image') return m.el;
+  const k = tailKey(c);
+  const v = tails.get(k);
+  if (v && v !== 'pending') return v;
+  const cv = await grabFrame(m, c.out - 0.04);
+  tails.set(k, cv || null);
+  return cv;
+}
+
+// найгучніший момент у фрагменті файлу (за хвилею) — для вирівнювання гучності
+export function peakIn(m, from, to) {
+  if (!m || !m.peaks) return null;
+  let p = 0;
+  for (let i = Math.max(0, Math.floor(from * PEAKS_RATE)), e = Math.min(m.peaks.length, Math.ceil(to * PEAKS_RATE)); i < e; i++) if (m.peaks[i] > p) p = m.peaks[i];
+  return p;
+}

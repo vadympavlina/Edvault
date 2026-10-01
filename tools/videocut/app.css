@@ -372,3 +372,64 @@ details.more summary:hover{color:var(--text)}
   .tl-heads{width:40px}.head span{display:none}
   .tr-time{font-size:12px}
 }
+
+/* ── нові можливості: фільтри, переходи, емодзі, заставки, швидкі дії, запис голосу ── */
+.look-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.look-card{display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:3px 3px 4px;border-radius:9px;border:1px solid var(--border);background:var(--surface2)}
+.look-card:hover{border-color:var(--border2)}
+.look-card.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-light)}
+.look-card img,.look-card i{display:block;width:100%;aspect-ratio:16/9;border-radius:6px;object-fit:cover;background:linear-gradient(135deg,#64748b,#334155)}
+.look-card small{font-size:10.5px;color:var(--text2);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.look-card.on small{color:var(--accent);font-weight:600}
+.tr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tr-card{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 4px 6px;border-radius:9px;border:1px solid var(--border);background:var(--surface2)}
+.tr-card:hover{border-color:var(--border2)}
+.tr-card.on{border-color:var(--accent);background:var(--accent-light)}
+.tr-card small{font-size:11px;color:var(--text2)}
+.tr-card.on small{color:var(--accent);font-weight:600}
+.tr-card i{display:block;width:44px;height:24px;border-radius:5px;position:relative;overflow:hidden;background:#4F6BF4}
+.tr-card i::before,.tr-card i::after{content:'';position:absolute;inset:0}
+.tr-none i{background:linear-gradient(90deg,#4F6BF4 50%,#ec4899 50%)}
+.tr-fade i{background:linear-gradient(90deg,#4F6BF4,#ec4899)}
+.tr-black i{background:linear-gradient(90deg,#4F6BF4,#000 50%,#ec4899)}
+.tr-slide i{background:#ec4899}.tr-slide i::before{background:#4F6BF4;right:45%;animation:trSlide 1.6s ease-in-out infinite}
+.tr-wipe i{background:#ec4899}.tr-wipe i::before{background:#4F6BF4;left:45%;border-left:2px solid #fff}
+.tr-zoom i{background:#ec4899}.tr-zoom i::before{background:#4F6BF4;opacity:.6;transform:scale(1.25);border-radius:4px}
+@keyframes trSlide{0%,100%{transform:translateX(0)}50%{transform:translateX(-30%)}}
+.btn-ghost-sm{border:1px dashed var(--border2);color:var(--text2);margin-top:8px}
+.btn-ghost-sm:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.emoji-grid button{aspect-ratio:1;border-radius:9px;border:1px solid var(--border);background:var(--surface2);font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;transition:transform .1s}
+.emoji-grid button:hover{transform:scale(1.12);border-color:var(--accent)}
+.emoji-grid.sm button{font-size:18px}
+.emoji-grid button.on{border-color:var(--accent);background:var(--accent-light)}
+.card-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.card-pick{aspect-ratio:16/10;border-radius:9px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;transition:transform .1s}
+.card-pick:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+.quick-title{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:2px 2px 8px}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.quick-card{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);text-align:left;transition:border-color .12s,transform .1s}
+.quick-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.quick-card .ico{width:20px;height:20px;color:var(--accent);margin-bottom:4px}
+.quick-card b{font-size:12.5px}
+.quick-card small{font-size:11px;color:var(--muted);line-height:1.35}
+.clip .tr-zone{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(255,255,255,.55),rgba(255,255,255,0));pointer-events:none;border-right:1px dashed rgba(255,255,255,.8)}
+.clip .tr-zone::after{content:'';position:absolute;left:-1px;top:50%;width:10px;height:10px;transform:translate(-50%,-50%) rotate(45deg);background:#fff;border:2px solid var(--clip);border-radius:2px}
+.lane-v .sil{position:absolute;top:2px;bottom:2px;background:repeating-linear-gradient(45deg,rgba(239,68,68,.55),rgba(239,68,68,.55) 6px,rgba(239,68,68,.3) 6px,rgba(239,68,68,.3) 12px);border:1.5px solid #ef4444;border-radius:5px;pointer-events:none;z-index:4}
+.mu.voice{border-color:#f97316;background:color-mix(in srgb,#f97316 12%,transparent)}
+.mu.voice .lbl{color:#c2410c}
+[data-theme=dark] .mu.voice .lbl{color:#fdba74}
+.btn-rec .ico{color:#ef4444}
+.btn-rec-solid{background:#ef4444;border-color:#ef4444;box-shadow:0 2px 8px rgba(239,68,68,.3)}
+.btn-rec-solid:hover:not(:disabled){background:#dc2626;border-color:#dc2626}
+.rec-count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:6;font-size:min(30vh,160px);font-weight:900;color:#fff;text-shadow:0 6px 40px rgba(0,0,0,.6);background:rgba(0,0,0,.35);pointer-events:none}
+.rec-count.pop{animation:recPop .8s cubic-bezier(.16,1,.3,1)}
+@keyframes recPop{0%{transform:scale(.4);opacity:0}35%{transform:scale(1.12);opacity:1}100%{transform:scale(1)}}
+.rec-badge{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 14px;border-radius:30px;background:rgba(20,20,24,.85);color:#fff;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.rec-badge i{width:10px;height:10px;border-radius:50%;background:#ef4444;animation:recBlink 1s infinite}
+.rec-badge b{font-variant-numeric:tabular-nums}
+.rec-badge span{opacity:.75}
+.rec-badge .btn{background:#ef4444;color:#fff;height:28px;border-radius:20px}
+.rec-badge .btn:hover:not(:disabled){background:#dc2626;color:#fff}
+@keyframes recBlink{50%{opacity:.3}}
+body.recording .tl,body.recording .lib,body.recording .insp,body.recording .topbar{pointer-events:none;opacity:.6}

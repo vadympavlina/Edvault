@@ -13,6 +13,7 @@ export function initPlayer(cv) {
   ctx = canvas.getContext('2d');
   on('project', () => { if (!S.playing) requestDraw(); });
   on('media', () => { if (!S.playing) requestDraw(); });
+  on('tails', () => { if (!S.playing) requestDraw(); });
 }
 
 export function resizeCanvas(maxW, maxH) {
@@ -50,6 +51,7 @@ function gainFor(el) {
   } catch (e) { gains.set(el, null); return null; }
 }
 function setVolume(el, v) {
+  if (S.recMute) v = 0; // під час запису голосу — тиша, щоб звук не потрапив у мікрофон
   const g = gains.get(el) ?? (S.playing ? gainFor(el) : null);
   if (g) { g.gain.value = v; el.volume = 1; }
   else el.volume = Math.max(0, Math.min(1, v));

@@ -174,7 +174,7 @@ function resize(o, a, mode, dx, dy) {
   let x0 = a.x, y0 = a.y, x1 = a.x + a.w, y1 = a.y + a.h;
   if (mode.includes('w')) x0 += dx; if (mode.includes('e')) x1 += dx;
   if (mode.includes('n')) y0 += dy; if (mode.includes('s')) y1 += dy;
-  if (o.type === 'image') { // зберігаємо пропорції картинки
+  if (o.type === 'image' || o.type === 'emoji') { // зберігаємо пропорції картинки й емодзі
     const ratio = a.h / a.w;
     const w = Math.max(0.02, Math.abs(x1 - x0));
     const h = w * ratio;
