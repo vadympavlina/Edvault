@@ -2,6 +2,8 @@
 import { S, media, on, emit, commit, select, findSel, layout, clipAt, outputSize } from './state.js';
 import { textBoxes } from './render.js';
 import { capBox, capStyle } from './cc.js';
+import { isLayer, cropDrag } from './layer.js';
+import { addLayerAt, addToTimeline } from './ops.js';
 import { requestDraw } from './player.js';
 import { $, clamp } from './ui.js';
 
@@ -14,6 +16,21 @@ export function initPreviewLayer() {
   on('time', () => { if (S.sel && S.sel.kind !== 'music') scheduleHandles(); });
   window.addEventListener('resize', scheduleHandles);
   canvas.addEventListener('pointerdown', onCanvasDown);
+  // файл із бібліотеки на кадр — поверх основного відео, в місці падіння
+  const stage = canvas.parentElement;
+  stage.addEventListener('dragover', e => {
+    if (![...e.dataTransfer.types].includes('application/x-vc-media')) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; stage.classList.add('drop-on');
+  });
+  stage.addEventListener('dragleave', e => { if (!stage.contains(e.relatedTarget)) stage.classList.remove('drop-on'); });
+  stage.addEventListener('drop', e => {
+    const id = e.dataTransfer.getData('application/x-vc-media'); if (!id) return;
+    e.preventDefault(); stage.classList.remove('drop-on');
+    const m = media.get(id); if (!m || m.kind === 'audio') return;
+    const p = norm(e);
+    if (!S.project.clips.length) { addToTimeline(m); return; }
+    addLayerAt(m, { start: S.t, cx: clamp(p.x, 0, 1), cy: clamp(p.y, 0, 1) });
+  });
   layer.addEventListener('pointerdown', onHandleDown);
   canvas.addEventListener('dblclick', e => {
     const hit = hitTest(e);
@@ -89,7 +106,8 @@ function renderHandles() {
       const x0 = Math.min(b.x, b.x + b.w), y0 = Math.min(b.y, b.y + b.h);
       html = `<div class="selbox" style="left:${x0 * 100}%;top:${y0 * 100}%;width:${Math.abs(b.w) * 100}%;height:${Math.abs(b.h) * 100}%">` +
         ['nw', 'ne', 'sw', 'se'].map(h => `<i class="hd ${h}" data-h="${h}"></i>`).join('') +
-        (o.type === 'text' ? '<i class="hd e side" data-h="e"></i><i class="hd w side" data-h="w"></i>' : '') + '</div>';
+        (o.type === 'text' ? '<i class="hd e side" data-h="e"></i><i class="hd w side" data-h="w"></i>' : '') +
+        (isLayer(o) ? ['n', 's', 'e', 'w'].map(h => `<i class="hd ${h} side crop" data-h="${h}" data-tip="Обрізати"></i>`).join('') : '') + '</div>';
     }
   } else if (o && S.sel.kind === 'caption' && capBox.id === o.id) {
     html = `<div class="selbox capsel" style="left:${capBox.x * 100}%;top:${capBox.y * 100}%;width:${capBox.w * 100}%;height:${capBox.h * 100}%"></div>`;
@@ -190,6 +208,11 @@ function onMove(e) {
       if (snapX) o.x = 0.5 - o.w / 2;
       if (snapY) o.y = 0.5 - h / 2;
       gv.hidden = !snapX; gh.hidden = !snapY;
+      if (isLayer(o)) { // прилипання до країв кадру
+        const E = 0.012;
+        if (!snapX) { if (Math.abs(o.x) < E) o.x = 0; else if (Math.abs(o.x + o.w - 1) < E) o.x = 1 - o.w; }
+        if (!snapY) { if (Math.abs(o.y) < E) o.y = 0; else if (Math.abs(o.y + o.h - 1) < E) o.y = 1 - o.h; }
+      }
     }
   } else if (drag.mode === 'p1') { o.x = p.x; o.y = p.y; o.w = a.x + a.w - p.x; o.h = a.y + a.h - p.y; }
   else if (drag.mode === 'p2') { o.w = p.x - a.x; o.h = p.y - a.y; }
@@ -199,6 +222,7 @@ function onMove(e) {
 }
 
 function resize(o, a, mode, dx, dy) {
+  if (isLayer(o) && mode.length === 1) { cropDrag(o, a, mode, dx, dy); return; } // бокові маркери — обрізка
   if (o.type === 'text') {
     const h0 = drag.h0;
     if (mode === 'e') { o.w = Math.max(0.05, a.w + dx); return; }

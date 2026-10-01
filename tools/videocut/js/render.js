@@ -2,6 +2,7 @@
 // provider(layoutItem, sourceTime) → {src: CanvasImageSource | VideoSample, w, h} | null
 import { S, media, layout, clipAt, srcTime } from './state.js';
 import { capStyle, drawCaption, capState, capBox } from './cc.js';
+import { drawLayer } from './layer.js';
 import { tailFrame } from './media.js';
 
 export const FONT_STACK = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
@@ -240,40 +241,10 @@ export function drawOverlay(ctx, o, W, H, k, x = {}) {
       ctx.restore();
       break;
     }
-    case 'video': {
-      const f = x.frame;
-      let bx = o.x * W, by = o.y * H, bw = o.w * W, bh = o.h * H;
-      if (bw < 0) { bx += bw; bw = -bw; } if (bh < 0) { by += bh; bh = -bh; }
-      const shape = o.shape || 'circle';
-      const path = () => {
-        ctx.beginPath();
-        if (shape === 'circle') ctx.ellipse(bx + bw / 2, by + bh / 2, bw / 2, bh / 2, 0, 0, Math.PI * 2);
-        else roundRectPath(ctx, bx, by, bw, bh, shape === 'round' ? Math.min(bw, bh) * 0.12 : 0);
-      };
-      ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 24 * k; ctx.shadowOffsetY = 6 * k;
-      path(); ctx.fillStyle = '#111'; ctx.fill();
-      ctx.restore();
-      if (f && f.w && f.h) {
-        ctx.save(); path(); ctx.clip();
-        const r = Math.max(bw / f.w, bh / f.h), dw = f.w * r, dh = f.h * r;
-        const dx = bx + (bw - dw) / 2, dy = by + (bh - dh) / 2;
-        if (o.flip) { ctx.translate(bx + bw / 2, 0); ctx.scale(-1, 1); ctx.translate(-(bx + bw / 2), 0); }
-        if (f.src && typeof f.src.draw === 'function' && !(f.src instanceof HTMLCanvasElement)) f.src.draw(ctx, dx, dy, dw, dh);
-        else ctx.drawImage(f.src, dx, dy, dw, dh);
-        ctx.restore();
-      }
-      if (o.border && o.border !== 'none') { ctx.save(); path(); ctx.lineWidth = 6 * k; ctx.strokeStyle = o.border; ctx.stroke(); ctx.restore(); }
-      break;
-    }
+    case 'video': drawLayer(ctx, o, x.frame, W, H, k); break;
     case 'image': {
       const m = media.get(o.mediaId);
-      if (!m || !m.el) break;
-      const x = o.x * W, y = o.y * H, w = o.w * W, h = o.h * H;
-      ctx.save();
-      if (o.radius) { roundRectPath(ctx, x, y, w, h, o.radius * k); ctx.clip(); }
-      try { ctx.drawImage(m.el, x, y, w, h); } catch (e) { /* ще не завантажено */ }
-      ctx.restore();
+      if (m && m.el) drawLayer(ctx, o, { src: m.el, w: m.width || m.el.naturalWidth, h: m.height || m.el.naturalHeight }, W, H, k);
       break;
     }
   }

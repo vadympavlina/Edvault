@@ -2,16 +2,19 @@
 // Мініатюри й хвилі малюються лише для видимої частини — це тримає швидкість навіть на годинних відео.
 import { S, media, emit, on, layout, duration, clipDur, musicDur, snap, commit, rippleShift, select, findSel } from './state.js';
 import { thumbAt, PEAKS_RATE } from './media.js';
+import { isLayer } from './layer.js';
+import { addToTimeline, addLayerAt } from './ops.js';
 import { seek } from './player.js';
 import { $, esc, icon, clamp, fmt } from './ui.js';
 
-const ROW = 28, CC_H = 30, V_H = 66, A_H = 44, RULER_H = 26;
+const ROW = 28, CC_H = 30, V_H = 66, V2_H = 50, A_H = 44, RULER_H = 26;
 const OV_LABEL = { video: 'Відео поверх', text: 'Текст', rect: 'Рамка', arrow: 'Стрілка', blur: 'Розмиття', spot: 'Прожектор', image: 'Зображення', emoji: 'Емодзі', progress: 'Прогрес' };
 const OV_ICON = { video: 'pip', text: 'text', rect: 'rect', arrow: 'arrow', blur: 'blur', spot: 'spot', image: 'image', emoji: 'smile', progress: 'progress' };
 const TR_NAMES = { fade: 'Розчинення', black: 'Через чорне', slide: 'Зсув', wipe: 'Шторка', zoom: 'Наближення' };
 
 let scroll, inner, lanes, heads, ruler, playheadEl, rangeEl, insertEl;
-let vCanvas, aCanvas;
+let vCanvas, aCanvas, v2Canvas;
+let v2Rows = 1, v2RowOf = new Map();
 let ovRows = 1;
 let muRows = 1, muRowOf = new Map();
 
@@ -33,6 +36,29 @@ export function initTimeline() {
   inner.addEventListener('dblclick', e => {
     const it = e.target.closest('.it');
     if (it) { select(it.dataset.kind, it.dataset.id); emit('focus-inspector'); }
+  });
+  // файли з бібліотеки: «Відео 1» — вставити кліп, «Звук» — музика, решта — поверх (Відео 2)
+  inner.addEventListener('dragover', e => {
+    if (![...e.dataTransfer.types].includes('application/x-vc-media')) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+    const lane = e.target.closest('.lane');
+    lanes.querySelectorAll('.lane.drop-on').forEach(l => { if (l !== lane) l.classList.remove('drop-on'); });
+    if (lane) lane.classList.add('drop-on');
+  });
+  inner.addEventListener('dragleave', e => { if (!inner.contains(e.relatedTarget)) lanes.querySelectorAll('.lane.drop-on').forEach(l => l.classList.remove('drop-on')); });
+  inner.addEventListener('drop', e => {
+    const id = e.dataTransfer.getData('application/x-vc-media'); if (!id) return;
+    e.preventDefault();
+    lanes.querySelectorAll('.lane.drop-on').forEach(l => l.classList.remove('drop-on'));
+    const m = media.get(id); if (!m) return;
+    const t = Math.max(0, snap(timeAt(e), null, 8));
+    const lane = e.target.closest('.lane');
+    if (m.kind !== 'audio' && (!S.project.clips.length || (lane && lane.classList.contains('lane-v')))) {
+      const L = layout();
+      let at = L.length;
+      for (let i = 0; i < L.length; i++) if (t < (L[i].start + L[i].end) / 2) { at = i; break; }
+      addToTimeline(m, { at });
+    } else addLayerAt(m, { start: t });
   });
   $('tlZoom').addEventListener('input', e => setZoom(zoomFromSlider(+e.target.value)));
   render();
@@ -103,11 +129,23 @@ export function render() {
   const selCls = (k, id) => (sel && sel.kind === k && sel.id === id ? ' sel' : '');
   const hnd = '<i class="h h-l"></i><i class="h h-r"></i>';
 
-  const { rowOf, n } = assignRows(p.overlays);
+  const layers = p.overlays.filter(isLayer), graphics = p.overlays.filter(o => !isLayer(o));
+  const { rowOf, n } = assignRows(graphics);
   ovRows = n;
   const ovH = n * ROW + 6;
+  const lr = assignRows(layers);
+  v2Rows = lr.n; v2RowOf = lr.rowOf;
+  const v2H = v2Rows * V2_H + 6;
+  const lay = layers.map(o => {
+    const m = media.get(o.mediaId);
+    const badges = [];
+    if (o.shape === 'circle') badges.push('коло');
+    if ((o.opacity ?? 1) < 0.99) badges.push(Math.round((o.opacity ?? 1) * 100) + '%');
+    if (o.type === 'video' && o.muted) badges.push('без звуку');
+    return `<div class="it lay${o.type === 'image' ? ' lay-img' : ''}${selCls('overlay', o.id)}${m ? '' : ' missing'}" data-kind="overlay" data-id="${o.id}" style="left:${o.start * pps}px;width:${Math.max(4, o.dur * pps)}px;top:${3 + (v2RowOf.get(o.id) || 0) * V2_H}px;height:${V2_H - 6}px"><span class="lbl">${esc(m ? m.name : 'Файл відсутній')}${badges.length ? ' · ' + badges.join(' · ') : ''}</span>${hnd}</div>`;
+  }).join('');
 
-  const ov = p.overlays.map(o => {
+  const ov = graphics.map(o => {
     const label = o.type === 'text' ? (o.text || '').split('\n')[0] : o.type === 'emoji' ? (o.emoji || '') + ' ' + OV_LABEL.emoji : OV_LABEL[o.type];
     return `<div class="it ov ov-${o.type}${selCls('overlay', o.id)}" data-kind="overlay" data-id="${o.id}" style="left:${o.start * pps}px;width:${Math.max(4, o.dur * pps)}px;top:${3 + rowOf.get(o.id) * ROW}px">${icon(OV_ICON[o.type] || 'shapes')}<span>${esc(label)}</span>${hnd}</div>`;
   }).join('');
@@ -135,17 +173,19 @@ export function render() {
   const empty = (cond, text) => (cond ? `<div class="lane-empty">${text}</div>` : '');
   // основне відео — одразу під лінійкою, щоб завжди було видно
   lanes.innerHTML =
+    `<div class="lane lane-v2" style="height:${v2H}px"><canvas class="lane-canvas" id="tlV2Canvas"></canvas>${empty(!layers.length, p.clips.length ? 'Відео 2 — перетягніть сюди відео чи фото, і воно буде поверх основного' : '')}${lay}</div>` +
     `<div class="lane lane-v" style="height:${V_H}px"><canvas class="lane-canvas" id="tlVCanvas"></canvas>${empty(!p.clips.length, 'Перетягніть сюди відео або фото')}${clips}${sil}</div>` +
     `<div class="lane lane-a" style="height:${A_H * muRows}px"><canvas class="lane-canvas" id="tlACanvas"></canvas>${empty(!p.music.length, 'Музика та озвучення')}${mu}</div>` +
     `<div class="lane lane-cc" style="height:${CC_H}px">${empty(!p.captions.length, 'Субтитри — вкладка «Субтитри» ліворуч')}${cc}</div>` +
-    `<div class="lane lane-ov" style="height:${ovH}px">${empty(!p.overlays.length, 'Текст, стрілки, розмиття — вкладки «Текст» і «Елементи»')}${ov}</div>`;
+    `<div class="lane lane-ov" style="height:${ovH}px">${empty(!graphics.length, 'Текст, стрілки, розмиття — вкладки «Текст» і «Елементи»')}${ov}</div>`;
   heads.innerHTML =
     `<div class="head" style="height:${RULER_H}px"></div>` +
-    `<div class="head head-v" style="height:${V_H}px">${icon('video')}<span>Відео</span></div>` +
+    `<div class="head head-v2" style="height:${v2H}px">${icon('pip')}<span>Відео 2</span></div>` +
+    `<div class="head head-v" style="height:${V_H}px">${icon('video')}<span>Відео 1</span></div>` +
     `<div class="head" style="height:${A_H * muRows}px">${icon('music')}<span>Звук</span></div>` +
     `<div class="head" style="height:${CC_H}px">${icon('cc')}<span>Субтитри</span></div>` +
     `<div class="head" style="height:${ovH}px">${icon('text')}<span>Графіка</span></div><div style="height:40px"></div>`;
-  vCanvas = $('tlVCanvas'); aCanvas = $('tlACanvas');
+  vCanvas = $('tlVCanvas'); aCanvas = $('tlACanvas'); v2Canvas = $('tlV2Canvas');
   placePlayhead(); placeRange(); drawRuler(); drawCanvases();
   $('tlDur').textContent = fmt(d, true);
 }
@@ -221,6 +261,29 @@ function drawCanvases() {
       drawWave(gv, m, c.in, c.speed || 1, x0, Math.min(x1, w), top + h - 17, 16, 'rgba(255,255,255,.85)', pps);
     }
     gv.restore();
+  }
+  if (v2Canvas) {
+    const g2 = sizeCanvas(v2Canvas, v2Rows * V2_H + 6);
+    for (const o of S.project.overlays) {
+      if (!isLayer(o)) continue;
+      const x0 = o.start * pps - sl, x1 = (o.start + o.dur) * pps - sl;
+      if (x1 < 0 || x0 > w) continue;
+      const m = media.get(o.mediaId); if (!m || !m.thumbs.length) continue;
+      const top = 3 + (v2RowOf.get(o.id) || 0) * V2_H, h = V2_H - 6;
+      g_clip(g2, x0 + 1, top, x1 - x0 - 2, h, 6);
+      g2.save(); g2.clip();
+      const th = m.thumbs[0].c, tw = Math.max(20, h * th.width / th.height);
+      const startTile = Math.max(0, Math.floor(-x0 / tw));
+      for (let x = x0 + startTile * tw; x < Math.min(x1, w); x += tw) {
+        const img = m.kind === 'image' ? th : thumbAt(m, (o.in || 0) + (x - x0 + tw / 2) / pps);
+        if (img) g2.drawImage(img, x, top, tw, h);
+      }
+      if (m.peaks && o.type === 'video' && !o.muted) {
+        g2.fillStyle = 'rgba(0,0,0,.35)'; g2.fillRect(x0, top + h - 14, x1 - x0, 14);
+        drawWave(g2, m, o.in || 0, 1, x0, Math.min(x1, w), top + h - 13, 12, 'rgba(255,255,255,.85)', pps);
+      }
+      g2.restore();
+    }
   }
   const ga = sizeCanvas(aCanvas, A_H * muRows);
   const waveA = getComputedStyle(document.documentElement).getPropertyValue('--wave-a').trim() || '#10b981';

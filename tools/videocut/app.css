@@ -471,3 +471,29 @@ body.recording .tl,body.recording .lib,body.recording .insp,body.recording .topb
 .cc-nav .btn{justify-content:center}
 .pv-layer .selbox.capsel{border-style:dashed}
 .cc-fold summary span{flex:1}
+
+/* накладання: доріжка «Відео 2» */
+.lay{border:1.5px solid var(--lay,#8b5cf6);background:transparent;align-items:flex-start;padding:4px 7px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+.lay .lbl{background:rgba(0,0,0,.6);color:#fff;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;max-width:100%}
+.lay.lay-img{--lay:#0ea5e9}
+.lay.missing{border-color:var(--danger)}
+.head-v2 .ico{color:#8b5cf6}
+.lane.drop-on{background:color-mix(in srgb,var(--accent) 14%,var(--lane))!important;box-shadow:inset 0 0 0 2px var(--accent)}
+.drop-on > canvas#pv{outline:3px dashed var(--accent);outline-offset:3px}
+.pv-layer .side.n,.pv-layer .side.s{left:50%;width:22px;height:8px;margin:-4px 0 0 -11px;cursor:ns-resize}
+.pv-layer .side.n{top:0}.pv-layer .side.s{top:100%}
+.pv-layer .side.crop{background:#1a1d23;border-color:#fff}
+.layouts{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.layouts button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px 5px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);font-size:10.5px;font-weight:500;color:var(--text2);line-height:1.15;text-align:center}
+.layouts button.on{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.layouts i{position:relative;width:34px;height:22px;border-radius:3px;background:var(--surface3,#d9dce3);overflow:hidden}
+.layouts i::after{content:'';position:absolute;background:var(--accent);border-radius:2px}
+.lo-corner i::after{right:3px;bottom:3px;width:12px;height:8px}
+.lo-center i::after{left:8px;top:5px;width:18px;height:12px}
+.lo-full i::after{inset:0}
+.lo-left i::after{left:0;top:0;bottom:0;width:50%}
+.lo-right i::after{right:0;top:0;bottom:0;width:50%}
+.lo-top i::after{left:0;right:0;top:0;height:50%}
+.lo-bottom i::after{left:0;right:0;bottom:0;height:50%}
+.crop-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.crop-grid .field{margin-bottom:6px}
