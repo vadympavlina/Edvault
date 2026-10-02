@@ -3,800 +3,476 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Edvault — Урок</title>
+  <title>Урок — Edvault</title>
+  <script>try{var t=localStorage.getItem('edvault-theme')||'auto';document.documentElement.dataset.theme=(t==='dark'||(t==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches))?'dark':'light';var f=localStorage.getItem('edvault_lesson_fs');if(f)document.documentElement.style.setProperty('--fs',f)}catch(e){}</script>
 
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://edvault-d4a7f-default-rtdb.firebaseio.com" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="modulepreload" href="firebase-config.js" />
+  <link rel="modulepreload" href="portal-common.js" />
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js" />
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js" />
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234F6BF4'/><path d='M8 24.5A2.5 2.5 0 0 1 10.5 22H24M10.5 7H24v18H10.5A2.5 2.5 0 0 1 8 22.5v-13A2.5 2.5 0 0 1 10.5 7z' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
   <link rel="stylesheet" href="styles.css" />
+  <!-- очищення HTML уроку; вантажиться паралельно з даними -->
+  <script async src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" onload="window.__purify&&window.__purify()" onerror="window.__purifyFail=1;window.__purify&&window.__purify()"></script>
 
   <style>
-    body { overflow: hidden; height: 100vh; }
+    html, body { height: 100%; }
+    body { overflow: hidden; }
+    :root { --fs: 1; }
 
-    /* ── Breadcrumb ── */
-    .breadcrumb {
-      display: flex; align-items: center; gap: 5px;
-      flex: 1; min-width: 0; overflow: hidden;
-    }
-    .breadcrumb a {
-      font-size: 12.5px; color: var(--muted); text-decoration: none;
-      white-space: nowrap; transition: color .12s;
-    }
-    .breadcrumb a:hover { color: var(--accent); }
-    .breadcrumb-sep { color: var(--subtle); font-size: 13px; flex-shrink: 0; }
-    .breadcrumb-cur {
-      font-size: 12.5px; font-weight: 600; color: var(--text);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
+    .crumbs { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; overflow: hidden; font-size: 12.5px; }
+    .crumbs a { color: var(--muted); text-decoration: none; white-space: nowrap; padding: 3px 5px; border-radius: 5px; }
+    .crumbs a:hover { color: var(--accent); background: var(--bg); }
+    .crumbs .sep { color: var(--subtle); flex-shrink: 0; }
+    .crumbs .cur { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; padding: 0 5px; }
+    .crumbs .hide-md { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .progress { position: absolute; left: 0; bottom: -1px; height: 2px; background: var(--accent); width: 0; transition: width .1s linear; }
 
-    /* ── Lesson layout ── */
-    .lesson-layout {
-      display: flex;
-      height: calc(100vh - var(--topbar));
-      overflow: hidden;
-    }
+    .layout { flex: 1; display: flex; min-height: 0; position: relative; }
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto; scroll-behavior: smooth; }
+    .main.frame { overflow: hidden; }
 
-    /* ── Main content ── */
-    .lesson-main {
-      flex: 1; min-width: 0;
-      display: flex; flex-direction: column;
-      background: var(--bg); overflow-y: auto;
-    }
+    /* ── Вкладки сторінок ── */
+    .tabs { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; padding: 0 12px; overflow-x: auto; flex-shrink: 0; scrollbar-width: thin; position: sticky; top: 0; z-index: 5; }
+    .tab { display: flex; align-items: center; gap: 6px; height: 42px; padding: 0 14px; font-size: 13px; font-weight: 500; color: var(--muted); white-space: nowrap; border-bottom: 2px solid transparent; }
+    .tab:hover { color: var(--text); }
+    .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab .num { font-size: 11px; color: var(--subtle); }
 
-    /* ── Page tabs (top of content area) ── */
-    .page-tabs-bar {
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 0;
-      padding: 0 16px;
-      overflow-x: auto; flex-shrink: 0;
-    }
-    .page-tabs-bar::-webkit-scrollbar { height: 3px; }
-    .page-tabs-bar::-webkit-scrollbar-thumb { background: var(--border2); }
-    .page-tab-btn {
-      display: flex; align-items: center; gap: 6px;
-      height: 40px; padding: 0 14px;
-      border: none; background: transparent;
-      font-family: 'Inter', system-ui, sans-serif;
-      font-size: 13px; font-weight: 500; color: var(--muted);
-      cursor: pointer; white-space: nowrap;
-      border-bottom: 2px solid transparent;
-      transition: color .12s, border-color .12s;
-    }
-    .page-tab-btn:hover { color: var(--text); }
-    .page-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .page-tab-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+    /* ── Стаття ── */
+    .article-wrap { width: 100%; max-width: 800px; margin: 0 auto; padding: 40px 32px 56px; flex: 1; }
+    .article { font-family: 'Lora', Georgia, serif; color: var(--text); line-height: 1.78; font-size: calc(16px * var(--fs)); overflow-wrap: break-word; }
+    .article > :first-child { margin-top: 0; }
+    .article h1 { font-size: 1.75em; font-weight: 700; line-height: 1.28; margin: 0 0 .6em; letter-spacing: -.01em; }
+    .article h2 { font-size: 1.32em; font-weight: 600; margin: 1.7em 0 .55em; line-height: 1.35; }
+    .article h3 { font-size: 1.08em; font-weight: 600; margin: 1.4em 0 .45em; }
+    .article h1, .article h2, .article h3 { scroll-margin-top: 60px; }
+    .article p { margin-bottom: .9em; }
+    .article ul, .article ol { margin: 0 0 .9em 1.4em; }
+    .article li { margin-bottom: .35em; }
+    .article code { font-family: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace; font-size: .86em; background: var(--surface2); border: 1px solid var(--border); padding: 1px 6px; border-radius: 5px; color: #c0392b; }
+    :root[data-theme="dark"] .article code { color: #ff9a8b; }
+    .article pre { position: relative; background: #1e2433; border-radius: var(--r); padding: 16px 18px; overflow-x: auto; margin-bottom: 1em; line-height: 1.55; }
+    .article pre code { background: none; border: 0; color: #e2e8f0; padding: 0; font-size: .84em; }
+    .copy { position: absolute; top: 8px; right: 8px; height: 26px; padding: 0 9px; border-radius: 6px; background: rgba(255,255,255,.1); color: #cbd5e1; font: 500 11.5px var(--font); opacity: 0; transition: opacity .15s, background .15s; }
+    .article pre:hover .copy, .copy:focus-visible { opacity: 1; }
+    .copy:hover { background: rgba(255,255,255,.2); color: #fff; }
+    .article blockquote { border-left: 3px solid var(--accent); margin: 0 0 1em; padding: 10px 16px; background: var(--accent-bg); border-radius: 0 var(--r) var(--r) 0; }
+    .article img, .article video, .article iframe { max-width: 100%; border-radius: var(--r); margin: .6em 0; }
+    .article img { height: auto; }
+    .article a { color: var(--accent); }
+    .article hr { border: 0; border-top: 1px solid var(--border); margin: 1.8em 0; }
+    .article .tbl { overflow-x: auto; margin-bottom: 1em; }
+    .article table { width: 100%; border-collapse: collapse; font-size: .92em; }
+    .article th { background: var(--surface2); font-weight: 600; }
+    .article th, .article td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
 
-    /* ── Content wrapper ── */
-    .lesson-content-wrap {
-      flex: 1; display: flex; flex-direction: column;
-      min-height: 0; /* required for flex children to shrink below content size */
-    }
+    /* ── Окрема HTML-сторінка ── */
+    .frame-box { flex: 1; display: flex; min-height: 0; background: #fff; }
+    .frame-box iframe { flex: 1; width: 100%; border: 0; display: block; }
 
-    /* ── Isolated iframe page ── */
-    .isolated-frame-wrap {
-      flex: 1; display: flex; flex-direction: column;
-      overflow: hidden; min-height: 0;
-    }
-    .isolated-frame {
-      flex: 1; width: 100%; border: none; display: block; min-height: 0;
-    }
+    /* ── Зміст ── */
+    .toc { width: 250px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface); overflow-y: auto; padding: 18px 10px 24px; }
+    .toc-title { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--subtle); padding: 0 10px 8px; }
+    .toc a { display: block; padding: 5px 10px; border-radius: 6px; font-size: 12.5px; line-height: 1.4; color: var(--muted); text-decoration: none; border-left: 2px solid transparent; }
+    .toc a:hover { background: var(--bg); color: var(--text); }
+    .toc a.on { color: var(--accent); background: var(--accent-bg); border-left-color: var(--accent); }
+    .toc a.l3 { padding-left: 22px; font-size: 12px; }
+    body.no-toc .toc { display: none; }
 
-    /* ── Regular HTML content ── */
-    .lesson-article-wrap {
-      max-width: 780px; margin: 0 auto;
-      padding: 36px 32px 60px;
-      width: 100%;
-    }
+    /* ── Посилання й матеріали ── */
+    .panels { border-top: 1px solid var(--border); background: var(--surface); padding: 22px 32px 28px; display: flex; gap: 32px; flex-wrap: wrap; flex-shrink: 0; }
+    .panel { flex: 1; min-width: 220px; }
+    .panel-title { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--subtle); margin-bottom: 10px; }
+    .panel-title svg { width: 14px; height: 14px; }
+    .plink { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--r); text-decoration: none; color: var(--muted); font-size: 13px; border: 1px solid transparent; }
+    .plink:hover { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-lt); }
+    .plink svg { width: 14px; height: 14px; color: var(--subtle); }
+    .plink:hover svg { color: var(--accent); }
+    .plink span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .plink em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--subtle); background: var(--bg); padding: 2px 6px; border-radius: 4px; }
 
-    /* ── Article typography ── */
-    .lesson-article {
-      font-family: 'Lora', serif;
-      color: var(--text); line-height: 1.75;
-    }
-    .lesson-article h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 16px; color: var(--text); }
-    .lesson-article h2 { font-size: 20px; font-weight: 600; margin: 28px 0 10px; color: var(--text); }
-    .lesson-article h3 { font-size: 16px; font-weight: 600; margin: 20px 0 8px; color: var(--text); }
-    .lesson-article p { margin-bottom: 14px; font-size: 15px; }
-    .lesson-article ul, .lesson-article ol { margin: 0 0 14px 20px; font-size: 15px; }
-    .lesson-article li { margin-bottom: 6px; }
-    .lesson-article code {
-      font-family: 'Courier New', monospace; font-size: 13px;
-      background: var(--bg); border: 1px solid var(--border);
-      padding: 1px 6px; border-radius: 5px; color: #c0392b;
-    }
-    .lesson-article pre {
-      background: #1e2433; border-radius: var(--r);
-      padding: 16px 18px; overflow-x: auto; margin-bottom: 16px;
-    }
-    .lesson-article pre code {
-      background: transparent; border: none; color: #e2e8f0;
-      font-size: 13px; padding: 0;
-    }
-    .lesson-article blockquote {
-      border-left: 3px solid var(--accent); margin: 0 0 16px;
-      padding: 10px 16px; background: var(--accent-bg);
-      border-radius: 0 var(--r) var(--r) 0;
-    }
-    .lesson-article img { max-width: 100%; border-radius: var(--r); margin: 10px 0; }
-    .lesson-article a { color: var(--accent); }
-    .lesson-article table {
-      width: 100%; border-collapse: collapse; margin-bottom: 16px;
-      font-size: 14px;
-    }
-    .lesson-article th { background: var(--bg); font-weight: 600; }
-    .lesson-article th, .lesson-article td {
-      border: 1px solid var(--border); padding: 8px 12px; text-align: left;
-    }
-    .lesson-article tr:nth-child(even) td { background: var(--bg); }
+    /* ── Гортання сторінок ── */
+    .pager { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 32px; background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
+    .pager .btn { height: 36px; max-width: 42%; }
+    .pager .btn span { overflow: hidden; text-overflow: ellipsis; }
+    .pager-info { font-size: 12px; color: var(--subtle); white-space: nowrap; }
 
-    /* ── Bottom panels: links & materials ── */
-    .lesson-panels {
-      border-top: 1px solid var(--border);
-      background: var(--surface);
-      padding: 20px 32px 28px;
-      display: flex; gap: 32px; flex-wrap: wrap;
-    }
-    .lesson-panel { flex: 1; min-width: 200px; }
-    .panel-title {
-      display: flex; align-items: center; gap: 7px;
-      font-size: 11px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .7px; color: var(--subtle); margin-bottom: 10px;
-    }
-    .panel-title svg { width: 13px; height: 13px; }
-    .panel-link {
-      display: flex; align-items: center; gap: 8px;
-      padding: 7px 10px; border-radius: var(--r);
-      text-decoration: none; color: var(--muted);
-      font-size: 13px; transition: background .12s, color .12s;
-      border: 1px solid transparent;
-    }
-    .panel-link:hover {
-      background: var(--accent-bg); color: var(--accent);
-      border-color: var(--accent-lt);
-    }
-    .panel-link svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--subtle); }
-    .panel-link:hover svg { color: var(--accent); }
-    .panel-link-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .panel-ext {
-      font-size: 10px; font-weight: 600; color: var(--subtle);
-      background: var(--bg); padding: 1px 5px; border-radius: 4px;
-      flex-shrink: 0;
-    }
-    .panel-empty { font-size: 12px; color: var(--subtle); font-style: italic; }
+    .state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px; color: var(--subtle); text-align: center; }
+    .state svg { width: 48px; height: 48px; color: var(--border2); }
+    .state strong { font-size: 16px; color: var(--muted); }
+    .state p { font-size: 13px; line-height: 1.6; }
+    .state a { color: var(--accent); }
+    .skel-line { height: 14px; margin-bottom: 12px; }
 
-    /* ── Nav buttons ── */
-    .lesson-nav {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 32px; background: var(--surface);
-      border-top: 1px solid var(--border);
-    }
-    .nav-page-btn {
-      display: flex; align-items: center; gap: 7px;
-      height: 34px; padding: 0 14px;
-      border-radius: var(--r); border: 1px solid var(--border2);
-      background: var(--surface); color: var(--muted);
-      font-family: 'Inter', system-ui, sans-serif;
-      font-size: 13px; font-weight: 500; cursor: pointer;
-      transition: border-color .12s, color .12s, background .12s;
-    }
-    .nav-page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
-    .nav-page-btn:disabled { opacity: .35; cursor: default; }
-    .nav-page-btn svg { width: 14px; height: 14px; }
-    .nav-page-info { font-size: 12px; color: var(--subtle); }
+    /* ── Режим фокусу / повний екран ── */
+    body.focus .topbar, body.focus .tabs, body.focus .pager, body.focus .toc { display: none !important; }
+    .exit-focus { display: none; position: fixed; top: 12px; right: 12px; z-index: 99; width: 38px; height: 38px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); box-shadow: var(--sh); color: var(--muted); align-items: center; justify-content: center; }
+    .exit-focus svg { width: 16px; height: 16px; }
+    body.focus .exit-focus { display: flex; }
+    .tag-pill { display: inline-flex; align-items: center; height: 19px; padding: 0 8px; border-radius: 20px; font-size: 10.5px; font-weight: 600; flex-shrink: 0; }
 
-    /* ── Error / Loading ── */
-    .lesson-state {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      color: var(--subtle); gap: 12px; padding: 40px;
+    @media (max-width: 1100px) { .toc { display: none; } }
+    @media (max-width: 700px) {
+      .article-wrap { padding: 22px 16px 40px; }
+      .panels { padding: 16px; gap: 18px; }
+      .pager { padding: 10px 12px; }
+      .crumbs .hide-md, .crumbs .sep.hide-md { display: none; }
+      .btn-label { display: none; }
     }
-    .lesson-state svg { width: 48px; height: 48px; color: var(--border2); }
-    .lesson-state strong { font-size: 16px; color: var(--muted); }
-    .lesson-state p { font-size: 13px; line-height: 1.6; text-align: center; }
-
-    /* ── Spinner ── */
-    .spinner {
-      width: 36px; height: 36px; border: 3px solid var(--border);
-      border-top-color: var(--accent); border-radius: 50%;
-      animation: spin .7s linear infinite;
+    @media print {
+      body { overflow: visible; height: auto; }
+      .layout, .main { display: block; overflow: visible; }
+      .tabs, .pager, .toc, .copy, .exit-focus { display: none !important; }
+      .article-wrap { max-width: none; padding: 0; }
+      .panels { border: 0; padding: 20px 0 0; }
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Status bar ── */
-    .statusbar {
-      height: var(--statusbar);
-      background: var(--surface); border-top: 1px solid var(--border);
-      display: flex; align-items: center; gap: 12px;
-      padding: 0 14px; flex-shrink: 0;
-    }
-    .statusbar span { font-size: 11px; color: var(--subtle); display: flex; align-items: center; gap: 5px; }
-    .sb-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; display: inline-block; }
-    .sb-right { margin-left: auto; }
-
-    @media(max-width: 700px) {
-      .lesson-sidebar { display: none; }
-      .lesson-article-wrap { padding: 20px 16px 40px; }
-      .lesson-panels { padding: 16px; gap: 20px; }
-      .lesson-nav { padding: 12px 16px; }
-    }
-
-    /* ── Icon-only topbar buttons (focus / fullscreen) ── */
-    .btn-icon {
-      display: flex; align-items: center; justify-content: center;
-      width: 34px; height: 34px; padding: 0; flex-shrink: 0;
-      border-radius: var(--r); border: 1px solid transparent;
-      background: transparent; color: var(--muted);
-      cursor: pointer; transition: background .12s, color .12s, border-color .12s;
-    }
-    .btn-icon:hover { background: var(--accent-bg); color: var(--accent); }
-    .btn-icon svg { width: 17px; height: 17px; }
-    .btn-icon.active { color: var(--accent); background: var(--accent-bg); border-color: var(--accent-lt); }
-
-    /* ── Focus / fullscreen modes: hide top & bottom navigation ── */
-    body.mode-focus .topbar,
-    body.mode-focus .statusbar,
-    body.mode-focus .lesson-nav,
-    body.mode-focus .page-tabs-bar,
-    body.mode-fullscreen .topbar,
-    body.mode-fullscreen .statusbar,
-    body.mode-fullscreen .lesson-nav,
-    body.mode-fullscreen .page-tabs-bar {
-      display: none !important;
-    }
-    body.mode-focus .lesson-layout,
-    body.mode-fullscreen .lesson-layout {
-      height: 100vh !important;
-    }
-
-    /* ── Floating exit button (shown only while nav is hidden) ── */
-    .focus-exit-btn {
-      display: none;
-      position: fixed; top: 14px; right: 14px; z-index: 999;
-      width: 36px; height: 36px; border-radius: 50%;
-      align-items: center; justify-content: center;
-      background: var(--surface); border: 1px solid var(--border2);
-      color: var(--muted); cursor: pointer;
-      box-shadow: 0 2px 10px rgba(0,0,0,.1);
-      transition: color .12s, border-color .12s;
-    }
-    .focus-exit-btn svg { width: 16px; height: 16px; }
-    .focus-exit-btn:hover { color: var(--accent); border-color: var(--accent-lt); }
-    body.mode-focus .focus-exit-btn,
-    body.mode-fullscreen .focus-exit-btn { display: flex; }
   </style>
 </head>
-<body>
+<body class="no-toc">
 
-<!-- ══ TOP BAR ══════════════════════════════════════════════ -->
 <header class="topbar">
-  <a href="materials.html" class="brand">
-    <div class="brand-mark">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-      </svg>
-    </div>
-    <span class="brand-name">Edvault</span>
-  </a>
+  <a href="materials.html" class="brand" aria-label="Edvault — до матеріалів"><span class="brand-mark" id="brandMark"></span></a>
   <div class="topbar-div"></div>
-  <nav class="breadcrumb" id="breadcrumb">
-    <a href="materials.html">Портал</a>
-    <span class="breadcrumb-sep">›</span>
-    <span class="breadcrumb-cur" id="bcTitle">Завантаження...</span>
+  <nav class="crumbs" id="crumbs" aria-label="Шлях">
+    <a href="materials.html">Матеріали</a><span class="sep">›</span><span class="cur">Завантаження…</span>
   </nav>
   <div class="topbar-actions">
-    <button class="btn-icon" id="btnFocus" title="Режим фокусу (сховати навігацію)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-    </button>
-    <button class="btn-icon" id="btnFullscreen" title="На весь екран">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-    </button>
-    <button class="btn btn-ghost" id="btnDownload" style="display:none" title="Завантажити урок">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <span class="btn-label">Завантажити</span>
-    </button>
-    <a href="index.html" class="btn btn-ghost">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <span class="btn-label">Портал</span>
-    </a>
+    <button class="icon-btn" id="btnFont" title="Розмір тексту" aria-label="Розмір тексту" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 9 6l5 14M5.8 15h6.4M15 20l3.5-9 3.5 9M16.2 17h4.6"/></svg></button>
+    <button class="icon-btn" id="btnToc" title="Зміст" aria-label="Зміст" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></button>
+    <button class="icon-btn" id="btnFocus" title="Режим фокусу (F)" aria-label="Режим фокусу"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+    <button class="icon-btn" id="btnTheme"></button>
+    <button class="btn btn-ghost" id="btnDownload" title="Завантажити урок файлом" hidden><span id="dlIco"></span><span class="btn-label">Завантажити</span></button>
   </div>
+  <div class="progress" id="progress"></div>
 </header>
 
-<!-- ══ BODY ═════════════════════════════════════════════════ -->
-<div class="lesson-layout">
-
-  <!-- Main -->
-  <main class="lesson-main" id="lessonMain">
-
-    <!-- Loading state -->
-    <div class="lesson-state" id="stateLoading">
-      <div class="spinner"></div>
-      <strong>Завантаження уроку...</strong>
+<div class="layout">
+  <main class="main" id="main">
+    <div class="article-wrap" id="loading" aria-busy="true">
+      <div class="skeleton" style="height:30px;width:60%;margin-bottom:24px"></div>
+      <div class="skeleton skel-line" style="width:100%"></div><div class="skeleton skel-line" style="width:94%"></div><div class="skeleton skel-line" style="width:97%"></div><div class="skeleton skel-line" style="width:70%"></div>
     </div>
-
-    <!-- Error state -->
-    <div class="lesson-state" id="stateError" style="display:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      <strong>Урок не знайдено</strong>
-      <p>Можливо, посилання застаріле або урок було видалено.<br/>
-         <a href="index.html" style="color:var(--accent)">Повернутись на портал</a></p>
-    </div>
-
-    <!-- Content (filled dynamically) -->
-    <div id="lessonBody" style="display:none; flex:1; flex-direction:column"></div>
-
   </main>
+  <aside class="toc" id="toc" aria-label="Зміст сторінки"></aside>
 </div>
 
-<!-- ══ FOCUS/FULLSCREEN EXIT (floating, visible only when nav hidden) ══ -->
-<button class="focus-exit-btn" id="btnExitFocus" title="Показати навігацію (Esc)">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-</button>
+<button class="exit-focus" id="btnExitFocus" title="Показати панелі (Esc)" aria-label="Показати панелі"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg></button>
 
-<!-- ══ STATUS BAR ════════════════════════════════════════════ -->
-<div class="statusbar">
-  <span id="subjBadge" style="color:var(--muted)"></span>
-  <span class="sb-right" id="sbTime"></span>
-</div>
-
-<!-- ══ SCRIPTS ═══════════════════════════════════════════════ -->
 <script type="module">
-  import { dbGet, objToArray } from './firebase-config.js';
+  import { dbGet } from './firebase-config.js';
+  import { ICON, esc, safeUrl, store, initThemeToggle, rememberLesson, toast } from './portal-common.js';
 
-  // ── Clock ──────────────────────────────────────────────────
-  const sbTimeEl = document.getElementById('sbTime');
-  const tick = () => sbTimeEl.textContent = new Date().toLocaleTimeString('uk-UA');
-  tick(); setInterval(tick, 1000);
+  const $ = id => document.getElementById(id);
+  const main = $('main');
+  $('brandMark').innerHTML = ICON.book; $('dlIco').outerHTML = ICON.download;
+  initThemeToggle($('btnTheme'));
 
-  // ── Focus mode (eye button) — hides top/bottom navigation ──
-  const ICON_EYE     = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
-  const ICON_EYE_OFF = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
-  const ICON_MAXIMIZE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>`;
-  const ICON_MINIMIZE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>`;
+  const params = new URLSearchParams(location.search);
+  const lessonId = params.get('id');
+  let pageIdx = Math.max(0, parseInt(params.get('page') || '0', 10) || 0);
+  let lesson = null, pages = [], subjName = '';
 
-  const btnFocus      = document.getElementById('btnFocus');
-  const btnFullscreen = document.getElementById('btnFullscreen');
-  const btnExitFocus  = document.getElementById('btnExitFocus');
-
-  btnFocus?.addEventListener('click', () => {
-    const active = document.body.classList.toggle('mode-focus');
-    btnFocus.classList.toggle('active', active);
-    btnFocus.innerHTML = active ? ICON_EYE_OFF : ICON_EYE;
-    btnFocus.title = active ? 'Показати навігацію' : 'Режим фокусу (сховати навігацію)';
+  // DOMPurify вантажиться паралельно з уроком
+  const purifyReady = new Promise(res => {
+    if (window.DOMPurify || window.__purifyFail) return res();
+    window.__purify = res;
+    setTimeout(res, 6000);
   });
 
-  btnFullscreen?.addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
-    } else {
-      document.exitFullscreen?.();
-    }
-  });
-
-  document.addEventListener('fullscreenchange', () => {
-    const active = !!document.fullscreenElement;
-    document.body.classList.toggle('mode-fullscreen', active);
-    btnFullscreen.classList.toggle('active', active);
-    btnFullscreen.innerHTML = active ? ICON_MINIMIZE : ICON_MAXIMIZE;
-    btnFullscreen.title = active ? 'Вийти з повноекранного режиму' : 'На весь екран';
-  });
-
-  btnExitFocus?.addEventListener('click', () => {
-    document.body.classList.remove('mode-focus');
-    btnFocus?.classList.remove('active');
-    if (btnFocus) { btnFocus.innerHTML = ICON_EYE; btnFocus.title = 'Режим фокусу (сховати навігацію)'; }
-    if (document.fullscreenElement) document.exitFullscreen?.();
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.body.classList.contains('mode-focus')) {
-      document.body.classList.remove('mode-focus');
-      btnFocus?.classList.remove('active');
-      if (btnFocus) { btnFocus.innerHTML = ICON_EYE; btnFocus.title = 'Режим фокусу (сховати навігацію)'; }
-    }
-  });
-
-  // ── Parse URL params ───────────────────────────────────────
-  const params    = new URLSearchParams(location.search);
-  const lessonId  = params.get('id');
-  let   curPageIdx = parseInt(params.get('page') || '0', 10);
-
-  // Module-level state — shared by switchPage, renderTOC, downloadLesson
-  let _lesson    = null;
-  let _pages     = null;
-  let _container = null;
-
-  if (!lessonId) {
-    showError();
-  } else {
-    loadLesson(lessonId);
+  // ══════════ Кеш уроків ══════════
+  // Урок показується миттєво з кешу, а в цей час перевіряємо, чи не змінився він у базі.
+  const CK = id => 'edvault_lesson:' + id;
+  const CACHE_MAX = 1_500_000, FRESH_MS = 60 * 1000, KEEP = 12;
+  function readCache(id) { const c = store.get(CK(id)); return c && c.lesson ? c : null; }
+  function writeCache(id, l, info = null) {
+    const s = JSON.stringify({ ts: Date.now(), lesson: l, info });
+    if (s.length > CACHE_MAX) return;
+    const idx = (store.get('edvault_lesson_idx', []) || []).filter(x => x !== id);
+    idx.unshift(id);
+    idx.slice(KEEP).forEach(old => store.del(CK(old)));
+    try { localStorage.setItem(CK(id), s); store.set('edvault_lesson_idx', idx.slice(0, KEEP)); }
+    catch { idx.slice(1).forEach(old => store.del(CK(old))); } // місця немає — звільняємо
   }
 
-  // ── sessionStorage cache (TTL 5 хв) ────────────────────────
-  // Кеш живе в межах вкладки — закрив вкладку, кеш зник.
-  // TTL потрібен на випадок, якщо адмін оновив урок, поки вкладка відкрита.
-  const CACHE_TTL = 5 * 60 * 1000;
-  const cacheKey  = (id) => `edvault:lesson:${id}`;
-
-  function getCachedLesson(id) {
-    try {
-      const raw = sessionStorage.getItem(cacheKey(id));
-      if (!raw) return null;
-      const data = JSON.parse(raw);
-      if (!data || Date.now() - data.ts > CACHE_TTL) return null;
-      return data;
-    } catch { return null; }
+  // назви предмета, папки й тегу — з кешу порталу, інакше одним маленьким запитом
+  const portal = (store.get('edvault_portal_v2') || {}).d || null;
+  async function lookup(l, known) {
+    if (known && known.sid === l.subjectId && known.tid === (l.tagId || null)) return known;
+    const out = { subj: portal?.subjects?.[l.subjectId] || null, tag: l.tagId ? portal?.tags?.[l.tagId] || null : null, path: folderPath(l.folderId) };
+    const jobs = [];
+    if (l.subjectId && !out.subj) jobs.push(dbGet(`/subjects/${l.subjectId}/name`).then(v => { out.subj = v ? { name: v } : null; }).catch(() => {}));
+    if (l.tagId && !out.tag) jobs.push(dbGet(`/tags/${l.tagId}`).then(v => { out.tag = v; }).catch(() => {}));
+    await Promise.all(jobs);
+    return { ...out, sid: l.subjectId, tid: l.tagId || null };
   }
 
-  function setCachedLesson(id, lesson, subjects, tags) {
+  // шлях папок — лише з кешу порталу (окремо не читаємо)
+  function folderPath(fid) {
+    const F = portal?.folders || {}, path = [];
+    while (fid && F[fid] && path.length < 20) { path.unshift({ id: fid, name: F[fid].name }); fid = F[fid].parentId; }
+    return path;
+  }
+  function normalizePages(l) {
+    if (Array.isArray(l.pages) && l.pages.length) return l.pages.filter(Boolean);
+    return [{ id: 'p0', title: 'Урок', htmlContent: l.htmlContent || '<p>Вміст відсутній.</p>', isolated: false }];
+  }
+
+  async function load() {
+    if (!lessonId) return showError();
+    const cached = readCache(lessonId);
+    if (cached) { await show(cached.lesson, cached.info); if (Date.now() - cached.ts < FRESH_MS) return; }
     try {
-      sessionStorage.setItem(cacheKey(id), JSON.stringify({
-        lesson, subjects, tags, ts: Date.now()
-      }));
+      const fresh = await dbGet(`/lessons/${lessonId}`);
+      if (!fresh) { if (!cached) showError(); return; }
+      const changed = !cached || JSON.stringify(fresh) !== JSON.stringify(cached.lesson);
+      if (changed) { await show(fresh, cached && cached.info); if (cached) toast('Урок оновлено', 'ok', 1800); }
+      writeCache(lessonId, fresh, lastInfo);
     } catch (e) {
-      // QuotaExceededError — урок завеликий (наприклад, base64 картинки).
-      // Не критично: просто не кешуємо, наступне відкриття піде в Firebase.
-      console.warn('Lesson cache skipped:', e.message);
-    }
-  }
-
-  // ── Load lesson ────────────────────────────────────────────
-  async function loadLesson(id) {
-    try {
-      let lesson, subjects, tags;
-
-      // Спершу пробуємо кеш — миттєвий рендер без спінера
-      const cached = getCachedLesson(id);
-      if (cached) {
-        ({ lesson, subjects, tags } = cached);
-      } else {
-        [lesson, subjects, tags] = await Promise.all([
-          dbGet(`/lessons/${id}`),
-          dbGet('/subjects'),
-          dbGet('/tags')
-        ]);
-        if (lesson) setCachedLesson(id, lesson, subjects, tags);
-      }
-
-      if (!lesson) { showError(); return; }
-      const allTags = tags || {};
-
-      // Normalize pages
-      let pages;
-      if (Array.isArray(lesson.pages) && lesson.pages.length > 0) {
-        pages = lesson.pages;
-      } else if (lesson.htmlContent) {
-        pages = [{ id: 'p0', title: 'Урок', htmlContent: lesson.htmlContent, isolated: false }];
-      } else {
-        pages = [{ id: 'p0', title: 'Урок', htmlContent: '<p>Вміст відсутній.</p>', isolated: false }];
-      }
-
-      // Subject info
-      const subj = subjects && lesson.subjectId ? subjects[lesson.subjectId] : null;
-      const subjName = subj?.name || '';
-
-      // Breadcrumb
-      document.title = `${lesson.title} — Edvault`;
-      document.getElementById('bcTitle').textContent = lesson.title || 'Урок';
-      if (subjName) {
-        const breadcrumb = document.getElementById('breadcrumb');
-        breadcrumb.innerHTML = `
-          <a href="index.html">Портал</a>
-          <span class="breadcrumb-sep">›</span>
-          <span style="font-size:12.5px;color:var(--muted)">${esc(subjName)}</span>
-          <span class="breadcrumb-sep">›</span>
-          <span class="breadcrumb-cur">${esc(lesson.title || 'Урок')}</span>`;
-        document.getElementById('subjBadge').textContent = `📚 ${subjName}`;
-      }
-      // Show tag badge in statusbar
-      if (lesson.tagId && allTags[lesson.tagId]) {
-        const tag = allTags[lesson.tagId];
-        const sb  = document.getElementById('subjBadge');
-        const tagEl = document.createElement('span');
-        tagEl.style.cssText = `display:inline-flex;align-items:center;height:18px;padding:0 8px;border-radius:20px;font-size:10.5px;font-weight:600;background:${tag.bg};color:${tag.text};margin-left:6px`;
-        tagEl.textContent = tag.name;
-        sb.after(tagEl);
-      }
-
-      // Show download button and wire it up
-      const btnDownload = document.getElementById('btnDownload');
-      btnDownload.style.display = '';
-      btnDownload.addEventListener('click', () => downloadLesson(lesson, pages));
-
-      // Save to module scope so TOC can use them
-      _lesson    = lesson;
-      _pages     = pages;
-
-      // Hide loading, show body
-      document.getElementById('stateLoading').style.display = 'none';
-      const body = document.getElementById('lessonBody');
-      body.style.display = 'flex';
-      body.style.flexDirection = 'column';
-      body.style.flex = '1';
-
-      // Save container to module scope
-      _container = body;
-
-      // Clamp page index
-      curPageIdx = Math.max(0, Math.min(curPageIdx, pages.length - 1));
-
-      renderLesson(body, lesson, pages, curPageIdx);
-
-    } catch(e) {
       console.error(e);
-      showError();
+      if (!cached) showError('Не вдалося завантажити урок', 'Перевірте з’єднання з інтернетом і оновіть сторінку.');
     }
   }
 
-  // ── Render lesson ──────────────────────────────────────────
-  function renderLesson(container, lesson, pages, pageIdx) {
-    const page = pages[pageIdx];
-    const isIsolated = !!page.isolated;
-    const hasMultiplePages = pages.length > 1;
-
-    container.innerHTML = '';
-
-    // For isolated pages: only the iframe scrolls, lesson-main must not scroll
-    // For regular pages: lesson-main scrolls normally
-    const lessonMain = document.getElementById('lessonMain');
-    if (lessonMain) {
-      lessonMain.style.overflowY = isIsolated ? 'hidden' : 'auto';
-    }
-
-    // Page tabs (only if multiple pages)
-    if (hasMultiplePages) {
-      const tabsBar = document.createElement('div');
-      tabsBar.className = 'page-tabs-bar';
-      pages.forEach((p, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'page-tab-btn' + (i === pageIdx ? ' active' : '');
-        btn.innerHTML = `
-          ${p.isolated
-            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
-            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>`
-          }
-          ${esc(p.title || `Сторінка ${i + 1}`)}`;
-        btn.addEventListener('click', () => switchPage(i, pages, lesson, container));
-        tabsBar.appendChild(btn);
-      });
-      container.appendChild(tabsBar);
-    }
-
-    // Content area
-    const contentWrap = document.createElement('div');
-    contentWrap.className = 'lesson-content-wrap';
-
-    if (isIsolated) {
-      // Render isolated HTML in iframe via Blob URL.
-      // With Blob URL as src: anchor links like #heading-1 resolve to blob://...#heading-1
-      // and just scroll within the iframe — they CANNOT load lesson.html.
-      const frameWrap = document.createElement('div');
-      frameWrap.className = 'isolated-frame-wrap';
-      const iframe = document.createElement('iframe');
-      iframe.className = 'isolated-frame';
-      iframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-forms allow-same-origin');
-
-      // Inject interceptor: external links open in _blank, internal anchors scroll smoothly
-      const interceptor = `<script>
-(function(){
-  document.addEventListener('click', function(e){
-    var a = e.target.closest('a[href]');
-    if (!a) return;
-    var href = a.getAttribute('href') || '';
-    if (href.startsWith('#')) return; // anchor — let browser handle scroll natively
-    e.preventDefault();
-    e.stopPropagation();
-    if (href) window.open(a.href || href, '_blank', 'noopener,noreferrer');
-  }, true);
-})();
-<\/script>`;
-
-      let html = page.htmlContent || '';
-      if (html.includes('</head>')) {
-        html = html.replace('</head>', interceptor + '</head>');
-      } else {
-        html = interceptor + html;
-      }
-
-      // Blob URL: anchor hrefs like #heading-1 resolve to blob:https://...#heading-1
-      // The browser scrolls within the iframe — no lesson.html reload possible
-      const blob   = new Blob([html], { type: 'text/html;charset=utf-8' });
-      const blobUrl = URL.createObjectURL(blob);
-      iframe.src = blobUrl;
-      iframe.addEventListener('load', () => URL.revokeObjectURL(blobUrl), { once: true });
-
-      frameWrap.appendChild(iframe);
-      contentWrap.appendChild(frameWrap);
-    } else {
-      // Render normal HTML content with sanitization
-      const articleWrap = document.createElement('div');
-      articleWrap.className = 'lesson-article-wrap';
-      const article = document.createElement('article');
-      article.className = 'lesson-article';
-      // Use DOMPurify if available, otherwise set innerHTML directly
-      if (typeof DOMPurify !== 'undefined') {
-        article.innerHTML = DOMPurify.sanitize(page.htmlContent || '');
-      } else {
-        article.innerHTML = page.htmlContent || '<p style="color:var(--subtle)">Вміст відсутній.</p>';
-      }
-      articleWrap.appendChild(article);
-      contentWrap.appendChild(articleWrap);
-    }
-
-    container.appendChild(contentWrap);
-
-    // Bottom panels: links + materials
-    const links = lesson.links || [];
-    const mats  = lesson.materials || [];
-    if (links.length || mats.length) {
-      const panels = document.createElement('div');
-      panels.className = 'lesson-panels';
-
-      if (links.length) {
-        panels.insertAdjacentHTML('beforeend', `
-          <div class="lesson-panel">
-            <div class="panel-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-              Корисні посилання
-            </div>
-            ${links.map(l => `
-              <a class="panel-link" href="${esc(l.url)}" target="_blank" rel="noopener">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                <span class="panel-link-title">${esc(l.title || l.url)}</span>
-                <span class="panel-ext">→</span>
-              </a>`).join('')}
-          </div>`);
-      }
-
-      if (mats.length) {
-        panels.insertAdjacentHTML('beforeend', `
-          <div class="lesson-panel">
-            <div class="panel-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Матеріали для завантаження
-            </div>
-            ${mats.map(m => {
-              const ext = (m.fileUrl || '').split('.').pop().toUpperCase().slice(0, 4);
-              return `<a class="panel-link" href="${esc(m.fileUrl)}" target="_blank" rel="noopener" download>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                <span class="panel-link-title">${esc(m.title || m.fileUrl)}</span>
-                ${ext ? `<span class="panel-ext">${ext}</span>` : ''}
-              </a>`;
-            }).join('')}
-          </div>`);
-      }
-
-      container.appendChild(panels);
-    }
-
-    // Prev / Next navigation (for multi-page lessons)
-    if (hasMultiplePages) {
-      const nav = document.createElement('div');
-      nav.className = 'lesson-nav';
-      nav.innerHTML = `
-        <button class="nav-page-btn" id="btnPrev" ${pageIdx === 0 ? 'disabled' : ''}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          Попередня
-        </button>
-        <span class="nav-page-info">${pageIdx + 1} / ${pages.length}</span>
-        <button class="nav-page-btn" id="btnNext" ${pageIdx === pages.length - 1 ? 'disabled' : ''}>
-          Наступна
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>`;
-      nav.querySelector('#btnPrev')?.addEventListener('click', () => switchPage(pageIdx - 1, pages, lesson, container));
-      nav.querySelector('#btnNext')?.addEventListener('click', () => switchPage(pageIdx + 1, pages, lesson, container));
-      container.appendChild(nav);
-    }
+  let lastInfo = null;
+  async function show(l, known) {
+    lesson = l; pages = normalizePages(l);
+    pageIdx = Math.min(pageIdx, pages.length - 1);
+    document.title = `${l.title || 'Урок'} — Edvault`;
+    $('btnDownload').hidden = false;
+    await renderPage(false);
+    renderCrumbs(l, known || { subj: portal?.subjects?.[l.subjectId], tag: portal?.tags?.[l.tagId], path: folderPath(l.folderId) });
+    lastInfo = await lookup(l, known);
+    renderCrumbs(l, lastInfo);
   }
 
-  // ── Switch page ────────────────────────────────────────────
-  function switchPage(idx, pages, lesson, container) {
-    const url = new URL(location.href);
-    url.searchParams.set('page', idx);
-    history.replaceState(null, '', url);
-    curPageIdx = idx;
-
-    renderLesson(container, lesson, pages, idx);
-    document.getElementById('lessonMain')?.scrollTo(0, 0);
+  function renderCrumbs(l, info) {
+    const s = info.subj, path = info.path || [];
+    const subjUrl = `materials.html?subject=${encodeURIComponent(l.subjectId || '')}`;
+    $('crumbs').innerHTML = `<a href="materials.html" class="hide-md">Матеріали</a><span class="sep hide-md">›</span>` +
+      (s ? `<a href="${subjUrl}" class="hide-md">${esc(s.name)}</a><span class="sep hide-md">›</span>` : '') +
+      path.map(p => `<a href="${subjUrl}&folder=${encodeURIComponent(p.id)}" class="hide-md">${esc(p.name)}</a><span class="sep hide-md">›</span>`).join('') +
+      `<span class="cur" title="${esc(l.title || '')}">${esc(l.title || 'Урок')}</span>` +
+      (info.tag ? `<span class="tag-pill" style="background:${esc(info.tag.bg)};color:${esc(info.tag.text)}">${esc(info.tag.name)}</span>` : '');
+    if (s) subjName = s.name;
+    rememberLesson({ id: lessonId, title: l.title || 'Урок', subj: subjName, page: pageIdx || 0 });
   }
 
-  // ── Download lesson ────────────────────────────────────────
-  function downloadLesson(lesson, pages) {
-    const page = pages[curPageIdx];
+  // ══════════ Сторінка уроку ══════════
+  let tocObserver = null;
+  async function renderPage(scrollTop = true) {
+    const page = pages[pageIdx] || pages[0];
+    const multi = pages.length > 1;
+    if (tocObserver) { tocObserver.disconnect(); tocObserver = null; }
+    main.classList.toggle('frame', !!page.isolated);
+    const frag = document.createDocumentFragment();
 
-    let html;
+    if (multi) {
+      const tabs = document.createElement('div');
+      tabs.className = 'tabs'; tabs.setAttribute('role', 'tablist');
+      tabs.innerHTML = pages.map((p, i) => `<button class="tab${i === pageIdx ? ' on' : ''}" role="tab" aria-selected="${i === pageIdx}" data-page="${i}"><span class="num">${i + 1}</span>${esc(p.title || `Сторінка ${i + 1}`)}</button>`).join('');
+      frag.appendChild(tabs);
+    }
+
+    let article = null;
     if (page.isolated) {
-      // Standalone uploaded file — download as-is
-      html = page.htmlContent || '';
+      // окремий HTML-документ — у пісочниці, зовнішні посилання відкриваються в новій вкладці
+      const box = document.createElement('div');
+      box.className = 'frame-box';
+      const iframe = document.createElement('iframe');
+      iframe.title = page.title || 'Урок';
+      iframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-same-origin allow-modals');
+      iframe.setAttribute('allow', 'fullscreen; clipboard-write');
+      const hook = `<script>document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;var h=a.getAttribute('href')||'';if(h.charAt(0)==='#')return;e.preventDefault();if(h)window.open(a.href||h,'_blank','noopener');},true);<\/script>`;
+      let html = page.htmlContent || '';
+      html = /<\/head>/i.test(html) ? html.replace(/<\/head>/i, hook + '</head>') : hook + html;
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+      iframe.src = url;
+      iframe.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+      box.appendChild(iframe);
+      frag.appendChild(box);
     } else {
-      // Wrap portal HTML content in a clean standalone document
-      const linksHtml = (lesson.links || []).map(l =>
-        `<li><a href="${escAttr(l.url)}" target="_blank">${escText(l.title || l.url)}</a></li>`
-      ).join('');
-      const matsHtml = (lesson.materials || []).map(m =>
-        `<li><a href="${escAttr(m.fileUrl)}" target="_blank">${escText(m.title || m.fileUrl)}</a></li>`
-      ).join('');
-
-      html = `<!DOCTYPE html>
-<html lang="uk">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${escText(lesson.title || 'Урок')}</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Georgia, 'Times New Roman', serif; color: #1a1d23; background: #fff; max-width: 820px; margin: 40px auto; padding: 0 32px 60px; line-height: 1.75; }
-    h1 { font-size: 28px; font-weight: 700; margin-bottom: 18px; }
-    h2 { font-size: 21px; font-weight: 600; margin: 28px 0 10px; }
-    h3 { font-size: 17px; font-weight: 600; margin: 20px 0 8px; }
-    p  { font-size: 16px; margin-bottom: 14px; }
-    ul, ol { margin: 0 0 14px 22px; font-size: 16px; }
-    li { margin-bottom: 6px; }
-    code { font-family: 'Courier New', monospace; font-size: 13.5px; background: #f3f4f6; border: 1px solid #e2e5ea; padding: 1px 6px; border-radius: 4px; color: #c0392b; }
-    pre  { background: #1e2433; border-radius: 6px; padding: 16px; overflow-x: auto; margin-bottom: 16px; }
-    pre code { background: transparent; border: none; color: #e2e8f0; }
-    blockquote { border-left: 3px solid #4F6BF4; margin: 0 0 16px; padding: 10px 16px; background: #eef0fe; border-radius: 0 6px 6px 0; }
-    img { max-width: 100%; border-radius: 6px; margin: 10px 0; }
-    a   { color: #4F6BF4; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 15px; }
-    th  { background: #f3f4f6; font-weight: 600; }
-    th, td { border: 1px solid #e2e5ea; padding: 8px 12px; text-align: left; }
-    tr:nth-child(even) td { background: #f9fafb; }
-    .meta { font-size: 13px; color: #6b7280; margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid #e2e5ea; }
-    .extra-section { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e5ea; }
-    .extra-section h2 { font-size: 16px; color: #6b7280; margin-bottom: 10px; }
-    .extra-section ul { list-style: none; margin: 0; padding: 0; }
-    .extra-section li { margin-bottom: 6px; }
-    .extra-section a { font-size: 14px; }
-  </style>
-</head>
-<body>
-  <h1>${escText(lesson.title || 'Урок')}</h1>
-  ${pages.length > 1 ? `<div class="meta">Сторінка ${curPageIdx + 1} з ${pages.length}: ${escText(page.title || '')}</div>` : ''}
-  ${page.htmlContent || ''}
-  ${linksHtml ? `<div class="extra-section"><h2>🔗 Корисні посилання</h2><ul>${linksHtml}</ul></div>` : ''}
-  ${matsHtml  ? `<div class="extra-section"><h2>📁 Матеріали</h2><ul>${matsHtml}</ul></div>` : ''}
-</body>
-</html>`;
+      const wrap = document.createElement('div');
+      wrap.className = 'article-wrap';
+      article = document.createElement('article');
+      article.className = 'article';
+      await purifyReady;
+      const raw = page.htmlContent || '<p style="color:var(--subtle)">Вміст відсутній.</p>';
+      article.innerHTML = window.DOMPurify ? DOMPurify.sanitize(raw, { ADD_ATTR: ['target', 'allowfullscreen'], ADD_TAGS: ['iframe'] }) : raw;
+      enhance(article);
+      wrap.appendChild(article);
+      frag.appendChild(wrap);
     }
 
-    // Trigger download
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    const pagePart = pages.length > 1 ? `_${curPageIdx + 1}` : '';
-    a.href     = url;
-    a.download = `${(lesson.title || 'урок').replace(/[^\wа-яА-ЯіІєЄїЇ\s]/g, '').trim()}${pagePart}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+    // посилання й матеріали — під кожною сторінкою
+    const links = (lesson.links || []).filter(x => safeUrl(x && x.url));
+    const mats = (lesson.materials || []).filter(x => safeUrl(x && x.fileUrl));
+    if (links.length || mats.length) {
+      const p = document.createElement('div');
+      p.className = 'panels';
+      p.innerHTML = (links.length ? `<div class="panel"><div class="panel-title">${ICON.link}Корисні посилання</div>${links.map(x => `<a class="plink" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener">${ICON.ext}<span>${esc(x.title || x.url)}</span></a>`).join('')}</div>` : '') +
+        (mats.length ? `<div class="panel"><div class="panel-title">${ICON.download}Матеріали</div>${mats.map(x => {
+          const ext = (String(x.fileUrl).split(/[?#]/)[0].split('.').pop() || '').toUpperCase();
+          return `<a class="plink" href="${esc(safeUrl(x.fileUrl))}" target="_blank" rel="noopener" download>${ICON.doc}<span>${esc(x.title || x.fileUrl)}</span>${ext && ext.length <= 4 ? `<em>${esc(ext)}</em>` : ''}</a>`;
+        }).join('')}</div>` : '');
+      frag.appendChild(p);
+    }
+
+    if (multi) {
+      const prev = pages[pageIdx - 1], next = pages[pageIdx + 1];
+      const nav = document.createElement('div');
+      nav.className = 'pager';
+      nav.innerHTML = `<button class="btn btn-line" data-page="${pageIdx - 1}" ${prev ? '' : 'disabled'}>${ICON.chevL}<span>${prev ? esc(prev.title || 'Попередня') : 'Попередня'}</span></button>
+        <span class="pager-info">${pageIdx + 1} / ${pages.length}</span>
+        <button class="btn ${next ? 'btn-solid' : 'btn-line'}" data-page="${pageIdx + 1}" ${next ? '' : 'disabled'}><span>${next ? esc(next.title || 'Наступна') : 'Наступна'}</span>${ICON.chevR}</button>`;
+      frag.appendChild(nav);
+    }
+
+    main.replaceChildren(frag);
+    if (scrollTop) main.scrollTop = 0;
+    $('btnFont').hidden = !article;
+    buildToc(article);
+    updateProgress();
   }
 
-  function escText(s) { const d = document.createElement('div'); d.textContent = String(s || ''); return d.innerHTML; }
-  function escAttr(s) { return String(s || '').replace(/"/g, '&quot;'); }
+  // гарні дрібниці в статті: якорі для заголовків, копіювання коду, ліниві картинки, таблиці з прокруткою
+  function enhance(root) {
+    root.querySelectorAll('img').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; });
+    root.querySelectorAll('a[href]').forEach(a => {
+      const h = a.getAttribute('href') || '';
+      if (!safeUrl(h)) { a.removeAttribute('href'); return; }
+      if (!h.startsWith('#')) { a.target = '_blank'; a.rel = 'noopener'; }
+    });
+    root.querySelectorAll('table').forEach(t => { if (!t.parentElement.classList.contains('tbl')) { const w = document.createElement('div'); w.className = 'tbl'; t.before(w); w.appendChild(t); } });
+    root.querySelectorAll('pre').forEach(pre => {
+      const b = document.createElement('button');
+      b.className = 'copy'; b.type = 'button'; b.textContent = 'Копіювати';
+      pre.appendChild(b);
+    });
+    let n = 0;
+    root.querySelectorAll('h1, h2, h3').forEach(h => { if (!h.id) h.id = 'h-' + (++n); });
+  }
+  main.addEventListener('click', async e => {
+    const c = e.target.closest('.copy');
+    if (c) {
+      const code = c.parentElement.cloneNode(true); code.querySelector('.copy')?.remove();
+      try { await navigator.clipboard.writeText(code.textContent); c.textContent = 'Скопійовано'; }
+      catch { c.textContent = 'Не вдалося'; }
+      setTimeout(() => { c.textContent = 'Копіювати'; }, 1500);
+      return;
+    }
+    const p = e.target.closest('[data-page]');
+    if (p && !p.disabled) goPage(+p.dataset.page);
+  });
 
-  // ── Error state ────────────────────────────────────────────
-  function showError() {
-    document.getElementById('stateLoading').style.display = 'none';
-    document.getElementById('stateError').style.display   = 'flex';
+  function goPage(i) {
+    if (i < 0 || i >= pages.length || i === pageIdx) return;
+    pageIdx = i;
+    const url = new URL(location.href);
+    if (i) url.searchParams.set('page', i); else url.searchParams.delete('page');
+    history.replaceState(null, '', url);
+    renderPage();
+    rememberLesson({ id: lessonId, title: lesson.title || 'Урок', subj: subjName, page: i });
   }
 
-  // ── Escape helper ──────────────────────────────────────────
-  function esc(s) {
-    if (!s) return '';
-    const d = document.createElement('div');
-    d.textContent = String(s);
-    return d.innerHTML;
+  // ── Зміст ──
+  let tocOpen = store.get('edvault_lesson_toc', true);
+  function buildToc(article) {
+    const toc = $('toc');
+    const hs = article ? [...article.querySelectorAll('h1, h2, h3')].filter(h => h.textContent.trim()) : [];
+    const has = hs.length >= 3;
+    $('btnToc').hidden = !has;
+    document.body.classList.toggle('no-toc', !has || !tocOpen);
+    $('btnToc').classList.toggle('on', has && tocOpen);
+    if (!has) { toc.innerHTML = ''; return; }
+    const top = Math.min(...hs.map(h => +h.tagName[1]));
+    toc.innerHTML = `<div class="toc-title">На цій сторінці</div>` + hs.map(h => `<a href="#${h.id}" class="l${Math.min(3, +h.tagName[1] - top + 2)}">${esc(h.textContent.trim())}</a>`).join('');
+    const links = new Map([...toc.querySelectorAll('a')].map(a => [a.getAttribute('href').slice(1), a]));
+    tocObserver = new IntersectionObserver(entries => {
+      entries.forEach(en => { if (en.isIntersecting) { links.forEach(a => a.classList.remove('on')); links.get(en.target.id)?.classList.add('on'); } });
+    }, { root: main, rootMargin: '0px 0px -75% 0px' });
+    hs.forEach(h => tocObserver.observe(h));
+  }
+  $('toc').addEventListener('click', e => {
+    const a = e.target.closest('a'); if (!a) return;
+    e.preventDefault();
+    document.getElementById(a.getAttribute('href').slice(1))?.scrollIntoView({ block: 'start' });
+  });
+  $('btnToc').addEventListener('click', () => {
+    tocOpen = !tocOpen; store.set('edvault_lesson_toc', tocOpen);
+    document.body.classList.toggle('no-toc', !tocOpen);
+    $('btnToc').classList.toggle('on', tocOpen);
+  });
+
+  // ── Прогрес читання ──
+  let progQueued = false;
+  function updateProgress() {
+    const max = main.scrollHeight - main.clientHeight;
+    $('progress').style.width = (max > 4 ? Math.min(100, main.scrollTop / max * 100) : 0) + '%';
+  }
+  main.addEventListener('scroll', () => { if (progQueued) return; progQueued = true; requestAnimationFrame(() => { progQueued = false; updateProgress(); }); }, { passive: true });
+
+  // ── Розмір тексту ──
+  const SIZES = [0.9, 1, 1.12, 1.25, 1.4];
+  $('btnFont').addEventListener('click', () => {
+    const cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fs')) || 1;
+    const next = SIZES[(SIZES.findIndex(v => Math.abs(v - cur) < 0.01) + 1) % SIZES.length];
+    document.documentElement.style.setProperty('--fs', next);
+    store.set('edvault_lesson_fs', String(next), true);
+    toast(`Розмір тексту: ${Math.round(next * 100)}%`, '', 1200);
+  });
+
+  // ── Фокус і повний екран ──
+  function setFocus(on) {
+    document.body.classList.toggle('focus', on);
+    if (on && !document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+    if (!on && document.fullscreenElement) document.exitFullscreen?.();
+  }
+  $('btnFocus').addEventListener('click', () => setFocus(true));
+  $('btnExitFocus').addEventListener('click', () => setFocus(false));
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('focus'); });
+  addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+    if (e.key === 'ArrowRight' && pages.length > 1) { goPage(pageIdx + 1); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' && pages.length > 1) { goPage(pageIdx - 1); e.preventDefault(); }
+    else if (e.key === 'f' || e.key === 'F' || e.key === 'а' || e.key === 'А') setFocus(!document.body.classList.contains('focus'));
+    else if (e.key === 'Escape' && document.body.classList.contains('focus')) setFocus(false);
+  });
+
+  // ── Завантаження файлом ──
+  $('btnDownload').addEventListener('click', () => {
+    const page = pages[pageIdx];
+    let html;
+    const name = (lesson.title || 'урок').replace(/[\\/:*?"<>|]+/g, '').trim() || 'урок';
+    if (page.isolated) html = page.htmlContent || '';
+    else {
+      // усі звичайні сторінки уроку — в одному файлі
+      const body = pages.filter(p => !p.isolated).map((p, i, arr) => (arr.length > 1 ? `<h2 class="pg">${esc(p.title || `Сторінка ${i + 1}`)}</h2>` : '') + (window.DOMPurify ? DOMPurify.sanitize(p.htmlContent || '') : (p.htmlContent || ''))).join('\n');
+      const li = (arr, key) => arr.filter(x => safeUrl(x[key])).map(x => `<li><a href="${esc(safeUrl(x[key]))}">${esc(x.title || x[key])}</a></li>`).join('');
+      const links = li(lesson.links || [], 'url'), mats = li(lesson.materials || [], 'fileUrl');
+      html = `<!DOCTYPE html><html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(lesson.title || 'Урок')}</title>
+<style>body{font-family:Georgia,'Times New Roman',serif;color:#1a1d23;max-width:800px;margin:40px auto;padding:0 24px 60px;line-height:1.75;font-size:17px}h1{font-size:30px;line-height:1.25}h2{font-size:22px;margin-top:1.6em}h2.pg{border-top:1px solid #e2e5ea;padding-top:1em;color:#4F6BF4}code{font-family:Consolas,monospace;font-size:.86em;background:#f3f4f6;padding:1px 6px;border-radius:4px;color:#c0392b}pre{background:#1e2433;color:#e2e8f0;padding:16px;border-radius:6px;overflow-x:auto}pre code{background:none;color:inherit}blockquote{border-left:3px solid #4F6BF4;margin:0 0 16px;padding:10px 16px;background:#eef0fe}img{max-width:100%}a{color:#4F6BF4}table{border-collapse:collapse;width:100%}th,td{border:1px solid #e2e5ea;padding:8px 12px;text-align:left}.extra{margin-top:40px;padding-top:16px;border-top:1px solid #e2e5ea}</style></head>
+<body><h1>${esc(lesson.title || 'Урок')}</h1>${body}${links ? `<div class="extra"><h3>Корисні посилання</h3><ul>${links}</ul></div>` : ''}${mats ? `<div class="extra"><h3>Матеріали</h3><ul>${mats}</ul></div>` : ''}</body></html>`;
+    }
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: `${name}${page.isolated && pages.length > 1 ? `_${pageIdx + 1}` : ''}.html` });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  function showError(title = 'Урок не знайдено', text = 'Можливо, посилання застаріло або урок видалено.') {
+    main.classList.remove('frame');
+    main.innerHTML = `<div class="state">${ICON.alert}<strong>${esc(title)}</strong><p>${esc(text)}<br><a href="materials.html">До матеріалів</a></p></div>`;
+    $('crumbs').innerHTML = `<a href="materials.html">Матеріали</a>`;
   }
 
+  load();
 </script>
-
-<!-- DOMPurify for sanitizing HTML content on non-isolated pages -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js" crossorigin="anonymous"></script>
-
 </body>
 </html>
