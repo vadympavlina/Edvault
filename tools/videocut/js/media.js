@@ -12,7 +12,7 @@ function kindOf(blob, name) {
   const ext = (name.split('.').pop() || '').toLowerCase();
   if (t.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif'].includes(ext)) return 'image';
   if (t.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac', 'opus'].includes(ext)) return 'audio';
-  if (t.startsWith('video/') || ['mp4', 'webm', 'mov', 'mkv', 'm4v', 'avi', 'ts'].includes(ext)) return 'video';
+  if (t.startsWith('video/') || ['mp4', 'webm', 'mov', 'mkv', 'm4v', 'avi', 'ts', 'wmv', 'flv', 'mpg', 'mpeg', '3gp', 'mts', 'm2ts', 'ogv'].includes(ext)) return 'video';
   return null;
 }
 
