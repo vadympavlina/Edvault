@@ -497,3 +497,42 @@ body.recording .tl,body.recording .lib,body.recording .insp,body.recording .topb
 .lo-bottom i::after{left:0;right:0;bottom:0;height:50%}
 .crop-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
 .crop-grid .field{margin-bottom:6px}
+
+/* ── Рядок меню (Файл · Редагування · …) ── */
+.menubar{display:flex;align-items:center;gap:1px;margin-left:6px;min-width:0}
+.mb-btn{height:32px;padding:0 10px;border-radius:7px;font-size:13.5px;font-weight:500;color:var(--text2);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.mb-btn:hover,.mb-btn.on{background:var(--surface3);color:var(--text)}
+.mb-btn .ico{width:17px;height:17px}
+.mb-burger{display:none}
+.mb-dd{position:fixed;z-index:9500;min-width:250px;max-width:340px;max-height:calc(100vh - 70px);overflow-y:auto;padding:5px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;box-shadow:var(--shadow-lg);animation:mbIn .1s ease}
+@keyframes mbIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.mb-it{display:flex;align-items:center;gap:8px;width:100%;height:32px;padding:0 10px 0 6px;border-radius:6px;font-size:13px;color:var(--text);text-align:left;outline:none}
+.mb-it:hover:not(:disabled),.mb-it:focus-visible:not(:disabled),.mb-it:focus:not(:disabled){background:var(--accent);color:#fff}
+.mb-it:hover .mb-k,.mb-it:focus .mb-k{color:rgba(255,255,255,.8)}
+.mb-it:disabled{color:var(--muted);opacity:.55;cursor:default}
+.mb-ck{width:16px;display:flex;justify-content:center;flex-shrink:0}
+.mb-ck .ico{width:14px;height:14px}
+.mb-l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mb-k{font-size:11.5px;color:var(--muted);flex-shrink:0;display:flex;align-items:center}
+.mb-k .ico{width:13px;height:13px}
+.mb-sep{height:1px;background:var(--border);margin:5px 6px}
+.mb-head{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:8px 10px 4px}
+.mb-all{min-width:280px}
+.proj{display:flex;align-items:baseline;gap:8px;min-width:0;max-width:34vw}
+.proj .brand-proj{font-size:13px;font-weight:600;color:var(--text);max-width:none}
+.topbar>.brand-mark{margin-left:2px}
+/* панелі можна сховати з меню «Вигляд» */
+@media(min-width:981px){
+  body.hide-lib .lib,body.hide-insp .insp{display:none}
+  body.hide-lib .work{grid-template-columns:minmax(0,1fr) 300px}
+  body.hide-insp .work{grid-template-columns:292px minmax(0,1fr)}
+  body.hide-lib.hide-insp .work{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:1180px){.mb-top{padding:0 7px;font-size:13px}}
+@media(max-width:1060px){.mb-top{display:none}.mb-burger{display:inline-flex}}
+@media(max-width:640px){.proj{display:none}.mb-burger span{display:none}}
+/* швидкі дії — компактно: ті самі дії є в меню */
+.quick-card{min-height:0;padding:9px 10px;flex-direction:row;align-items:center;gap:8px}
+.quick-card small{display:none}
+.quick-card b{font-size:12.5px;margin:0}
+.quick-card>.ico{width:16px;height:16px;flex-shrink:0;margin:0}
