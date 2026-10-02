@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="modulepreload" href="firebase-config.js" />
   <link rel="modulepreload" href="portal-common.js" />
+  <link rel="modulepreload" href="admin-structure.js" />
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js" />
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js" />
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js" />
@@ -197,19 +198,88 @@
     .colors button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid transparent; }
     .colors button.on { border-color: currentColor; }
 
-    /* ── Структура ── */
-    .fm-crumbs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; }
-    .fm-crumbs button { padding: 3px 6px; border-radius: 5px; color: var(--muted); }
-    .fm-crumbs button:hover { background: var(--surface); color: var(--accent); }
-    .fm-crumbs .cur { font-weight: 600; color: var(--text); padding: 3px 6px; }
-    .fm-crumbs .sep { color: var(--subtle); }
-    .tr[draggable="true"] { cursor: grab; }
-    .tr.dragging { opacity: .35; }
-    .tr.drop { background: var(--accent-bg); box-shadow: inset 0 0 0 2px var(--accent); }
-    .drop-up { margin: 8px; padding: 14px; border: 2px dashed var(--border2); border-radius: var(--r); text-align: center; font-size: 12.5px; color: var(--subtle); }
-    .drop-up.drop { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
-    .tr .name.link { cursor: pointer; }
-    .tr .name.link:hover { color: var(--accent); text-decoration: underline; }
+    /* ── Структура: дерево + вміст ── */
+    .page:has(#sec-structure.on) { max-width: 1280px; }
+    .st { display: grid; grid-template-columns: 290px 1fr; gap: 14px; align-items: start; }
+    .st-tree { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--sh-sm); position: sticky; top: 0; max-height: calc(100vh - 150px); display: flex; flex-direction: column; overflow: hidden; }
+    .st-tree-top { padding: 10px; border-bottom: 1px solid var(--border); }
+    .st-tree-top .search-wrap, .st-actions .search-wrap { max-width: none; min-width: 0; }
+    .st-tree-top .search-inp, .st-actions .search-inp { height: 32px; }
+    .tree { overflow-y: auto; padding: 6px; flex: 1; }
+    .tree.pick { max-height: 52vh; border: 1px solid var(--border); border-radius: var(--r); }
+    .tn { display: flex; align-items: center; gap: 6px; height: 32px; padding-left: calc(var(--lv) * 16px + 2px); padding-right: 8px; border-radius: 7px; cursor: pointer; font-size: 13px; color: var(--muted); user-select: none; }
+    .tn:hover { background: var(--bg); color: var(--text); }
+    .tn.on { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+    .tn.drop { background: var(--accent-bg); box-shadow: inset 0 0 0 2px var(--accent); color: var(--accent); }
+    .tw { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border-radius: 4px; color: var(--subtle); flex-shrink: 0; }
+    .tw svg { width: 12px; height: 12px; transition: transform .15s; }
+    .tn[aria-expanded="true"] .tw svg { transform: rotate(90deg); }
+    .tw:hover { background: var(--border); }
+    .tw.none { visibility: hidden; }
+    .ti { display: flex; color: var(--accent); }
+    .ti svg { width: 15px; height: 15px; }
+    .ti.folder { color: var(--folder); }
+    .tl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tc { font-size: 11px; color: var(--subtle); font-weight: 500; }
+    .st-pane { min-width: 0; }
+    .st-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .st-crumbs { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; flex: 1; min-width: 200px; font-size: 13.5px; }
+    .st-crumbs button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 6px; color: var(--muted); }
+    .st-crumbs button svg { width: 15px; height: 15px; color: var(--accent); }
+    .st-crumbs button:hover, .st-crumbs button.drop { background: var(--accent-bg); color: var(--accent); }
+    .st-crumbs button.cur { color: var(--text); font-weight: 600; }
+    .st-crumbs .sep { color: var(--subtle); }
+    .st-actions { display: flex; gap: 6px; align-items: center; }
+    .st-actions .search-wrap { width: 220px; }
+    /* смуга вибору плаває внизу — не зсуває список під курсором */
+    .selbar { position: fixed; z-index: 80; left: 50%; bottom: 44px; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 14px; background: var(--surface); border: 1px solid var(--accent-lt); border-radius: 14px; box-shadow: var(--sh-lg); flex-wrap: wrap; animation: fadeIn .14s ease; }
+    .selbar[hidden] { display: none; }
+    .selbar b { font-size: 13px; color: var(--accent); margin-right: 6px; }
+    .selbar .btn { height: 30px; }
+    .ck-all { display: flex; }
+    .ck, .ck-all input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+    .st-list { outline: none; }
+    .it { display: flex; align-items: center; gap: 11px; padding: 8px 12px; border-bottom: 1px solid var(--border); min-height: 54px; cursor: default; user-select: none; }
+    .it:last-child { border-bottom: 0; }
+    .it:hover { background: var(--surface2); }
+    .it.sel { background: var(--accent-bg); }
+    .it.drop { background: var(--accent-bg); box-shadow: inset 0 0 0 2px var(--accent); }
+    .it.dragging { opacity: .4; }
+    .it .ico { width: 34px; height: 34px; border-radius: 9px; background: var(--accent-bg); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .it .ico svg { width: 16px; height: 16px; }
+    .it .ico.folder { background: var(--folder-bg); color: var(--folder); }
+    .it .info { flex: 1; min-width: 0; }
+    .it .name { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .it .meta { font-size: 12px; color: var(--subtle); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .it .acts { display: flex; gap: 2px; opacity: 0; transition: opacity .1s; }
+    .it:hover .acts, .it.sel .acts, .it:focus-within .acts { opacity: 1; }
+    .it .acts .icon-btn { width: 30px; height: 30px; }
+    .it .ren { height: 30px; font-weight: 600; }
+    .it.up { min-height: 40px; color: var(--subtle); font-size: 12.5px; cursor: pointer; gap: 8px; padding-left: 16px; }
+    .it.up svg { width: 15px; height: 15px; }
+    .it.up:hover { color: var(--accent); }
+    .it[data-k^="f:"] .name { cursor: pointer; }
+    .st-hint { font-size: 11.5px; color: var(--subtle); margin-top: 10px; line-height: 1.5; padding-bottom: 60px; }
+    .drag-ghost { position: fixed; top: -100px; left: 0; padding: 6px 12px; border-radius: 8px; background: var(--accent); color: #fff; font: 600 12.5px var(--font); box-shadow: var(--sh); }
+    .toast-undo { margin-left: 8px; padding: 3px 10px; border-radius: 5px; background: rgba(255,255,255,.22); color: #fff; font-size: 12.5px; font-weight: 600; }
+    .toast-undo:hover { background: rgba(255,255,255,.35); }
+    .new-in { display: flex; gap: 6px; flex-basis: 100%; margin-bottom: 4px; }
+    .new-in .inp { height: 32px; }
+    /* вибір у таблиці уроків */
+    .tr .ck { margin-right: -2px; }
+    .tr.sel { background: var(--accent-bg); }
+    /* швидкий перехід Ctrl+K */
+    .cmd { max-width: 560px; align-self: flex-start; margin-top: 10vh; }
+    .cmd-inp { width: 100%; height: 50px; border: 0; border-bottom: 1px solid var(--border); padding: 0 18px; font-size: 15px; background: transparent; outline: none; color: var(--text); }
+    .cmd-list { max-height: 55vh; overflow-y: auto; padding: 6px; }
+    .cmd-it { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: 8px; text-align: left; font-size: 13.5px; color: var(--text); }
+    .cmd-it svg { width: 16px; height: 16px; color: var(--subtle); }
+    .cmd-it small { margin-left: auto; font-size: 11.5px; color: var(--subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
+    .cmd-it.on { background: var(--accent-bg); color: var(--accent); }
+    .cmd-it.on svg { color: var(--accent); }
+    .cmd-h { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--subtle); padding: 8px 10px 4px; }
+    .kbd-hint { margin-left: auto; font-size: 11px; color: var(--subtle); border: 1px solid var(--border2); border-radius: 5px; padding: 1px 6px; }
+    @media (max-width: 1000px) { .st { grid-template-columns: 1fr; } .st-tree { position: static; max-height: 300px; } .st-actions .search-wrap { width: 160px; } }
 
     .user-av { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid var(--border); }
     .user-av.fb { display: flex; align-items: center; justify-content: center; background: var(--accent-bg); color: var(--accent); font-size: 13px; font-weight: 700; }
@@ -250,6 +320,7 @@
     <div class="topbar-div"></div>
     <span style="font-size:12px;font-weight:600;color:var(--subtle);letter-spacing:.06em">АДМІН</span>
     <div class="topbar-actions">
+      <button class="btn btn-line" id="btnCmd" title="Швидкий перехід (Ctrl+K)"><span data-ico="search"></span><span class="btn-label">Знайти…</span><span class="kbd-hint btn-label">Ctrl K</span></button>
       <a href="materials.html" class="btn btn-ghost" target="_blank" rel="noopener"><span data-ico="ext"></span><span class="btn-label">Портал</span></a>
       <button class="icon-btn" id="btnTheme"></button>
       <button class="btn btn-ghost" id="logoutBtn"><span data-ico="logout"></span><span class="btn-label">Вийти</span></button>
@@ -311,21 +382,18 @@
             <select class="sel" id="lessonFilterSubj" aria-label="Предмет"></select>
             <select class="sel" id="lessonFilterTag" aria-label="Тег"></select>
           </div>
+          <div class="selbar" id="lesBulk" hidden>
+            <b id="lesSelN"></b>
+            <button class="btn btn-outline" data-lb="move"><span data-ico="folder"></span>Перемістити до…</button>
+            <button class="btn btn-line" data-lb="tag"><span data-ico="tag"></span>Тег…</button>
+            <button class="btn btn-line" data-lb="del"><span data-ico="trash"></span>Видалити</button>
+            <button class="btn btn-ghost" data-lb="clear" style="margin-left:auto">Скасувати вибір</button>
+          </div>
           <div class="card" id="lessonTable"></div>
         </section>
 
-        <!-- Структура -->
-        <section class="sec" id="sec-structure">
-          <div class="sec-head"><div><h1>Структура</h1><p>Папки й уроки предмета — перетягуйте, щоб упорядкувати</p></div>
-            <div class="actions">
-              <select class="sel" id="structSubj" style="width:220px" aria-label="Предмет"></select>
-              <button class="btn btn-outline" id="btnNewFolder" disabled><span data-ico="folderPlus"></span>Нова папка</button>
-              <button class="btn btn-solid" data-act="newLessonHere" id="btnLessonHere" disabled><span data-ico="plus"></span><span class="btn-label">Урок сюди</span></button>
-            </div>
-          </div>
-          <div class="fm-crumbs" id="fmCrumbs"></div>
-          <div class="card" id="fmArea"></div>
-        </section>
+        <!-- Структура (будує admin-structure.js) -->
+        <section class="sec" id="sec-structure"></section>
 
         <!-- Предмети -->
         <section class="sec" id="sec-subjects">
@@ -398,11 +466,10 @@
   <div class="modal-f"><button type="button" class="btn btn-ghost" data-close>Скасувати</button><button class="btn btn-solid" type="submit">Зберегти</button></div>
 </form></div>
 
-<div class="modal-bg" id="mFolder" hidden><form class="modal sm" data-form="folder">
-  <div class="modal-h"><h2 id="mFolderTitle">Нова папка</h2><button type="button" class="icon-btn" data-close aria-label="Закрити"><span data-ico="x"></span></button></div>
-  <div class="modal-b"><div class="field"><label class="label" for="folderName">Назва</label><input class="inp" id="folderName" placeholder="Наприклад: Модуль 1" autocomplete="off" required /></div></div>
-  <div class="modal-f"><button type="button" class="btn btn-ghost" data-close>Скасувати</button><button class="btn btn-solid" type="submit">Зберегти</button></div>
-</form></div>
+<div class="modal-bg" id="mCmd" hidden><div class="modal cmd" role="dialog" aria-label="Швидкий перехід">
+  <input class="cmd-inp" id="cmdInp" placeholder="Урок, предмет, папка або дія…" autocomplete="off" />
+  <div class="cmd-list" id="cmdList"></div>
+</div></div>
 
 <div class="modal-bg" id="mConfirm" hidden><div class="modal sm" role="alertdialog">
   <div class="modal-h"><h2 id="confirmTitle">Підтвердження</h2></div>
@@ -446,6 +513,7 @@
 <script type="module">
   import { dbGet, dbSet, dbUpdate, dbRemove, generateId, onAuth, signInEmail, signInGoogleIdToken, authSignOut } from './firebase-config.js';
   import { ICON, esc, cmp, norm, count, store, toast, initThemeToggle, safeUrl } from './portal-common.js';
+  import { initStructure } from './admin-structure.js';
 
   const $ = id => document.getElementById(id);
   const GOOGLE_CLIENT_ID = '181496726566-09dl834sj984ceg4ciqk6p3tlrc39dn0.apps.googleusercontent.com';
@@ -500,6 +568,14 @@
   const sorted = (obj, key = 'name') => Object.entries(obj).sort((a, b) => cmp(a[1][key], b[1][key]));
   const subjName = id => S[id]?.name || '—';
 
+  // зміни зі «Структури» та масових дій — оновлюємо все, що від них залежить
+  function afterChange() { recount(); renderLessons(); renderRecent(); renderStats(); renderSubjects(); renderTags(); STRUCT.renderIfVisible(); saveCache(); }
+  const STRUCT = initStructure({
+    st: () => ({ C, S, L, T, F }), save, afterChange, confirmBox, toast, I, esc, cmp, norm, count, store, dbUpdate, dbSet, generateId,
+    editLesson: id => editLesson(id), newLesson: pre => newLesson(pre),
+    onBulkDone: () => { lesSel.clear(); renderLessons(); },
+  });
+
   // ══════════ Вхід ══════════
   function showAuthError(msg) { $('authError').textContent = msg; $('authError').hidden = !msg; }
   let gsiLoaded = false;
@@ -543,32 +619,45 @@
 
   // ══════════ Завантаження ══════════
   // Лише легкі метадані: повний урок підтягується, тільки коли його відкривають для редагування.
+  // Кеш у браузері: адмінка відкривається миттєво, а свіжі дані підтягуються у фоні.
+  const CACHE = 'edvault_admin_cache_v1';
+  let cacheTimer = 0, writes = 0;
+  function saveCache() { clearTimeout(cacheTimer); cacheTimer = setTimeout(() => store.set(CACHE, { ts: Date.now(), C, S, L, T, F }), 400); }
+  async function fetchAll() {
+    const [c, s, l, t, f, m] = await Promise.all([
+      dbGet('/categories'), dbGet('/subjects'), dbGet('/lesson_meta'), dbGet('/tags'),
+      dbGet('/folders').catch(e => { console.warn('Папки не завантажено — перевірте правила /folders', e); return null; }),
+      dbGet('/settings/maintenance').catch(() => null),
+    ]);
+    return { C: c || {}, S: s || {}, L: l || {}, T: t || {}, F: f || {}, maint: !!m?.enabled };
+  }
   async function boot() {
     route();
-    setBusy(true);
+    const cached = store.get(CACHE);
+    if (cached && cached.L) { ({ C, S, L, T, F } = cached); recount(); renderAll(); }
+    setBusy(true, cached ? 'Оновлення…' : 'Завантаження…');
     try {
-      const [c, s, l, t, f, m] = await Promise.all([
-        dbGet('/categories'), dbGet('/subjects'), dbGet('/lesson_meta'), dbGet('/tags'),
-        dbGet('/folders').catch(e => { console.warn('Папки не завантажено — перевірте правила /folders', e); return null; }),
-        dbGet('/settings/maintenance').catch(() => null),
-      ]);
-      C = c || {}; S = s || {}; L = l || {}; T = t || {}; F = f || {};
-      applyMaint(m?.enabled);
-      recount(); renderAll();
+      let d, w;
+      do { w = writes; d = await fetchAll(); } while (w !== writes); // якщо щось зберегли під час читання — читаємо ще раз
+      applyMaint(d.maint);
+      const changed = !cached || JSON.stringify([d.C, d.S, d.L, d.T, d.F]) !== JSON.stringify([C, S, L, T, F]);
+      ({ C, S, L, T, F } = d);
+      if (changed) { recount(); renderAll(); }
+      saveCache();
     } catch (e) {
-      console.error(e); toast('Не вдалося завантажити дані', 'err', 5000);
+      console.error(e); toast(cached ? 'Немає з’єднання — показано збережені дані' : 'Не вдалося завантажити дані', 'err', 5000);
     } finally { setBusy(false); }
     loadUsers(); // у фоні — щоб одразу бачити, хто чекає на доступ
   }
   function setBusy(on, label) { $('sbDot').classList.toggle('off', on); $('sbState').textContent = on ? (label || 'Завантаження…') : 'Підключено'; }
   async function save(fn, okMsg) {
     setBusy(true, 'Збереження…');
-    try { const r = await fn(); if (okMsg) toast(okMsg); return r ?? true; }
+    try { const r = await fn(); writes++; saveCache(); if (okMsg) toast(okMsg); return r ?? true; }
     catch (e) { console.error(e); toast('Помилка збереження' + (e.code ? `: ${e.code}` : ''), 'err', 4500); return false; }
     finally { setBusy(false); }
   }
   function renderAll() {
-    renderStats(); renderRecent(); renderLessons(); renderSubjects(); renderCats(); renderTags(); fillSelects(); renderStructure();
+    renderStats(); renderRecent(); renderLessons(); renderSubjects(); renderCats(); renderTags(); fillSelects(); STRUCT.renderIfVisible();
   }
 
   // ══════════ Розділи (адреса #розділ) ══════════
@@ -579,6 +668,7 @@
     document.querySelectorAll('.nav').forEach(n => n.classList.toggle('on', n.dataset.sec === sec));
     $('content').scrollTop = 0;
     if (sec === 'users' && !U) loadUsers();
+    if (sec === 'structure') STRUCT.show();
   }
   addEventListener('hashchange', route);
   addEventListener('keydown', e => {
@@ -587,6 +677,47 @@
       const inp = sec === 'users' ? $('userSearch') : $('lessonSearch');
       if (sec !== 'users' && sec !== 'lessons') location.hash = 'lessons';
       e.preventDefault(); setTimeout(() => inp.focus(), 0);
+    }
+  });
+
+  // ══════════ Швидкий перехід (Ctrl+K) ══════════
+  const SEC_NAMES = { dashboard: 'Огляд', lessons: 'Уроки', structure: 'Структура', subjects: 'Предмети', categories: 'Категорії', tags: 'Теги', users: 'Користувачі' };
+  let cmdItems = [], cmdIdx = 0;
+  function openCmd() { $('cmdInp').value = ''; renderCmd(); openModal('mCmd', 'cmdInp'); }
+  function renderCmd() {
+    const q = norm($('cmdInp').value);
+    const out = [];
+    const add = (group, icon, label, sub, run) => out.push({ group, icon, label, sub, run });
+    const hit = t => !q || norm(t).includes(q);
+    const actions = [['Новий урок', 'plus', () => newLesson()], ['Урок з .html файлу', 'upload', () => { uploadMode = 'new'; $('fileHtml').click(); }], ['Новий предмет', 'book', () => document.querySelector('[data-act="newSubject"]').click()], ['Нова категорія', 'layers', () => document.querySelector('[data-act="newCategory"]').click()], ['Новий тег', 'tag', () => document.querySelector('[data-act="newTag"]').click()]];
+    actions.filter(([n]) => hit(n)).forEach(([n, ic, run]) => add('Дії', ic, n, '', run));
+    Object.entries(SEC_NAMES).filter(([, n]) => hit(n)).forEach(([k, n]) => add('Розділи', 'grid', n, '', () => { location.hash = k; }));
+    if (q) {
+      Object.entries(L).filter(([, l]) => norm(l.title).includes(q)).sort((a, b) => cmp(a[1].title, b[1].title)).slice(0, 30)
+        .forEach(([id, l]) => add('Уроки', 'doc', l.title || 'Без назви', subjName(l.subjectId) + (F[l.folderId] ? ' › ' + F[l.folderId].name : ''), () => editLesson(id)));
+      sorted(S).filter(([, x]) => norm(x.name).includes(q)).slice(0, 10).forEach(([id, x]) => add('Предмети', 'book', x.name, 'відкрити структуру', () => { location.hash = 'structure'; STRUCT.go(id); }));
+      Object.entries(F).filter(([, f]) => norm(f.name).includes(q) && S[f.subjectId]).slice(0, 15).forEach(([id, f]) => add('Папки', 'folder', f.name, subjName(f.subjectId), () => { location.hash = 'structure'; STRUCT.go(f.subjectId, id); }));
+    }
+    cmdItems = out; cmdIdx = 0;
+    let g = '';
+    $('cmdList').innerHTML = out.length ? out.map((it, i) => (it.group !== g ? `<div class="cmd-h">${g = it.group}</div>` : '') + `<button type="button" class="cmd-it${i === 0 ? ' on' : ''}" data-ci="${i}">${I[it.icon] || ''}<span>${esc(it.label)}</span>${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</button>`).join('') : '<div class="empty-row">Нічого не знайдено</div>';
+  }
+  function runCmd(i) { const it = cmdItems[i]; if (!it) return; closeModal('mCmd'); it.run(); }
+  $('cmdInp').addEventListener('input', renderCmd);
+  $('cmdInp').addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); if (!cmdItems.length) return;
+      cmdIdx = (cmdIdx + (e.key === 'ArrowDown' ? 1 : -1) + cmdItems.length) % cmdItems.length;
+      $('cmdList').querySelectorAll('.cmd-it').forEach((b, i) => b.classList.toggle('on', i === cmdIdx));
+      $('cmdList').querySelector('.cmd-it.on')?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') { e.preventDefault(); runCmd(cmdIdx); }
+  });
+  $('cmdList').addEventListener('click', e => { const b = e.target.closest('[data-ci]'); if (b) runCmd(+b.dataset.ci); });
+  $('btnCmd').addEventListener('click', openCmd);
+  addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !$('app').hidden) {
+      e.preventDefault();
+      if (!$('mCmd').hidden) closeModal('mCmd'); else if (!document.querySelector('.modal-bg:not([hidden])')) openCmd();
     }
   });
 
@@ -611,14 +742,14 @@
   };
 
   // ══════════ Уроки ══════════
-  let lesPage = 1, lesQ = '', lesSubj = '', lesTag = '';
+  let lesPage = 1, lesQ = '', lesSubj = '', lesTag = '', lesSel = new Set();
   const tagPill = t => t ? `<span class="pill" style="background:${esc(t.bg)};color:${esc(t.text)}">${esc(t.name)}</span>` : '';
   function lessonRow(id, l, short = false) {
     const tag = T[l.tagId];
     const folder = l.folderId && F[l.folderId] ? ` · 📁 ${esc(F[l.folderId].name)}` : '';
     const meta = short ? `${esc(subjName(l.subjectId))}${l.updatedAt ? ' · ' + ago(l.updatedAt) : ''}` :
       `${esc(subjName(l.subjectId))}${folder} · ${count(l.pagesCount || 1, 'сторінка', 'сторінки', 'сторінок')}${l.linksCount ? ' · ' + count(l.linksCount, 'посилання', 'посилання', 'посилань') : ''}${l.materialsCount ? ' · ' + count(l.materialsCount, 'файл', 'файли', 'файлів') : ''}`;
-    return `<div class="tr" data-lesson="${esc(id)}"><span class="ico">${l.isUploaded ? I.file : I.doc}</span>
+    return `<div class="tr${!short && lesSel.has(id) ? ' sel' : ''}" data-lesson="${esc(id)}">${short ? '' : `<input type="checkbox" class="ck" data-ck="${esc(id)}" ${lesSel.has(id) ? 'checked' : ''} aria-label="Вибрати урок" />`}<span class="ico">${l.isUploaded ? I.file : I.doc}</span>
       <div class="info"><div class="name">${esc(l.title || 'Без назви')}</div><div class="meta">${meta}</div></div>
       <span class="hide-sm">${tagPill(tag)}</span>${l.isUploaded ? '<span class="pill gray hide-sm">HTML-файл</span>' : ''}
       <div class="acts">
@@ -627,7 +758,13 @@
         ${short ? '' : `<button class="icon-btn hide-sm" data-a="dupLesson" title="Дублювати">${I.copy}</button><button class="icon-btn danger" data-a="delLesson" title="Видалити">${I.trash}</button>`}
       </div></div>`;
   }
+  function paintLesSel() {
+    lesSel.forEach(id => { if (!L[id]) lesSel.delete(id); });
+    $('lesBulk').hidden = !lesSel.size;
+    $('lesSelN').textContent = `Вибрано: ${lesSel.size}`;
+  }
   function renderLessons() {
+    paintLesSel();
     let rows = Object.entries(L);
     if (lesSubj) rows = rows.filter(([, l]) => l.subjectId === lesSubj);
     if (lesTag) rows = rows.filter(([, l]) => (lesTag === '-' ? !l.tagId : l.tagId === lesTag));
@@ -652,6 +789,19 @@
   $('lessonSearch').addEventListener('input', e => { clearTimeout(qTimer); qTimer = setTimeout(() => { lesQ = norm(e.target.value); lesPage = 1; renderLessons(); }, 120); });
   $('lessonFilterSubj').addEventListener('change', e => { lesSubj = e.target.value; lesPage = 1; renderLessons(); });
   $('lessonFilterTag').addEventListener('change', e => { lesTag = e.target.value; lesPage = 1; renderLessons(); });
+  $('lessonTable').addEventListener('change', e => {
+    const c = e.target.closest('[data-ck]'); if (!c) return;
+    c.checked ? lesSel.add(c.dataset.ck) : lesSel.delete(c.dataset.ck);
+    c.closest('.tr').classList.toggle('sel', c.checked); paintLesSel();
+  });
+  $('lesBulk').addEventListener('click', e => {
+    const b = e.target.closest('[data-lb]'); if (!b) return;
+    const keys = [...lesSel].map(id => 'l:' + id);
+    if (b.dataset.lb === 'move') STRUCT.openMoveDialog(keys);
+    else if (b.dataset.lb === 'tag') STRUCT.openTagDialog(keys);
+    else if (b.dataset.lb === 'del') STRUCT.bulkDelete(keys);
+    else { lesSel.clear(); renderLessons(); }
+  });
   $('lessonTable').addEventListener('click', e => { const b = e.target.closest('[data-pg]'); if (b && !b.disabled) { lesPage = +b.dataset.pg; renderLessons(); $('content').scrollTop = 0; } });
 
   function fillSelects() {
@@ -660,10 +810,6 @@
     $('lessonFilterSubj').value = S[lesSubj] ? lesSubj : '';
     $('lessonFilterTag').innerHTML = '<option value="">Усі теги</option><option value="-">Без тегу</option>' + sorted(T).map(([id, t]) => `<option value="${esc(id)}">${esc(t.name)}</option>`).join('');
     $('lessonFilterTag').value = lesTag && (lesTag === '-' || T[lesTag]) ? lesTag : '';
-    const cur = $('structSubj').value || store.get('edvault_admin_struct', '');
-    $('structSubj').innerHTML = '<option value="">— Оберіть предмет —</option>' + subjOpts;
-    if (S[cur]) $('structSubj').value = cur;
-    fmSubj = $('structSubj').value;
   }
 
   // ══════════ Предмети / категорії / теги ══════════
@@ -676,6 +822,7 @@
         <button class="toggle ${on ? 'on' : 'off'}" data-a="toggleSubj" title="${on ? 'Сховати з порталу' : 'Показати на порталі'}">${on ? 'Показано' : 'Сховано'}</button>
         <div class="acts">
           <a class="icon-btn hide-sm" href="materials.html?subject=${encodeURIComponent(id)}" target="_blank" rel="noopener" title="Відкрити на порталі">${I.eye}</a>
+          <button class="icon-btn" data-a="subjStruct" title="Папки й уроки предмета">${I.folder}</button>
           <button class="icon-btn" data-a="lessonInSubj" title="Новий урок у цьому предметі">${I.plus}</button>
           <button class="icon-btn" data-a="editSubj" title="Редагувати">${I.edit}</button>
           <button class="icon-btn danger" data-a="delSubj" title="Видалити">${I.trash}</button>
@@ -720,7 +867,7 @@
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && open.id === 'mLesson') { e.preventDefault(); saveLesson(); }
   });
 
-  let editCat = null, editSubj = null, editTag = null, editFolder = null;
+  let editCat = null, editSubj = null, editTag = null;
   const TAG_COLORS = [['#dbeafe', '#1e40af'], ['#dcfce7', '#166534'], ['#fef9c3', '#854d0e'], ['#fee2e2', '#991b1b'], ['#f3e8ff', '#6b21a8'], ['#ffedd5', '#9a3412'], ['#fce7f3', '#9d174d'], ['#e0f2fe', '#0c4a6e'], ['#f1f5f9', '#334155']];
   let tagColor = TAG_COLORS[0];
   function paintTag() {
@@ -756,14 +903,6 @@
         if (await save(() => editTag ? dbUpdate(`/tags/${id}`, data) : dbSet(`/tags/${id}`, data), editTag ? 'Тег оновлено' : 'Тег додано')) {
           T[id] = data; closeModal('mTag'); recount(); renderTags(); renderLessons(); fillSelects(); if (!$('mLesson').hidden) renderTagPick();
         }
-      } else if (f.dataset.form === 'folder') {
-        const name = $('folderName').value.trim(); if (!name) return;
-        if (editFolder) {
-          if (await save(() => dbUpdate(`/folders/${editFolder}`, { name }), 'Папку перейменовано')) { F[editFolder].name = name; closeModal('mFolder'); renderStructure(); }
-        } else {
-          const id = generateId(10), folder = { name, parentId: fmCur() || null, subjectId: fmSubj };
-          if (await save(() => dbSet(`/folders/${id}`, folder), 'Папку створено')) { F[id] = folder; closeModal('mFolder'); recount(); renderStructure(); }
-        }
       } else if (f.dataset.form === 'lesson') await saveLesson();
     } finally { btn.disabled = false; }
   });
@@ -777,12 +916,11 @@
     switch (a) {
       case 'newLesson': return newLesson();
       case 'uploadLesson': uploadMode = 'new'; return $('fileHtml').click();
-      case 'newLessonHere': return newLesson({ subjectId: fmSubj, folderId: fmCur() });
       case 'lessonInSubj': return newLesson({ subjectId: id });
       case 'editLesson': return editLesson(id, b);
       case 'dupLesson': return dupLesson(id, b);
       case 'delLesson': return confirmBox(`Видалити урок «${L[id]?.title}»? Це не можна скасувати.`, async ok => {
-        if (ok && await save(() => dbUpdate('/', { [`lessons/${id}`]: null, [`lesson_meta/${id}`]: null }), 'Урок видалено')) { delete L[id]; recount(); renderLessons(); renderRecent(); renderStats(); renderStructure(); }
+        if (ok && await save(() => dbUpdate('/', { [`lessons/${id}`]: null, [`lesson_meta/${id}`]: null }), 'Урок видалено')) { delete L[id]; recount(); renderLessons(); renderRecent(); renderStats(); STRUCT.renderIfVisible(); }
       });
       case 'newCategory': editCat = null; $('mCatTitle').textContent = 'Нова категорія'; $('catName').value = ''; return openModal('mCat', 'catName');
       case 'editCat': editCat = id; $('mCatTitle').textContent = 'Редагувати категорію'; $('catName').value = C[id].name; return openModal('mCat', 'catName');
@@ -797,7 +935,7 @@
         b.disabled = false; return;
       }
       case 'delSubj': return confirmBox(`Видалити предмет «${S[id]?.name}»? Його уроки (${N.lesBySubj.get(id) || 0}) залишаться в базі, але зникнуть з порталу.`, async ok => {
-        if (ok && await save(() => dbRemove(`/subjects/${id}`), 'Предмет видалено')) { delete S[id]; recount(); renderSubjects(); renderCats(); fillSelects(); renderLessons(); renderStats(); renderStructure(); }
+        if (ok && await save(() => dbRemove(`/subjects/${id}`), 'Предмет видалено')) { delete S[id]; recount(); renderSubjects(); renderCats(); fillSelects(); renderLessons(); renderStats(); STRUCT.renderIfVisible(); }
       });
       case 'newTag': editTag = null; $('mTagTitle').textContent = 'Новий тег'; $('tagName').value = ''; tagColor = TAG_COLORS[0]; paintTag(); return openModal('mTag', 'tagName');
       case 'editTag': editTag = id; $('mTagTitle').textContent = 'Редагувати тег'; $('tagName').value = T[id].name; tagColor = [T[id].bg, T[id].text]; paintTag(); return openModal('mTag', 'tagName');
@@ -807,10 +945,7 @@
       case 'approve': return setUser(id, { approved: true, blocked: false }, `${U[id]?.name || 'Користувач'}: доступ дозволено`);
       case 'block': return confirmBox(`Заблокувати ${U[id]?.name || 'користувача'}? Він більше не зможе відкрити портал.`, ok => ok && setUser(id, { blocked: true }, 'Заблоковано'), { ok: 'Заблокувати' });
       case 'unblock': return setUser(id, { blocked: false, approved: true }, 'Доступ відновлено');
-      case 'openFolder': fmPath.push(id); return renderStructure();
-      case 'renameFolder': editFolder = id; $('mFolderTitle').textContent = 'Перейменувати папку'; $('folderName').value = F[id].name; return openModal('mFolder', 'folderName');
-      case 'delFolder': return confirmBox(`Видалити папку «${F[id]?.name}»? Її вміст переміститься на рівень вище.`, async ok => { if (ok) await deleteFolder(id); });
-      case 'toRoot': return moveItems([{ type: 'lesson', id }], null);
+      case 'subjStruct': location.hash = 'structure'; return STRUCT.go(id);
     }
   });
 
@@ -871,88 +1006,6 @@
       if (await save(() => dbUpdate('/', up), 'Доступ дозволено')) { ids.forEach(id => { U[id].approved = true; }); recount(); renderUsers(); renderStats(); }
     }, { ok: 'Дозволити', danger: false, title: 'Дозволити всім' });
   });
-
-  // ══════════ Структура (папки) ══════════
-  let fmSubj = '', fmPath = [];
-  const fmCur = () => fmPath[fmPath.length - 1] || null;
-  $('structSubj').addEventListener('change', e => { fmSubj = e.target.value; fmPath = []; store.set('edvault_admin_struct', fmSubj); renderStructure(); });
-  $('btnNewFolder').addEventListener('click', () => { editFolder = null; $('mFolderTitle').textContent = 'Нова папка'; $('folderName').value = ''; openModal('mFolder', 'folderName'); });
-  function renderStructure() {
-    $('btnNewFolder').disabled = $('btnLessonHere').disabled = !fmSubj || !S[fmSubj];
-    fmPath = fmPath.filter(id => F[id]);
-    if (!fmSubj || !S[fmSubj]) { $('fmCrumbs').innerHTML = ''; $('fmArea').innerHTML = '<div class="empty-row">Оберіть предмет, щоб побачити його папки й уроки</div>'; return; }
-    $('fmCrumbs').innerHTML = (fmPath.length ? `<button data-fm="-1">${esc(S[fmSubj].name)}</button>` : `<span class="cur">${esc(S[fmSubj].name)}</span>`) +
-      fmPath.map((id, i) => `<span class="sep">›</span>${i < fmPath.length - 1 ? `<button data-fm="${i}">${esc(F[id].name)}</button>` : `<span class="cur">${esc(F[id].name)}</span>`}`).join('');
-    const cur = fmCur();
-    const folders = Object.entries(F).filter(([, f]) => f.subjectId === fmSubj && (F[f.parentId] ? f.parentId : null) === cur).sort((a, b) => cmp(a[1].name, b[1].name));
-    const lessons = Object.entries(L).filter(([, l]) => l.subjectId === fmSubj && ((F[l.folderId] ? l.folderId : null) === cur)).sort((a, b) => cmp(a[1].title, b[1].title));
-    let html = cur ? `<div class="drop-up" data-drop="up">${I.up} Перетягніть сюди, щоб підняти на рівень вище</div>` : '';
-    html += folders.map(([id, f]) => {
-      const n = (N.folderByParent.get(id) || 0) + (N.lesByFolder.get(id) || 0);
-      return `<div class="tr" draggable="true" data-folder="${esc(id)}" data-drop="${esc(id)}"><span class="ico folder">${I.folder}</span>
-        <div class="info"><div class="name link" data-a="openFolder">${esc(f.name)}</div><div class="meta">${count(n, 'елемент', 'елементи', 'елементів')}</div></div>
-        <div class="acts"><button class="icon-btn" data-a="renameFolder" title="Перейменувати">${I.edit}</button><button class="icon-btn danger" data-a="delFolder" title="Видалити">${I.trash}</button></div></div>`;
-    }).join('');
-    html += lessons.map(([id, l]) => `<div class="tr" draggable="true" data-lesson="${esc(id)}"><span class="ico">${I.doc}</span>
-      <div class="info"><div class="name">${esc(l.title || 'Без назви')}</div><div class="meta">${count(l.pagesCount || 1, 'сторінка', 'сторінки', 'сторінок')}${T[l.tagId] ? ' · ' + esc(T[l.tagId].name) : ''}</div></div>
-      <div class="acts"><a class="icon-btn" href="lesson.html?id=${encodeURIComponent(id)}" target="_blank" rel="noopener" title="Відкрити">${I.eye}</a><button class="icon-btn" data-a="editLesson" title="Редагувати">${I.edit}</button>${cur ? `<button class="icon-btn" data-a="toRoot" title="Перемістити в корінь предмета">${I.up}</button>` : ''}</div></div>`).join('');
-    if (!folders.length && !lessons.length) html += '<div class="empty-row">Тут порожньо. Створіть папку або перетягніть сюди уроки.</div>';
-    $('fmArea').innerHTML = html;
-  }
-  $('fmCrumbs').addEventListener('click', e => { const b = e.target.closest('[data-fm]'); if (!b) return; const i = +b.dataset.fm; fmPath = i < 0 ? [] : fmPath.slice(0, i + 1); renderStructure(); });
-
-  // перетягування в папку або на рівень вище
-  let drag = null;
-  $('fmArea').addEventListener('dragstart', e => {
-    const r = e.target.closest('[draggable="true"]'); if (!r) return;
-    drag = r.dataset.folder ? { type: 'folder', id: r.dataset.folder } : { type: 'lesson', id: r.dataset.lesson };
-    r.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', drag.id);
-  });
-  $('fmArea').addEventListener('dragend', () => { drag = null; $('fmArea').querySelectorAll('.dragging, .drop').forEach(x => x.classList.remove('dragging', 'drop')); });
-  const isDesc = (anc, fid) => { while (fid) { if (fid === anc) return true; fid = F[fid]?.parentId; } return false; };
-  function dropTarget(e) {
-    const t = e.target.closest('[data-drop]'); if (!t || !drag) return null;
-    const dest = t.dataset.drop === 'up' ? (F[fmCur()]?.parentId || null) : t.dataset.drop;
-    if (drag.type === 'folder' && dest && isDesc(drag.id, dest)) return null;
-    return { el: t, dest };
-  }
-  $('fmArea').addEventListener('dragover', e => {
-    const d = dropTarget(e);
-    $('fmArea').querySelectorAll('.drop').forEach(x => { if (!d || x !== d.el) x.classList.remove('drop'); });
-    if (!d) return;
-    e.preventDefault(); d.el.classList.add('drop');
-  });
-  $('fmArea').addEventListener('drop', async e => {
-    const d = dropTarget(e); if (!d) return;
-    e.preventDefault();
-    const it = drag; drag = null;
-    await moveItems([it], d.dest);
-  });
-  async function moveItems(items, dest) {
-    const up = {};
-    for (const it of items) {
-      if (it.type === 'folder') up[`folders/${it.id}/parentId`] = dest || null;
-      else { up[`lessons/${it.id}/folderId`] = dest || null; up[`lesson_meta/${it.id}/folderId`] = dest || null; }
-    }
-    if (await save(() => dbUpdate('/', up), 'Переміщено')) {
-      for (const it of items) { if (it.type === 'folder') F[it.id].parentId = dest || null; else L[it.id].folderId = dest || null; }
-      recount(); renderStructure();
-    }
-  }
-  // папку видаляємо, а її вміст (уроки й підпапки) піднімаємо на рівень вище — одним записом
-  async function deleteFolder(id) {
-    const parent = F[id]?.parentId || null, up = { [`folders/${id}`]: null };
-    const lessons = Object.entries(L).filter(([, l]) => l.folderId === id).map(([lid]) => lid);
-    const subs = Object.entries(F).filter(([, f]) => f.parentId === id).map(([fid]) => fid);
-    lessons.forEach(lid => { up[`lessons/${lid}/folderId`] = parent; up[`lesson_meta/${lid}/folderId`] = parent; });
-    subs.forEach(fid => { up[`folders/${fid}/parentId`] = parent; });
-    if (await save(() => dbUpdate('/', up), 'Папку видалено')) {
-      lessons.forEach(lid => { L[lid].folderId = parent; });
-      subs.forEach(fid => { F[fid].parentId = parent; });
-      delete F[id]; fmPath = fmPath.filter(x => x !== id);
-      recount(); renderStructure(); renderLessons();
-    }
-  }
 
   // ══════════ Редактор уроку ══════════
   let ed = null; // { id, pages, active, links, mats, tagId, uploaded, folderId, dirty }
@@ -1153,7 +1206,7 @@
     savingLesson = false; $('saveLessonBtn').disabled = false; $('saveLessonBtn').textContent = 'Зберегти урок';
     if (!ok) return;
     L[id] = meta; ed = null; closeModal('mLesson');
-    recount(); renderLessons(); renderRecent(); renderStats(); renderStructure();
+    recount(); renderLessons(); renderRecent(); renderStats(); STRUCT.renderIfVisible();
   }
 
   // ── Урок з .html файлу ──
