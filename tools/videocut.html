@@ -48,16 +48,15 @@
 
 <header class="topbar">
   <a class="back-link" href="../tools.html" data-tip="До всіх інструментів Edvault" aria-label="До інструментів"><span data-icon="back"></span></a>
-  <div class="brand-mark" data-tip="Відеоредактор"><span data-icon="film"></span></div>
   <nav class="menubar" id="menubar" aria-label="Меню"></nav>
   <div class="grow"></div>
-  <div class="proj" data-tip="Назву можна змінити на панелі «Проєкт» праворуч"><span class="brand-proj" id="projName">Новий проєкт</span><span class="save-state" id="saveState"></span></div>
+  <button type="button" class="proj" id="btnProj" data-tip="Параметри проєкту: назва, формат кадру"><span class="brand-proj" id="projName">Новий проєкт</span><span class="save-state" id="saveState"></span></button>
   <div class="grow"></div>
-  <button class="btn btn-icon" id="btnUndo" data-tip="Скасувати" data-key="Ctrl+Z" disabled><span data-icon="undo"></span></button>
-  <button class="btn btn-icon" id="btnRedo" data-tip="Повторити" data-key="Ctrl+Shift+Z" disabled><span data-icon="redo"></span></button>
-  <button class="btn btn-icon only-narrow" id="btnShowLib" data-tip="Медіа, текст, елементи"><span data-icon="media"></span></button>
-  <button class="btn btn-icon only-narrow" id="btnShowInsp" data-tip="Властивості"><span data-icon="gear"></span></button>
-  <button class="btn btn-primary" id="btnExport" data-key="Ctrl+E"><span data-icon="download"></span>Експорт</button>
+  <button class="btn btn-icon btn-sm" id="btnUndo" data-tip="Скасувати" data-key="Ctrl+Z" disabled><span data-icon="undo"></span></button>
+  <button class="btn btn-icon btn-sm" id="btnRedo" data-tip="Повторити" data-key="Ctrl+Shift+Z" disabled><span data-icon="redo"></span></button>
+  <button class="btn btn-icon btn-sm only-narrow" id="btnShowLib" data-tip="Медіа, текст, елементи"><span data-icon="media"></span></button>
+  <button class="btn btn-icon btn-sm only-narrow" id="btnShowInsp" data-tip="Властивості"><span data-icon="gear"></span></button>
+  <button class="btn btn-primary btn-sm" id="btnExport" data-key="Ctrl+E"><span data-icon="download"></span><span class="hide-sm">Експорт</span></button>
 </header>
 
 <div class="work">
@@ -77,25 +76,13 @@
       <div class="rec-count" id="recCount" hidden></div>
       <div class="rec-badge" id="recBadge" hidden><i></i><b id="recTime">00:00</b><span>Іде запис</span><button class="btn btn-sm" id="btnRecStop"><span data-icon="stop"></span>Стоп</button></div>
       <div class="pv-layer" id="pvLayer"></div>
+      <button class="btn btn-icon btn-sm stage-full" id="btnFull" data-tip="На весь екран" data-key="F"><span data-icon="full"></span></button>
       <div class="stage-empty" id="stageEmpty">
         <div class="se-ico"><span data-icon="film"></span></div>
         <h2>Почніть з відео</h2>
         <p>Перетягніть файл сюди або виберіть його на комп’ютері. Підтримуються MP4, MOV, WebM, AVI, WMV, MPG та інші, а також фото й музика.</p>
         <button class="btn btn-primary btn-lg" id="btnImport3"><span data-icon="upload"></span>Вибрати файли</button>
         <p class="small">Усе обробляється у вашому браузері — відео нікуди не завантажується.</p>
-      </div>
-    </div>
-    <div class="transport">
-      <div class="tr-time"><b id="trTime">00:00.0</b><span> / </span><span id="trDur">00:00.0</span></div>
-      <div class="tr-main">
-        <button class="btn btn-icon" id="btnStart" data-tip="На початок" data-key="Home"><span data-icon="prev"></span></button>
-        <button class="btn btn-icon" id="btnFrameBack" data-tip="Кадр назад" data-key="←"><span data-icon="stepBack"></span></button>
-        <button class="btn btn-play" id="btnPlay" data-tip="Відтворити / пауза" data-key="Пробіл"><span data-icon="play"></span></button>
-        <button class="btn btn-icon" id="btnFrameFwd" data-tip="Кадр уперед" data-key="→"><span data-icon="stepFwd"></span></button>
-        <button class="btn btn-icon" id="btnEnd" data-tip="У кінець" data-key="End"><span data-icon="next"></span></button>
-      </div>
-      <div class="tr-right">
-        <button class="btn btn-icon" id="btnFull" data-tip="На весь екран" data-key="F"><span data-icon="full"></span></button>
       </div>
     </div>
   </main>
@@ -107,16 +94,25 @@
 
 <section class="tl" id="tl">
   <div class="tl-bar">
-    <button class="btn btn-sm" id="btnSplit" data-tip="Розрізати в позиції курсора" data-key="S"><span data-icon="split"></span><span class="hide-md">Розрізати</span></button>
-    <button class="btn btn-sm" id="btnDelete" data-tip="Видалити виділене" data-key="Delete"><span data-icon="trash"></span><span class="hide-md">Видалити</span></button>
-    <button class="btn btn-sm" id="btnCutRange" data-tip="Вирізати позначений шматок з відео" data-key="X" disabled><span data-icon="scissors"></span><span class="hide-md">Вирізати шматок</span></button>
-    <div class="grow"></div>
-    <span class="tl-time hide-sm"><b id="tlTime">00:00.0</b> / <span id="tlDur">00:00.0</span></span>
-    <div class="sep hide-sm"></div>
-    <button class="btn btn-sm btn-icon" id="btnZoomOut" data-tip="Віддалити" data-key="−"><span data-icon="zoomOut"></span></button>
-    <input type="range" id="tlZoom" min="0" max="100" value="50" aria-label="Масштаб таймлайну">
-    <button class="btn btn-sm btn-icon" id="btnZoomIn" data-tip="Наблизити" data-key="+"><span data-icon="zoomIn"></span></button>
-    <button class="btn btn-sm btn-icon" id="btnZoomFit" data-tip="Показати все" data-key="Shift+Z"><span data-icon="fit"></span></button>
+    <div class="tb-l">
+      <button class="btn btn-sm btn-icon" id="btnSplit" data-tip="Розрізати в позиції курсора" data-key="S"><span data-icon="split"></span></button>
+      <button class="btn btn-sm btn-icon" id="btnDelete" data-tip="Видалити виділене" data-key="Delete"><span data-icon="trash"></span></button>
+      <button class="btn btn-sm" id="btnCutRange" data-tip="Вирізати позначений шматок з відео" data-key="X" disabled><span data-icon="scissors"></span><span class="hide-md">Вирізати шматок</span></button>
+    </div>
+    <div class="tb-c">
+      <button class="btn btn-icon btn-sm hide-sm" id="btnStart" data-tip="На початок" data-key="Home"><span data-icon="prev"></span></button>
+      <button class="btn btn-icon btn-sm" id="btnFrameBack" data-tip="Кадр назад" data-key="←"><span data-icon="stepBack"></span></button>
+      <button class="btn btn-play" id="btnPlay" data-tip="Відтворити / пауза" data-key="Пробіл"><span data-icon="play"></span></button>
+      <button class="btn btn-icon btn-sm" id="btnFrameFwd" data-tip="Кадр уперед" data-key="→"><span data-icon="stepFwd"></span></button>
+      <button class="btn btn-icon btn-sm hide-sm" id="btnEnd" data-tip="У кінець" data-key="End"><span data-icon="next"></span></button>
+      <span class="tr-time"><b id="trTime">00:00.0</b><span> / </span><span id="trDur">00:00.0</span></span>
+    </div>
+    <div class="tb-r">
+      <button class="btn btn-sm btn-icon hide-sm" id="btnZoomOut" data-tip="Віддалити" data-key="−"><span data-icon="zoomOut"></span></button>
+      <input type="range" class="hide-sm" id="tlZoom" min="0" max="100" value="50" aria-label="Масштаб таймлайну">
+      <button class="btn btn-sm btn-icon hide-sm" id="btnZoomIn" data-tip="Наблизити" data-key="+"><span data-icon="zoomIn"></span></button>
+      <button class="btn btn-sm btn-icon" id="btnZoomFit" data-tip="Показати все" data-key="Shift+Z"><span data-icon="fit"></span></button>
+    </div>
   </div>
   <div class="tl-main">
     <div class="tl-heads" id="tlHeads"></div>

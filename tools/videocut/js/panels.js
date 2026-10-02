@@ -57,7 +57,7 @@ function renderLibrary() {
     const items = [...media.values()];
     const used = new Set([...S.project.clips.map(c => c.mediaId), ...S.project.music.map(m => m.mediaId), ...S.project.overlays.map(o => o.mediaId)]);
     body.innerHTML = `
-      <button class="drop" id="btnImport2">${icon('upload')}<b>Додати файли</b><span>Відео, фото або аудіо — або перетягніть їх у вікно</span></button>
+      <button class="drop${items.length ? ' drop-sm' : ''}" id="btnImport2">${icon('upload')}<b>Додати файли</b>${items.length ? '' : '<span>Відео, фото або аудіо — або перетягніть їх у вікно</span>'}</button>
       ${items.length ? `<div class="mgrid">${items.map(m => {
         let url = thumbCache.get(m.id + ':' + m.thumbs.length);
         if (url === undefined && m.thumbs.length) { url = thumbURL(m); thumbCache.set(m.id + ':' + m.thumbs.length, url); }
@@ -69,11 +69,11 @@ function renderLibrary() {
           <div class="mname">${esc(m.name)}</div>
           <div class="mact">
             <button class="btn btn-sm btn-primary" data-act="add" data-tip="${m.kind === 'audio' ? 'Додати на музичну доріжку' : 'Додати в кінець таймлайну'}">${icon('plus')}</button>
-            ${m.kind !== 'audio' && S.project.clips.length ? `<button class="btn btn-sm btn-icon" data-act="layer" data-tip="Поверх основного відео (доріжка «Відео 2»)">${icon('pip')}</button>` : ''}
+            ${m.kind !== 'audio' && S.project.clips.length ? `<button class="btn btn-sm btn-icon" data-act="layer" data-tip="Поверх основного відео (доріжка «Поверх»)">${icon('pip')}</button>` : ''}
             <button class="btn btn-sm btn-icon" data-act="rm" data-tip="Прибрати з проєкту">${icon('trash')}</button>
           </div>
         </div>`;
-      }).join('')}</div>${S.project.clips.length && items.some(m => m.kind !== 'audio') ? '<p class="lib-hint" style="margin-top:8px">Перетягніть файл на таймлайн чи на перегляд: на доріжку «Відео 2» або на кадр — і він буде поверх основного відео.</p>' : ''}` : '<p class="lib-hint">Тут з’являться файли проєкту. Усе обробляється у вашому браузері — нічого не завантажується на сервер.</p>'}`;
+      }).join('')}</div>` : '<p class="lib-hint">Усе обробляється у вашому браузері — нічого не завантажується на сервер.</p>'}`;
   } else if (tab === 'text') {
     body.innerHTML = `<p class="lib-hint">Натисніть, щоб додати на поточну позицію курсора.</p><div class="presets">${Object.entries(TEXT_PRESETS).map(([k, v]) => `
       <button class="preset pr-${k}" data-preset="${k}"><span class="pr-demo">${esc(v.o.text.split('\n')[0])}</span><span class="pr-name">${esc(v.label)}</span></button>`).join('')}</div>`;
@@ -212,10 +212,18 @@ const openMore = new Set();
 const fold = (key, label, val, build) => `<details class="fold" data-more="${key}" ${openMore.has(key) ? 'open' : ''}><summary><span>${label}</span><b>${val}</b></summary>${openMore.has(key) ? `<div class="fold-body">${build()}</div>` : ''}</details>`;
 const more = (key, html) => `<details class="more" data-more="${key}" ${openMore.has(key) ? 'open' : ''}><summary>Точніше</summary><div class="more-body">${html}</div></details>`;
 
+// панель праворуч з'являється лише коли є що налаштовувати: виділено елемент або відкрито параметри проєкту
+let projOpen = false;
+export function showProject(on = true) {
+  projOpen = on;
+  if (on && S.sel) select(null); else renderInspector();
+}
 function renderInspector() {
   const el = box();
   const o = findSel(), s = S.sel;
-  if (!o) { el.innerHTML = projectPanel(); balanceSegs(el); return; }
+  if (o) projOpen = false;
+  document.body.classList.toggle('insp-off', !o && !projOpen);
+  if (!o) { el.innerHTML = projOpen ? projectPanel() : ''; balanceSegs(el); return; }
   if (s.kind === 'clip') el.innerHTML = clipPanel(o);
   else if (s.kind === 'overlay') el.innerHTML = overlayPanel(o);
   else if (s.kind === 'caption') el.innerHTML = captionPanel(o);
@@ -228,27 +236,16 @@ function head(ic, title, sub) {
     <button class="btn btn-icon btn-sm" data-a="deselect" data-tip="Готово (Esc)">${icon('x')}</button></div>`;
 }
 
-// ── Проєкт: швидкі дії + формат ──
+// ── Проєкт: назва, формат, тонкі налаштування ──
 function projectPanel() {
   const p = S.project;
-  const hasClips = p.clips.length > 0;
   const FORMATS = [['16:9', 'YouTube, урок', 'r169'], ['9:16', 'Reels, Shorts', 'r916'], ['1:1', 'Квадрат', 'r11'], ['4:3', 'Класичний', 'r43']];
-  return `<div class="insp-head"><span class="insp-ico">${icon('film')}</span><div><b>Проєкт</b><small>${hasClips ? fmtShort(duration()) : 'Додайте відео, фото чи аудіо'}</small></div></div>
-    ${hasClips ? '' : `<button class="btn btn-primary btn-block" data-a="import">${icon('upload')}Вибрати файли</button><div class="sep"></div>`}
-    ${hasClips ? `<div class="quick-title">Швидкі дії</div>
-    <div class="quick">
-      <button class="quick-card" data-a="silences">${icon('wand')}<b>Прибрати паузи</b><small>Автоматично вирізати тишу</small></button>
-      <button class="quick-card" data-a="voice">${icon('mic')}<b>Озвучити</b><small>Записати голос під відео</small></button>
-      <button class="quick-card" data-a="asr">${icon('cc')}<b>Субтитри самі</b><small>Розпізнати мову у відео</small></button>
-      <button class="quick-card" data-a="tab" data-v="elements">${icon('pip')}<b>Вебкамера в кутку</b><small>Відео поверх відео</small></button>
-      <button class="quick-card" data-a="trAll">${icon('sparkle')}<b>Переходи</b><small>${p.clips.length > 1 && p.clips.slice(1).every(x => x.tr) ? 'Прибрати між кліпами' : 'Плавно між кліпами'}</small></button>
-      <button class="quick-card" data-a="tab" data-v="elements">${icon('smile')}<b>Заставка й емодзі</b><small>Назва уроку, стікери</small></button>
-    </div>` : ''}
-    <div class="sep"></div>
-    <div class="field"><label>Назва проєкту</label><input class="input" data-pf="name" value="${esc(p.name)}" maxlength="80"></div>
-    <div class="field"><label>Форма кадру</label><div class="fmt-cards">${FORMATS.map(([v, n, cls]) => `<button class="fmt-card${p.aspect === v ? ' on' : ''}" data-set="p:aspect" data-v="${v}"><i class="fmt-shape ${cls}"></i><b>${v}</b><small>${n}</small></button>`).join('')}</div></div>
-    ${more('project', `${seg('p:fps', 'Кадрів за секунду', [[24, '24'], [25, '25'], [30, '30'], [60, '60']], p.fps, '30 — стандарт. 60 — для плавних рухів мишею чи ігор.')}
-      <div class="field"><label>Колір фону (де немає відео)</label>${swatches(p.bg, 'p:bg')}</div>`)}`;
+  return `<div class="insp-head"><span class="insp-ico">${icon('film')}</span><div><b>Проєкт</b><small>${p.clips.length ? fmtShort(duration()) : 'Порожній'}</small></div>
+    <button class="btn btn-icon btn-sm" data-a="closeProject" data-tip="Закрити (Esc)">${icon('x')}</button></div>
+    <div class="field"><label>Назва</label><input class="input" data-pf="name" value="${esc(p.name)}" maxlength="80"></div>
+    <div class="field"><label>Форма кадру</label><div class="fmt-cards">${FORMATS.map(([v, n, cls]) => `<button class="fmt-card${p.aspect === v ? ' on' : ''}" data-set="p:aspect" data-v="${v}" title="${n}"><i class="fmt-shape ${cls}"></i><b>${v}</b></button>`).join('')}</div></div>
+    ${seg('p:fps', 'Кадрів за секунду', [[24, '24'], [25, '25'], [30, '30'], [60, '60']], p.fps, '30 — стандарт. 60 — для плавних рухів мишею чи ігор.')}
+    <div class="field"><label>Колір фону (де немає відео)</label>${swatches(p.bg, 'p:bg')}</div>`;
 }
 
 // ── Кліп ──
@@ -361,7 +358,7 @@ function layerPanel(o) {
       <div class="chips"><button class="chip" data-a="toCursor">${icon('stepFwd')}Почати з курсора</button><button class="chip" data-a="pipSync">${icon('fit')}Разом з відео (з 0:00)</button></div>` : timing(o)}
     ${actions(act('split', 'split', 'Розрізати', 'data-key="S"'), act('dup', 'copy', 'Дублювати'), act('front', 'front', 'Наперед'), act('del', 'trash', 'Видалити'))}
     ${more('ov-layer', `<div class="insp-row">${timeField('start', 'Початок', o.start)}${timeField('dur', 'Тривалість', o.dur)}</div>
-      ${video ? `<p class="hint">Фрагмент файлу ${fmt(o.in || 0)}–${fmt((o.in || 0) + o.dur)}${m ? ` з ${fmt(m.duration)}` : ''}. Краї на доріжці «Відео 2» обрізають початок і кінець.</p>` : ''}`)}`;
+      ${video ? `<p class="hint">Фрагмент файлу ${fmt(o.in || 0)}–${fmt((o.in || 0) + o.dur)}${m ? ` з ${fmt(m.duration)}` : ''}. Краї на доріжці «Поверх» обрізають початок і кінець.</p>` : ''}`)}`;
 }
 
 function animSeg(o) {
@@ -533,6 +530,7 @@ function onClick(e) {
   if (b.dataset.a && ccAction(b.dataset.a, o)) return;
   switch (b.dataset.a) {
     case 'deselect': select(null); break;
+    case 'closeProject': showProject(false); break;
     case 'split': splitAt(); break;
     case 'dup': duplicateSel(); break;
     case 'del': deleteSel(); break;
