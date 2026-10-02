@@ -9,6 +9,7 @@ import { addToTimeline, addOverlay, splitAt, deleteSel, duplicateSel, cutRange, 
 import { exportVideo, exportAudio, exportSize, detectCodecs, canExport } from './export.js';
 import { DB, takeHandoff } from './db.js';
 import { initAsr, openAsr, asrBusy } from './asr.js';
+import { initConvert, needsConvert, convertWithDialog, converting } from './convert.js';
 import { $, icon, hydrateIcons, initTips, initTheme, toast, fmt, openModal, closeModal, anyModalOpen, confirmDialog, downloadBlob, safeName, fmtBytes } from './ui.js';
 
 hydrateIcons();
@@ -20,6 +21,7 @@ initLibrary();
 initInspector();
 initPreviewLayer();
 initAsr();
+initConvert();
 on('open-asr', openAsr);
 
 // ── розмір перегляду ──
@@ -117,11 +119,21 @@ $('capInput').addEventListener('change', e => { const f = e.target.files[0]; e.t
 
 async function importFiles(files, { logo = false, toTimeline = true } = {}) {
   let added = 0;
-  for (const f of files) {
+  for (let f of files) {
     if (/\.(srt|vtt)$/i.test(f.name)) { await importCaptionFile(f); continue; }
+    // AVI, WMV, MPG та інші формати, яких браузер не відкриває, — спершу перетворюємо на MP4
+    if (needsConvert(f)) { const c = await convertWithDialog(f); if (!c) continue; f = c; }
     toast(`Відкриваємо «${f.name}»…`, '', 60000);
     try {
-      const m = await addMedia(f, f.name);
+      let m;
+      try { m = await addMedia(f, f.name); }
+      catch (e) {
+        // браузер не відкрив відео (незнайомий кодек) — пропонуємо перетворити
+        if (!/^video\//.test(f.type) && !/\.(mp4|mov|mkv|webm|m4v|ts)$/i.test(f.name)) throw e;
+        if (!(await confirmDialog('Формат не підтримується браузером', `«${f.name}» не вдалося відкрити. Перетворити його на MP4 прямо тут? Це займе трохи часу.`, 'Перетворити', false))) continue;
+        const c = await convertWithDialog(f); if (!c) continue;
+        f = c; m = await addMedia(f, f.name);
+      }
       added++;
       if (logo && m.kind === 'image') addOverlay('image', { mediaId: m.id });
       else if (toTimeline && (m.kind !== 'image' || !S.project.clips.length || files.length > 1)) addToTimeline(m, { silent: true });
@@ -539,4 +551,4 @@ async function stopVoice() {
     toast('Не вдалося зберегти запис: ' + (e.message || e), 'err', 6000);
   }
 }
-window.addEventListener('beforeunload', e => { if (rec || asrBusy()) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (rec || asrBusy() || converting()) { e.preventDefault(); e.returnValue = ''; } });

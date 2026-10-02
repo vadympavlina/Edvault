@@ -231,6 +231,17 @@
   </div>
 </div>
 
+<!-- Конвертація AVI та інших форматів -->
+<div class="overlay" id="cvModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cvTitle">
+    <div class="modal-head"><h3 id="cvTitle">Перетворюємо відео</h3></div>
+    <p class="msg">Браузер не відкриває <b id="cvName"></b> напряму, тож редактор перетворює його на сумісний формат прямо на вашому комп’ютері — файл нікуди не надсилається.</p>
+    <div class="ex-prog"><div class="ex-bar"><i id="cvBar"></i></div><div class="ex-row"><b id="cvPct">0%</b><span id="cvStage">Готуємо…</span></div></div>
+    <p class="hint">Після перетворення відео відкриється як звичайно. Не закривайте вкладку.</p>
+    <div class="modal-actions"><button class="btn btn-outline" id="cvCancel">Скасувати</button></div>
+  </div>
+</div>
+
 <!-- Озвучення -->
 <div class="overlay" id="voModal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="voTitle">
@@ -284,7 +295,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div id="tip"></div>
 <div id="mediaPool" aria-hidden="true"></div>
-<input type="file" id="fileInput" accept="video/*,audio/*,image/*,.mkv,.mov" multiple hidden>
+<input type="file" id="fileInput" accept="video/*,audio/*,image/*,.mkv,.mov,.avi,.wmv,.asf,.flv,.f4v,.mpg,.mpeg,.vob,.3gp,.3g2,.mts,.m2ts,.divx,.ogv,.dv,.rm,.rmvb,.mxf" multiple hidden>
 <input type="file" id="capInput" accept=".srt,.vtt,text/vtt,application/x-subrip" hidden>
 
 <noscript><p style="padding:20px">Для роботи редактора потрібен JavaScript.</p></noscript>
