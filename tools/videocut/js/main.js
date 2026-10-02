@@ -3,7 +3,7 @@ import { S, media, on, emit, commit, undo, redo, canUndo, canRedo, select, findS
 import { addMedia, removeMedia } from './media.js';
 import { initPlayer, resizeCanvas, seek, toggle, pause, play, snapshot, requestDraw } from './player.js';
 import { initTimeline, render as renderTimeline, zoomBy, zoomFit, setZoom } from './timeline.js';
-import { initLibrary, initInspector, importCaptionFile, showTab } from './panels.js';
+import { initLibrary, initInspector, importCaptionFile, showTab, showProject } from './panels.js';
 import { initPreviewLayer, renderHandles } from './preview.js';
 import { addToTimeline, addOverlay, splitAt, deleteSel, duplicateSel, cutRange, addCaption, findSilences, cutRanges, addVoice, freezeFrame, normalizeSel, transitionsAll, addTitleCard, addLayerAt, TEXT_PRESETS, CARD_STYLES } from './ops.js';
 import { initMenu } from './menu.js';
@@ -232,7 +232,7 @@ document.addEventListener('keydown', e => {
     case 'Equal': case 'NumpadAdd': zoomBy(1.5); break;
     case 'Minus': case 'NumpadSubtract': zoomBy(1 / 1.5); break;
     case 'KeyZ': if (e.shiftKey) zoomFit(); break;
-    case 'Escape': if (S.sel) select(null); else clearMarks(); break;
+    case 'Escape': if (S.sel) select(null); else if (!document.body.classList.contains('insp-off')) showProject(false); else clearMarks(); break;
     case 'Slash': if (e.shiftKey) openModal('helpModal'); break;
     default: return;
   }
@@ -418,7 +418,8 @@ async function takeHandoffIfAny() {
 
 // маленькі екрани: панелі як висувні
 $('btnShowLib').addEventListener('click', () => { document.body.classList.toggle('show-lib'); document.body.classList.remove('show-insp'); });
-$('btnShowInsp').addEventListener('click', () => { document.body.classList.toggle('show-insp'); document.body.classList.remove('show-lib'); });
+$('btnShowInsp').addEventListener('click', () => { if (!S.sel) showProject(true); document.body.classList.toggle('show-insp'); document.body.classList.remove('show-lib'); });
+$('btnProj').addEventListener('click', () => { const off = document.body.classList.contains('insp-off') || !!S.sel; showProject(off); if (off && matchMedia('(max-width:980px)').matches) { document.body.classList.add('show-insp'); document.body.classList.remove('show-lib'); } if (off) setTimeout(() => document.querySelector('#inspector [data-pf="name"]')?.focus(), 0); });
 document.addEventListener('pointerdown', e => {
   if (!document.body.matches('.show-lib,.show-insp')) return;
   if (e.target.closest('.lib,.insp,#btnShowLib,#btnShowInsp,.overlay')) return;
@@ -579,13 +580,14 @@ window.addEventListener('beforeunload', e => { if (rec || asrBusy() || convertin
   const viaInspector = sel => withClip(() => { document.querySelector('#inspector ' + sel)?.click(); });
   const isImg = () => { const c = curClip(); return c && media.get(c.mediaId)?.kind === 'image'; };
   const panel = (cls, on) => { document.body.classList.toggle(cls, !on); try { localStorage.setItem('vc_' + cls, document.body.classList.contains(cls) ? '1' : ''); } catch { /* немає доступу */ } };
-  ['hide-lib', 'hide-insp'].forEach(c => { try { if (localStorage.getItem('vc_' + c)) document.body.classList.add(c); } catch { /* немає доступу */ } });
+  ['hide-lib'].forEach(c => { try { if (localStorage.getItem('vc_' + c)) document.body.classList.add(c); } catch { /* немає доступу */ } });
   const narrow = () => matchMedia('(max-width:980px)').matches;
   const showLibTab = t => { showTab(t); if (narrow()) document.body.classList.add('show-lib'); else panel('hide-lib', true); };
 
   initMenu($('menubar'), [
     { label: 'Файл', items: [
       { label: 'Новий проєкт', run: () => $('btnNew').click() },
+      { label: 'Параметри проєкту…', run: () => $('btnProj').click() },
       { label: 'Додати файли…', key: 'Ctrl+O', run: () => pickFiles('') },
       { sep: true },
       { label: 'Імпортувати субтитри (.srt, .vtt)…', run: () => $('capInput').click() },
@@ -655,7 +657,6 @@ window.addEventListener('beforeunload', e => { if (rec || asrBusy() || convertin
       { label: 'Формат кадру', sub: [['16:9', 'YouTube, урок'], ['9:16', 'Reels, Shorts'], ['1:1', 'Квадрат'], ['4:3', 'Класичний']].map(([v, n]) => ({ label: `${v} — ${n}`, checked: () => S.project.aspect === v, run: () => { S.project.aspect = v; commit(); emit('aspect'); } })) },
       { sep: true },
       { label: 'Панель медіа й елементів', checked: () => !document.body.classList.contains('hide-lib'), run: () => narrow() ? document.body.classList.toggle('show-lib') : panel('hide-lib', document.body.classList.contains('hide-lib')) },
-      { label: 'Панель властивостей', checked: () => !document.body.classList.contains('hide-insp'), run: () => narrow() ? document.body.classList.toggle('show-insp') : panel('hide-insp', document.body.classList.contains('hide-insp')) },
       { sep: true },
       { label: 'Прилипання на таймлайні', checked: () => S.snap, run: () => $('btnSnapToggle').click() },
       { label: 'Наблизити таймлайн', key: '+', run: () => zoomBy(1.5) },

@@ -521,18 +521,60 @@ body.recording .tl,body.recording .lib,body.recording .insp,body.recording .topb
 .proj{display:flex;align-items:baseline;gap:8px;min-width:0;max-width:34vw}
 .proj .brand-proj{font-size:13px;font-weight:600;color:var(--text);max-width:none}
 .topbar>.brand-mark{margin-left:2px}
-/* панелі можна сховати з меню «Вигляд» */
-@media(min-width:981px){
-  body.hide-lib .lib,body.hide-insp .insp{display:none}
-  body.hide-lib .work{grid-template-columns:minmax(0,1fr) 300px}
-  body.hide-insp .work{grid-template-columns:292px minmax(0,1fr)}
-  body.hide-lib.hide-insp .work{grid-template-columns:minmax(0,1fr)}
-}
 @media(max-width:1180px){.mb-top{padding:0 7px;font-size:13px}}
 @media(max-width:1060px){.mb-top{display:none}.mb-burger{display:inline-flex}}
 @media(max-width:640px){.proj{display:none}.mb-burger span{display:none}}
-/* швидкі дії — компактно: ті самі дії є в меню */
-.quick-card{min-height:0;padding:9px 10px;flex-direction:row;align-items:center;gap:8px}
-.quick-card small{display:none}
-.quick-card b{font-size:12.5px;margin:0}
-.quick-card>.ico{width:16px;height:16px;flex-shrink:0;margin:0}
+/* ── Компактний вигляд: менше рамок і рядків, більше місця для відео ── */
+.topbar{height:42px;gap:4px;padding:0 8px}
+.back-link{height:30px;padding:0 6px}
+.menubar{margin-left:2px}
+.mb-btn{height:28px;padding:0 9px;font-size:13px}
+.topbar .btn-primary.btn-sm{height:28px;padding:0 12px}
+.proj{display:flex;align-items:baseline;gap:8px;min-width:0;max-width:34vw;height:28px;align-items:center;padding:0 10px;border-radius:7px}
+.proj:hover{background:var(--surface2)}
+.proj .brand-proj{font-size:12.5px;font-weight:600;color:var(--text);max-width:none}
+.save-state{font-size:11px}
+/* бібліотека: вузькі вкладки */
+@media(min-width:981px){.work{grid-template-columns:264px minmax(0,1fr) 288px}}
+.lib-tabs{padding:5px 6px;gap:2px}
+.lib-tabs button{gap:2px;padding:5px 2px 4px;font-size:11px;border-radius:7px}
+.lib-tabs .ico{width:15px;height:15px}
+.lib-body{padding:10px}
+/* властивості — лише коли є що налаштовувати */
+@media(min-width:981px){
+  body.insp-off .insp,body.hide-lib .lib{display:none}
+  body.insp-off .work{grid-template-columns:264px minmax(0,1fr)}
+  body.hide-lib .work{grid-template-columns:minmax(0,1fr) 288px}
+  body.hide-lib.insp-off .work{grid-template-columns:minmax(0,1fr)}
+}
+.insp{padding:12px 14px 18px}
+.fmt-cards{grid-template-columns:repeat(4,1fr);gap:5px}
+.fmt-card{padding:8px 2px 6px;gap:2px}
+.fmt-card b{font-size:11.5px}
+/* кнопка «на весь екран» — у кутку перегляду, з'являється при наведенні */
+.stage-full{position:absolute;right:10px;bottom:10px;z-index:4;background:rgba(15,17,23,.55);color:#fff;opacity:0;transition:opacity .15s}
+.stage:hover .stage-full,.stage-full:focus-visible{opacity:1}
+.stage-full:hover:not(:disabled){background:rgba(15,17,23,.8);color:#fff}
+.stage:fullscreen .stage-full{opacity:.6}
+/* таймлайн: один рядок керування й лише потрібна висота */
+.splitter{height:5px}
+.tl{height:min(var(--tl-h),var(--tl-fit,var(--tl-h)));min-height:0}
+.tl-bar{height:44px;display:grid;grid-template-columns:1fr auto 1fr;gap:6px;padding:0 8px}
+.tb-l,.tb-c,.tb-r{display:flex;align-items:center;gap:2px;min-width:0}
+.tb-r{justify-content:flex-end}
+.tb-c .tr-time{margin-left:8px;font-size:12px;min-width:118px}
+.tl-bar .btn-play{width:32px;height:32px;margin:0 3px;box-shadow:none}
+.tl-bar .btn-play .ico{width:15px;height:15px}
+.tl-bar input[type=range]{width:90px}
+.tl-heads{width:94px}
+.head{gap:6px;padding:0 9px;font-size:11px}
+.tl-ruler-wrap,.tl-ruler{height:22px}
+.tl-insert{top:22px}
+.lane-empty{font-size:11.5px}
+.lane-v2.drop-on,.lane-a.drop-on{outline:2px dashed var(--accent);outline-offset:-3px}
+@media(max-width:980px){body.show-lib .lib,body.show-insp .insp{top:42px}}
+@media(max-width:640px){.tl-bar{grid-template-columns:auto 1fr auto}.tb-c .tr-time{min-width:0}.tl-heads{width:36px}}
+.drop-sm{flex-direction:row;justify-content:center;gap:8px;padding:9px 12px}
+.drop-sm .ico{width:16px;height:16px;margin:0}
+.drop-sm b{font-size:12.5px}
+.mgrid{margin-top:10px}
