@@ -225,8 +225,8 @@ document.addEventListener('keydown', e => {
     case 'KeyI': mark('in'); break;
     case 'KeyO': mark('out'); break;
     case 'KeyX': cutRange(S.markIn, S.markOut); break;
-    case 'KeyT': showTab('text'); addOverlay('text', { preset: 'plain' }); emit('focus-inspector'); break;
-    case 'KeyC': showTab('captions'); addCaption(''); break;
+    case 'KeyT': e.preventDefault(); showTab('text'); addOverlay('text', { preset: 'plain' }); emit('focus-inspector'); break;
+    case 'KeyC': e.preventDefault(); showTab('captions'); addCaption(''); break;
     case 'KeyF': toggleFullscreen(); break;
     case 'KeyR': openVoice(); break;
     case 'Equal': case 'NumpadAdd': zoomBy(1.5); break;
