@@ -7,7 +7,7 @@ import { seek } from './player.js';
 import { parseSubtitles } from './srt.js';
 import { renderCapTab, markActiveCaption, capTabClick, capTabInput, capTabChange, capTabToggle, captionInspector, ccAction, speedHtml } from './cc-panel.js';
 import { isLayer, LAYOUTS, layoutOf, applyLayout, cropSides, setCropSide, setScale, setShape, resetCrop } from './layer.js';
-import { $, esc, icon, fmt, fmtShort, parseTime, toast, confirmDialog, downloadBlob, safeName, fmtBytes, balanceSegs } from './ui.js';
+import { $, esc, icon, fmt, fmtShort, parseTime, toast, confirmDialog, downloadBlob, safeName, fmtBytes, balanceSegs, keepFocus, typingIn } from './ui.js';
 
 const COLORS = ['#ffffff', '#1a1d23', '#ef4444', '#f59e0b', '#ffd43b', '#10b981', '#0ea5e9', '#4F6BF4', '#8b5cf6', '#ec4899'];
 const EMOJIS = ['👍', '👏', '✅', '❌', '⭐', '🔥', '❗', '❓', '💡', '📌', '👉', '👆', '😀', '😮', '🤔', '🎉', '❤️', '⚠️', '🏆', '📝', '🎯', '🚀', '⏰', '🔍'];
@@ -37,7 +37,18 @@ export function initLibrary() {
   on('show-tab', t => { showTab(t); document.body.classList.add('show-lib'); });
   on('media', () => { if (tab === 'media' || tab === 'elements') renderLibrary(); });
   on('thumbs', () => { if (tab === 'media') renderLibrary(); });
-  on('project', d => { if (tab === 'captions' && !(d && d.from === 'lib')) renderLibrary(); });
+  on('project', d => {
+    if (tab !== 'captions' || (d && d.from === 'lib')) return;
+    // текст субтитру змінюють праворуч — лише оновлюємо рядок у списку
+    if (d && d.live && d.from === 'insp' && S.sel && S.sel.kind === 'caption') {
+      const c = S.project.captions.find(x => x.id === S.sel.id);
+      const ta = c && $('libBody').querySelector(`textarea[data-cap="${c.id}"]`);
+      if (ta) { if (ta.value !== c.text) ta.value = c.text; return; }
+    }
+    // поки людина друкує в списку, автозбереження не перемальовує його
+    if (typingIn($('libBody')) && !(d && d.restored)) return;
+    renderLibrary();
+  });
   on('select', () => { if (tab === 'captions') markActiveCaption(); });
   on('time', () => { if (tab === 'captions') markActiveCaption(); });
   renderLibrary();
@@ -50,7 +61,8 @@ function thumbURL(m) {
 }
 const thumbCache = new Map();
 
-function renderLibrary() {
+function renderLibrary() { keepFocus($('libBody'), drawLibrary); }
+function drawLibrary() {
   $('libTabs').querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const body = $('libBody');
   if (tab === 'media') {
@@ -178,6 +190,8 @@ export function initInspector() {
   on('project', d => {
     if (d && d.from === 'insp') return;
     if (d && d.live && box().contains(document.activeElement)) return;
+    // автозбереження під час набору не чіпає поле, у якому людина пише
+    if (typingIn(box()) && !(d && d.restored)) return;
     renderInspector();
   });
   on('media', () => { if (!S.sel) renderInspector(); });
@@ -218,7 +232,8 @@ export function showProject(on = true) {
   projOpen = on;
   if (on && S.sel) select(null); else renderInspector();
 }
-function renderInspector() {
+function renderInspector() { keepFocus(box(), drawInspector); }
+function drawInspector() {
   const el = box();
   const o = findSel(), s = S.sel;
   if (o) projOpen = false;

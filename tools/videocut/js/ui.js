@@ -77,6 +77,28 @@ export function icon(name, cls = 'ico') {
   return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ''}</svg>`;
 }
 // перемикач, що не вміщається в рядок, ділимо на рівні ряди замість «хвоста» з однієї кнопки
+// чи людина зараз друкує в полі всередині el
+export const typingIn = el => { const a = document.activeElement; return !!a && el.contains(a) && (a.matches('textarea, input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color])') || a.isContentEditable); };
+// Перемальовує панель, не збиваючи людину: повертає фокус у те саме поле, курсор, виділення й прокрутку.
+export function keepFocus(el, render) {
+  const a = document.activeElement;
+  let sel = null, pos = null;
+  if (a && a !== el && el.contains(a) && a.matches('input, textarea, select')) {
+    const attrs = [...a.attributes].filter(x => x.name.startsWith('data-') && x.name !== 'data-tip');
+    if (attrs.length) {
+      sel = a.tagName.toLowerCase() + attrs.map(x => `[${x.name}="${CSS.escape(x.value)}"]`).join('');
+      try { pos = [a.selectionStart, a.selectionEnd, a.selectionDirection, a.scrollTop]; } catch { pos = null; }
+    }
+  }
+  const top = el.scrollTop;
+  render();
+  el.scrollTop = top;
+  if (!sel) return;
+  const n = el.querySelector(sel);
+  if (!n) return;
+  n.focus({ preventScroll: true });
+  if (pos && pos[0] != null) { try { n.setSelectionRange(pos[0], pos[1], pos[2] || 'none'); n.scrollTop = pos[3]; } catch { /* поле без курсора */ } }
+}
 export function balanceSegs(el) {
   el.querySelectorAll('.seg').forEach(g => {
     const b = g.children;
