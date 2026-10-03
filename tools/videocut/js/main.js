@@ -130,11 +130,12 @@ async function importFiles(files, { logo = false, layer = false, toTimeline = tr
     toast(`Відкриваємо «${f.name}»…`, '', 60000);
     try {
       let m;
-      try { m = await addMedia(f, f.name); }
+      try { m = await addMedia(f, f.name, { check: true }); }
       catch (e) {
-        // браузер не відкрив відео (незнайомий кодек) — пропонуємо перетворити
-        if (!/^video\//.test(f.type) && !/\.(mp4|mov|mkv|webm|m4v|ts)$/i.test(f.name)) throw e;
-        if (!(await confirmDialog('Формат не підтримується браузером', `«${f.name}» не вдалося відкрити. Перетворити його на MP4 прямо тут? Це займе трохи часу.`, 'Перетворити', false))) continue;
+        // браузер не відкрив відео або не показує його кадрів (H.265, ProRes, MJPEG у MOV тощо) — перетворюємо
+        const vid = e.needsConvert || /^video\//.test(f.type) || /\.(mp4|mov|qt|mkv|webm|m4v|ts)$/i.test(f.name);
+        if (!vid) throw e;
+        toast(`«${f.name}»: браузер не вміє показати цей кодек — перетворюємо`, '', 4000);
         const c = await convertWithDialog(f); if (!c) continue;
         f = c; m = await addMedia(f, f.name);
       }
@@ -142,7 +143,6 @@ async function importFiles(files, { logo = false, layer = false, toTimeline = tr
       if (logo && m.kind === 'image') addOverlay('image', { mediaId: m.id });
       else if (layer && m.kind !== 'audio' && S.project.clips.length) addLayerAt(m, { start: S.t });
       else if (toTimeline && (m.kind !== 'image' || !S.project.clips.length || files.length > 1)) addToTimeline(m, { silent: true });
-      if (m.kind === 'video' && !m.canDecodeV && m.vt) toast(`«${m.name}»: браузер не вміє швидко декодувати цей кодек — експорт буде повільнішим`, 'err', 6000);
     } catch (e) {
       console.error(e);
       toast(e.message || 'Не вдалося відкрити файл', 'err', 5000);
@@ -668,7 +668,7 @@ window.addEventListener('beforeunload', e => { if (rec || asrBusy() || convertin
     ] },
     { label: 'Довідка', items: [
       { label: 'Гарячі клавіші', key: '?', run: () => openModal('helpModal') },
-      { label: 'Підтримувані формати', run: () => toast('Відео: MP4, MOV, WebM, MKV, а також AVI, WMV, MPG, FLV, 3GP, MTS (перетворюються автоматично). Фото: JPG, PNG, WebP, GIF. Звук: MP3, WAV, M4A, OGG.', '', 9000) },
+      { label: 'Підтримувані формати', run: () => toast('Відео: MP4, MOV, WebM, MKV, а також AVI, WMV, MPG, FLV, 3GP, MTS і MOV з iPhone (H.265) чи ProRes — їх редактор перетворює автоматично. Фото: JPG, PNG, WebP, GIF. Звук: MP3, WAV, M4A, OGG.', '', 9000) },
       { label: 'Меню з клавіатури', key: 'F10', run: () => toast('F10 відкриває меню, стрілки — пересування, Enter — вибір, Esc — закрити', '', 6000) },
     ] },
   ]);

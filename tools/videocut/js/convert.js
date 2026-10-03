@@ -1,4 +1,4 @@
-// Конвертація старих і «небраузерних» форматів (AVI, WMV, FLV, MPG, 3GP, MTS…) у MP4 (або WebM,
+// Конвертація старих і «небраузерних» форматів (AVI, WMV, FLV, MPG, 3GP, MTS, а також MOV з H.265/ProRes…) у MP4 (або WebM,
 // якщо браузер не вміє H.264) — прямо в браузері.
 // ffmpeg.wasm (≈31 МБ) вантажиться лише під час першої конвертації, далі береться з кешу браузера.
 // Якщо всередині вже H.264 — лише перепаковуємо (секунди), інакше перекодовуємо у швидкому режимі.
@@ -91,7 +91,8 @@ export async function convertToMp4(file, onProgress = () => {}) {
       const label = info.video ? 'Перекодовуємо відео…' : 'Перекодовуємо звук…';
       stage(label);
       const h = progress(0, 1, label); f.on('log', h);
-      const even = ['-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', '-pix_fmt', 'yuv420p'];
+      // парні розміри; 4K і більше — до 1080p, щоб перетворення не тривало вічність (для уроку цього досить)
+      const even = ['-vf', "scale='min(iw,1920)':'min(ih,1920)':force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1", '-pix_fmt', 'yuv420p'];
       const v = !info.video ? [] : mp4 ? ['-map', '0:v:0', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '22', ...even]
         : ['-map', '0:v:0', '-c:v', 'libvpx', '-deadline', 'realtime', '-cpu-used', '8', '-b:v', '0', '-crf', '10', '-qmin', '4', '-qmax', '42', ...even];
       const a = !info.audio ? [] : ['-map', '0:a:0?', ...(mp4 ? ['-c:a', 'aac', '-b:a', '160k'] : ['-c:a', 'libopus', '-b:a', '128k'])];

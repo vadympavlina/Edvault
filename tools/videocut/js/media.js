@@ -12,8 +12,23 @@ function kindOf(blob, name) {
   const ext = (name.split('.').pop() || '').toLowerCase();
   if (t.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif'].includes(ext)) return 'image';
   if (t.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac', 'opus'].includes(ext)) return 'audio';
-  if (t.startsWith('video/') || ['mp4', 'webm', 'mov', 'mkv', 'm4v', 'avi', 'ts', 'wmv', 'flv', 'mpg', 'mpeg', '3gp', 'mts', 'm2ts', 'ogv'].includes(ext)) return 'video';
+  if (t.startsWith('video/') || ['mp4', 'webm', 'mov', 'qt', 'mkv', 'm4v', 'avi', 'ts', 'wmv', 'flv', 'mpg', 'mpeg', '3gp', 'mts', 'm2ts', 'ogv'].includes(ext)) return 'video';
   return null;
+}
+
+// чи браузер справді показує кадри (а не лише звук) — для кодеків, яких не вміє WebCodecs
+function framesVisible(el, ms = 6000) {
+  return new Promise(res => {
+    let done = false;
+    const fin = v => { if (done) return; done = true; clearTimeout(tm); el.removeEventListener('loadeddata', chk); el.removeEventListener('error', bad); res(v); };
+    const chk = () => { if (el.readyState >= 2) fin(el.videoWidth > 0); };
+    const bad = () => fin(false);
+    const tm = setTimeout(() => fin(el.readyState >= 2 && el.videoWidth > 0), ms);
+    if (el.error) return fin(false);
+    chk();
+    el.addEventListener('loadeddata', chk);
+    el.addEventListener('error', bad);
+  });
 }
 
 function mediaElementMeta(el) {
@@ -71,7 +86,13 @@ export async function addMedia(blob, name, opts = {}) {
     }
     m.hasVideo = m.kind === 'video';
     m.hasAudio = !!m.at || m.kind === 'audio';
-    if (!isFinite(m.duration) || m.duration <= 0) throw new Error('Не вдалося визначити тривалість файлу ' + name);
+    // кодек, якого браузер не показує (H.265 з iPhone, ProRes, MJPEG…) — краще одразу перетворити
+    if (opts.check && m.kind === 'video' && !(m.vt && m.canDecodeV) && !(await framesVisible(el))) {
+      el.removeAttribute('src'); el.remove(); URL.revokeObjectURL(m.url);
+      try { m.input?.dispose?.(); } catch (e) { /* ignore */ }
+      throw Object.assign(new Error('Браузер не показує відео з цього файлу'), { needsConvert: true });
+    }
+    if (!isFinite(m.duration) || m.duration <= 0) throw Object.assign(new Error('Не вдалося визначити тривалість файлу ' + name), { needsConvert: m.kind === 'video' });
   }
 
   media.set(id, m);
