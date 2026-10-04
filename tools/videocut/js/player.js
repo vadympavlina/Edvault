@@ -224,7 +224,7 @@ function syncElements(hard, L = layout()) {
     const a = m.el, st = mu.in + (t - mu.start);
     active.add(a);
     if (hard || Math.abs(a.currentTime - st) > 0.3) a.currentTime = st;
-    setVolume(a, (mu.volume ?? 1) * fadeAlpha(t, mu.start, md, mu.fadeIn || 0, mu.fadeOut || 0) * (mu.duck ? duckGain(t, L) : 1));
+    setVolume(a, (mu.volume ?? 1) * fadeAlpha(t, mu.start, md, mu.fadeIn || 0, mu.fadeOut || 0) * (mu.duck ? duckGain(t) : 1));
     if (a.paused) a.play().catch(() => {});
   }
   media.forEach(m => { if (m.el && m.el.pause && !active.has(m.el) && !m.el.paused) m.el.pause(); });

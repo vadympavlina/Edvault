@@ -142,8 +142,10 @@ export function snapPoints(excludeId) {
   if (S.markOut != null) pts.push(S.markOut);
   return pts;
 }
+// Alt під час перетягування тимчасово вимикає прилипання
+export const snapOn = () => S.snap && !S.altNoSnap;
 export function snap(t, excludeId, px = 8) {
-  if (!S.snap) return t;
+  if (!snapOn()) return t;
   const th = px / S.pps;
   let best = t, bd = th;
   for (const p of snapPoints(excludeId)) { const d = Math.abs(p - t); if (d < bd) { bd = d; best = p; } }

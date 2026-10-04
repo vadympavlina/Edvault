@@ -1,6 +1,6 @@
 // Таймлайн: доріжки, перетягування, обрізання, прилипання, зум.
 // Мініатюри й хвилі малюються лише для видимої частини — це тримає швидкість навіть на годинних відео.
-import { S, media, emit, on, layout, duration, clipDur, musicDur, snap, commit, rippleShift, select, findSel } from './state.js';
+import { S, media, emit, on, layout, duration, clipDur, musicDur, snap, snapOn, commit, rippleShift, select, findSel } from './state.js';
 import { thumbAt, PEAKS_RATE } from './media.js';
 import { isLayer } from './layer.js';
 import { addToTimeline, addLayerAt } from './ops.js';
@@ -390,6 +390,7 @@ function scrub(e) {
 
 function onMove(e) {
   if (!drag) return;
+  S.altNoSnap = e.altKey;
   if (!drag.moved && Math.abs(e.clientX - drag.x0) < 3) return;
   drag.moved = true;
   const dt = timeAt(e) - drag.t0;
@@ -402,7 +403,7 @@ function onMove(e) {
 
 function snapBoth(start, dur, id) {
   const s1 = snap(start, id), s2 = snap(start + dur, id) - dur;
-  if (!S.snap) return start;
+  if (!snapOn()) return start;
   return Math.abs(s1 - start) <= Math.abs(s2 - start) ? (s1 !== start ? s1 : s2) : s2;
 }
 
@@ -479,6 +480,7 @@ function onUp() {
   inner.removeEventListener('pointermove', onMove);
   if (!drag) return;
   const d = drag; drag = null;
+  S.altNoSnap = false;
   insertEl.hidden = true;
   if (!d.moved) return;
   if (d.kind === 'clip' && d.mode === 'move') {

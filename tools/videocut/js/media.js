@@ -106,14 +106,27 @@ export async function addMedia(blob, name, opts = {}) {
   return m;
 }
 
-export function removeMedia(id) {
+// Видалені з проєкту файли лишаються в IndexedDB до кінця сесії, щоб «Скасувати» могло їх повернути
+const removed = new Map(); // id → назва
+export function removedMedia(id) { return removed.get(id) || null; }
+export async function reviveMedia(id) {
+  const name = removed.get(id);
+  if (!name || media.has(id)) return media.get(id) || null;
+  const blob = await DB.getBlob(id);
+  if (!blob) { removed.delete(id); return null; }
+  removed.delete(id);
+  return addMedia(blob, name, { id, persist: false });
+}
+export function purgeRemoved() { removed.forEach((_, id) => DB.delBlob(id).catch(() => {})); removed.clear(); }
+
+export function removeMedia(id, { forever = false } = {}) {
   const m = media.get(id);
   if (!m) return;
+  if (forever) DB.delBlob(id).catch(() => {}); else removed.set(id, m.name);
   if (m.el && m.el.parentNode) { m.el.pause?.(); m.el.removeAttribute('src'); m.el.load?.(); m.el.remove(); }
   URL.revokeObjectURL(m.url);
   if (m.input) try { m.input.dispose?.(); } catch (e) { /* ignore */ }
   media.delete(id);
-  DB.delBlob(id).catch(() => {});
   emit('media');
 }
 
@@ -131,7 +144,7 @@ async function analyze(m) {
 
 async function makeThumbs(m) {
   const th = 72, tw = Math.max(16, Math.round(th * m.width / m.height));
-  const n = Math.min(160, Math.max(6, Math.ceil(m.duration / 1.5)));
+  const n = Math.min(400, Math.max(6, Math.ceil(m.duration / 1.5)));
   const step = m.duration / n;
   const times = Array.from({ length: n }, (_, i) => Math.min(m.duration - 0.05, i * step + step / 2));
   if (m.vt && m.canDecodeV) {

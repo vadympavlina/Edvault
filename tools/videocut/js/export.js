@@ -54,7 +54,7 @@ class ElementFrames {
   async at(t) {
     const v = this.v;
     if (v.readyState < 1) await new Promise(r => v.addEventListener('loadedmetadata', r, { once: true }));
-    if (Math.abs(v.currentTime - t) > 0.001) await new Promise(r => { v.addEventListener('seeked', r, { once: true }); v.currentTime = t; setTimeout(r, 3000); });
+    if (Math.abs(v.currentTime - t) > 0.001) await new Promise(r => { v.addEventListener('seeked', r, { once: true }); v.currentTime = t; setTimeout(r, 1500); });
     return { src: v, w: v.videoWidth, h: v.videoHeight };
   }
   async close() { this.v.removeAttribute('src'); this.v.load(); }
@@ -122,12 +122,14 @@ export async function exportVideo(opts) {
       if (!m) return null;
       if (m.kind === 'image') r = { at: async () => ({ src: m.el, w: m.width, h: m.height }), close: async () => {} };
       else if (m.vt && m.canDecodeV) r = new ClipFrames(m, Math.max(l.clip.in, srcTime(l, Math.max(a, l.start))) - 0.05, l.clip.out);
-      else r = new ElementFrames(m);
+      else { r = new ElementFrames(m); warnSlow(); }
       readers.set(l.clip.id, r);
     }
     return r;
   };
 
+  let warned = false;
+  const warnSlow = () => { if (!warned) { warned = true; opts.onWarn?.('Цей файл браузер не вміє швидко декодувати — експорт буде повільнішим. Для швидкості перетворіть його на MP4 (H.264) і додайте знову.'); } };
   resetAudioSinks();
   const frames = Math.max(1, Math.round(total * fps));
   let audioDone = a;

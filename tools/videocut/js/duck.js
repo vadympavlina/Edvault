@@ -1,6 +1,6 @@
 // Приглушення музики, коли звучить голос (з кліпу, озвучення чи відео поверх).
 // Рахується за хвилями звуку (peaks), однаково для перегляду й експорту.
-import { S, media, layout } from './state.js';
+import { S, media, layout, on } from './state.js';
 import { PEAKS_RATE } from './media.js';
 
 export const DUCK_LEVEL = 0.3;   // гучність музики під голосом
@@ -40,7 +40,18 @@ function voiceAt(a, b, L) {
   return false;
 }
 // гучність музики (0.3…1) у момент t: м'яко опускається трохи раніше голосу й повільно повертається
-export function duckGain(t, L = layout()) {
+// Кеш: під час відтворення значення просять на кожному кадрі, а рахунок обходить усі доріжки.
+// Скидається за будь-якої зміни проєкту чи хвиль звуку.
+const cache = new Map();
+['project', 'peaks', 'media'].forEach(ev => on(ev, () => cache.clear()));
+export function duckGain(t, L) {
+  if (L) return duckGainRaw(t, L); // з готовим layout (експорт) — без кешу
+  const k = Math.round(t / 0.04);
+  let v = cache.get(k);
+  if (v === undefined) { v = duckGainRaw(k * 0.04, layout()); if (cache.size > 4000) cache.clear(); cache.set(k, v); }
+  return v;
+}
+function duckGainRaw(t, L) {
   // утримання: голос у [t-0.45, t+0.15] → приглушено
   let held = 0, n = 0;
   for (let x = t - 0.2; x <= t + 0.2 + 1e-9; x += 0.1) {
@@ -54,6 +65,6 @@ export function duckEnvelope(t0, t1) {
   const L = layout();
   const n = Math.ceil((t1 - t0) / STEP) + 2;
   const out = new Float32Array(n);
-  for (let i = 0; i < n; i++) out[i] = duckGain(t0 + i * STEP, L);
+  for (let i = 0; i < n; i++) out[i] = duckGainRaw(t0 + i * STEP, L);
   return { at: t => { const f = (t - t0) / STEP, i = Math.max(0, Math.min(n - 2, Math.floor(f))), r = Math.min(1, Math.max(0, f - i)); return out[i] + (out[i + 1] - out[i]) * r; } };
 }

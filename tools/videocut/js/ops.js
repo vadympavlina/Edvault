@@ -145,16 +145,7 @@ export function cutRange(a, b) {
   const end = mainEnd();
   b = Math.min(b, end);
   if (b - a < 0.05) { toast('Позначений шматок порожній'); return false; }
-  const p = S.project;
-  const out = [];
-  for (const l of layout()) {
-    const c = l.clip, sp = c.speed || 1;
-    if (l.end <= a || l.start >= b) { out.push(c); continue; }
-    if (l.start < a) { const left = { ...structuredClone(c), out: c.in + (a - l.start) * sp, fadeOut: 0 }; out.push(left); }
-    if (l.end > b) { const right = { ...structuredClone(c), id: l.start < a ? uid('c') : c.id, in: c.in + (b - l.start) * sp, fadeIn: 0 }; out.push(right); }
-  }
-  p.clips = out;
-  rippleShift(a, -(b - a));
+  cutRangeRaw(a, b);
   S.markIn = S.markOut = null;
   select(null);
   commit();
@@ -376,8 +367,10 @@ export function transitionsAll(type = 'fade') {
 }
 
 // Озвучення: записаний голос лягає на звукову доріжку з місця початку запису
-export function addVoice(m, start) {
-  const x = { id: uid('a'), mediaId: m.id, start, in: 0, out: m.duration, volume: 1, fadeIn: 0, fadeOut: 0, voice: true };
+export function addVoice(m, start, trim = 0) {
+  // trim — затримка мікрофона: початок запису відрізаємо, щоб голос збігався з відео
+  const skip = Math.max(0, Math.min(trim, m.duration - 0.2));
+  const x = { id: uid('a'), mediaId: m.id, start, in: skip, out: m.duration, volume: 1, fadeIn: 0, fadeOut: 0, voice: true };
   S.project.music.push(x);
   commit();
   select('music', x.id);

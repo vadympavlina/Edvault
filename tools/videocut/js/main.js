@@ -1,6 +1,6 @@
 // Точка входу відеоредактора Edvault.
 import { S, media, on, emit, commit, undo, redo, canUndo, canRedo, select, findSel, duration, layout, clipAt, newProject, resetHistory, mainEnd } from './state.js';
-import { addMedia, removeMedia } from './media.js';
+import { addMedia, removeMedia, reviveMedia, removedMedia, purgeRemoved } from './media.js';
 import { initPlayer, resizeCanvas, seek, toggle, pause, play, snapshot, requestDraw } from './player.js';
 import { initTimeline, render as renderTimeline, zoomBy, zoomFit, setZoom } from './timeline.js';
 import { initLibrary, initInspector, importCaptionFile, showTab, showProject } from './panels.js';
@@ -274,6 +274,11 @@ function defaultName() {
 }
 const exRange = () => (exOpt.range === 'marks' && S.markIn != null && S.markOut != null ? [S.markIn, S.markOut] : [0, duration()]);
 
+// приблизний розмір файлу, байт
+function estimateSize(len, W, H, audioOnly = false) {
+  const vbr = ({ low: 1, medium: 2.5, high: 5, max: 9 }[exOpt.quality] || 5) * (W * H) / (1920 * 1080) + 0.16;
+  return (audioOnly ? 0.16 : vbr) * 1e6 / 8 * len;
+}
 let infoSeq = 0;
 async function updateExportInfo() {
   const audioOnly = exOpt.format === 'audio';
@@ -288,8 +293,7 @@ async function updateExportInfo() {
   const codecs = await detectCodecs(fmtKey, W, H).catch(() => ({}));
   if (seq !== infoSeq) return;
   const names = { avc: 'H.264', hevc: 'H.265', vp9: 'VP9', vp8: 'VP8', av1: 'AV1', aac: 'AAC', opus: 'Opus', vorbis: 'Vorbis' };
-  const vbr = { medium: 2.5, high: 5, max: 9 }[exOpt.quality] * (W * H) / (1920 * 1080) + 0.16;
-  const size = (audioOnly ? 0.16 : vbr) * 1e6 / 8 * len;
+  const size = estimateSize(len, W, H, audioOnly);
   let html;
   if (audioOnly) html = codecs.a ? `Звук: <b>${names[codecs.a] || codecs.a}</b> · тривалість <b>${fmt(len)}</b> · приблизно <b>${fmtBytes(size)}</b>` : '<span class="warn">Браузер не вміє кодувати звук.</span>';
   else if (!codecs.v) html = `<span class="warn">Браузер не вміє кодувати відео у ${exOpt.format.toUpperCase()} такого розміру. Спробуйте інший формат або меншу якість.</span>`;
@@ -310,7 +314,14 @@ async function startExport() {
   const range = exRange();
   let writable = null;
   // довгі відео пишемо одразу у файл (без утримання всього в пам'яті), якщо браузер це дозволяє
-  if (!audioOnly && window.showSaveFilePicker && range[1] - range[0] > 600) {
+  const { W: ew, H: eh } = exportSize(exOpt.short);
+  const estBytes = estimateSize(range[1] - range[0], ew, eh, audioOnly);
+  // без запису прямо у файл (Safari, Firefox) усе відео збирається в пам'яті — для великих файлів це ризик
+  if (!audioOnly && !window.showSaveFilePicker && estBytes > 800e6) {
+    const ok = await confirmDialog('Великий файл', `Готове відео займе близько ${fmtBytes(estBytes)}, а цей браузер збирає його в пам’яті — вкладка може завершитися помилкою. Надійніше експортувати в Chrome чи Edge, або вибрати меншу роздільність чи якість. Продовжити тут?`, 'Продовжити', false);
+    if (!ok) return;
+  }
+  if (!audioOnly && window.showSaveFilePicker && (range[1] - range[0] > 600 || estBytes > 250e6)) {
     try {
       const h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'Відео', accept: { [exOpt.format === 'mp4' ? 'video/mp4' : 'video/webm']: ['.' + ext] } }] });
       writable = await h.createWritable();
@@ -327,7 +338,7 @@ async function startExport() {
     if (info && info.eta != null) $('exEta').textContent = `Залишилось ≈ ${fmt(info.eta)}${info.speed ? ` · швидкість ${info.speed.toFixed(1).replace('.', ',')}×` : ''}`;
   };
   try {
-    const opts = { format: audioOnly ? 'mp4' : exOpt.format, short: exOpt.short, quality: exOpt.quality, fps: S.project.fps, range, onProgress, signal: ctrl.signal, writable };
+    const opts = { format: audioOnly ? 'mp4' : exOpt.format, short: exOpt.short, quality: exOpt.quality, fps: S.project.fps, range, onProgress, signal: ctrl.signal, writable, onWarn: m => toast(m, '', 7000) };
     const blob = audioOnly ? await exportAudio(opts) : await exportVideo(opts);
     const secs = (performance.now() - t0) / 1000;
     if (blob) { lastExport = { blob, name }; downloadBlob(blob, name); }
@@ -358,10 +369,17 @@ function saveNow() {
   clearTimeout(saveTimer);
   const list = [...media.values()].map(m => ({ id: m.id, name: m.name }));
   return Promise.all([DB.set('project', S.project), DB.set('mediaList', list)])
-    .then(() => setSaveState('Збережено'))
+    .then(() => { savePending = false; setSaveState('Збережено'); })
     .catch(e => { console.warn(e); setSaveState('Не збережено'); });
 }
 function scheduleSave() { setSaveState('Зберігаємо…'); clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 700); }
+// закрили або згорнули вкладку раніше за 0,7 с після правки — зберігаємо одразу, щоб остання зміна не пропала
+let savePending = false;
+on('project', d => { if (d && d.committed) savePending = true; });
+on('media', () => { savePending = true; });
+const flushSave = () => { if (savePending) { savePending = false; saveNow(); } };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
+window.addEventListener('pagehide', flushSave);
 on('project', d => { if (d && d.committed) scheduleSave(); });
 on('media', scheduleSave);
 
@@ -370,14 +388,16 @@ async function restore() {
   try { p = await DB.get('project'); list = (await DB.get('mediaList')) || []; } catch (e) { console.warn(e); }
   if (!p || !p.clips) return false;
   const missing = [];
-  for (const { id, name } of list) {
-    try {
-      const blob = await DB.getBlob(id);
-      if (!blob) { missing.push(name); continue; }
-      await addMedia(blob, name, { id, persist: false });
-    } catch (e) { missing.push(name); }
+  // блоби читаємо з бази паралельно, а відкриваємо по черзі — зберігається порядок файлів у бібліотеці
+  const blobs = await Promise.all(list.map(x => DB.getBlob(x.id).catch(() => null)));
+  for (let i = 0; i < list.length; i++) {
+    const { id, name } = list[i];
+    if (!blobs[i]) { missing.push(name); continue; }
+    try { await addMedia(blobs[i], name, { id, persist: false }); } catch (e) { missing.push(name); }
   }
   S.project = { ...newProject(), ...p };
+  // файли, яких немає у списку проєкту (залишки після збоїв чи видалених), більше не потрібні
+  DB.blobKeys().then(keys => keys.filter(k => !list.some(x => x.id === k)).forEach(k => DB.delBlob(k).catch(() => {}))).catch(() => {});
   resetHistory();
   emit('project', { committed: true, restored: true });
   emit('aspect');
@@ -388,10 +408,21 @@ async function restore() {
   return true;
 }
 
+// «Скасувати» повернуло кліпи, чий файл раніше прибрали з проєкту, — підвантажуємо його назад
+async function reviveMissing() {
+  const p = S.project;
+  const ids = new Set([...p.clips.map(c => c.mediaId), ...p.music.map(m => m.mediaId), ...p.overlays.map(o => o.mediaId)].filter(Boolean));
+  let n = 0;
+  for (const id of ids) if (!media.has(id) && removedMedia(id)) { try { if (await reviveMedia(id)) n++; } catch (e) { console.warn(e); } }
+  if (n) { emit('project', { restored: true }); emit('aspect'); }
+}
+on('project', d => { if (d && d.restored && d.committed) reviveMissing(); });
+
 $('btnNew').addEventListener('click', async () => {
   if ((S.project.clips.length || media.size) && !(await confirmDialog('Почати новий проєкт?', 'Поточний проєкт і всі додані файли буде прибрано з редактора. Уже експортовані відео це не зачепить.', 'Новий проєкт'))) return;
   pause();
-  [...media.keys()].forEach(removeMedia);
+  [...media.keys()].forEach(id => removeMedia(id, { forever: true }));
+  purgeRemoved();
   S.project = newProject();
   S.sel = null; S.t = 0; clearMarks();
   resetHistory();
@@ -520,7 +551,10 @@ $('voStart').addEventListener('click', async () => {
   const recorder = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 128000 } : {});
   rec = { recorder, stream, chunks: [], start: S.t, mime: recorder.mimeType || mime, t0: performance.now() };
   recorder.ondataavailable = e => { if (e.data && e.data.size) rec.chunks.push(e.data); };
+  const started = new Promise(res => { recorder.onstart = res; });
   recorder.start(250);
+  await started;
+  rec.latency = Math.max(0, Math.min(0.5, stream.getAudioTracks()[0]?.getSettings?.().latency || 0));
   S.recMute = mute;
   document.body.classList.add('recording');
   $('recBadge').hidden = false;
@@ -550,7 +584,7 @@ async function stopVoice() {
   try {
     toast('Обробляємо запис…', '', 20000);
     const m = await addMedia(blob, `Голос ${fmt(r.start).replace(':', '-')}.${ext}`);
-    addVoice(m, r.start);
+    addVoice(m, r.start, r.latency || 0);
     seek(r.start);
     toast('Голос додано на звукову доріжку. Відтворіть, щоб послухати', 'ok', 4500);
   } catch (e) {
