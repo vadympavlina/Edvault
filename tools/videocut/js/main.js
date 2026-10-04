@@ -192,6 +192,14 @@ function mark(which) {
 function clearMarks() { S.markIn = S.markOut = null; $('btnCutRange').disabled = true; emit('marks'); }
 on('project', d => { if (d && d.committed && S.markIn == null) $('btnCutRange').disabled = true; });
 
+// новий субтитр у позиції курсора, і одразу можна друкувати
+function newCaptionHere() {
+  showTab('captions');
+  const c = addCaption('');
+  const ta = document.querySelector(`#libBody textarea[data-cap="${c.id}"]`);
+  if (ta) { ta.focus(); ta.select(); }
+}
+
 // ── клавіатура (за фізичною клавішею — працює й на українській розкладці) ──
 document.addEventListener('keydown', e => {
   if (anyModalOpen()) {
@@ -234,7 +242,7 @@ document.addEventListener('keydown', e => {
     case 'KeyO': mark('out'); break;
     case 'KeyX': cutRange(S.markIn, S.markOut); break;
     case 'KeyT': e.preventDefault(); showTab('text'); addOverlay('text', { preset: 'plain' }); emit('focus-inspector'); break;
-    case 'KeyC': e.preventDefault(); showTab('captions'); addCaption(''); break;
+    case 'KeyC': e.preventDefault(); newCaptionHere(); break;
     case 'KeyF': toggleFullscreen(); break;
     case 'KeyR': openVoice(); break;
     case 'Equal': case 'NumpadAdd': zoomBy(1.5); break;
@@ -454,7 +462,7 @@ window.addEventListener('beforeunload', e => { if (isRecording() || asrBusy() ||
     ] },
     { label: 'Додати', items: [
       { label: 'Текст', sub: Object.entries(TEXT_PRESETS).map(([k, v]) => ({ label: v.label, run: () => { showLibTab('text'); addOverlay('text', { preset: k }); emit('focus-inspector'); } })) },
-      { label: 'Субтитр у позиції курсора', key: 'C', run: () => { showLibTab('captions'); addCaption(''); } },
+      { label: 'Субтитр у позиції курсора', key: 'C', run: () => { showLibTab('captions'); newCaptionHere(); } },
       { label: 'Заставка з назвою', sub: Object.keys(CARD_STYLES).map((k, i) => ({ label: ['Синя', 'Захід сонця', 'Зелена', 'Темна', 'Світла'][i] || k, run: async () => { try { await addTitleCard(k); emit('focus-inspector'); } catch (e) { toast('Не вдалося створити заставку', 'err'); } } })) },
       { sep: true },
       { label: 'Стрілка', enabled: has, run: () => addOverlay('arrow') },
