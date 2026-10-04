@@ -598,3 +598,4 @@ body.recording .tl,body.recording .lib,body.recording .insp,body.recording .topb
 
 /* Прокрутка не «повзе» сама: браузер не підлаштовує її під зміни вмісту панелей */
 .insp,.lib-body,.tl-scroll,.modal,.mb-dd{overflow-anchor:none}
+.it:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}

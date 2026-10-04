@@ -11,6 +11,7 @@ import { LOOKS, TRANSITIONS } from './render.js';
 import { toSrt, toVtt } from './srt.js';
 import { exportVideo, exportAudio, exportSize, detectCodecs, canExport } from './export.js';
 import { DB, takeHandoff } from './db.js';
+import { packProject, unpackProject, PROJ_EXT } from './projfile.js';
 import { initAsr, openAsr, asrBusy } from './asr.js';
 import { initConvert, needsConvert, convertWithDialog, converting } from './convert.js';
 import { $, icon, hydrateIcons, initTips, initTheme, toast, fmt, openModal, closeModal, anyModalOpen, confirmDialog, downloadBlob, safeName, fmtBytes } from './ui.js';
@@ -125,6 +126,7 @@ async function importFiles(files, { logo = false, layer = false, toTimeline = tr
   let added = 0;
   for (let f of files) {
     if (/\.(srt|vtt)$/i.test(f.name)) { await importCaptionFile(f); continue; }
+    if (f.name.toLowerCase().endsWith(PROJ_EXT)) { await openProjectFile(f); continue; }
     // AVI, WMV, MPG та інші формати, яких браузер не відкриває, — спершу перетворюємо на MP4
     if (needsConvert(f)) { const c = await convertWithDialog(f); if (!c) continue; f = c; }
     toast(`Відкриваємо «${f.name}»…`, '', 60000);
@@ -418,19 +420,51 @@ async function reviveMissing() {
 }
 on('project', d => { if (d && d.restored && d.committed) reviveMissing(); });
 
-$('btnNew').addEventListener('click', async () => {
-  if ((S.project.clips.length || media.size) && !(await confirmDialog('Почати новий проєкт?', 'Поточний проєкт і всі додані файли буде прибрано з редактора. Уже експортовані відео це не зачепить.', 'Новий проєкт'))) return;
+// прибирає з редактора поточний проєкт і всі файли
+function clearEditor() {
   pause();
   [...media.keys()].forEach(id => removeMedia(id, { forever: true }));
   purgeRemoved();
   S.project = newProject();
   S.sel = null; S.t = 0; clearMarks();
   resetHistory();
+}
+$('btnNew').addEventListener('click', async () => {
+  if ((S.project.clips.length || media.size) && !(await confirmDialog('Почати новий проєкт?', 'Поточний проєкт і всі додані файли буде прибрано з редактора. Уже експортовані відео це не зачепить. Щоб не втратити роботу, спершу збережіть проєкт у файл (меню «Файл»).', 'Новий проєкт'))) return;
+  clearEditor();
   emit('project', { committed: true });
   emit('select');
   emit('aspect');
   saveNow();
 });
+
+// ── проєкт як файл ──
+function saveProjectFile() {
+  if (!media.size && !S.project.clips.length) { toast('Проєкт порожній — нічого зберігати'); return; }
+  const blob = packProject();
+  downloadBlob(blob, safeName(S.project.name) + PROJ_EXT);
+  toast(`Проєкт збережено у файл (${fmtBytes(blob.size)}). Він містить усі відео, фото й звуки`, 'ok', 5000);
+}
+async function openProjectFile(file) {
+  let data;
+  try { data = await unpackProject(file); } catch (e) { toast(e.message || 'Не вдалося відкрити файл проєкту', 'err', 6000); return; }
+  if ((S.project.clips.length || media.size) && !(await confirmDialog('Відкрити проєкт із файлу?', 'Поточний проєкт буде замінено. Збережіть його у файл, якщо він ще потрібен.', 'Відкрити'))) return;
+  clearEditor();
+  toast('Відкриваємо проєкт…', '', 60000);
+  const missing = [];
+  for (const it of data.items) {
+    try { await addMedia(it.blob, it.name, { id: it.id }); } catch (e) { console.warn(e); missing.push(it.name); }
+  }
+  S.project = { ...newProject(), ...data.project };
+  resetHistory();
+  emit('project', { committed: true, restored: true });
+  emit('select');
+  emit('aspect');
+  if (duration() > 0) zoomFit();
+  saveNow();
+  toast(missing.length ? `Проєкт відкрито, але не вдалося завантажити: ${missing.join(', ')}` : 'Проєкт відкрито', missing.length ? 'err' : 'ok', 5000);
+}
+$('projInput').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) openProjectFile(f); });
 
 // файл, переданий з іншого інструмента (наприклад, «Запис екрану»)
 async function takeHandoffIfAny() {
@@ -630,6 +664,8 @@ window.addEventListener('beforeunload', e => { if (rec || asrBusy() || convertin
       { sep: true },
       { label: 'Зберегти кадр як PNG', enabled: has, run: () => $('btnSnap').click() },
       { label: 'Експорт відео…', key: 'Ctrl+E', enabled: has, run: openExport },
+      { label: 'Зберегти проєкт у файл…', enabled: () => media.size > 0, run: saveProjectFile },
+      { label: 'Відкрити проєкт із файлу…', run: () => $('projInput').click() },
       { label: 'Зберегти проєкт у браузері', key: 'Ctrl+S', run: () => { saveNow(); toast('Проєкт збережено в цьому браузері', 'ok'); } },
       { sep: true },
       { label: 'До всіх інструментів', run: () => { location.href = '../tools.html'; } },

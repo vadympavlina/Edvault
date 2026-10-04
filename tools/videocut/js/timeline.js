@@ -36,6 +36,22 @@ export function initTimeline() {
   window.addEventListener('resize', () => { render(); });
   scroll.addEventListener('wheel', onWheel, { passive: false });
   inner.addEventListener('pointerdown', onDown);
+  // клавіатура: Tab переходить між елементами таймлайну, фокус виділяє елемент (далі працюють S, Delete, Ctrl+D…)
+  inner.addEventListener('focusin', e => {
+    const it = e.target.closest?.('.it');
+    if (it && !(S.sel && S.sel.kind === it.dataset.kind && S.sel.id === it.dataset.id)) select(it.dataset.kind, it.dataset.id);
+  });
+  inner.addEventListener('keydown', e => {
+    const it = e.target.closest?.('.it');
+    if (!it || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Enter') { e.preventDefault(); emit('focus-inspector'); return; }
+    // стрілки вгору/вниз пересуваються між елементами в порядку на таймлайні, ліворуч/праворуч лишаються для курсора
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      const all = [...inner.querySelectorAll('.it')].sort((a, b) => a.offsetLeft - b.offsetLeft);
+      const n = all[all.indexOf(it) + (e.key === 'ArrowDown' ? 1 : -1)];
+      if (n) { e.preventDefault(); n.focus(); }
+    }
+  });
   inner.addEventListener('dblclick', e => {
     const it = e.target.closest('.it');
     if (it) { select(it.dataset.kind, it.dataset.id); emit('focus-inspector'); }
@@ -139,6 +155,8 @@ export function render() {
   if (renderQueued) { cancelAnimationFrame(renderQueued); renderQueued = 0; }
   // перемальовування замінює всі доріжки — запам'ятовуємо прокрутку, щоб таймлайн не «підстрибував»
   const keepL = scroll.scrollLeft, keepT = scroll.scrollTop;
+  const fa = document.activeElement && document.activeElement.closest ? document.activeElement.closest('.it') : null;
+  const focusKey = fa && inner.contains(fa) ? fa.dataset.kind + ':' + fa.dataset.id : null;
   const p = S.project, pps = S.pps;
   const d = duration();
   const width = Math.max(scroll.clientWidth, (d + 8) * pps);
@@ -204,6 +222,15 @@ export function render() {
   const need = BAR_H + RULER_H + rows.reduce((a, r) => a + r[0] + 1, 0) + 14;
   $('tl').style.setProperty('--tl-fit', need + 'px');
   vCanvas = $('tlVCanvas'); aCanvas = $('tlACanvas'); v2Canvas = $('tlV2Canvas');
+  // доступність: кожен елемент — кнопка з підписом, яку можна досягти клавішею Tab
+  const KIND = { clip: 'Кліп', overlay: 'Накладка', caption: 'Субтитр', music: 'Звук' };
+  lanes.querySelectorAll('.it').forEach(it => {
+    it.tabIndex = 0;
+    it.setAttribute('role', 'button');
+    it.setAttribute('aria-label', `${KIND[it.dataset.kind] || ''}: ${it.textContent.trim()}`);
+    it.setAttribute('aria-pressed', it.classList.contains('sel') ? 'true' : 'false');
+    if (focusKey && it.dataset.kind + ':' + it.dataset.id === focusKey) it.focus({ preventScroll: true });
+  });
   if (scroll.scrollTop !== keepT) scroll.scrollTop = keepT;
   if (scroll.scrollLeft !== keepL) scroll.scrollLeft = keepL;
   heads.scrollTop = scroll.scrollTop; // назви доріжок завжди навпроти своїх доріжок

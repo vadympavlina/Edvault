@@ -88,6 +88,10 @@ export async function exportVideo(opts) {
   await output.start();
 
   if (S.project.captions.length) await loadCcFont(capStyle(S.project));
+  // шрифт тексту на відео має бути готовий до першого кадру, інакше початок відео вийде іншим шрифтом
+  if (S.project.overlays.some(o => o.type === 'text') && document.fonts && document.fonts.load) {
+    await Promise.race([Promise.all([600, 700, 800].map(w => document.fonts.load(`${w} 48px Inter`, 'АаБбЯя Aa').catch(() => {}))), new Promise(r => setTimeout(r, 3000))]);
+  }
   const L = layout();
   // останні кадри кліпів, після яких іде перехід
   const tails = new Map();

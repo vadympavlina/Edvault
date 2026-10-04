@@ -4,7 +4,14 @@
 // Якщо всередині вже H.264 — лише перепаковуємо (секунди), інакше перекодовуємо у швидкому режимі.
 import { $, toast, openModal, closeModal } from './ui.js';
 
-const CORE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/';
+// Спершу шукаємо конвертер поруч із редактором (vendor/ffmpeg-core/ — див. README там), інакше беремо з CDN.
+// Так у школі без інтернету все працює, якщо файли покласти в папку один раз.
+const LOCAL_CORE = new URL('../vendor/ffmpeg-core/', import.meta.url).href;
+const CDN_CORE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/';
+async function coreBase() {
+  try { const r = await fetch(LOCAL_CORE + 'ffmpeg-core.wasm', { method: 'HEAD' }); if (r.ok && !/html/.test(r.headers.get('content-type') || '')) return LOCAL_CORE; } catch (e) { /* немає локальної копії */ }
+  return CDN_CORE;
+}
 export const CONVERT_EXT = ['avi', 'wmv', 'asf', 'flv', 'f4v', 'mpg', 'mpeg', 'mpe', 'm2v', 'vob', '3gp', '3g2', 'mts', 'm2ts', 'divx', 'xvid', 'ogv', 'dv', 'rm', 'rmvb', 'mxf', 'm1v'];
 export const CONVERT_ACCEPT = CONVERT_EXT.map(e => '.' + e).join(',');
 const ext = name => (String(name).split('.').pop() || '').toLowerCase();
@@ -18,7 +25,8 @@ async function getFF(onStage) {
     const { FFmpeg } = await import('../vendor/ffmpeg/index.js');
     const inst = new FFmpeg();
     onStage('Завантажуємо конвертер (≈ 31 МБ, лише перший раз)…');
-    await inst.load({ coreURL: CORE + 'ffmpeg-core.js', wasmURL: CORE + 'ffmpeg-core.wasm' });
+    const base = await coreBase();
+    await inst.load({ coreURL: base + 'ffmpeg-core.js', wasmURL: base + 'ffmpeg-core.wasm' });
     ff = inst;
     return inst;
   })().finally(() => { loading = null; });

@@ -346,7 +346,7 @@ export function normalizeSel() {
   if (!o) return false;
   const m = media.get(o.mediaId);
   if (!m || !m.peaks) { toast(m && m.analyzing ? 'Ще аналізуємо звук — спробуйте за мить' : 'У цьому файлі немає звуку'); return false; }
-  const peak = s.kind === 'music' ? peakIn(m, o.in, o.out) : peakIn(m, o.in, o.out);
+  const peak = peakIn(m, o.in, o.out);
   if (!peak || peak < 0.005) { toast('Тут майже тиша — нічого вирівнювати'); return false; }
   const v = Math.max(0.1, Math.min(2, Math.round((0.9 / peak) * 20) / 20));
   o.volume = v;

@@ -1,10 +1,16 @@
 // Розпізнавання мови (Whisper) у фоновому потоці. Модель завантажується один раз і кешується браузером.
-const LIB = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0/dist/transformers.min.js';
+// Локальна копія (vendor/transformers/transformers.min.js) має перевагу; без неї — CDN.
+const LOCAL_LIB = new URL('../vendor/transformers/transformers.min.js', import.meta.url).href;
+const CDN_LIB = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0/dist/transformers.min.js';
+async function loadLib() {
+  try { const r = await fetch(LOCAL_LIB, { method: 'HEAD' }); if (r.ok && !/html/.test(r.headers.get('content-type') || '')) return await import(LOCAL_LIB); } catch (e) { /* немає локальної копії */ }
+  return import(CDN_LIB);
+}
 let lib = null, asr = null, loadedKey = null;
 
 async function load(model) {
   if (asr && loadedKey === model) return;
-  if (!lib) lib = await import(LIB);
+  if (!lib) lib = await loadLib();
   lib.env.allowLocalModels = false;
   const progress = d => {
     if (d.status === 'progress' && d.total) postMessage({ type: 'dl', file: d.file, loaded: d.loaded, total: d.total });
