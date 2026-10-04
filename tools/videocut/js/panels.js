@@ -7,7 +7,7 @@ import { seek } from './player.js';
 import { parseSubtitles } from './srt.js';
 import { renderCapTab, markActiveCaption, capTabClick, capTabInput, capTabChange, capTabToggle, captionInspector, ccAction, speedHtml } from './cc-panel.js';
 import { isLayer, LAYOUTS, layoutOf, applyLayout, cropSides, setCropSide, setScale, setShape, resetCrop } from './layer.js';
-import { $, esc, icon, fmt, fmtShort, parseTime, toast, confirmDialog, downloadBlob, safeName, fmtBytes, balanceSegs, keepFocus, typingIn } from './ui.js';
+import { $, esc, icon, fmt, fmtShort, parseTime, toast, confirmDialog, downloadBlob, safeName, fmtBytes, balanceSegs, keepFocus, typingIn, setHtml } from './ui.js';
 
 const COLORS = ['#ffffff', '#1a1d23', '#ef4444', '#f59e0b', '#ffd43b', '#10b981', '#0ea5e9', '#4F6BF4', '#8b5cf6', '#ec4899'];
 const EMOJIS = ['👍', '👏', '✅', '❌', '⭐', '🔥', '❗', '❓', '💡', '📌', '👉', '👆', '😀', '😮', '🤔', '🎉', '❤️', '⚠️', '🏆', '📝', '🎯', '🚀', '⏰', '🔍'];
@@ -68,7 +68,7 @@ function drawLibrary() {
   if (tab === 'media') {
     const items = [...media.values()];
     const used = new Set([...S.project.clips.map(c => c.mediaId), ...S.project.music.map(m => m.mediaId), ...S.project.overlays.map(o => o.mediaId)]);
-    body.innerHTML = `
+    setHtml(body, `
       <button class="drop${items.length ? ' drop-sm' : ''}" id="btnImport2">${icon('upload')}<b>Додати файли</b>${items.length ? '' : '<span>Відео, фото або аудіо — або перетягніть їх у вікно</span>'}</button>
       ${items.length ? `<div class="mgrid">${items.map(m => {
         let url = thumbCache.get(m.id + ':' + m.thumbs.length);
@@ -85,15 +85,15 @@ function drawLibrary() {
             <button class="btn btn-sm btn-icon" data-act="rm" data-tip="Прибрати з проєкту">${icon('trash')}</button>
           </div>
         </div>`;
-      }).join('')}</div>` : '<p class="lib-hint">Усе обробляється у вашому браузері — нічого не завантажується на сервер.</p>'}`;
+      }).join('')}</div>` : '<p class="lib-hint">Усе обробляється у вашому браузері — нічого не завантажується на сервер.</p>'}`);
   } else if (tab === 'text') {
-    body.innerHTML = `<p class="lib-hint">Натисніть, щоб додати на поточну позицію курсора.</p><div class="presets">${Object.entries(TEXT_PRESETS).map(([k, v]) => `
-      <button class="preset pr-${k}" data-preset="${k}"><span class="pr-demo">${esc(v.o.text.split('\n')[0])}</span><span class="pr-name">${esc(v.label)}</span></button>`).join('')}</div>`;
+    setHtml(body, `<p class="lib-hint">Натисніть, щоб додати на поточну позицію курсора.</p><div class="presets">${Object.entries(TEXT_PRESETS).map(([k, v]) => `
+      <button class="preset pr-${k}" data-preset="${k}"><span class="pr-demo">${esc(v.o.text.split('\n')[0])}</span><span class="pr-name">${esc(v.label)}</span></button>`).join('')}</div>`);
   } else if (tab === 'elements') {
     const imgs = [...media.values()].filter(m => m.kind === 'image');
     const vids = [...media.values()].filter(m => m.kind === 'video');
     const el = (type, ic, name, sub) => `<button class="elem" data-el="${type}" title="${sub}">${icon(ic)}<b>${name}</b></button>`;
-    body.innerHTML = `<div class="elems">
+    setHtml(body, `<div class="elems">
       ${el('arrow', 'arrow', 'Стрілка', 'Вказати на кнопку чи деталь')}
       ${el('rect', 'rect', 'Рамка', 'Обвести важливе')}
       ${el('spot', 'spot', 'Прожектор', 'Затемнити все, крім області')}
@@ -109,7 +109,7 @@ function drawLibrary() {
     <p class="lib-hint" style="margin-top:6px">3 секунди з великим заголовком — на початку відео або в місці курсора.</p>
     <div class="lib-sub">Зображення поверх відео</div>
     ${imgs.length ? `<div class="mgrid">${imgs.map(m => `<button class="mcard img-pick" data-img="${m.id}" title="${esc(m.name)}"><div class="mthumb">${m.thumbs[0] ? `<img src="${m.thumbs[0].c.toDataURL()}" alt="">` : icon('image')}</div><div class="mname">${esc(m.name)}</div></button>`).join('')}</div>` : ''}
-    <button class="btn btn-outline btn-block" id="btnAddLogo">${icon('image')} Логотип або картинка…</button>`;
+    <button class="btn btn-outline btn-block" id="btnAddLogo">${icon('image')} Логотип або картинка…</button>`);
   } else if (tab === 'captions') renderCapTab(body);
 }
 
@@ -190,6 +190,11 @@ export function initInspector() {
   on('project', d => {
     if (d && d.from === 'insp') return;
     if (d && d.live && box().contains(document.activeElement)) return;
+    // текст субтитру змінюють у списку ліворуч — лише оновлюємо поле праворуч
+    if (d && d.live && d.from === 'lib' && S.sel && S.sel.kind === 'caption') {
+      const c = findSel(), ta = c && box().querySelector('textarea[data-f="text"]');
+      if (ta) { if (ta.value !== c.text) ta.value = c.text; const sp = box().querySelector('[data-cc-speed]'); if (sp) sp.innerHTML = speedHtml(c); return; }
+    }
     // автозбереження під час набору не чіпає поле, у якому людина пише
     if (typingIn(box()) && !(d && d.restored)) return;
     renderInspector();
@@ -238,12 +243,13 @@ function drawInspector() {
   const o = findSel(), s = S.sel;
   if (o) projOpen = false;
   document.body.classList.toggle('insp-off', !o && !projOpen);
-  if (!o) { el.innerHTML = projOpen ? projectPanel() : ''; balanceSegs(el); return; }
-  if (s.kind === 'clip') el.innerHTML = clipPanel(o);
-  else if (s.kind === 'overlay') el.innerHTML = overlayPanel(o);
-  else if (s.kind === 'caption') el.innerHTML = captionPanel(o);
-  else if (s.kind === 'music') el.innerHTML = musicPanel(o);
-  balanceSegs(el);
+  let html = '';
+  if (!o) html = projOpen ? projectPanel() : '';
+  else if (s.kind === 'clip') html = clipPanel(o);
+  else if (s.kind === 'overlay') html = overlayPanel(o);
+  else if (s.kind === 'caption') html = captionPanel(o);
+  else if (s.kind === 'music') html = musicPanel(o);
+  if (setHtml(el, html)) balanceSegs(el);
 }
 
 function head(ic, title, sub) {

@@ -79,6 +79,21 @@ export function icon(name, cls = 'ico') {
 // перемикач, що не вміщається в рядок, ділимо на рівні ряди замість «хвоста» з однієї кнопки
 // чи людина зараз друкує в полі всередині el
 export const typingIn = el => { const a = document.activeElement; return !!a && el.contains(a) && (a.matches('textarea, input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color])') || a.isContentEditable); };
+// Записує HTML у панель лише якщо він змінився — зайві перемальовування скидали прокрутку й фокус.
+// Якщо людина встигла змінити поле (input/toggle), кеш скидається, щоб панель точно оновилася.
+export function setHtml(el, html) {
+  if (!el.__bound) {
+    el.__bound = true;
+    const drop = () => { el.__html = null; };
+    el.addEventListener('input', drop, true);
+    el.addEventListener('change', drop, true);
+    el.addEventListener('toggle', drop, true);
+  }
+  if (el.__html === html) return false;
+  el.innerHTML = html;
+  el.__html = html;
+  return true;
+}
 // Перемальовує панель, не збиваючи людину: повертає фокус у те саме поле, курсор, виділення й прокрутку.
 export function keepFocus(el, render) {
   const a = document.activeElement;
@@ -90,9 +105,21 @@ export function keepFocus(el, render) {
       try { pos = [a.selectionStart, a.selectionEnd, a.selectionDirection, a.scrollTop]; } catch { pos = null; }
     }
   }
+  // прокрутка самої панелі й вкладених списків (наприклад, перелік субтитрів)
   const top = el.scrollTop;
+  const inner = [...el.querySelectorAll('[data-keep-scroll]')].map(n => [n.dataset.keepScroll, n.scrollTop]);
+  if (!el.__scrollBound) {
+    el.__scrollBound = true;
+    const mark = () => { el.__userAt = performance.now(); };
+    ['wheel', 'touchmove', 'pointerdown', 'keydown'].forEach(ev => el.addEventListener(ev, mark, { passive: true, capture: true }));
+  }
+  const at = performance.now();
   render();
   el.scrollTop = top;
+  inner.forEach(([k, v]) => { const n = el.querySelector(`[data-keep-scroll="${CSS.escape(k)}"]`); if (n) n.scrollTop = v; });
+  // картинки й шрифти довантажуються вже після перемальовування і змінюють висоту — повертаємо прокрутку ще раз,
+  // але лише якщо людина сама не крутила панель
+  requestAnimationFrame(() => { if ((el.__userAt || 0) < at && el.scrollTop !== top && el.scrollHeight - el.clientHeight >= top) el.scrollTop = top; });
   if (!sel) return;
   const n = el.querySelector(sel);
   if (!n) return;
@@ -148,8 +175,11 @@ export function toast(msg, kind, ms) {
 export function openModal(id) {
   const o = $(id);
   o.classList.add('open');
+  const m = o.querySelector('.modal');
+  if (m) m.scrollTop = 0;
   const f = o.querySelector('[autofocus]') || o.querySelector('.btn-primary');
-  if (f) setTimeout(() => f.focus(), 20);
+  // preventScroll: інакше довге вікно прокручується до кнопки внизу і верх «зникає»
+  if (f) setTimeout(() => f.focus({ preventScroll: true }), 20);
 }
 export function closeModal(id) { $(id).classList.remove('open'); }
 export const anyModalOpen = () => !!document.querySelector('.overlay.open');

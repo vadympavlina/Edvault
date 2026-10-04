@@ -4,7 +4,7 @@ import { CC_FONTS, CC_BGS, CC_ANIMS, CC_PRESETS, capStyle, presetThumb, loadCcFo
 import { addCaption, setCaptions } from './ops.js';
 import { seek } from './player.js';
 import { toSrt, toVtt } from './srt.js';
-import { $, esc, icon, fmt, toast, confirmDialog, downloadBlob, safeName, balanceSegs } from './ui.js';
+import { $, esc, icon, fmt, toast, confirmDialog, downloadBlob, safeName, balanceSegs, setHtml } from './ui.js';
 
 const COLORS = ['#ffffff', '#1a1d23', '#ffd43b', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#4F6BF4', '#0ea5e9', '#22c55e'];
 const POS = [[0.06, 'Вгорі'], [0.5, 'По центру'], [0.93, 'Знизу']];
@@ -86,7 +86,7 @@ export function renderCapTab(el) {
   const caps = sorted();
   const has = caps.length > 0;
   Object.keys(CC_PRESETS).forEach(k => loadCcFont({ ...capStyle({}), ...CC_PRESETS[k] }));
-  el.innerHTML = `
+  const html = `
     ${has ? `<div class="row2">
         <button class="btn btn-primary btn-grow" id="btnAddCap" data-cc="add">${icon('plus')} Субтитр тут</button>
         <button class="btn btn-outline btn-icon" id="btnAutoCap" data-cc="auto" data-tip="Розпізнати мову ще раз" ${p.clips.length ? '' : 'disabled'}>${icon('wand')}</button>
@@ -109,7 +109,7 @@ export function renderCapTab(el) {
         <textarea rows="2" data-cap="${c.id}" spellcheck="true">${esc(c.text)}</textarea>
         <button class="btn btn-sm btn-icon" data-cap-del="${c.id}" data-tip="Видалити">${icon('x')}</button>
       </div>`; }).join('')}</div>` : '<p class="lib-hint">Поставте курсор на потрібне місце, натисніть «Вручну» і введіть текст. Enter у полі — наступний субтитр.</p>'}`;
-  balanceSegs(el);
+  if (setHtml(el, html)) balanceSegs(el);
   applyFind();
   lastKey = '';
   markActiveCaption();

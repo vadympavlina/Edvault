@@ -1,9 +1,9 @@
 // Автоматичні субтитри: збираємо голос із таймлайну (16 кГц моно), ділимо на шматки по тиші й віддаємо Whisper у Worker.
-import { S, emit, mainEnd, duration, outputSize } from './state.js';
+import { S, media, emit, mainEnd, duration, outputSize, layout, musicDur, findSel } from './state.js';
 import { capStyle, capMaxChars, splitCaption, tidyCaptions } from './cc.js';
 import { renderBlock, resetAudioSinks } from './audio.js';
-import { setCaptions } from './ops.js';
-import { $, fmt, toast, openModal, closeModal } from './ui.js';
+import { setCaptionsIn } from './ops.js';
+import { $, esc, fmt, toast, openModal, closeModal } from './ui.js';
 
 const SR = 16000;
 export const ASR_MODELS = {
@@ -11,20 +11,60 @@ export const ASR_MODELS = {
   small: { id: 'onnx-community/whisper-small', size: '≈ 250 МБ' },
 };
 
-// голос з таймлайну без музики, моно 16 кГц
-export async function speechAudio(onProgress) {
-  const end = duration();
-  const out = new Float32Array(Math.ceil(end * SR));
+// звук з таймлайну на відрізку [a, b], моно 16 кГц; sources — які доріжки брати (див. audio.js)
+export async function speechAudio(a, b, sources, onProgress) {
+  const out = new Float32Array(Math.max(0, Math.ceil((b - a) * SR)));
   resetAudioSinks();
-  for (let t = 0; t < end - 1e-6; t += 4) {
-    const b = Math.min(end, t + 4);
-    const buf = await renderBlock(t, b, { speechOnly: true });
+  for (let t = a; t < b - 1e-6; t += 4) {
+    const e = Math.min(b, t + 4);
+    const buf = await renderBlock(t, e, { sources });
     const L = buf.getChannelData(0), R = buf.getChannelData(1);
-    const o0 = Math.round(t * SR);
+    const o0 = Math.round((t - a) * SR);
     for (let i = 0, j = 0; j < L.length - 2 && o0 + i < out.length; i++, j += 3) out[o0 + i] = (L[j] + R[j] + L[j + 1] + R[j + 1] + L[j + 2] + R[j + 2]) / 6;
-    onProgress?.(b / end);
+    onProgress?.((e - a) / (b - a));
   }
   return out;
+}
+
+// ── звідки брати мовлення ──
+// Кожен варіант — набір доріжок (див. segments у audio.js). `ids` додається для «виділеного елемента».
+const hasAudio = m => !!(m && m.at && m.canDecodeA);
+function stats() {
+  const p = S.project;
+  const sum = list => ({ n: list.length, dur: list.reduce((s, x) => s + x.d, 0) });
+  const main = layout().filter(l => hasAudio(media.get(l.clip.mediaId)) && !l.clip.muted).map(l => ({ d: l.end - l.start }));
+  const voice = p.music.filter(x => x.voice && hasAudio(media.get(x.mediaId))).map(x => ({ d: musicDur(x) }));
+  const music = p.music.filter(x => !x.voice && hasAudio(media.get(x.mediaId))).map(x => ({ d: musicDur(x) }));
+  const layers = p.overlays.filter(o => o.type === 'video' && !o.muted && hasAudio(media.get(o.mediaId))).map(o => ({ d: o.dur }));
+  return { main: sum(main), voice: sum(voice), music: sum(music), layers: sum(layers) };
+}
+function selectedItem() {
+  const o = findSel(), s = S.sel;
+  if (!o || !s) return null;
+  if (s.kind === 'clip') return hasAudio(media.get(o.mediaId)) && !o.muted ? { kind: 'main', id: o.id, name: media.get(o.mediaId).name } : null;
+  if (s.kind === 'music') return hasAudio(media.get(o.mediaId)) ? { kind: o.voice ? 'voice' : 'music', id: o.id, name: o.voice ? 'Озвучення' : media.get(o.mediaId).name } : null;
+  if (s.kind === 'overlay' && o.type === 'video') return hasAudio(media.get(o.mediaId)) && !o.muted ? { kind: 'layers', id: o.id, name: media.get(o.mediaId).name } : null;
+  return null;
+}
+const SRC_DEFS = [
+  { id: 'sel', title: 'Виділений елемент', hint: s => (s.sel ? `«${s.sel.name}»` : 'Спершу виділіть кліп чи звук на таймлайні'), ok: s => !!s.sel, src: s => ({ [s.sel.kind]: true, ids: new Set([s.sel.id]) }) },
+  { id: 'speech', title: 'Увесь голос', hint: () => 'Звук основного відео, озвучення й відео поверх — без музики', ok: s => s.main.n + s.voice.n + s.layers.n > 0, src: () => ({ main: true, voice: true, layers: true }) },
+  { id: 'all', title: 'Усе, що звучить', hint: () => 'Усі звукові доріжки разом, разом із музикою', ok: s => s.main.n + s.voice.n + s.layers.n + s.music.n > 0, src: () => ({ main: true, voice: true, layers: true, music: true }) },
+  { id: 'main', title: 'Лише основне відео', hint: s => `${s.main.n} ${s.main.n === 1 ? 'кліп' : 'кліпів'} · ${fmt(s.main.dur)}`, ok: s => s.main.n > 0, src: () => ({ main: true }) },
+  { id: 'voice', title: 'Лише озвучення', hint: s => (s.voice.n ? `Записаний голос · ${fmt(s.voice.dur)}` : 'Озвучення ще не записано'), ok: s => s.voice.n > 0, src: () => ({ voice: true }) },
+  { id: 'layers', title: 'Лише відео поверх', hint: s => (s.layers.n ? `${s.layers.n} шт. · ${fmt(s.layers.dur)}` : 'Немає відео поверх основного'), ok: s => s.layers.n > 0, src: () => ({ layers: true }) },
+  { id: 'music', title: 'Лише музика та звуки', hint: s => (s.music.n ? `${s.music.n} шт. · наприклад, пісня з текстом` : 'Немає доданої музики'), ok: s => s.music.n > 0, src: () => ({ music: true }) },
+];
+const RANGES = [
+  { id: 'all', title: 'Весь проєкт' },
+  { id: 'marks', title: 'Позначений шматок' },
+  { id: 'cursor', title: 'Від курсора до кінця' },
+];
+function rangeOf(id) {
+  const end = duration();
+  if (id === 'marks' && S.markIn != null && S.markOut != null && S.markOut - S.markIn > 0.2) return [Math.max(0, S.markIn), Math.min(end, S.markOut)];
+  if (id === 'cursor' && S.t < end - 0.3) return [S.t, end];
+  return [0, end];
 }
 
 // ділимо на шматки ≤ 28 с у найтихіших місцях
@@ -64,7 +104,8 @@ export function toCaptions(chunks, offset, partLen, max = 74) {
 }
 
 let worker = null, running = null;
-const opt = { lang: 'uk', model: 'base' };
+const opt = { lang: 'uk', model: 'base', source: 'speech', range: 'all', mode: 'replace' };
+let curStats = null;
 
 export function initAsr() {
   const segPick = (id, key) => $(id).addEventListener('click', e => {
@@ -73,16 +114,47 @@ export function initAsr() {
     opt[key] = b.dataset.v;
   });
   segPick('asrLang', 'lang'); segPick('asrModel', 'model');
+  segPick('asrRange', 'range'); segPick('asrMode', 'mode');
+  $('asrRange').addEventListener('click', refreshInfo);
+  $('asrMode').addEventListener('click', refreshInfo);
+  $('asrSources').addEventListener('change', e => { if (e.target.name === 'asrSrc') { opt.source = e.target.value; refreshInfo(); } });
   $('asrStart').addEventListener('click', start);
   $('asrCancel').addEventListener('click', cancel);
 }
 
 export function openAsr() {
-  if (!S.project.clips.length) { toast('Спочатку додайте відео'); return; }
+  if (!S.project.clips.length && !S.project.music.length) { toast('Спочатку додайте відео чи звук'); return; }
   if (running) { openModal('asrModal'); return; }
   $('asrSetup').hidden = false; $('asrRun').hidden = true;
-  $('asrInfo').innerHTML = S.project.captions.length ? `<span class="warn">Наявні субтитри (${S.project.captions.length}) буде замінено.</span>` : `Тривалість відео <b>${fmt(mainEnd())}</b>. Розпізнавання займе приблизно стільки ж часу (швидше з відеокартою).`;
+  curStats = { ...stats(), sel: selectedItem() };
+  // за замовчуванням: виділений елемент → він; інакше попередній вибір, якщо доступний; інакше «увесь голос»
+  let pick = curStats.sel ? SRC_DEFS[0] : SRC_DEFS.find(d => d.id === opt.source && d.id !== 'sel' && d.ok(curStats));
+  if (!pick) pick = SRC_DEFS.find(d => d.id !== 'sel' && d.ok(curStats));
+  opt.source = pick ? pick.id : 'speech';
+  $('asrSources').innerHTML = SRC_DEFS.map(d => {
+    const ok = d.ok(curStats);
+    return `<label class="src-opt${ok ? '' : ' off'}"><input type="radio" name="asrSrc" value="${d.id}" ${d.id === opt.source ? 'checked' : ''} ${ok ? '' : 'disabled'}><span><b>${esc(d.title)}</b><small>${esc(d.hint(curStats))}</small></span></label>`;
+  }).join('');
+  // «позначений шматок» доступний, лише коли позначено початок і кінець
+  const hasMarks = S.markIn != null && S.markOut != null && S.markOut - S.markIn > 0.2;
+  $('asrRange').querySelectorAll('button').forEach(b => {
+    const v = b.dataset.v;
+    b.disabled = (v === 'marks' && !hasMarks) || (v === 'cursor' && S.t >= duration() - 0.3);
+    if (b.disabled && opt.range === v) opt.range = 'all';
+    b.classList.toggle('on', b.dataset.v === opt.range);
+  });
+  $('asrModeWrap').hidden = !S.project.captions.length;
+  refreshInfo();
   openModal('asrModal');
+}
+
+function refreshInfo() {
+  const [a, b] = rangeOf(opt.range);
+  const len = b - a;
+  const n = S.project.captions.filter(c => c.start < b && c.start + c.dur > a).length;
+  let html = `Відрізок <b>${fmt(a)} – ${fmt(b)}</b> (${fmt(len)}). Розпізнавання займе приблизно стільки ж часу (швидше з відеокартою).`;
+  if (n) html += opt.mode === 'replace' ? `<br><span class="warn">Наявні субтитри на цьому відрізку (${n}) буде замінено — це можна скасувати через Ctrl+Z.</span>` : `<br>Нові субтитри додадуться до наявних (${n}). Можливі накладання — потім скористайтеся «Виправити час».`;
+  $('asrInfo').innerHTML = html;
 }
 
 function setProg(p, text) {
@@ -93,15 +165,20 @@ function setProg(p, text) {
 
 async function start() {
   const model = ASR_MODELS[opt.model];
+  const def = SRC_DEFS.find(d => d.id === opt.source);
+  if (!def || !curStats || !def.ok(curStats)) { toast('Оберіть, з чого розпізнавати мову', 'err'); return; }
+  const sources = def.src(curStats);
+  const [ra, rb] = rangeOf(opt.range);
+  const mode = S.project.captions.length ? opt.mode : 'replace';
   $('asrSetup').hidden = true; $('asrRun').hidden = false;
-  setProg(0, 'Збираємо звук з відео…');
+  setProg(0, 'Збираємо звук…');
   running = { cancelled: false };
   const run = running;
   try {
-    const audio = await speechAudio(p => setProg(p * 0.1));
+    const audio = await speechAudio(ra, rb, sources, p => setProg(p * 0.1));
     if (run.cancelled) return;
     const parts = splitParts(audio);
-    if (!parts.length) throw new Error('У відео не знайдено мовлення');
+    if (!parts.length) throw new Error('У вибраному звуці не знайдено мовлення. Спробуйте інше джерело, наприклад «Усе, що звучить».');
     const total = parts.reduce((s, p) => s + p.audio.length, 0);
     setProg(0.1, `Завантажуємо модель розпізнавання (${model.size}, лише перший раз)…`);
     if (!worker) worker = new Worker(new URL('./asr-worker.js', import.meta.url), { type: 'module' });
@@ -122,9 +199,9 @@ async function start() {
         } else if (d.type === 'ready') {
           setProg(0.3, d.device === 'webgpu' ? 'Розпізнаємо мову (з відеокартою)…' : 'Розпізнаємо мову…');
         } else if (d.type === 'part') {
-          caps.push(...toCaptions(d.chunks.length ? d.chunks : [{ text: d.text, timestamp: [0, d.len] }], d.offset, d.len, maxChars));
+          caps.push(...toCaptions(d.chunks.length ? d.chunks : [{ text: d.text, timestamp: [0, d.len] }], ra + d.offset, d.len, maxChars));
           doneLen += parts[d.i].audio.length;
-          setProg(0.3 + 0.7 * doneLen / total, `Розпізнано ${fmt(d.offset + d.len)} з ${fmt(mainEnd())}…`);
+          setProg(0.3 + 0.7 * doneLen / total, `Розпізнано ${fmt(ra + d.offset + d.len)} з ${fmt(rb)}…`);
         } else if (d.type === 'done') resolve();
         else if (d.type === 'error') reject(new Error(d.message));
       };
@@ -134,7 +211,7 @@ async function start() {
     if (run.cancelled) return;
     // не даємо субтитрам перекриватися
     tidyCaptions(caps);
-    setCaptions(caps, true);
+    setCaptionsIn(caps, mode, [ra, rb]);
     closeModal('asrModal');
     toast(caps.length ? `Готово: ${caps.length} субтитрів. Перевірте текст — його можна виправити у вкладці «Субтитри»` : 'Мовлення не розпізнано', caps.length ? 'ok' : 'err', 6000);
     emit('asr-done');
@@ -142,7 +219,7 @@ async function start() {
     console.error(e);
     if (!run.cancelled) {
       $('asrSetup').hidden = false; $('asrRun').hidden = true;
-      $('asrInfo').innerHTML = `<span class="warn">${/fetch|network|Failed to load|import/i.test(e.message) ? 'Не вдалося завантажити модель розпізнавання. Перевірте інтернет і спробуйте ще раз.' : 'Не вдалося розпізнати: ' + e.message}</span>`;
+      $('asrInfo').innerHTML = `<span class="warn">${/fetch|network|Failed to load|import/i.test(e.message) ? 'Не вдалося завантажити модель розпізнавання. Перевірте інтернет і спробуйте ще раз.' : 'Не вдалося розпізнати: ' + esc(e.message)}</span>`;
     }
   } finally { if (running === run) running = null; }
 }

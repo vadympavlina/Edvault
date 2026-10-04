@@ -253,6 +253,16 @@ export function setCaptions(list, replace) {
   commit();
 }
 
+// Автосубтитри: 'replace' прибирає наявні субтитри лише на відрізку [a, b], 'add' лишає їх
+export function setCaptionsIn(list, mode, range) {
+  const p = S.project;
+  const [a, b] = range || [0, Infinity];
+  const keep = mode === 'replace' ? p.captions.filter(c => !(c.start < b && c.start + c.dur > a)) : p.captions;
+  const items = list.map(c => ({ id: uid('s'), start: c.start, dur: c.dur, text: c.text }));
+  p.captions = keep.concat(items).sort((x, y) => x.start - y.start);
+  commit();
+}
+
 export function trimMusicToVideo(x) {
   const end = mainEnd();
   if (end <= x.start) return;

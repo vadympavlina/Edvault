@@ -23,7 +23,8 @@ let dragKind = null;
 export function initTimeline() {
   scroll = $('tlScroll'); inner = $('tlInner'); lanes = $('tlLanes'); heads = $('tlHeads');
   ruler = $('tlRuler'); playheadEl = $('tlPlayhead'); rangeEl = $('tlRange'); insertEl = $('tlInsert');
-  on('project', render);
+  // під час перетягування 'project' приходить на кожен рух миші — перемальовуємо не частіше за кадр
+  on('project', d => { if (d && d.live) scheduleRender(); else render(); });
   on('select', render);
   on('media', render);
   on('thumbs', drawCanvases);
@@ -128,8 +129,16 @@ function assignRows(items) {
   return { rowOf, n: Math.max(1, rows.length) };
 }
 
+let renderQueued = 0;
+function scheduleRender() {
+  if (renderQueued) return;
+  renderQueued = requestAnimationFrame(() => { renderQueued = 0; render(); });
+}
 export function render() {
   if (!scroll) return;
+  if (renderQueued) { cancelAnimationFrame(renderQueued); renderQueued = 0; }
+  // перемальовування замінює всі доріжки — запам'ятовуємо прокрутку, щоб таймлайн не «підстрибував»
+  const keepL = scroll.scrollLeft, keepT = scroll.scrollTop;
   const p = S.project, pps = S.pps;
   const d = duration();
   const width = Math.max(scroll.clientWidth, (d + 8) * pps);
@@ -195,6 +204,9 @@ export function render() {
   const need = BAR_H + RULER_H + rows.reduce((a, r) => a + r[0] + 1, 0) + 14;
   $('tl').style.setProperty('--tl-fit', need + 'px');
   vCanvas = $('tlVCanvas'); aCanvas = $('tlACanvas'); v2Canvas = $('tlV2Canvas');
+  if (scroll.scrollTop !== keepT) scroll.scrollTop = keepT;
+  if (scroll.scrollLeft !== keepL) scroll.scrollLeft = keepL;
+  heads.scrollTop = scroll.scrollTop; // назви доріжок завжди навпроти своїх доріжок
   placePlayhead(); placeRange(); drawRuler(); drawCanvases();
 }
 

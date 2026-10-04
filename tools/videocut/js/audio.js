@@ -33,24 +33,27 @@ async function readPCM(m, from, to) {
   return [L, R];
 }
 
-// Сегменти звуку, що потрапляють у [t0, t1)
-function segments(t0, t1, speechOnly = false) {
+// Сегменти звуку, що потрапляють у [t0, t1).
+// src — які доріжки брати (для розпізнавання мовлення): { main, voice, music, layers, ids }; null — усе (експорт).
+// ids — якщо задано, беруться лише елементи з цими id (наприклад, виділений кліп).
+function segments(t0, t1, src = null) {
   const out = [];
+  const want = (kind, id) => !src || ((src[kind] ?? false) && (!src.ids || src.ids.has(id)));
   for (const l of layout()) {
     if (l.end <= t0 || l.start >= t1) continue;
     const c = l.clip, m = media.get(c.mediaId);
-    if (!m || !m.at || !m.canDecodeA || c.muted || (c.volume ?? 1) <= 0) continue;
+    if (!m || !m.at || !m.canDecodeA || c.muted || (c.volume ?? 1) <= 0 || !want('main', c.id)) continue;
     out.push({ m, start: l.start, end: l.end, srcIn: c.in, speed: c.speed || 1, vol: c.volume ?? 1, fin: c.fadeIn || 0, fout: c.fadeOut || 0 });
   }
   for (const mu of S.project.music) {
-    if (speechOnly && !mu.voice) continue;
+    if (!want(mu.voice ? 'voice' : 'music', mu.id)) continue;
     const m = media.get(mu.mediaId);
     const d = musicDur(mu);
     if (!m || !m.at || !m.canDecodeA || mu.start + d <= t0 || mu.start >= t1) continue;
-    out.push({ m, start: mu.start, end: mu.start + d, srcIn: mu.in, speed: 1, vol: mu.volume ?? 1, fin: mu.fadeIn || 0, fout: mu.fadeOut || 0, duck: !speechOnly && !!mu.duck });
+    out.push({ m, start: mu.start, end: mu.start + d, srcIn: mu.in, speed: 1, vol: mu.volume ?? 1, fin: mu.fadeIn || 0, fout: mu.fadeOut || 0, duck: !src && !!mu.duck });
   }
   for (const o of S.project.overlays) {
-    if (o.type !== 'video' || o.muted || (o.volume ?? 1) <= 0) continue;
+    if (o.type !== 'video' || o.muted || (o.volume ?? 1) <= 0 || !want('layers', o.id)) continue;
     const m = media.get(o.mediaId);
     if (!m || !m.at || !m.canDecodeA || o.start + o.dur <= t0 || o.start >= t1) continue;
     out.push({ m, start: o.start, end: o.start + Math.min(o.dur, m.duration - (o.in || 0)), srcIn: o.in || 0, speed: 1, vol: o.volume ?? 1, fin: 0, fout: 0 });
@@ -62,11 +65,12 @@ const GRAIN = Math.round(0.05 * SR), HOP = GRAIN / 2;
 const WIN = new Float32Array(GRAIN).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / GRAIN)); // періодичне вікно Ганна: сума з 50% перекриттям = 1
 
 // Рендерить блок [t0, t1) таймлайну в AudioBuffer (48 кГц, стерео)
-export async function renderBlock(t0, t1, { speechOnly = false } = {}) {
+export async function renderBlock(t0, t1, { speechOnly = false, sources = null } = {}) {
+  const src = sources || (speechOnly ? { main: true, voice: true, layers: true } : null);
   const n = Math.max(1, Math.round((t1 - t0) * SR));
   const outL = new Float32Array(n), outR = new Float32Array(n);
   let env = null;
-  for (const s of segments(t0, t1, speechOnly)) {
+  for (const s of segments(t0, t1, src)) {
     const a = Math.max(t0, s.start), b = Math.min(t1, s.end);
     const o0 = Math.round((a - t0) * SR), o1 = Math.round((b - t0) * SR);
     if (o1 <= o0) continue;
