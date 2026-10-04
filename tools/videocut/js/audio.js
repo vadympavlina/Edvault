@@ -1,14 +1,15 @@
 // Мікшування звуку для експорту: блоками, щоб довгі відео не займали всю пам'ять.
 // Швидкість кліпу змінюється без зміни тону (granular overlap-add).
 import { AudioBufferSink } from '../vendor/mediabunny.min.mjs';
+import { SR, GRAIN, HOP, CHAIN, SEARCH, WIN, alignGrains } from './stretch.js';
 import { S, media, layout, musicDur } from './state.js';
 import { fadeAlpha } from './render.js';
 import { duckEnvelope } from './duck.js';
 
-export const SR = 48000;
+export { SR };
 const sinks = new Map();
 const sinkFor = m => { if (!sinks.has(m.id)) sinks.set(m.id, new AudioBufferSink(m.at)); return sinks.get(m.id); };
-export function resetAudioSinks() { sinks.clear(); }
+export function resetAudioSinks() { sinks.clear(); chains.clear(); }
 
 // Читає PCM джерела [from, to) і перераховує в SR. Повертає [L, R].
 async function readPCM(m, from, to) {
@@ -16,6 +17,7 @@ async function readPCM(m, from, to) {
   const len = Math.max(0, Math.ceil((to - from) * SR));
   const L = new Float32Array(len), R = new Float32Array(len);
   if (!len) return [L, R];
+  const filled = new Uint8Array(len);
   for await (const w of sinkFor(m).buffers(from, to)) {
     const b = w.buffer, sr = b.sampleRate;
     const c0 = b.getChannelData(0), c1 = b.getChannelData(Math.min(1, b.numberOfChannels - 1));
@@ -28,8 +30,12 @@ async function readPCM(m, from, to) {
       const f = pos - i, i2 = Math.min(c0.length - 1, i + 1);
       L[j] = c0[i] + (c0[i2] - c0[i]) * f;
       R[j] = c1[i] + (c1[i2] - c1[i]) * f;
+      filled[j] = 1;
     }
   }
+  // між шматками, які віддав декодер, через округлення часу іноді випадає один семпл — це чути як клацання; заповнюємо сусіднім
+  for (let j = 1; j < len; j++) if (!filled[j] && filled[j - 1]) { L[j] = L[j - 1]; R[j] = R[j - 1]; filled[j] = 1; }
+  for (let j = len - 2; j >= 0; j--) if (!filled[j] && filled[j + 1]) { L[j] = L[j + 1]; R[j] = R[j + 1]; filled[j] = 1; }
   return [L, R];
 }
 
@@ -61,8 +67,26 @@ function segments(t0, t1, src = null) {
   return out;
 }
 
-const GRAIN = Math.round(0.05 * SR), HOP = GRAIN / 2;
-const WIN = new Float32Array(GRAIN).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / GRAIN)); // періодичне вікно Ганна: сума з 50% перекриттям = 1
+// кеш ланцюжків WSOLA: сусідні блоки експорту читають одні й ті самі ланцюжки
+const chains = new Map();
+async function chainFor(s, c) {
+  const key = `${s.m.id}|${s.srcIn}|${s.speed}|${c}`;
+  const hit = chains.get(key);
+  if (hit) return hit;
+  const k0 = c * CHAIN, k1 = k0 + CHAIN;
+  const nom = k => Math.round(s.srcIn * SR + k * HOP * s.speed);
+  const lo = nom(k0) - SEARCH - HOP, hi = nom(k1 - 1) + SEARCH + GRAIN + HOP * 2;
+  const [L, R] = await readPCM(s.m, lo / SR, hi / SR);
+  const base = Math.round(Math.max(0, lo) / 1); // readPCM починає з max(0, from)
+  const mono = new Float32Array(L.length);
+  for (let i = 0; i < mono.length; i++) mono[i] = (L[i] + R[i]) * 0.5;
+  const noms = []; for (let k = k0; k < k1; k++) noms.push(nom(k));
+  const ch = { L, R, base, starts: alignGrains(mono, base, noms) };
+  if (chains.size > 6) chains.delete(chains.keys().next().value);
+  chains.set(key, ch);
+  return ch;
+}
+export function resetAudioCache() { chains.clear(); }
 
 // Рендерить блок [t0, t1) таймлайну в AudioBuffer (48 кГц, стерео)
 export async function renderBlock(t0, t1, { speechOnly = false, sources = null } = {}) {
@@ -84,25 +108,23 @@ export async function renderBlock(t0, t1, { speechOnly = false, sources = null }
       for (let j = o0, i = 0; j < o1; j++, i++) { const g = gain(j); outL[j] += (L[i] || 0) * g; outR[j] += (R[i] || 0) * g; }
       continue;
     }
-    // зміна швидкості без зміни тону: зерна по 50 мс, крок виходу HOP, крок у джерелі HOP*speed
+    // зміна швидкості без зміни тону (WSOLA): зерна по 50 мс, крок виходу HOP, початок у джерелі підбирається за формою хвилі
     const segStartIdx = Math.round((s.start - t0) * SR); // індекс початку сегмента відносно блока (може бути від'ємним)
     const rel0 = o0 - segStartIdx, rel1 = o1 - segStartIdx; // позиції всередині сегмента (у вихідних семплах)
-    const k0 = Math.max(0, Math.floor((rel0 - GRAIN) / HOP) + 1), k1 = Math.floor((rel1 - 1) / HOP);
-    const srcFrom = s.srcIn + (k0 * HOP * s.speed) / SR;
-    const srcTo = s.srcIn + (k1 * HOP * s.speed + GRAIN) / SR;
-    const [L, R] = await readPCM(s.m, srcFrom, srcTo + 1 / SR);
-    const base = Math.round(srcFrom * SR);
-    for (let k = k0; k <= k1; k++) {
-      const oStart = k * HOP;                                 // початок зерна у виході (відносно сегмента)
-      const sStart = Math.round(s.srcIn * SR + oStart * s.speed) - base; // початок зерна в прочитаному PCM
-      for (let i = 0; i < GRAIN; i++) {
-        const rel = oStart + i;
-        if (rel < rel0 || rel >= rel1) continue;
-        const j = rel + segStartIdx;
-        const si = sStart + i;
-        if (si < 0 || si >= L.length) continue;
-        const g = gain(j) * WIN[i];
-        outL[j] += L[si] * g; outR[j] += R[si] * g;
+    const kMin = Math.max(0, Math.floor((rel0 - GRAIN) / HOP) + 1), kMax = Math.floor((rel1 - 1) / HOP);
+    for (let c = Math.floor(kMin / CHAIN); c <= Math.floor(kMax / CHAIN); c++) {
+      const ch = await chainFor(s, c);
+      for (let k = Math.max(kMin, c * CHAIN); k <= Math.min(kMax, (c + 1) * CHAIN - 1); k++) {
+        const oStart = k * HOP;                    // початок зерна у виході (відносно сегмента)
+        const sStart = ch.starts[k - c * CHAIN] - ch.base; // початок зерна в прочитаному PCM
+        const iFrom = Math.max(0, rel0 - oStart), iTo = Math.min(GRAIN, rel1 - oStart);
+        for (let i = iFrom; i < iTo; i++) {
+          const si = sStart + i;
+          if (si < 0 || si >= ch.L.length) continue;
+          const j = oStart + i + segStartIdx;
+          const g = gain(j) * WIN[i];
+          outL[j] += ch.L[si] * g; outR[j] += ch.R[si] * g;
+        }
       }
     }
   }
