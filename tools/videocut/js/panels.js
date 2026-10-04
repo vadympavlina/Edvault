@@ -262,6 +262,9 @@ function head(ic, title, sub) {
     <button class="btn btn-icon btn-sm" data-a="deselect" data-tip="Готово (Esc)">${icon('x')}</button></div>`;
 }
 
+// Розділ панелі: заголовок з іконкою і група пов'язаних налаштувань
+const sec = (title, ic, html, aux = '') => `<section class="isec"><h4 class="isec-h">${icon(ic)}<span>${title}</span>${aux ? `<em>${aux}</em>` : ''}</h4>${html}</section>`;
+
 // ── Проєкт: назва, формат, тонкі налаштування ──
 function projectPanel() {
   const p = S.project;
@@ -288,23 +291,23 @@ function clipPanel(c) {
   const mw = m ? (side ? m.height : m.width) : W, mh = m ? (side ? m.width : m.height) : H;
   const otherShape = m && Math.abs(mw / mh - W / H) > 0.02;
   const fitSeg = seg('fit', 'Поля навколо кадру', [['blur', 'Розмиті'], ['contain', 'Чорні'], ['cover', 'Обрізати']], c.fit || 'contain');
+  const speedHint = sp === 1 ? '' : sp > 1 ? 'Голос залишиться природним — без «мультяшного» ефекту.' : 'Уповільнення — зручно, щоб показати швидкі дії.';
+  const sound = isImg
+    ? `<div class="field"><label>Скільки показувати</label><div class="seg">${[3, 5, 8, 10].map(v => `<button data-a="imgDur" data-v="${v}" class="${near(clipDur(c), v) ? 'on' : ''}">${v} с</button>`).join('')}</div></div>
+       ${seg('motion', 'Рух фото', Object.entries(MOTIONS), c.motion || 'none')}`
+    : `${seg('speed', 'Швидкість', [[0.5, '0,5×'], [1, '1×'], [1.25, '1,25×'], [1.5, '1,5×'], [2, '2×']], sp, speedHint)}
+       ${c.muted ? '' : `<div class="field"><label>Гучність<span class="aux" data-show="volume">${Math.round((c.volume ?? 1) * 100)}%</span></label><input type="range" data-f="volume" data-pct="1" min="0" max="2" step="0.05" value="${c.volume ?? 1}"></div>`}
+       <div class="chips">${chip('muted', 'Без звуку', !!c.muted, 'true', 'mute')}</div>`;
   return head(isImg ? 'image' : 'video', m ? m.name : 'Кліп', sub) +
-    `<div class="chips">
-      ${chip('fadeIn', 'Плавна поява', c.fadeIn > 0, 0.8, 'sparkle')}
-      ${chip('fadeOut', 'Плавне зникнення', c.fadeOut > 0, 0.8, 'sparkle')}
-      ${isImg ? '' : chip('muted', 'Без звуку', !!c.muted, 'true', 'mute')}
-    </div>
-    ${isImg ? `<div class="field"><label>Скільки показувати</label><div class="seg">${[3, 5, 8, 10].map(v => `<button data-a="imgDur" data-v="${v}" class="${near(clipDur(c), v) ? 'on' : ''}">${v} с</button>`).join('')}</div></div>
-      ${seg('motion', 'Рух фото', Object.entries(MOTIONS), c.motion || 'none', 'Повільний рух оживлює фото — як у документальному кіно.')}`
-      : `${seg('speed', 'Швидкість', [[0.5, '0,5×'], [1, '1×'], [1.25, '1,25×'], [1.5, '1,5×'], [2, '2×']], sp, sp === 1 ? '1× — звичайна швидкість. Лекцію часто зручно прискорити до 1,25×.' : sp > 1 ? 'Голос залишиться природним — без «мультяшного» ефекту.' : sp < 1 ? 'Уповільнення — зручно, щоб показати швидкі дії.' : '')}
-      ${c.muted ? '' : `<div class="field"><label>Гучність<span class="aux" data-show="volume">${Math.round((c.volume ?? 1) * 100)}%</span></label><input type="range" data-f="volume" data-pct="1" min="0" max="2" step="0.05" value="${c.volume ?? 1}"></div>`}`}
-    ${seg('zoom', 'Наблизити частину кадру', [[1, 'Ні'], [1.5, '1,5×'], [2, '2×'], [3, '3×']], z, z > 1.001 ? 'Перетягніть синій хрестик на перегляді туди, що треба показати ближче.' : 'Допомагає показати дрібну кнопку чи текст на записі екрана.')}
-    ${otherShape ? fitSeg : ''}
-    ${m ? fold('look', 'Фільтр', LOOKS[c.look || 'none'] ? LOOKS[c.look || 'none'].name : '', () => lookCards(c, m)) : ''}
-    ${idx > 0 ? fold('tr', 'Перехід', c.tr && TRANSITIONS[c.tr.type] ? TRANSITIONS[c.tr.type] : 'Немає', () => `<div class="tr-grid">${[['', 'Немає']].concat(Object.entries(TRANSITIONS)).map(([k, n]) => `<button data-a="tr" data-v="${k}" class="tr-card tr-${k || 'none'}${(c.tr ? c.tr.type : '') === k ? ' on' : ''}"><i></i><small>${n}</small></button>`).join('')}</div>
-      <button class="btn btn-sm btn-block btn-ghost-sm" data-a="trAll">${icon('sparkle')}${S.project.clips.slice(1).every(x => x.tr) ? 'Прибрати переходи всюди' : 'Переходи між усіма кліпами'}</button>`) : ''}
-    ${actions(act('split', 'split', 'Розрізати тут', 'data-key="S"'), isImg ? '' : act('freeze', 'camera', 'Стоп-кадр'), act('dup', 'copy', 'Дублювати'), isImg ? '' : act('norm', 'volume', 'Вирівняти гучність'), act('del', 'trash', 'Видалити'))}
-    ${more('clip', `${range('fadeIn', 'Тривалість появи', 0, 3, 0.1, c.fadeIn || 0, ' с')}
+    sec(isImg ? 'Показ' : 'Швидкість і звук', isImg ? 'image' : 'volume', sound) +
+    sec('Плавність', 'sparkle', `<div class="chips">${chip('fadeIn', 'Плавна поява', c.fadeIn > 0, 0.8, 'sparkle')}${chip('fadeOut', 'Плавне зникнення', c.fadeOut > 0, 0.8, 'sparkle')}</div>` +
+      (idx > 0 ? fold('tr', 'Перехід', c.tr && TRANSITIONS[c.tr.type] ? TRANSITIONS[c.tr.type] : 'Немає', () => `<div class="tr-grid">${[['', 'Немає']].concat(Object.entries(TRANSITIONS)).map(([k, n]) => `<button data-a="tr" data-v="${k}" class="tr-card tr-${k || 'none'}${(c.tr ? c.tr.type : '') === k ? ' on' : ''}"><i></i><small>${n}</small></button>`).join('')}</div>
+        <button class="btn btn-sm btn-block btn-ghost-sm" data-a="trAll">${icon('sparkle')}${S.project.clips.slice(1).every(x => x.tr) ? 'Прибрати переходи всюди' : 'Переходи між усіма кліпами'}</button>`) : '')) +
+    sec('Кадр і вигляд', 'shapes', `${seg('zoom', 'Наблизити частину кадру', [[1, 'Ні'], [1.5, '1,5×'], [2, '2×'], [3, '3×']], z, z > 1.001 ? 'Перетягніть синій хрестик на перегляді туди, що треба показати ближче.' : '')}
+      ${otherShape ? fitSeg : ''}
+      ${m ? fold('look', 'Фільтр', LOOKS[c.look || 'none'] ? LOOKS[c.look || 'none'].name : '', () => lookCards(c, m)) : ''}`) +
+    actions(act('split', 'split', 'Розрізати', 'data-key="S"'), isImg ? '' : act('freeze', 'camera', 'Стоп-кадр'), act('dup', 'copy', 'Дублювати'), isImg ? '' : act('norm', 'volume', 'Вирівняти'), act('del', 'trash', 'Видалити', 'data-danger="1"')) +
+    more('clip', `${range('fadeIn', 'Тривалість появи', 0, 3, 0.1, c.fadeIn || 0, ' с')}
       ${range('fadeOut', 'Тривалість зникнення', 0, 3, 0.1, c.fadeOut || 0, ' с')}
       ${range('zoom', 'Наближення', 1, 4, 0.05, z, '×', z.toFixed(2).replace('.', ','))}
       ${FILTERS_OK ? range('bri', 'Яскравість', 0.5, 1.6, 0.02, c.bri ?? 1, '%', Math.round((c.bri ?? 1) * 100)) + range('con', 'Контраст', 0.5, 1.8, 0.02, c.con ?? 1, '%', Math.round((c.con ?? 1) * 100)) + range('sat', 'Насиченість', 0, 2, 0.02, c.sat ?? 1, '%', Math.round((c.sat ?? 1) * 100)) : ''}
@@ -312,7 +315,7 @@ function clipPanel(c) {
       <div class="field"><label>Поворот і дзеркало</label><div class="seg"><button data-a="rot" data-v="-90">${icon('rotL')} Вліво</button><button data-a="rot" data-v="90">${icon('rotR')} Вправо</button><button data-a="flip" class="${c.flip ? 'on' : ''}">${icon('flipH')} Дзеркало</button></div><p class="hint">Для відео з телефона, знятого боком.</p></div>
       ${otherShape ? '' : fitSeg}
       ${isImg ? '' : seg('motion', 'Повільний рух кадру', Object.entries(MOTIONS), c.motion || 'none')}
-      ${isImg ? '' : `<p class="hint">Фрагмент ${fmt(c.in)}–${fmt(c.out)} з файлу тривалістю ${fmt(m ? m.duration : 0)}.</p>`}`)}`;
+      ${isImg ? '' : `<p class="hint">Фрагмент ${fmt(c.in)}–${fmt(c.out)} з файлу тривалістю ${fmt(m ? m.duration : 0)}.</p>`}`);
 }
 
 // мініатюри фільтрів з кадру цього кліпу
@@ -367,24 +370,24 @@ function layerPanel(o) {
   const shape = o.shape || (video ? 'circle' : 'rect');
   const cropR = (side, label) => `<div class="field"><label>${label}<span class="aux" data-show="crop-${side}">${Math.round(cs[side] * 100)}%</span></label><input type="range" data-l="crop" data-side="${side}" min="0" max="0.9" step="0.005" value="${cs[side]}"></div>`;
   return head(video ? 'pip' : 'image', video ? 'Відео поверх' : 'Зображення поверх', m ? m.name : '') +
-    `<div class="field"><label>Розташування</label><div class="layouts">${Object.entries(LAYOUTS).map(([k, n]) => `<button data-a="layout" data-v="${k}" class="lo-${k}${lo === k ? ' on' : ''}"><i></i>${n}</button>`).join('')}</div>
+    sec('Розташування', 'pip', `<div class="field"><div class="layouts">${Object.entries(LAYOUTS).map(([k, n]) => `<button data-a="layout" data-v="${k}" class="lo-${k}${lo === k ? ' on' : ''}"><i></i>${n}</button>`).join('')}</div>
       <p class="hint">Або перетягніть на перегляді. Кути — розмір, темні маркери по боках — обрізка.</p></div>
     ${['full', 'left', 'right', 'top', 'bottom'].includes(lo) ? '' : `<div class="field"><label>Кут</label><div class="corner-grid">${[['tl', '↖'], ['tr', '↗'], ['bl', '↙'], ['br', '↘']].map(([v, n]) => `<button data-a="pipCorner" data-v="${v}">${n}</button>`).join('')}</div></div>`}
-    <div class="field"><label>Розмір<span class="aux" data-show="scale">${Math.round(o.w * 100)}%</span></label><input type="range" data-l="scale" min="0.08" max="1" step="0.01" value="${Math.min(1, o.w)}"></div>
-    ${seg('shape', 'Форма', [['rect', 'Прямокутник'], ['round', 'Заокруглена'], ['circle', 'Коло']], shape)}
+    <div class="field"><label>Розмір<span class="aux" data-show="scale">${Math.round(o.w * 100)}%</span></label><input type="range" data-l="scale" min="0.08" max="1" step="0.01" value="${Math.min(1, o.w)}"></div>`) +
+    sec('Вигляд', 'shapes', `${seg('shape', 'Форма', [['rect', 'Прямокутник'], ['round', 'Заокруглена'], ['circle', 'Коло']], shape)}
     <details class="fold" data-more="crop" ${openMore.has('crop') || cropped ? 'open' : ''}><summary><span>Обрізати краї</span><b>${cropped ? 'обрізано' : 'ні'}</b></summary><div class="fold-body">
       <div class="crop-grid">${cropR('l', 'Зліва')}${cropR('r', 'Справа')}${cropR('t', 'Зверху')}${cropR('b', 'Знизу')}</div>
       ${cropped ? `<button class="btn btn-sm btn-outline btn-block" data-a="resetCrop">${icon('undo')}Без обрізки</button>` : ''}
     </div></details>
     <div class="field" style="margin-top:12px"><label>Непрозорість<span class="aux" data-show="opacity">${Math.round((o.opacity ?? 1) * 100)}%</span></label><input type="range" data-f="opacity" data-pct="1" min="0.1" max="1" step="0.01" value="${o.opacity ?? 1}"></div>
     <div class="field"><label>Рамка</label>${swatches(o.border && o.border !== 'none' ? o.border : '', 'border')}<button class="chip${!o.border || o.border === 'none' ? ' on' : ''}" data-a="noBorder" style="margin-top:6px">${icon('x')}Без рамки</button></div>
-    <div class="chips">${video ? chip('shadow', 'Тінь', !!o.shadow, 'true', 'sparkle') : ''}${chip('flip', 'Дзеркально', !!o.flip, 'true', 'flipH')}${video ? chip('muted', 'Без звуку', !!o.muted, 'true', 'mute') : ''}</div>
-    ${video && !o.muted ? `<div class="field"><label>Гучність<span class="aux" data-show="volume">${Math.round((o.volume ?? 1) * 100)}%</span></label><input type="range" data-f="volume" data-pct="1" min="0" max="2" step="0.05" value="${o.volume ?? 1}"></div>` : ''}
-    ${video ? `<div class="field"><label>Показувати<span class="aux">${fmt(o.start, true)} – ${fmt(o.start + o.dur, true)}</span></label></div>${animSeg(o)}
-      <div class="chips"><button class="chip" data-a="toCursor">${icon('stepFwd')}Почати з курсора</button><button class="chip" data-a="pipSync">${icon('fit')}Разом з відео (з 0:00)</button></div>` : timing(o)}
-    ${actions(act('split', 'split', 'Розрізати', 'data-key="S"'), act('dup', 'copy', 'Дублювати'), act('front', 'front', 'Наперед'), act('del', 'trash', 'Видалити'))}
-    ${more('ov-layer', `<div class="insp-row">${timeField('start', 'Початок', o.start)}${timeField('dur', 'Тривалість', o.dur)}</div>
-      ${video ? `<p class="hint">Фрагмент файлу ${fmt(o.in || 0)}–${fmt((o.in || 0) + o.dur)}${m ? ` з ${fmt(m.duration)}` : ''}. Краї на доріжці «Поверх» обрізають початок і кінець.</p>` : ''}`)}`;
+    <div class="chips">${video ? chip('shadow', 'Тінь', !!o.shadow, 'true', 'sparkle') : ''}${chip('flip', 'Дзеркально', !!o.flip, 'true', 'flipH')}</div>`) +
+    (video ? sec('Звук', 'volume', `<div class="chips">${chip('muted', 'Без звуку', !!o.muted, 'true', 'mute')}</div>${!o.muted ? `<div class="field"><label>Гучність<span class="aux" data-show="volume">${Math.round((o.volume ?? 1) * 100)}%</span></label><input type="range" data-f="volume" data-pct="1" min="0" max="2" step="0.05" value="${o.volume ?? 1}"></div>` : ''}`) : '') +
+    sec('Показ', 'play', video ? `<div class="field"><label>Показувати<span class="aux">${fmt(o.start, true)} – ${fmt(o.start + o.dur, true)}</span></label></div>${animSeg(o)}
+      <div class="chips"><button class="chip" data-a="toCursor">${icon('stepFwd')}Почати з курсора</button><button class="chip" data-a="pipSync">${icon('fit')}Разом з відео</button></div>` : timing(o)) +
+    actions(act('split', 'split', 'Розрізати', 'data-key="S"'), act('dup', 'copy', 'Дублювати'), act('front', 'front', 'Наперед'), act('del', 'trash', 'Видалити', 'data-danger="1"')) +
+    more('ov-layer', `<div class="insp-row">${timeField('start', 'Початок', o.start)}${timeField('dur', 'Тривалість', o.dur)}</div>
+      ${video ? `<p class="hint">Фрагмент файлу ${fmt(o.in || 0)}–${fmt((o.in || 0) + o.dur)}${m ? ` з ${fmt(m.duration)}` : ''}. Краї на доріжці «Поверх» обрізають початок і кінець.</p>` : ''}`);
 }
 
 function animSeg(o) {
@@ -432,8 +435,9 @@ function overlayPanel(o) {
       <div class="field"><label>Де</label><div class="seg"><button data-a="pbPos" data-v="bottom" class="${o.y > 0.5 ? 'on' : ''}">Внизу</button><button data-a="pbPos" data-v="top" class="${o.y <= 0.5 ? 'on' : ''}">Вгорі</button></div></div>
       <button class="btn btn-outline btn-sm btn-block" data-a="pbFull">${icon('fit')}На все відео</button>`;
   }
-  return head(OV_ICONS[o.type], OV_NAMES[o.type], '') + body + timing(o) +
-    actions(act('dup', 'copy', 'Дублювати'), act('del', 'trash', 'Видалити')) +
+  return head(OV_ICONS[o.type], OV_NAMES[o.type], `${fmt(o.start, true)} – ${fmt(o.start + o.dur, true)}`) +
+    sec(o.type === 'text' ? 'Текст' : 'Вигляд', OV_ICONS[o.type], body) + sec('Показ', 'play', timing(o)) +
+    actions(act('dup', 'copy', 'Дублювати'), act('del', 'trash', 'Видалити', 'data-danger="1"')) +
     more('ov-' + o.type, `${extra}<div class="insp-row">${timeField('start', 'Початок', o.start)}${timeField('dur', 'Тривалість', o.dur)}</div>
       <button class="btn btn-outline btn-sm btn-block" data-a="front">${icon('front')}Перенести наперед</button>`);
 }
@@ -444,14 +448,15 @@ function musicPanel(x) {
   const m = media.get(x.mediaId);
   const v = x.volume ?? 1;
   return head(x.voice ? 'mic' : 'music', x.voice ? 'Ваш голос' : m ? m.name : 'Аудіо', `${fmt(x.start, true)} – ${fmt(x.start + musicDur(x), true)}`) +
-    `${seg('volume', 'Гучність', [[0.2, 'Тихий фон'], [0.4, 'Фон'], [0.7, 'Середня'], [1, 'Повна']], [0.2, 0.4, 0.7, 1].reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a)), 'Для музики під голос найкраще «Фон» або «Тихий фон».')}
-    <div class="chips">${chip('fadeIn', 'Плавна поява', x.fadeIn > 0, 1, 'sparkle')}${chip('fadeOut', 'Плавне зникнення', x.fadeOut > 0, 2, 'sparkle')}${x.voice ? '' : chip('duck', 'Тихіше, коли говорять', !!x.duck, 'true', 'volume')}</div>
-    ${x.duck && !x.voice ? '<p class="hint">Музика сама стишується, коли у відео звучить голос, і повертається в паузах.</p>' : ''}
-    ${actions(x.voice ? '' : act('fitMusic', 'fit', 'Обрізати під відео', mainEnd() > x.start ? '' : 'disabled'), act('norm', 'volume', 'Вирівняти гучність'), act('split', 'split', 'Розрізати'), act('del', 'trash', 'Видалити'))}
-    ${more('music', `<div class="field"><label>Точна гучність<span class="aux" data-show="volume">${Math.round(v * 100)}%</span></label><input type="range" data-f="volume" data-pct="1" min="0" max="2" step="0.05" value="${v}"></div>
+    sec('Звук', 'volume', `${seg('volume', 'Гучність', [[0.2, 'Тихий фон'], [0.4, 'Фон'], [0.7, 'Середня'], [1, 'Повна']], [0.2, 0.4, 0.7, 1].reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a)), x.voice ? '' : 'Для музики під голос найкраще «Фон» або «Тихий фон».')}
+      ${x.voice ? '' : `<div class="chips">${chip('duck', 'Тихіше, коли говорять', !!x.duck, 'true', 'volume')}</div>`}
+      ${x.duck && !x.voice ? '<p class="hint">Музика сама стишується, коли у відео звучить голос, і повертається в паузах.</p>' : ''}`) +
+    sec('Плавність', 'sparkle', `<div class="chips">${chip('fadeIn', 'Плавна поява', x.fadeIn > 0, 1, 'sparkle')}${chip('fadeOut', 'Плавне зникнення', x.fadeOut > 0, 2, 'sparkle')}</div>`) +
+    actions(x.voice ? '' : act('fitMusic', 'fit', 'Під відео', mainEnd() > x.start ? '' : 'disabled'), act('norm', 'volume', 'Вирівняти'), act('split', 'split', 'Розрізати'), act('del', 'trash', 'Видалити', 'data-danger="1"')) +
+    more('music', `<div class="field"><label>Точна гучність<span class="aux" data-show="volume">${Math.round(v * 100)}%</span></label><input type="range" data-f="volume" data-pct="1" min="0" max="2" step="0.05" value="${v}"></div>
       ${range('fadeIn', 'Тривалість появи', 0, 5, 0.1, x.fadeIn || 0, ' с')}
       ${range('fadeOut', 'Тривалість зникнення', 0, 8, 0.1, x.fadeOut || 0, ' с')}
-      <div class="insp-row">${timeField('start', 'Початок', x.start)}<div class="field half"><label>Тривалість</label><div class="static">${fmtShort(musicDur(x))}</div></div></div>`)}`;
+      <div class="insp-row">${timeField('start', 'Початок', x.start)}<div class="field half"><label>Тривалість</label><div class="static">${fmtShort(musicDur(x))}</div></div></div>`);
 }
 
 // ── обробка введення ──

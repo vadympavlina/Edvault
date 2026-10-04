@@ -16,9 +16,10 @@ import { DB, takeHandoff } from './db.js';
 import { packProject, unpackProject, PROJ_EXT } from './projfile.js';
 import { initAsr, openAsr, asrBusy } from './asr.js';
 import { initConvert, needsConvert, convertWithDialog, converting } from './convert.js';
-import { $, icon, hydrateIcons, initTips, initTheme, toast, fmt, openModal, closeModal, anyModalOpen, confirmDialog, downloadBlob, safeName, fmtBytes } from './ui.js';
+import { $, icon, hydrateIcons, paintRanges, initTips, initTheme, toast, fmt, openModal, closeModal, anyModalOpen, confirmDialog, downloadBlob, safeName, fmtBytes } from './ui.js';
 
 hydrateIcons();
+paintRanges(document);
 initTips();
 initTheme($('btnTheme'));
 initPlayer($('pv'));

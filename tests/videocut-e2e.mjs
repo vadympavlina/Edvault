@@ -49,7 +49,7 @@ await step('прокрутка панелі властивостей не ски
   await page.evaluate(() => { document.getElementById('inspector').scrollTop = 1e5; });
   const before = await page.evaluate(() => document.getElementById('inspector').scrollTop);
   assert.ok(before > 0, 'панель має прокручуватися');
-  for (let i = 0; i < 4; i++) { await page.locator('#inspector [data-toggle]').first().dispatchEvent('click'); await page.waitForTimeout(250); }
+  for (let i = 0; i < 4; i++) { await page.locator('#inspector [data-toggle="fadeIn"]').first().dispatchEvent('click'); await page.waitForTimeout(250); }
   assert.equal(await page.evaluate(() => document.getElementById('inspector').scrollTop), before);
 });
 

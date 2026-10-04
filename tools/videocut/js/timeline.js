@@ -5,7 +5,7 @@ import { thumbAt, PEAKS_RATE } from './media.js';
 import { isLayer } from './layer.js';
 import { addToTimeline, addLayerAt } from './ops.js';
 import { seek } from './player.js';
-import { $, esc, icon, clamp, fmt, setHtml } from './ui.js';
+import { $, esc, icon, clamp, fmt, setHtml, paintRange } from './ui.js';
 
 const ROW = 26, CC_H = 28, V_H = 58, V2_H = 44, A_H = 40, RULER_H = 22, BAR_H = 44;
 const OV_LABEL = { video: 'Відео поверх', text: 'Текст', rect: 'Рамка', arrow: 'Стрілка', blur: 'Розмиття', spot: 'Прожектор', image: 'Зображення', emoji: 'Емодзі', progress: 'Прогрес' };
@@ -106,7 +106,7 @@ export function setZoom(pps, anchorT = S.t) {
   S.pps = pps;
   render();
   scroll.scrollLeft = Math.max(0, anchorT * pps - ax);
-  $('tlZoom').value = sliderFromZoom(pps);
+  $('tlZoom').value = sliderFromZoom(pps); paintRange($('tlZoom'));
   drawCanvases(); drawRuler();
 }
 export function zoomBy(f) { setZoom(S.pps * f); }
@@ -124,7 +124,7 @@ function onWheel(e) {
     const ax = e.clientX - rect.left;
     S.pps = pps; render();
     scroll.scrollLeft = Math.max(0, t * pps - ax);
-    $('tlZoom').value = sliderFromZoom(pps);
+    $('tlZoom').value = sliderFromZoom(pps); paintRange($('tlZoom'));
     drawCanvases(); drawRuler();
   } else if (!e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
     // коліщатко: якщо доріжок більше, ніж вміщується, — прокручуємо їх вертикально,

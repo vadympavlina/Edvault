@@ -88,7 +88,20 @@ let pointerDown = false;
 ['pointerup', 'pointercancel', 'dragend', 'blur'].forEach(ev => addEventListener(ev, () => { pointerDown = false; }, true));
 
 const FIELD = /^(INPUT|TEXTAREA|SELECT)$/;
+// Заповнення доріжки повзунка: CSS-змінна --p (відсоток), яку виставляє код
+export function paintRange(r) {
+  const min = +r.min || 0, max = r.max === '' ? 100 : +r.max, v = +r.value;
+  r.style.setProperty('--p', (max > min ? Math.max(0, Math.min(1, (v - min) / (max - min))) * 100 : 0).toFixed(1) + '%');
+}
+export const paintRanges = root => root.querySelectorAll('input[type=range]').forEach(paintRange);
+document.addEventListener('input', e => { if (e.target && e.target.type === 'range') paintRange(e.target); }, true);
+
 function syncAttrs(a, b) {
+  if (a.nodeName === 'INPUT' && a.type === 'range') { // style повзунка веде код (--p)
+    for (const at of [...a.attributes]) if (at.name !== 'style' && !b.hasAttribute(at.name)) a.removeAttribute(at.name);
+    for (const at of b.attributes) if (at.name !== 'style' && a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+    return;
+  }
   const keepRows = a.classList.contains('seg-rows'); // клас і стиль, які додає balanceSegs
   const isItem = a.classList.contains('it'); // доступність елементів таймлайну виставляє timeline.js після малювання
   for (const at of [...a.attributes]) {
@@ -140,10 +153,11 @@ export function setHtml(el, html) {
   }
   if (el.__html === html) return false;
   el.__html = html;
-  if (!el.firstChild) { el.innerHTML = html; return true; }
+  if (!el.firstChild) { el.innerHTML = html; paintRanges(el); return true; }
   const t = document.createElement('template');
   t.innerHTML = html;
   morphChildren(el, t.content);
+  paintRanges(el);
   return true;
 }
 // Перемальовує панель, не збиваючи людину: повертає фокус у те саме поле, курсор, виділення й прокрутку.
