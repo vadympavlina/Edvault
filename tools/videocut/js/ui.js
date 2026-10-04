@@ -79,7 +79,54 @@ export function icon(name, cls = 'ico') {
 // перемикач, що не вміщається в рядок, ділимо на рівні ряди замість «хвоста» з однієї кнопки
 // чи людина зараз друкує в полі всередині el
 export const typingIn = el => { const a = document.activeElement; return !!a && el.contains(a) && (a.matches('textarea, input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color])') || a.isContentEditable); };
-// Записує HTML у панель лише якщо він змінився — зайві перемальовування скидали прокрутку й фокус.
+// ── «м'яке» оновлення панелей ──
+// Панелі раніше повністю перемальовувались через innerHTML: елемент, який людина саме тягнула (повзунок) чи в якому
+// друкувала, підмінявся новим — перетягування обривалось, курсор і прокрутка «злітали». Тепер новий HTML порівнюється
+// з наявним, і змінюється лише те, що справді відрізняється; живі елементи лишаються на місці.
+let pointerDown = false;
+['pointerdown'].forEach(ev => document.addEventListener(ev, () => { pointerDown = true; }, true));
+['pointerup', 'pointercancel', 'dragend', 'blur'].forEach(ev => addEventListener(ev, () => { pointerDown = false; }, true));
+
+const FIELD = /^(INPUT|TEXTAREA|SELECT)$/;
+function syncAttrs(a, b) {
+  const keepRows = a.classList.contains('seg-rows'); // клас і стиль, які додає balanceSegs
+  for (const at of [...a.attributes]) {
+    if (keepRows && (at.name === 'class' || at.name === 'style')) continue;
+    if (!b.hasAttribute(at.name)) a.removeAttribute(at.name);
+  }
+  for (const at of b.attributes) {
+    if (keepRows && (at.name === 'class' || at.name === 'style')) continue;
+    if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+  }
+}
+function syncField(a, b) {
+  const t = a.type;
+  if (t === 'checkbox' || t === 'radio') { a.checked = b.hasAttribute('checked'); return; }
+  const want = a.tagName === 'TEXTAREA' ? b.value : a.tagName === 'SELECT' ? null : (b.getAttribute('value') ?? '');
+  if (a.tagName === 'SELECT') { const i = [...b.options].findIndex(o => o.selected); if (i >= 0 && a.selectedIndex !== i) a.selectedIndex = i; return; }
+  if (a.value === want) return;
+  // поле, у якому зараз друкують чи яке тягнуть, не чіпаємо
+  if (a === document.activeElement && (t !== 'range' || pointerDown)) return;
+  a.value = want;
+}
+function morphNode(a, b, parent) {
+  if (a.nodeType !== b.nodeType || a.nodeName !== b.nodeName) { parent.replaceChild(document.importNode(b, true), a); return; }
+  if (b.nodeType !== 1) { if (a.nodeValue !== b.nodeValue) a.nodeValue = b.nodeValue; return; }
+  if (a.nodeName === 'CANVAS') return; // полотна малює код (розмір, позиція) — їх не чіпаємо
+  syncAttrs(a, b);
+  if (FIELD.test(a.nodeName)) { syncField(a, b); if (a.nodeName !== 'SELECT') return; morphChildren(a, b); return; }
+  morphChildren(a, b);
+}
+function morphChildren(a, b) {
+  const n = b.childNodes.length;
+  for (let i = 0; i < n; i++) {
+    const nb = b.childNodes[i], na = a.childNodes[i];
+    if (!na) a.appendChild(document.importNode(nb, true)); else morphNode(na, nb, a);
+  }
+  while (a.childNodes.length > n) a.removeChild(a.lastChild);
+}
+
+// Записує HTML у панель, змінюючи лише відмінне. Повертає true, якщо щось змінилось.
 // Якщо людина встигла змінити поле (input/toggle), кеш скидається, щоб панель точно оновилася.
 export function setHtml(el, html) {
   if (!el.__bound) {
@@ -90,8 +137,11 @@ export function setHtml(el, html) {
     el.addEventListener('toggle', drop, true);
   }
   if (el.__html === html) return false;
-  el.innerHTML = html;
   el.__html = html;
+  if (!el.firstChild) { el.innerHTML = html; return true; }
+  const t = document.createElement('template');
+  t.innerHTML = html;
+  morphChildren(el, t.content);
   return true;
 }
 // Перемальовує панель, не збиваючи людину: повертає фокус у те саме поле, курсор, виділення й прокрутку.

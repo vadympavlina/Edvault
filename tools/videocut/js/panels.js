@@ -464,7 +464,7 @@ function onInput(e) {
     const sh = box().querySelector(`[data-show="${t.dataset.l === 'scale' ? 'scale' : 'crop-' + t.dataset.side}"]`);
     if (sh) sh.textContent = Math.round(v * 100) + '%';
     emit('project', { live: true, from: 'insp' });
-    softCommit();
+    if (t.type !== 'range') softCommit(); // повзунок зберігається один раз — коли його відпустили (change)
     return;
   }
   if (t.dataset.f) {
@@ -476,7 +476,7 @@ function onInput(e) {
     if (show) show.textContent = t.dataset.pct ? Math.round(v * 100) + '%' : t.dataset.unit === '%' ? Math.round(v * 100) + '%' : t.dataset.unit === '×' ? v.toFixed(2).replace('.', ',') + '×' : String(v).replace('.', ',') + (t.dataset.unit || '');
     if (S.sel.kind === 'caption') { const sp = box().querySelector('[data-cc-speed]'); if (sp) sp.innerHTML = speedHtml(o); }
     emit('project', { live: true, from: 'insp' });
-    softCommit();
+    if (t.type !== 'range') softCommit();
     return;
   }
   if (t.dataset.color) { setColor(o, t.dataset.color, t.value); }

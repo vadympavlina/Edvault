@@ -119,6 +119,32 @@ await step('вікна «Прибрати паузи» і «Озвучення»
   assert.equal(await page.locator('#silModal.open').count(), 0);
 });
 
+await step('повзунок не обривається, якщо зупинитись посеред перетягування', async () => {
+  await page.evaluate(() => document.activeElement.blur());
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  await page.keyboard.press('KeyT'); await page.waitForTimeout(300);
+  const sl = page.locator('#inspector input[type=range]').first();
+  const bb = await sl.boundingBox();
+  await page.evaluate(() => { document.querySelector('#inspector input[type=range]').__mark = 1; });
+  await page.mouse.move(bb.x + bb.width * 0.2, bb.y + bb.height / 2); await page.mouse.down();
+  await page.mouse.move(bb.x + bb.width * 0.5, bb.y + bb.height / 2, { steps: 4 });
+  await page.waitForTimeout(1000);
+  await page.mouse.move(bb.x + bb.width * 0.8, bb.y + bb.height / 2, { steps: 4 });
+  await page.mouse.up();
+  const r = await page.evaluate(() => { const e = document.querySelector('#inspector input[type=range]'); return { same: !!e.__mark, v: +e.value, min: +e.min, max: +e.max }; });
+  assert.ok(r.same, 'повзунок підмінився новим елементом');
+  assert.ok(r.v > r.min + (r.max - r.min) * 0.7, 'значення має дійти до кінця перетягування: ' + r.v);
+});
+
+await step('курсор у тексті не злітає після паузи в друку', async () => {
+  const ta = page.locator('#inspector textarea').first();
+  await ta.click(); await page.keyboard.press('Control+A'); await page.keyboard.type('abc');
+  await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft');
+  await page.waitForTimeout(1300);
+  await page.keyboard.type('X');
+  assert.equal(await ta.inputValue(), 'aXbc');
+});
+
 await step('жодної помилки в консолі сторінки', async () => assert.deepEqual(errors, []));
 
 await browser.close(); srv.close();

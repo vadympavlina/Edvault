@@ -5,7 +5,7 @@ import { thumbAt, PEAKS_RATE } from './media.js';
 import { isLayer } from './layer.js';
 import { addToTimeline, addLayerAt } from './ops.js';
 import { seek } from './player.js';
-import { $, esc, icon, clamp, fmt } from './ui.js';
+import { $, esc, icon, clamp, fmt, setHtml } from './ui.js';
 
 const ROW = 26, CC_H = 28, V_H = 58, V2_H = 44, A_H = 40, RULER_H = 22, BAR_H = 44;
 const OV_LABEL = { video: 'Відео поверх', text: 'Текст', rect: 'Рамка', arrow: 'Стрілка', blur: 'Розмиття', spot: 'Прожектор', image: 'Зображення', emoji: 'Емодзі', progress: 'Прогрес' };
@@ -215,9 +215,9 @@ export function render() {
   if (p.music.length || dragAud) rows.push([A_H * muRows, 'lane-a', `<canvas class="lane-canvas" id="tlACanvas"></canvas>${empty(!p.music.length, 'Відпустіть тут — музика чи звук')}${mu}`, 'music', 'Звук', 'Музика та озвучення']);
   if (p.captions.length) rows.push([CC_H, 'lane-cc', cc, 'cc', 'Субтитри', 'Субтитри']);
   if (graphics.length) rows.push([ovH, 'lane-ov', ov, 'text', 'Графіка', 'Текст, стрілки, розмиття']);
-  lanes.innerHTML = rows.map(([h, cls, html]) => `<div class="lane ${cls}" style="height:${h}px">${html}</div>`).join('');
-  heads.innerHTML = `<div class="head" style="height:${RULER_H}px"></div>` +
-    rows.map(([h, cls, , ic, name, tip]) => `<div class="head head-${cls.slice(5)}" style="height:${h}px" title="${tip}">${icon(ic)}<span>${name}</span></div>`).join('') + '<div style="height:40px"></div>';
+  setHtml(lanes, rows.map(([h, cls, html]) => `<div class="lane ${cls}" style="height:${h}px">${html}</div>`).join(''));
+  setHtml(heads, `<div class="head" style="height:${RULER_H}px"></div>` +
+    rows.map(([h, cls, , ic, name, tip]) => `<div class="head head-${cls.slice(5)}" style="height:${h}px" title="${tip}">${icon(ic)}<span>${name}</span></div>`).join('') + '<div style="height:40px"></div>');
   // таймлайн не вищий, ніж потрібно — решта місця йде переглядові
   const need = BAR_H + RULER_H + rows.reduce((a, r) => a + r[0] + 1, 0) + 14;
   $('tl').style.setProperty('--tl-fit', need + 'px');
