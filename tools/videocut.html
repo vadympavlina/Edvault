@@ -71,10 +71,10 @@
 <div class="work">
   <aside class="lib">
     <nav class="lib-tabs" id="libTabs">
-      <button data-tab="media"><span data-icon="media"></span>Медіа</button>
-      <button data-tab="text"><span data-icon="text"></span>Текст</button>
-      <button data-tab="elements"><span data-icon="shapes"></span>Елементи</button>
-      <button data-tab="captions"><span data-icon="cc"></span>Субтитри</button>
+      <button data-tab="media" role="tab"><span data-icon="media"></span>Медіа<i class="tab-n" hidden></i></button>
+      <button data-tab="text" role="tab"><span data-icon="text"></span>Текст<i class="tab-n" hidden></i></button>
+      <button data-tab="elements" role="tab"><span data-icon="shapes"></span>Елементи<i class="tab-n" hidden></i></button>
+      <button data-tab="captions" role="tab"><span data-icon="cc"></span>Субтитри<i class="tab-n" hidden></i></button>
     </nav>
     <div class="lib-body" id="libBody"></div>
   </aside>
@@ -110,6 +110,9 @@
     <div class="tb-l">
       <button class="btn btn-sm btn-icon" id="btnSplit" data-tip="Розрізати в позиції курсора" data-key="S"><span data-icon="split"></span></button>
       <button class="btn btn-sm btn-icon" id="btnDelete" data-tip="Видалити виділене" data-key="Delete"><span data-icon="trash"></span></button>
+      <span class="tb-sep" aria-hidden="true"></span>
+      <button class="btn btn-sm btn-icon" id="btnMarkIn" data-tip="Позначити початок шматка" data-key="I"><span data-icon="bracketL"></span></button>
+      <button class="btn btn-sm btn-icon" id="btnMarkOut" data-tip="Позначити кінець шматка" data-key="O"><span data-icon="bracketR"></span></button>
       <button class="btn btn-sm" id="btnCutRange" data-tip="Вирізати позначений шматок з відео" data-key="X" disabled><span data-icon="scissors"></span><span class="hide-md">Вирізати шматок</span></button>
     </div>
     <div class="tb-c">
@@ -121,6 +124,8 @@
       <span class="tr-time"><b id="trTime">00:00.0</b><span> / </span><span id="trDur">00:00.0</span></span>
     </div>
     <div class="tb-r">
+      <button class="btn btn-sm btn-icon on" id="btnSnapToggle" data-tip="Прилипання до країв елементів" data-key="Alt — тимчасово вимкнути"><span data-icon="magnet"></span></button>
+      <span class="tb-sep hide-sm" aria-hidden="true"></span>
       <button class="btn btn-sm btn-icon hide-sm" id="btnZoomOut" data-tip="Віддалити" data-key="−"><span data-icon="zoomOut"></span></button>
       <input type="range" class="hide-sm" id="tlZoom" min="0" max="100" value="50" aria-label="Масштаб таймлайну">
       <button class="btn btn-sm btn-icon hide-sm" id="btnZoomIn" data-tip="Наблизити" data-key="+"><span data-icon="zoomIn"></span></button>
@@ -135,6 +140,8 @@
         <div class="tl-lanes" id="tlLanes"></div>
         <div class="tl-range" id="tlRange" hidden></div>
         <div class="tl-insert" id="tlInsert" hidden></div>
+        <div class="tl-hover" id="tlHover" hidden><span></span></div>
+        <div class="tl-snap" id="tlSnap" hidden></div>
         <div class="tl-playhead" id="tlPlayhead"><i></i></div>
       </div>
     </div>
@@ -267,6 +274,7 @@
       <span>Відтворити / пауза</span><span><kbd>Пробіл</kbd> <kbd>K</kbd></span>
       <span>Назад / вперед на 5 с</span><span><kbd>J</kbd> <kbd>L</kbd></span>
       <span>Кадр назад / вперед (з Shift — 1 с)</span><span><kbd>←</kbd> <kbd>→</kbd></span>
+      <span>До попередньої / наступної точки монтажу</span><span><kbd>↑</kbd> <kbd>↓</kbd></span>
       <span>На початок / у кінець</span><span><kbd>Home</kbd> <kbd>End</kbd></span>
       <span>На весь екран</span><span><kbd>F</kbd></span>
       <span class="grp">Монтаж</span>
@@ -277,7 +285,8 @@
       <span>Копіювати / вирізати / вставити</span><span><kbd>Ctrl</kbd> <kbd>C</kbd> · <kbd>X</kbd> · <kbd>V</kbd></span>
       <span>Дублювати</span><span><kbd>Ctrl</kbd> <kbd>D</kbd></span>
       <span>Тимчасово вимкнути прилипання</span><span><kbd>Alt</kbd> + перетягування</span>
-      <span>Переходити між елементами таймлайну</span><span><kbd>Tab</kbd> · <kbd>↑</kbd> <kbd>↓</kbd></span>
+      <span>Переходити між елементами таймлайну</span><span><kbd>Tab</kbd> · потім <kbd>↑</kbd> <kbd>↓</kbd></span>
+      <span>Меню дій над елементом</span><span>права кнопка миші</span>
       <span>Скасувати / повторити</span><span><kbd>Ctrl</kbd> <kbd>Z</kbd> · <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd></span>
       <span>Додати текст / субтитр</span><span><kbd>T</kbd> <kbd>C</kbd></span>
       <span>Записати голос / зупинити запис</span><span><kbd>R</kbd> · <kbd>Пробіл</kbd></span>
@@ -305,7 +314,7 @@
 <div id="mediaPool" aria-hidden="true"></div>
 <div id="menuCmds" hidden>
   <button id="btnImport"></button><button id="btnNew"></button><button id="btnHelp"></button><button id="btnTheme"></button>
-  <button id="btnMarkIn"></button><button id="btnMarkOut"></button><button id="btnSilences"></button><button id="btnSnapToggle" class="on"></button>
+  <button id="btnSilences"></button>
   <button id="btnVoice"></button><button id="btnSnap"></button>
 </div>
 <input type="file" id="fileInput" accept="video/*,audio/*,image/*,.mkv,.mov,.qt,.hevc,.avi,.wmv,.asf,.flv,.f4v,.mpg,.mpeg,.vob,.3gp,.3g2,.mts,.m2ts,.divx,.ogv,.dv,.rm,.rmvb,.mxf" multiple hidden>

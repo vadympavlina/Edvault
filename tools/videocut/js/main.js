@@ -1,5 +1,5 @@
 // Точка входу відеоредактора Edvault.
-import { S, media, on, emit, commit, undo, redo, canUndo, canRedo, select, duration, layout, newProject, resetHistory } from './state.js';
+import { S, media, on, emit, commit, undo, redo, canUndo, canRedo, select, duration, layout, newProject, resetHistory, editPoints } from './state.js';
 import { addMedia, removeMedia, reviveMedia, removedMedia, purgeRemoved } from './media.js';
 import { initPlayer, resizeCanvas, seek, toggle, pause, play, snapshot, requestDraw } from './player.js';
 import { initTimeline, render as renderTimeline, zoomBy, zoomFit, setZoom } from './timeline.js';
@@ -7,6 +7,7 @@ import { initLibrary, initInspector, importCaptionFile, showTab, showProject } f
 import { initPreviewLayer, renderHandles } from './preview.js';
 import { addToTimeline, addOverlay, splitAt, deleteSel, duplicateSel, copySel, pasteClip, canPaste, cutRange, addCaption, normalizeSel, transitionsAll, addTitleCard, addLayerAt, TEXT_PRESETS, CARD_STYLES } from './ops.js';
 import { initMenu } from './menu.js';
+import { initCtx } from './ctxmenu.js';
 import { toSrt, toVtt } from './srt.js';
 import { exportVideo, exportAudio } from './export.js';
 import { openExport, isExporting } from './export-ui.js';
@@ -24,6 +25,7 @@ initTips();
 initTheme($('btnTheme'));
 initPlayer($('pv'));
 initTimeline();
+initCtx();
 initLibrary();
 initInspector();
 initPreviewLayer();
@@ -235,6 +237,13 @@ document.addEventListener('keydown', e => {
     case 'KeyL': seek(S.t + 5); break;
     case 'ArrowLeft': e.preventDefault(); pause(); seek(S.t - (e.shiftKey ? 1 : f)); break;
     case 'ArrowRight': e.preventDefault(); pause(); seek(S.t + (e.shiftKey ? 1 : f)); break;
+    case 'ArrowUp': case 'ArrowDown': { // до попередньої / наступної точки монтажу (край кліпу, тексту, субтитру…)
+      e.preventDefault(); pause();
+      const pts = editPoints(), eps = 0.005;
+      const target = e.code === 'ArrowDown' ? pts.find(p => p > S.t + eps) : [...pts].reverse().find(p => p < S.t - eps);
+      if (target != null) seek(target);
+      break;
+    }
     case 'Home': e.preventDefault(); seek(0); break;
     case 'End': e.preventDefault(); seek(duration()); break;
     case 'KeyS': e.preventDefault(); splitAt(); break;
@@ -438,7 +447,6 @@ window.addEventListener('beforeunload', e => { if (isRecording() || asrBusy() ||
       { label: 'Зберегти поточний кадр (PNG)', ic: 'camera', enabled: has, run: () => $('btnSnap').click() },
       { sep: true },
       { label: 'Параметри проєкту…', ic: 'gear', run: () => $('btnProj').click() },
-      { label: 'Вийти до всіх інструментів', ic: 'back', run: () => { location.href = '../tools.html'; } },
     ] },
     { label: 'Редагування', items: [
       { label: 'Скасувати', ic: 'undo', key: 'Ctrl+Z', enabled: canUndo, run: () => undo() },

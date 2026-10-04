@@ -80,35 +80,38 @@ function toolsBody() {
     <button class="btn btn-sm btn-block btn-ghost-sm cc-danger" data-cc="clear">${icon('trash')}Видалити всі субтитри</button>`;
 }
 
+let capView = 'text'; // що показує вкладка «Субтитри»: список тексту чи налаштування вигляду
 export function renderCapTab(el) {
   body = el;
   const p = S.project, st = capStyle(p);
   const caps = sorted();
   const has = caps.length > 0;
   Object.keys(CC_PRESETS).forEach(k => loadCcFont({ ...capStyle({}), ...CC_PRESETS[k] }));
-  const html = `
-    ${has ? `<div class="row2">
+  const view = has ? capView : 'style';
+  const top = has ? `<div class="row2">
         <button class="btn btn-primary btn-grow" id="btnAddCap" data-cc="add">${icon('plus')} Субтитр тут</button>
         <button class="btn btn-outline btn-icon" id="btnAutoCap" data-cc="auto" data-tip="Розпізнати мову ще раз" ${p.clips.length ? '' : 'disabled'}>${icon('wand')}</button>
         <button class="btn btn-outline btn-icon" id="btnImpCap" data-cc="import" data-tip="Імпорт .srt / .vtt">${icon('upload')}</button>
         <button class="btn btn-outline btn-icon" id="btnExpCap" data-cc="srt" data-tip="Зберегти .srt">${icon('download')}</button>
-      </div>` : `
+      </div>
+      <div class="seg lib-views" role="tablist"><button data-cc-view="text" role="tab" class="${view === 'text' ? 'on' : ''}">${icon('cc')}Текст<b>${caps.length}</b></button><button data-cc-view="style" role="tab" class="${view === 'style' ? 'on' : ''}">${icon('shapes')}Вигляд</button></div>` : `
       <button class="auto-cc" id="btnAutoCap" data-cc="auto" ${p.clips.length ? '' : 'disabled'}>${icon('wand')}<span><b>Створити субтитри автоматично</b><small>Розпізнавання мови прямо в браузері</small></span></button>
       <div class="row2">
         <button class="btn btn-outline btn-grow" id="btnAddCap" data-cc="add">${icon('plus')} Вручну</button>
         <button class="btn btn-outline btn-grow" id="btnImpCap" data-cc="import">${icon('upload')} Файл .srt</button>
-      </div>`}
-    <div class="lib-sub">Вигляд</div>
+      </div>`;
+  const styleView = `
+    <div class="lib-sub">Шаблон</div>
     <div class="cc-presets">${Object.entries(CC_PRESETS).map(([k, v]) => `<button class="cc-preset${st.preset === k ? ' on' : ''}" data-cc-preset="${k}" title="${v.name}"><img data-k="${k}" src="${thumb(k)}" alt=""><small>${v.name}</small></button>`).join('')}</div>
     <label class="cc-switch"><input type="checkbox" data-cc-burn ${st.show ? 'checked' : ''}><span><b>Вшити у відео</b><small>${st.show ? 'Субтитри буде видно в готовому відео' : 'Лише файл .srt — у відео їх не буде'}</small></span></label>
-    ${fold('style', 'Налаштувати вигляд', styleBody(st))}
-    ${has ? fold('tools', 'Інструменти', toolsBody()) : ''}
-    ${has ? `<div class="lib-sub cc-count">Текст · ${caps.length}</div>
-      <div class="caps">${caps.map(c => { const v = cps(c), lv = speedLevel(v); return `<div class="cap${lv === 'bad' ? ' fast' : ''}" data-id="${c.id}">
+    ${fold('style', 'Налаштувати вигляд', styleBody(st))}`;
+  const textView = `${fold('tools', 'Інструменти', toolsBody())}
+    <div class="caps">${caps.map(c => { const v = cps(c), lv = speedLevel(v); return `<div class="cap${lv === 'bad' ? ' fast' : ''}" data-id="${c.id}">
         <button class="cap-t" data-seek="${c.start}" ${lv === 'bad' ? `title="Задовго читати: ${Math.round(v)} символів за секунду"` : ''}>${fmt(c.start, true)}</button>
         <textarea rows="2" data-cap="${c.id}" spellcheck="true">${esc(c.text)}</textarea>
         <button class="btn btn-sm btn-icon" data-cap-del="${c.id}" data-tip="Видалити">${icon('x')}</button>
-      </div>`; }).join('')}</div>` : '<p class="lib-hint">Поставте курсор на потрібне місце, натисніть «Вручну» і введіть текст. Enter у полі — наступний субтитр.</p>'}`;
+      </div>`; }).join('')}</div>`;
+  const html = top + (!has ? `${styleView}<p class="lib-hint">Поставте курсор на потрібне місце, натисніть «Вручну» і введіть текст. Enter у полі — наступний субтитр.</p>` : view === 'text' ? textView : styleView);
   if (setHtml(el, html)) balanceSegs(el);
   applyFind();
   lastKey = '';
@@ -177,6 +180,7 @@ export function splitLong(silent) {
 export async function capTabClick(b) {
   const p = S.project;
   const a = b.dataset.cc;
+  if (b.dataset.ccView) { capView = b.dataset.ccView; emit('show-tab', 'captions'); return true; }
   if (b.dataset.ccPreset) {
     const st = W(), pr = CC_PRESETS[b.dataset.ccPreset];
     Object.assign(st, pr, { preset: b.dataset.ccPreset });
@@ -278,7 +282,7 @@ export function capTabToggle(e) {
   if (d.open) open.add(d.dataset.ccFold); else open.delete(d.dataset.ccFold);
   if (d.open) balanceSegs(d);
 }
-export function openStyle() { open.add('style'); }
+export function openStyle() { open.add('style'); capView = 'style'; }
 
 // ── властивості одного субтитру (права панель) ──
 export function speedHtml(c) {

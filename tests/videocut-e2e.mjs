@@ -157,6 +157,40 @@ await step('велике 4K-відео отримує легку копію дл
   assert.ok(ew <= 1280, 'перегляд має йти з легкою копією, а не з 4K: ' + ew);
 });
 
+await step('таймлайн: лінія часу під вказівником і напрямна прилипання', async () => {
+  await page.evaluate(() => document.activeElement.blur());
+  const box = await page.locator('#tlScroll').boundingBox();
+  await page.mouse.move(box.x + 300, box.y + 80);
+  await page.waitForTimeout(150);
+  assert.ok(await page.evaluate(() => !document.getElementById('tlHover').hidden), 'лінія часу має показуватись');
+  assert.match(await page.evaluate(() => document.querySelector('#tlHover span').textContent), /^\d\d:\d\d\.\d$/);
+  // перетягуємо накладку так, щоб її край «причепився» до краю сусіднього елемента
+  await page.evaluate(() => { const V = window.VideoCut; V.S.project.overlays.length = 0; V.S.project.overlays.push({ id: 'oa', type: 'text', start: 2, dur: 2, text: 'A', size: 60, x: .1, y: .1, w: .5 }, { id: 'ob', type: 'text', start: 6, dur: 2, text: 'B', size: 60, x: .1, y: .3, w: .5 }); V.commit(); });
+  await page.waitForTimeout(300);
+  const b = await page.locator('.it.ov').nth(1).boundingBox();
+  const pps = await page.evaluate(() => window.VideoCut.S.pps);
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2 - 2 * pps + 3, b.y + b.height / 2, { steps: 6 });
+  const shown = await page.evaluate(() => !document.getElementById('tlSnap').hidden);
+  await page.mouse.up();
+  assert.ok(shown, 'напрямна прилипання має показуватись під час перетягування');
+  assert.equal(await page.evaluate(() => document.getElementById('tlSnap').hidden), true);
+});
+
+await step('контекстне меню таймлайну розрізає кліп, ↓ переходить до наступної точки', async () => {
+  await VC(() => { window.VideoCut.seek(0); });
+  const before = await VC(() => window.VideoCut.S.project.clips.length);
+  const bb = await page.locator('.it.clip').first().boundingBox();
+  await page.mouse.click(bb.x + 200, bb.y + bb.height / 2, { button: 'right' });
+  assert.ok(await page.locator('.ctx').count(), 'меню має відкритись');
+  await page.locator('.ctx-it', { hasText: 'Розрізати тут' }).click();
+  assert.equal(await VC(() => window.VideoCut.S.project.clips.length), before + 1);
+  await VC(() => window.VideoCut.seek(0));
+  await page.evaluate(() => document.activeElement.blur());
+  await page.keyboard.press('ArrowDown');
+  assert.ok(await VC(() => window.VideoCut.S.t) > 0, 'курсор має перейти до наступної точки');
+});
+
 await step('жодної помилки в консолі сторінки', async () => assert.deepEqual(errors, []));
 
 await browser.close(); srv.close();

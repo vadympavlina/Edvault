@@ -144,10 +144,25 @@ export function snapPoints(excludeId) {
 }
 // Alt під час перетягування тимчасово вимикає прилипання
 export const snapOn = () => S.snap && !S.altNoSnap;
-export function snap(t, excludeId, px = 8) {
-  if (!snapOn()) return t;
+// найближча межа в радіусі px пікселів (або null)
+export function snapHit(t, excludeId, px = 8) {
+  if (!snapOn()) return null;
   const th = px / S.pps;
-  let best = t, bd = th;
+  let best = null, bd = th;
   for (const p of snapPoints(excludeId)) { const d = Math.abs(p - t); if (d < bd) { bd = d; best = p; } }
   return best;
+}
+export function snap(t, excludeId, px = 8) {
+  const h = snapHit(t, excludeId, px);
+  return h == null ? t : h;
+}
+// точки монтажу: початки й кінці кліпів та елементів — для переходів клавішами ↑ ↓
+export function editPoints() {
+  const p = S.project, pts = [0];
+  layout().forEach(l => { pts.push(l.start, l.end); });
+  p.overlays.forEach(o => { pts.push(o.start, o.start + o.dur); });
+  p.captions.forEach(c => { pts.push(c.start, c.start + c.dur); });
+  p.music.forEach(m => { pts.push(m.start, m.start + musicDur(m)); });
+  pts.push(duration());
+  return [...new Set(pts.map(v => Math.round(v * 1000) / 1000))].filter(isFinite).sort((x, y) => x - y);
 }

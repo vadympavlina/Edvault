@@ -1,6 +1,6 @@
 // Таймлайн: доріжки, перетягування, обрізання, прилипання, зум.
 // Мініатюри й хвилі малюються лише для видимої частини — це тримає швидкість навіть на годинних відео.
-import { S, media, emit, on, layout, duration, clipDur, musicDur, snap, snapOn, commit, rippleShift, select, findSel } from './state.js';
+import { S, media, emit, on, layout, duration, clipDur, musicDur, snap, snapHit, snapOn, commit, rippleShift, select, findSel } from './state.js';
 import { thumbAt, PEAKS_RATE } from './media.js';
 import { isLayer } from './layer.js';
 import { addToTimeline, addLayerAt } from './ops.js';
@@ -12,7 +12,7 @@ const OV_LABEL = { video: 'Відео поверх', text: 'Текст', rect: '
 const OV_ICON = { video: 'pip', text: 'text', rect: 'rect', arrow: 'arrow', blur: 'blur', spot: 'spot', image: 'image', emoji: 'smile', progress: 'progress' };
 const TR_NAMES = { fade: 'Розчинення', black: 'Через чорне', slide: 'Зсув', wipe: 'Шторка', zoom: 'Наближення' };
 
-let scroll, inner, lanes, heads, ruler, playheadEl, rangeEl, insertEl;
+let scroll, inner, lanes, heads, ruler, playheadEl, rangeEl, insertEl, hoverEl, snapEl;
 let vCanvas, aCanvas, v2Canvas;
 let v2Rows = 1, v2RowOf = new Map();
 let ovRows = 1;
@@ -23,6 +23,7 @@ let dragKind = null;
 export function initTimeline() {
   scroll = $('tlScroll'); inner = $('tlInner'); lanes = $('tlLanes'); heads = $('tlHeads');
   ruler = $('tlRuler'); playheadEl = $('tlPlayhead'); rangeEl = $('tlRange'); insertEl = $('tlInsert');
+  hoverEl = $('tlHover'); snapEl = $('tlSnap');
   // під час перетягування 'project' приходить на кожен рух миші — перемальовуємо не частіше за кадр
   on('project', d => { if (d && d.live) scheduleRender(); else render(); });
   on('select', render);
@@ -42,6 +43,14 @@ export function initTimeline() {
   window.addEventListener('resize', () => { render(); });
   scroll.addEventListener('wheel', onWheel, { passive: false });
   inner.addEventListener('pointerdown', onDown);
+  // тонка лінія з часом під вказівником — щоб точно потрапити в потрібну мить
+  let hoverRaf = 0, hoverX = null;
+  inner.addEventListener('pointermove', e => {
+    if (drag || e.pointerType === 'touch') return;
+    hoverX = e.clientX;
+    if (!hoverRaf) hoverRaf = requestAnimationFrame(() => { hoverRaf = 0; showHover(hoverX); });
+  });
+  inner.addEventListener('pointerleave', () => { hoverX = null; hoverEl.hidden = true; });
   // клавіатура: Tab переходить між елементами таймлайну, фокус виділяє елемент (далі працюють S, Delete, Ctrl+D…)
   inner.addEventListener('focusin', e => {
     const it = e.target.closest?.('.it');
@@ -51,6 +60,7 @@ export function initTimeline() {
     const it = e.target.closest?.('.it');
     if (!it || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'Enter') { e.preventDefault(); emit('focus-inspector'); return; }
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.stopPropagation(); // тут стрілки ↑↓ пересувають між елементами, а не по точках монтажу
     // стрілки вгору/вниз пересуваються між елементами в порядку на таймлайні, ліворуч/праворуч лишаються для курсора
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       const all = [...inner.querySelectorAll('.it')].sort((a, b) => a.offsetLeft - b.offsetLeft);
@@ -235,12 +245,27 @@ export function render() {
     it.setAttribute('role', 'button');
     it.setAttribute('aria-label', `${KIND[it.dataset.kind] || ''}: ${it.textContent.trim()}`);
     it.setAttribute('aria-pressed', it.classList.contains('sel') ? 'true' : 'false');
+    it.title = it.getAttribute('aria-label') + ' · права кнопка — дії';
     if (focusKey && it.dataset.kind + ':' + it.dataset.id === focusKey) it.focus({ preventScroll: true });
   });
   if (scroll.scrollTop !== keepT) scroll.scrollTop = keepT;
   if (scroll.scrollLeft !== keepL) scroll.scrollLeft = keepL;
   heads.scrollTop = scroll.scrollTop; // назви доріжок завжди навпроти своїх доріжок
   placePlayhead(); placeRange(); drawRuler(); drawCanvases();
+}
+
+function showHover(x) {
+  if (x == null || drag) { hoverEl.hidden = true; return; }
+  const t = Math.max(0, (x - inner.getBoundingClientRect().left) / S.pps);
+  hoverEl.hidden = false;
+  hoverEl.style.transform = `translateX(${t * S.pps}px)`;
+  hoverEl.firstElementChild.textContent = fmt(t, true);
+  hoverEl.classList.toggle('flip', t * S.pps - scroll.scrollLeft > scroll.clientWidth - 90);
+}
+function showSnap(at) {
+  if (at == null) { snapEl.hidden = true; return; }
+  snapEl.hidden = false;
+  snapEl.style.transform = `translateX(${at * S.pps}px)`;
 }
 
 function placePlayhead() {
@@ -426,18 +451,26 @@ function onMove(e) {
   S.altNoSnap = e.altKey;
   if (!drag.moved && Math.abs(e.clientX - drag.x0) < 3) return;
   drag.moved = true;
+  hoverEl.hidden = true;
+  S.snapAt = null;
   const dt = timeAt(e) - drag.t0;
   const P = S.project = structuredClone(drag.orig);
   if (drag.kind === 'clip') moveClip(P, dt, e);
   else if (drag.kind === 'music') moveMusic(P, dt);
   else moveTimed(P, drag.kind === 'overlay' ? P.overlays : P.captions, dt);
   emit('project', { live: true });
+  showSnap(S.snapAt);
 }
 
+// край, що тягнеться: прилипає й запам'ятовує, куди, щоб показати напрямну
+function snapEdge(t, id) { const h = snapHit(t, id); S.snapAt = h; return h == null ? t : h; }
 function snapBoth(start, dur, id) {
-  const s1 = snap(start, id), s2 = snap(start + dur, id) - dur;
-  if (!snapOn()) return start;
-  return Math.abs(s1 - start) <= Math.abs(s2 - start) ? (s1 !== start ? s1 : s2) : s2;
+  if (!snapOn()) { S.snapAt = null; return start; }
+  const h1 = snapHit(start, id), h2 = snapHit(start + dur, id);
+  const d1 = h1 == null ? Infinity : Math.abs(h1 - start), d2 = h2 == null ? Infinity : Math.abs(h2 - (start + dur));
+  if (d1 === Infinity && d2 === Infinity) { S.snapAt = null; return start; }
+  if (d1 <= d2) { S.snapAt = h1; return h1; }
+  S.snapAt = h2; return h2 - dur;
 }
 
 function moveTimed(P, list, dt) {
@@ -446,7 +479,7 @@ function moveTimed(P, list, dt) {
   const end = orig.start + orig.dur;
   if (drag.mode === 'move') o.start = Math.max(0, snapBoth(orig.start + dt, orig.dur, o.id));
   else if (drag.mode === 'l') {
-    o.start = clamp(snap(orig.start + dt, o.id), 0, end - 0.2);
+    o.start = clamp(snapEdge(orig.start + dt, o.id), 0, end - 0.2);
     if (o.type === 'video') { // ліву межу відео поверх не можна тягнути раніше за його початок
       const nin = (orig.in || 0) + (o.start - orig.start);
       if (nin < 0) o.start = orig.start - (orig.in || 0);
@@ -454,7 +487,7 @@ function moveTimed(P, list, dt) {
     }
     o.dur = end - o.start;
   } else {
-    o.dur = Math.max(0.2, snap(end + dt, o.id) - orig.start);
+    o.dur = Math.max(0.2, snapEdge(end + dt, o.id) - orig.start);
     if (o.type === 'video') { const m = media.get(o.mediaId); if (m) o.dur = Math.min(o.dur, m.duration - (o.in || 0)); }
   }
 }
@@ -465,12 +498,12 @@ function moveMusic(P, dt) {
   const m = media.get(x.mediaId), max = m ? m.duration : orig.out;
   if (drag.mode === 'move') x.start = Math.max(0, snapBoth(orig.start + dt, musicDur(orig), x.id));
   else if (drag.mode === 'l') {
-    let ns = snap(orig.start + dt, x.id);
+    let ns = snapEdge(orig.start + dt, x.id);
     let nin = orig.in + (ns - orig.start);
     if (nin < 0) { ns -= nin; nin = 0; }
     if (nin > orig.out - 0.2) { nin = orig.out - 0.2; ns = orig.start + (nin - orig.in); }
     x.in = nin; x.start = Math.max(0, ns);
-  } else x.out = clamp(orig.out + (snap(orig.start + musicDur(orig) + dt, x.id) - (orig.start + musicDur(orig))), orig.in + 0.2, max);
+  } else x.out = clamp(orig.out + (snapEdge(orig.start + musicDur(orig) + dt, x.id) - (orig.start + musicDur(orig))), orig.in + 0.2, max);
 }
 
 function moveClip(P, dt, e) {
@@ -500,7 +533,7 @@ function moveClip(P, dt, e) {
     c.in = clamp(orig.in + dt * sp, 0, orig.out - 0.1 * sp);
   } else {
     const maxOut = m ? m.duration : orig.out;
-    const newEnd = snap(oldEnd + dt, c.id);
+    const newEnd = snapEdge(oldEnd + dt, c.id);
     c.out = clamp(orig.out + (newEnd - oldEnd) * sp, orig.in + 0.1 * sp, maxOut);
   }
   // решта таймлайну (текст, субтитри) зсувається разом із вмістом кліпу
@@ -513,7 +546,7 @@ function onUp() {
   inner.removeEventListener('pointermove', onMove);
   if (!drag) return;
   const d = drag; drag = null;
-  S.altNoSnap = false;
+  S.altNoSnap = false; S.snapAt = null; showSnap(null);
   insertEl.hidden = true;
   if (!d.moved) return;
   if (d.kind === 'clip' && d.mode === 'move') {

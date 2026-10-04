@@ -59,9 +59,6 @@ kbd{display:inline-flex;align-items:center;height:21px;padding:0 6px;border-radi
 
 /* ── Верхня панель ── */
 .topbar{height:56px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px;background:var(--surface);border-bottom:1px solid var(--border);z-index:30}
-.back-link{display:flex;align-items:center;gap:6px;height:34px;padding:0 10px 0 8px;border-radius:var(--r);color:var(--text2);text-decoration:none;font-size:13px;font-weight:500;flex-shrink:0}
-.back-link:hover{background:var(--surface2);color:var(--text)}
-.back-link .ico{width:16px;height:16px}
 .sep{width:1px;height:22px;background:var(--border);margin:0 4px;flex-shrink:0}
 .brand{display:flex;align-items:center;gap:9px;min-width:0}
 .brand-mark{width:30px;height:30px;border-radius:9px;background:#ec4899;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(236,72,153,.35);flex-shrink:0}
@@ -527,7 +524,6 @@ body.recording .tl,body.recording .lib,body.recording .insp,body.recording .topb
 @media(max-width:640px){.proj{display:none}.mb-burger span{display:none}}
 /* ── Компактний вигляд: менше рамок і рядків, більше місця для відео ── */
 .topbar{height:42px;gap:4px;padding:0 8px}
-.back-link{height:30px;padding:0 6px}
 .menubar{margin-left:2px}
 .mb-btn{height:28px;padding:0 9px;font-size:13px}
 .topbar .btn-primary.btn-sm{height:28px;padding:0 12px}
@@ -744,3 +740,92 @@ details.more summary{padding:8px 4px;color:var(--text2);width:auto}
 .isec .look-card,.isec .style-card,.isec .layouts button,.isec .corner-grid button,.isec .tr-card{background:var(--surface2)}
 .isec textarea.input{min-height:76px}
 @media(max-width:980px){.insp{padding:0 10px 24px}.insp-head{margin:0 -10px 12px}}
+
+
+/* ══════════ Ліва панель: вкладки, медіа, шаблони ══════════ */
+.lib{background:var(--surface)}
+.lib-tabs{gap:3px;padding:8px 8px 0;border-bottom:1px solid var(--border);background:var(--surface)}
+.lib-tabs button{position:relative;padding:8px 2px 9px;border-radius:10px 10px 0 0;font-weight:600;color:var(--muted);transition:color .14s var(--ease),background .14s var(--ease)}
+.lib-tabs button::after{content:'';position:absolute;left:14%;right:14%;bottom:-1px;height:2px;border-radius:2px;background:var(--accent);transform:scaleX(0);transition:transform .2s var(--ease)}
+.lib-tabs button.on{background:transparent;color:var(--accent)}
+.lib-tabs button.on::after{transform:scaleX(1)}
+.lib-tabs .tab-n{position:absolute;top:3px;right:calc(50% - 26px);min-width:16px;height:16px;padding:0 4px;border-radius:9px;background:var(--accent);color:var(--on-accent);font:700 10px/16px Inter,sans-serif;font-style:normal;text-align:center}
+.lib-tabs .tab-n[hidden]{display:none}
+.lib-body{background:var(--bg);padding:12px 12px 20px}
+.lib-sub{margin:20px 2px 8px}
+.lib-sub.first{margin-top:2px}
+.lib-hint.tight{margin:-2px 2px 10px}
+.lib-hint{font-size:12px}
+
+/* картки в панелі — на сірому тлі виглядають окремими плитками */
+.mcard,.preset,.elem,.cc-preset,.cc-switch,details.fold{background:var(--surface)}
+.mcard,.preset,.elem,.cc-preset{box-shadow:var(--shadow-sm)}
+.drop{background:var(--surface)}
+
+/* фільтр файлів і підвкладки */
+.lib-filter,.lib-views{margin-top:10px}
+.lib-views{margin:12px 0 4px}
+.lib-views button b{min-width:18px;padding:0 5px;border-radius:9px;background:var(--surface3);font-size:10.5px;font-weight:700;color:var(--text2)}
+.lib-views button.on b{background:var(--accent-light);color:var(--accent)}
+.row2{display:flex;gap:6px;align-items:center}
+.row2 .btn-grow{flex:1;min-width:0;overflow:hidden}
+
+/* медіа-картки: постійна кнопка «додати», дії при наведенні */
+.mgrid{gap:10px}
+.mcard{border-radius:12px}
+.mthumb{border-radius:0}
+.mquick{position:absolute;left:6px;bottom:6px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent);color:var(--on-accent);box-shadow:0 2px 8px rgba(0,0,0,.35);transition:transform .14s var(--ease),background .14s}
+.mquick:hover{background:var(--accent-hover);transform:scale(1.1)}
+.mquick .ico{width:15px;height:15px}
+.mact{top:6px;right:6px}
+.mact .btn{background:rgba(255,255,255,.92);color:#1a1d23;border-color:transparent;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+:root[data-theme="dark"] .mact .btn{background:rgba(23,26,34,.92);color:var(--text)}
+.mname{display:flex;align-items:center;gap:6px;padding:7px 9px 8px;font-weight:600}
+.mused{flex:none;width:7px;height:7px;border-radius:50%;background:var(--success)}
+@media (pointer:coarse){.mact{opacity:1}}
+
+/* шаблони тексту — компактніші */
+.presets{gap:8px}
+.preset{position:relative;padding:8px;gap:0}
+.pr-demo{min-height:46px;padding:6px 12px}
+.pr-name{position:absolute;right:14px;bottom:13px;padding:1px 7px;border-radius:9px;background:rgba(0,0,0,.45);color:#fff;font-size:10.5px;font-weight:600}
+
+/* елементи: підписи не обрізаються */
+.elem b{font-size:11.5px}
+.elem{padding:10px 2px 8px}
+.card-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+
+
+/* ══════════ Таймлайн: зручності ══════════ */
+.tb-sep{width:1px;height:20px;margin:0 5px;background:var(--border);flex-shrink:0}
+.tl-bar .btn.on{background:var(--accent-light);color:var(--accent)}
+
+/* лінія з часом під вказівником */
+.tl-hover{position:absolute;top:0;bottom:0;left:0;width:1px;margin-left:-.5px;background:color-mix(in srgb,var(--text) 38%,transparent);z-index:5;pointer-events:none;will-change:transform}
+.tl-hover span{position:absolute;top:3px;left:5px;padding:1px 6px;border-radius:5px;background:var(--float-bg);color:var(--float-text);font:600 10.5px/16px Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tl-hover.flip span{left:auto;right:5px}
+
+/* напрямна прилипання: з'являється, коли край елемента «чіпляється» за сусідній */
+.tl-snap{position:absolute;top:0;bottom:0;left:0;width:2px;margin-left:-1px;z-index:8;pointer-events:none;background:#f59e0b;box-shadow:0 0 0 1px rgba(245,158,11,.25),0 0 10px rgba(245,158,11,.55);will-change:transform}
+
+/* за голівку курсора можна тягнути, як за лінійку */
+.tl-playhead i{pointer-events:auto;cursor:ew-resize}
+.tl-playhead i::after{content:'';position:absolute;inset:-6px -8px}
+
+/* контекстне меню таймлайну */
+.ctx{position:fixed;z-index:9600;min-width:230px;padding:5px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;box-shadow:var(--shadow-lg);animation:mbIn .1s ease}
+.ctx-it{display:flex;align-items:center;gap:9px;width:100%;height:33px;padding:0 10px 0 8px;border-radius:7px;font-size:13px;color:var(--text);text-align:left;outline:none}
+.ctx-it:hover:not(:disabled),.ctx-it:focus-visible:not(:disabled){background:var(--accent);color:#fff}
+.ctx-it:disabled{color:var(--muted);opacity:.55;cursor:default}
+.ctx-it.danger{color:var(--danger)}
+.ctx-it.danger:hover:not(:disabled),.ctx-it.danger:focus-visible:not(:disabled){background:var(--danger);color:#fff}
+.ctx-ic{width:16px;display:flex;justify-content:center;flex-shrink:0}
+.ctx-ic .ico{width:15px;height:15px}
+.ctx-l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctx-k{font-size:11.5px;color:var(--muted);flex-shrink:0}
+.ctx-it:hover:not(:disabled) .ctx-k,.ctx-it:focus-visible:not(:disabled) .ctx-k{color:rgba(255,255,255,.8)}
+.ctx-sep{height:1px;margin:5px 6px;background:var(--border)}
+
+/* ліва панель: дрібні правки */
+.pr-name{position:static;padding:5px 2px 1px;border-radius:0;background:none;color:var(--muted);font-size:11.5px;font-weight:600}
+.cap textarea{resize:none}
