@@ -175,38 +175,45 @@
 .tc-content .tc-toggle>:last-child{margin-bottom:0}
 .tc-content .tc-toggle[data-collapsed]>:not(:first-child){display:none}
 
-/* ── Шапка документа (банер) ── */
-.doc-header{position:relative;overflow:hidden;color:#fff;border-radius:var(--r-lg) var(--r-lg) 0 0;
+/* ── Шапка документа (банер): рівний прямокутник, без хвиль ── */
+.doc-header{--hc:#4F6BF4;position:relative;overflow:hidden;color:#fff;border-radius:var(--r-lg) var(--r-lg) 0 0;
   -webkit-print-color-adjust:exact;print-color-adjust:exact}
 .doc-header::before{content:'';position:absolute;inset:0;pointer-events:none}
-.doc-header.pattern-dots::before{background-image:radial-gradient(rgba(255,255,255,.32) 1.6px,transparent 1.7px);background-size:16px 16px}
-.doc-header.pattern-diagonal::before{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.14) 0 2px,transparent 2px 14px)}
-.doc-header.pattern-bubbles::before{background-image:radial-gradient(circle at 88% 18%,rgba(255,255,255,.28) 0 58px,transparent 60px),radial-gradient(circle at 97% 68%,rgba(255,255,255,.17) 0 85px,transparent 87px),radial-gradient(circle at 68% 96%,rgba(255,255,255,.13) 0 66px,transparent 68px)}
-.doc-header.pattern-grid::before{background-image:linear-gradient(rgba(255,255,255,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.13) 1px,transparent 1px);background-size:22px 22px}
-.doc-header.pattern-waves::before{background-image:repeating-radial-gradient(circle at 50% 180%,transparent 0,transparent 26px,rgba(255,255,255,.13) 27px,rgba(255,255,255,.13) 29px)}
-.doc-header-bg{position:relative;z-index:1;padding:40px 56px 62px}
-.doc-header-tag{display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,.22);
-  font-family:'Inter',sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px;margin-bottom:16px;max-width:calc(100% - 90px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.doc-header-title{font-family:'Inter',sans-serif;font-size:32px;font-weight:800;line-height:1.2;margin:0;letter-spacing:-.02em;max-width:80%;color:#fff}
-.doc-header-subtitle{font-family:'Inter',sans-serif;font-size:15px;font-weight:500;line-height:1.5;margin:10px 0 0;max-width:72%;color:rgba(255,255,255,.88)}
-.doc-header-logo{position:absolute;z-index:1;top:22px;right:28px;height:36px;max-width:140px;object-fit:contain}
-.doc-header.size-compact .doc-header-bg{padding:26px 56px 44px}
-.doc-header.size-compact .doc-header-title{font-size:26px}
-.doc-header.size-tall .doc-header-bg{padding:64px 56px 86px}
+.doc-header.pattern-dots::before{background-image:radial-gradient(rgba(255,255,255,.28) 1.4px,transparent 1.6px);background-size:18px 18px}
+.doc-header.pattern-diagonal::before{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.11) 0 2px,transparent 2px 16px)}
+.doc-header.pattern-grid::before{background-image:linear-gradient(rgba(255,255,255,.11) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.11) 1px,transparent 1px);background-size:24px 24px}
+/* візерунки з минулої версії: показуємо стримано */
+.doc-header.pattern-bubbles::before,.doc-header.pattern-waves::before{background-image:radial-gradient(rgba(255,255,255,.22) 1.4px,transparent 1.6px);background-size:18px 18px}
+.doc-header-bg{position:relative;z-index:1;padding:36px 56px 34px}
+.doc-header-tag{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.2);
+  font-family:'Inter',sans-serif;font-size:12px;font-weight:600;letter-spacing:.2px;margin-bottom:14px;max-width:calc(100% - 90px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-header-title{font-family:'Inter',sans-serif;font-size:30px;font-weight:800;line-height:1.2;margin:0;letter-spacing:-.02em;max-width:82%;color:#fff}
+.doc-header-subtitle{font-family:'Inter',sans-serif;font-size:15px;font-weight:500;line-height:1.5;margin:8px 0 0;max-width:74%;color:rgba(255,255,255,.88)}
+.doc-header-logo{position:absolute;z-index:1;top:50%;right:32px;transform:translateY(-50%);height:40px;max-width:140px;object-fit:contain}
+.doc-header.size-compact .doc-header-bg{padding:22px 56px 22px}
+.doc-header.size-compact .doc-header-title{font-size:24px}
+.doc-header.size-compact .doc-header-tag{margin-bottom:10px}
+.doc-header.size-tall .doc-header-bg{padding:60px 56px 56px}
 .doc-header.size-tall .doc-header-title{font-size:38px}
 .doc-header.align-center .doc-header-bg{text-align:center}
 .doc-header.align-center .doc-header-title,.doc-header.align-center .doc-header-subtitle{margin-left:auto;margin-right:auto}
 .doc-header.align-center .doc-header-tag{max-width:100%}
-.doc-header.align-center .doc-header-logo{right:auto;left:28px}
-.doc-header-wave{position:absolute;left:0;right:0;bottom:-1px;line-height:0;z-index:1}
-.doc-header-wave svg{width:100%;height:34px;display:block}
+.doc-header.align-center .doc-header-logo{position:relative;top:auto;right:auto;transform:none;display:block;margin:0 auto -12px;padding-top:26px}
+/* «Світлий»: легкий відтінок кольору, темний текст і кольорова смуга зліва */
+.doc-header.style-soft{color:var(--text);background:color-mix(in srgb,var(--hc) 9%,var(--surface));border-bottom:1px solid color-mix(in srgb,var(--hc) 22%,transparent)}
+.doc-header.style-soft::after{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--hc)}
+.doc-header.style-soft.align-center::after{left:0;right:0;top:0;bottom:auto;width:auto;height:5px}
+.doc-header.style-soft .doc-header-title{color:var(--text)}
+.doc-header.style-soft .doc-header-subtitle{color:var(--text2)}
+.doc-header.style-soft .doc-header-tag{background:color-mix(in srgb,var(--hc) 16%,transparent);color:color-mix(in srgb,var(--hc) 80%,var(--text))}
+.doc-header.style-soft::before{opacity:.0}
+.doc-header.style-soft.pattern-dots::before,.doc-header.style-soft.pattern-diagonal::before,.doc-header.style-soft.pattern-grid::before{opacity:1;filter:invert(1);mix-blend-mode:multiply;opacity:.35}
 @media(max-width:680px){
-  .doc-header-bg{padding:28px 22px 46px}
-  .doc-header-title{font-size:24px;max-width:100%}
+  .doc-header-bg{padding:24px 22px 24px}
+  .doc-header-title{font-size:23px;max-width:100%}
   .doc-header-subtitle{max-width:100%}
-  .doc-header-logo{height:26px;top:14px;right:16px}
-  .doc-header.size-compact .doc-header-bg{padding:20px 22px 36px}
-  .doc-header.size-tall .doc-header-bg{padding:40px 22px 60px}
+  .doc-header-logo{position:relative;top:auto;right:auto;transform:none;display:block;height:28px;margin:22px 22px -10px}
+  .doc-header.size-compact .doc-header-bg{padding:18px 22px}
+  .doc-header.size-tall .doc-header-bg{padding:40px 22px 38px}
   .doc-header.size-tall .doc-header-title{font-size:28px}
-  .doc-header.align-center .doc-header-logo{left:16px}
 }

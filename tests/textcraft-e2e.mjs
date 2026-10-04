@@ -153,6 +153,24 @@ await step('імпорт Markdown створює новий документ', a
   assert.ok(list >= 2);
 });
 
+await step('шапка: рівна, без дубля заголовка, потрапляє в експорт', async () => {
+  await page.fill('#docTitle', ''); // назва документа порожня — шапка бере текст першого заголовка
+  const t = await page.evaluate(() => document.querySelector('#editor h1').textContent);
+  await page.evaluate(() => document.querySelector('[data-act="header"]').click());
+  await page.waitForSelector('#headerModal.open');
+  assert.equal(await page.evaluate(() => document.getElementById('hdrDupWrap').hidden), false, 'має пропонувати прибрати однаковий заголовок');
+  await page.fill('#hdrTag', 'Інформатика');
+  await page.click('#hdrStyle [data-style="soft"]');
+  await page.click('#hdrApply');
+  const r = await page.evaluate(() => ({ wave: !!document.querySelector('.doc-header-wave'), title: document.querySelector('#docHeaderSlot .doc-header-title').textContent, soft: document.querySelector('#docHeaderSlot .doc-header').classList.contains('style-soft'), h1: document.querySelector('#editor > h1') ? document.querySelector('#editor > h1').textContent : null }));
+  assert.equal(r.wave, false);
+  assert.equal(r.title, t);
+  assert.equal(r.soft, true);
+  assert.notEqual(r.h1, t, 'однаковий заголовок має зникнути з тексту');
+  await page.keyboard.press('Control+KeyZ'); // повернути заголовок у текст для наступних перевірок
+  assert.equal(await page.evaluate(() => document.querySelector('#editor > h1').textContent), t);
+});
+
 await step('друга вкладка з тим самим документом — лише перегляд, зміни не перезаписуються', async () => {
   const p2 = await open(ctx);
   assert.equal(await p2.evaluate(() => window.TextCraft.state.docId), await page.evaluate(() => window.TextCraft.state.docId));

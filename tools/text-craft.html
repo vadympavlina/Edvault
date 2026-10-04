@@ -195,67 +195,41 @@
 <div class="overlay" id="headerModal">
   <div class="modal hdr-modal" role="dialog" aria-labelledby="hdrModalTitle">
     <div class="hdr-top">
-      <div>
-        <h3 id="hdrModalTitle">Шапка документа</h3>
-        <p class="hdr-sub">Кольоровий банер на початку документа — видно і в редакторі, і в експорті.</p>
-      </div>
-      <label class="switch" data-tip="Показувати шапку в документі">
-        <input type="checkbox" id="hdrEnabled"><span class="sw"></span><span class="sw-lbl" id="hdrEnabledLbl">Увімкнено</span>
-      </label>
+      <h3 id="hdrModalTitle">Шапка документа</h3>
       <button class="tb" data-close data-tip="Закрити"><span data-icon="close"></span></button>
     </div>
-    <div class="hdr-grid">
-      <div class="hdr-side">
-        <div class="hdr-label">Попередній перегляд</div>
-        <div class="hdr-page">
-          <div class="hdr-preview" id="hdrPreview"></div>
-          <div class="hdr-lines"><i style="width:62%"></i><i style="width:88%"></i><i style="width:74%"></i><i style="width:40%"></i></div>
+    <div class="hdr-body">
+      <div class="hdr-preview" id="hdrPreview"></div>
+      <div class="hdr-fields">
+        <label class="field-label" for="hdrTitle">Заголовок</label>
+        <input type="text" class="inp" id="hdrTitle" maxlength="140">
+        <label class="hdr-check" id="hdrDupWrap" hidden><input type="checkbox" id="hdrDup" checked><span>Прибрати такий самий заголовок з тексту — щоб він не повторювався двічі</span></label>
+        <div class="hdr-row">
+          <div><label class="field-label" for="hdrTag">Мітка <span class="opt">над заголовком</span></label><input type="text" class="inp" id="hdrTag" maxlength="60" placeholder="Напр. «Урок 3» або «8-Б клас»"></div>
+          <div><label class="field-label" for="hdrSubtitle">Підзаголовок <span class="opt">під заголовком</span></label><input type="text" class="inp" id="hdrSubtitle" maxlength="200" placeholder="Напр. «Здати до п’ятниці»"></div>
         </div>
-        <p class="hdr-hint">Щоб змінити шапку пізніше — просто клікніть на неї в документі.</p>
-      </div>
-      <div class="hdr-form" id="hdrForm">
-        <section>
-          <div class="hdr-label">Шаблон</div>
-          <div class="preset-grid" id="hdrPresets"></div>
-        </section>
-        <section>
-          <div class="hdr-label">Текст</div>
-          <label class="field-label" for="hdrTag">Мітка <span class="opt">над заголовком</span></label>
-          <input type="text" class="inp" id="hdrTag" maxlength="60" placeholder="Напр. «Урок 3» або «8-Б клас»">
-          <label class="field-label" for="hdrTitle">Заголовок</label>
-          <input type="text" class="inp" id="hdrTitle" maxlength="140" placeholder="За замовчуванням — назва документа">
-          <label class="field-label" for="hdrSubtitle">Підзаголовок <span class="opt">необов’язково</span></label>
-          <input type="text" class="inp" id="hdrSubtitle" maxlength="200" placeholder="Напр. «Здати до п’ятниці»">
-        </section>
-        <section>
-          <div class="hdr-label">Колір</div>
-          <div class="color-row" id="hdrColors"></div>
-        </section>
-        <section>
-          <div class="hdr-label">Візерунок</div>
-          <div class="pattern-grid" id="hdrPatterns"></div>
-        </section>
-        <section class="hdr-two">
-          <div>
-            <div class="hdr-label">Висота</div>
-            <div class="seg" id="hdrSize"><button data-size="compact">Мала</button><button data-size="normal">Середня</button><button data-size="tall">Велика</button></div>
+        <div class="field-label">Колір</div>
+        <div class="color-row" id="hdrColors"></div>
+        <div class="hdr-row">
+          <div><div class="field-label">Вигляд</div><div class="seg" id="hdrStyle"></div></div>
+          <div><div class="field-label">Візерунок</div><div class="seg" id="hdrPatterns"></div></div>
+        </div>
+        <details class="hdr-more">
+          <summary>Висота, вирівнювання, логотип</summary>
+          <div class="hdr-row">
+            <div><div class="field-label">Висота</div><div class="seg" id="hdrSize"></div></div>
+            <div><div class="field-label">Вирівнювання</div><div class="seg" id="hdrAlign"></div></div>
           </div>
-          <div>
-            <div class="hdr-label">Вирівнювання</div>
-            <div class="seg" id="hdrAlign"><button data-align="left"><span data-icon="alignLeft"></span>Ліворуч</button><button data-align="center"><span data-icon="alignCenter"></span>Центр</button></div>
-          </div>
-        </section>
-        <section>
-          <div class="hdr-label">Логотип</div>
+          <div class="field-label">Логотип</div>
           <div class="logo-zone" id="hdrLogoZone" tabindex="0" role="button"></div>
-        </section>
+        </details>
       </div>
     </div>
     <div class="modal-actions hdr-actions">
-      <button class="btn btn-danger" id="hdrRemove"><span data-icon="trash"></span>Прибрати шапку</button>
+      <button class="btn btn-danger" id="hdrRemove" hidden><span data-icon="trash"></span>Прибрати шапку</button>
       <span class="grow"></span>
       <button class="btn btn-outline" data-close>Скасувати</button>
-      <button class="btn btn-primary" id="hdrApply">Застосувати</button>
+      <button class="btn btn-primary" id="hdrApply">Додати шапку</button>
     </div>
   </div>
 </div>
@@ -281,6 +255,7 @@
 <script src="textcraft/js/50-tables.js"></script>
 <script src="textcraft/js/60-ui.js"></script>
 <script src="textcraft/js/70-docs.js"></script>
+<script src="textcraft/js/72-header.js"></script>
 <script src="textcraft/js/75-tabs.js"></script>
 <script src="textcraft/js/80-export.js"></script>
 <script src="textcraft/js/90-keys.js"></script>
