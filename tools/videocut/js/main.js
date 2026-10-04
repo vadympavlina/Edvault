@@ -261,7 +261,7 @@ on('storage-error', ({ name }) => {
   toast(`У браузері забракло місця, щоб зберегти «${name}». Монтаж працює, але після перезавантаження сторінки файл треба буде додати знову. Експортуйте відео, коли закінчите.`, 'err', 9000);
 });
 let saveTimer = 0;
-function setSaveState(t) { $('saveState').textContent = t; }
+function setSaveState(t) { const el = $('saveState'); el.textContent = t; el.dataset.s = t === 'Збережено' ? 'ok' : t === 'Не збережено' ? 'err' : 'busy'; }
 function saveNow() {
   clearTimeout(saveTimer);
   const list = [...media.values()].map(m => ({ id: m.id, name: m.name }));

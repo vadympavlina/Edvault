@@ -21,7 +21,17 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;900&family=Rubik:wght@500;800&family=Oswald:wght@500;700&family=Roboto+Slab:wght@500;800&family=Comfortaa:wght@600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- шрифти для субтитрів потрібні не одразу — вантажимо їх у фоні, щоб не гальмувати перший показ -->
+<link rel="stylesheet" media="print" id="ccFontsCss" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;900&family=Rubik:wght@500;800&family=Oswald:wght@500;700&family=Roboto+Slab:wght@500;800&family=Comfortaa:wght@600;700&family=Caveat:wght@600;700&display=swap">
+<script>
+  (function () {
+    var l = document.getElementById('ccFontsCss');
+    function done() { l.media = 'all'; window.__ccFontsReady = true; window.dispatchEvent(new Event('cc-fonts-css')); }
+    if (l.sheet) done(); else { l.addEventListener('load', done); l.addEventListener('error', function () { window.__ccFontsReady = true; window.dispatchEvent(new Event('cc-fonts-css')); }); }
+  })();
+</script>
+<meta name="color-scheme" content="light dark">
 <link rel="stylesheet" href="videocut/app.css">
 <link rel="modulepreload" href="videocut/js/main.js">
 <link rel="modulepreload" href="videocut/js/state.js">
@@ -81,7 +91,11 @@
         <h2>Почніть з відео</h2>
         <p>Перетягніть файл сюди або виберіть його на комп’ютері. Підтримуються MP4, MOV, WebM, AVI, WMV, MPG та інші, а також фото й музика.</p>
         <button class="btn btn-primary btn-lg" id="btnImport3"><span data-icon="upload"></span>Вибрати файли</button>
-        <p class="small">Усе обробляється у вашому браузері — відео нікуди не завантажується.</p>
+        <ol class="se-steps" aria-label="Як це працює">
+          <li><b>1</b><span>Додайте відео</span></li>
+          <li><b>2</b><span>Змонтуйте: різання, текст, субтитри</span></li>
+          <li><b>3</b><span>Експортуйте в MP4</span></li>
+        </ol>
       </div>
     </div>
   </main>
@@ -262,7 +276,7 @@
       <span>Вирізати позначений шматок</span><span><kbd>X</kbd></span>
       <span>Копіювати / вирізати / вставити</span><span><kbd>Ctrl</kbd> <kbd>C</kbd> · <kbd>X</kbd> · <kbd>V</kbd></span>
       <span>Дублювати</span><span><kbd>Ctrl</kbd> <kbd>D</kbd></span>
-      <span>Тимчасово вимкнути прилипання</span><span>тримайте <kbd>Alt</kbd> під час перетягування</span>
+      <span>Тимчасово вимкнути прилипання</span><span><kbd>Alt</kbd> + перетягування</span>
       <span>Переходити між елементами таймлайну</span><span><kbd>Tab</kbd> · <kbd>↑</kbd> <kbd>↓</kbd></span>
       <span>Скасувати / повторити</span><span><kbd>Ctrl</kbd> <kbd>Z</kbd> · <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd></span>
       <span>Додати текст / субтитр</span><span><kbd>T</kbd> <kbd>C</kbd></span>

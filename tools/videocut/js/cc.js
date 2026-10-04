@@ -53,11 +53,17 @@ export const ccSize = (st, k) => st.size * k * ((CC_FONTS[st.font] || {}).scale 
 const fontReady = new Map();
 const fontListeners = new Set();
 export const onCcFont = fn => fontListeners.add(fn); // перемалювати, коли шрифт довантажився
+// CSS з додатковими шрифтами підвантажується у фоні — чекаємо на нього, інакше document.fonts.load нічого не знайде
+const fontsCss = new Promise(res => {
+  if (window.__ccFontsReady) return res();
+  window.addEventListener('cc-fonts-css', res, { once: true });
+  setTimeout(res, 6000);
+});
 export function loadCcFont(st) {
   const F = CC_FONTS[st.font] || CC_FONTS.inter;
   const key = F.fam + (st.bold ? F.b : F.n);
   if (!fontReady.has(key)) {
-    const p = document.fonts && document.fonts.load ? document.fonts.load(`${st.bold ? F.b : F.n} 40px "${F.fam}"`, 'АаЇїZz').catch(() => []) : Promise.resolve([]);
+    const p = document.fonts && document.fonts.load ? fontsCss.then(() => document.fonts.load(`${st.bold ? F.b : F.n} 40px "${F.fam}"`, 'АаЇїZz')).catch(() => []) : Promise.resolve([]);
     fontReady.set(key, Promise.race([p.then(() => fontListeners.forEach(fn => fn())), new Promise(r => setTimeout(r, 4000))]));
   }
   return fontReady.get(key);

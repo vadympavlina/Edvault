@@ -32,7 +32,13 @@ export function initTimeline() {
   on('time', () => { placePlayhead(); if (S.playing) follow(); });
   on('marks', () => { placeRange(); drawRuler(); });
   on('silences', render);
-  scroll.addEventListener('scroll', () => { heads.scrollTop = scroll.scrollTop; drawCanvases(); drawRuler(); });
+  // прокрутка шле багато подій — мініатюри й лінійку малюємо раз на кадр
+  let scrollQueued = 0;
+  scroll.addEventListener('scroll', () => {
+    heads.scrollTop = scroll.scrollTop;
+    if (scrollQueued) return;
+    scrollQueued = requestAnimationFrame(() => { scrollQueued = 0; drawCanvases(); drawRuler(); });
+  }, { passive: true });
   window.addEventListener('resize', () => { render(); });
   scroll.addEventListener('wheel', onWheel, { passive: false });
   inner.addEventListener('pointerdown', onDown);
