@@ -27,7 +27,9 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<!-- шрифт для коду потрібен не одразу — вантажимо його у фоні, щоб не затримувати показ сторінки -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 
 <!-- ═══════════ ДИЗАЙН-ТОКЕНИ (спільні з експортом) ═══════════ -->
 <link rel="stylesheet" id="tcTokens" href="textcraft/tokens.css">
@@ -42,8 +44,6 @@
 
 <!-- ═══════ TOPBAR ═══════ -->
 <header class="topbar">
-  <a class="back-link" href="../tools.html" data-tip="До всіх інструментів Edvault"><span data-icon="back"></span><span class="hide-sm">Інструменти</span></a>
-  <div class="topbar-sep hide-sm"></div>
   <button class="btn btn-icon" data-act="docs" data-tip="Мої документи"><span data-icon="docs"></span></button>
   <div class="brand hide-md">
     <div class="brand-mark"><span data-icon="logo"></span></div>
@@ -252,6 +252,7 @@
 <script src="textcraft/js/20-commands.js"></script>
 <script src="textcraft/js/30-input.js"></script>
 <script src="textcraft/js/40-paste.js"></script>
+<script src="textcraft/js/45-highlight.js"></script>
 <script src="textcraft/js/50-tables.js"></script>
 <script src="textcraft/js/60-ui.js"></script>
 <script src="textcraft/js/70-docs.js"></script>

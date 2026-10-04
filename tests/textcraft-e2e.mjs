@@ -129,6 +129,21 @@ await step('експорт у HTML: зміст, без редагування, �
   assert.match(text, /class="x-toc"/);
   assert.match(text, /tc-copy/);
   assert.doesNotMatch(text, /contenteditable/);
+  assert.match(text, /<span class="tk-kw">print<\/span>|<span class="tk-fn">print<\/span>|<span class="tk-num">1<\/span>/, 'код має бути підсвічений');
+});
+
+await step('підсвітка коду в редакторі не змінює текст блоку', async () => {
+  const r = await page.evaluate(() => ({ n: CSS.highlights ? [...CSS.highlights.keys()].filter(k => k.startsWith('tc-')).length : -1, inner: document.querySelector('#editor pre.tc-code code').innerHTML }));
+  assert.ok(r.n > 0, 'мають бути зареєстровані підсвітки');
+  assert.doesNotMatch(r.inner, /<span/);
+});
+
+await step('назва без заповнення береться з першого заголовка; посилання «Інструменти» немає', async () => {
+  await page.fill('#docTitle', '');
+  await page.evaluate(() => document.getElementById('docTitle').dispatchEvent(new Event('input', { bubbles: true })));
+  const r = await page.evaluate(() => ({ ph: document.getElementById('docTitle').placeholder, h1: document.querySelector('#editor h1').textContent, back: document.querySelectorAll('a[href$="tools.html"]').length }));
+  assert.equal(r.ph, r.h1);
+  assert.equal(r.back, 0);
 });
 
 await step('експорт у Markdown', async () => {

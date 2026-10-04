@@ -206,6 +206,7 @@ function markDirty() {
   scheduleSave();
 }
 function onContentChanged() {
+  updateDocTitle();
   state.version++;
   markDirty();
   Stats.schedule();
@@ -216,14 +217,17 @@ function scheduleSave() {
   clearTimeout(state.saveTimer);
   state.saveTimer = setTimeout(() => saveNow(), 700);
 }
+// Назва з тексту: перший заголовок, інакше перший рядок
+function autoLabel() {
+  const clean = el => (el.textContent || '').replace(ZW, '').replace(/\s+/g, ' ').trim();
+  const h = $$('h1,h2', editor).find(x => !x.closest('.tc-block,td,th,li,blockquote') && clean(x));
+  if (h) return clean(h).slice(0, 80);
+  for (const el of editor.children) { const s = clean(el); if (s) return s.slice(0, 80); }
+  return '';
+}
 function docLabel() {
   const t = $('#docTitle').value.trim();
-  if (t) return t;
-  for (const el of editor.children) {
-    const s = (el.textContent || '').replace(ZW, '').replace(/\s+/g, ' ').trim();
-    if (s) return s.slice(0, 80);
-  }
-  return 'Без назви';
+  return t || autoLabel() || 'Без назви';
 }
 function serializeForStore(root) {
   const clone = root.cloneNode(true);
@@ -315,7 +319,12 @@ function loadDoc(rec) {
   if ($('#drawer').classList.contains('open')) renderDocList();
   Tabs.claim(rec.id);
 }
-function updateDocTitle() { document.title = (docLabel() !== 'Без назви' ? docLabel() + ' — ' : '') + 'TextCraft · Edvault'; }
+function updateDocTitle() {
+  // порожнє поле назви показує сірим назву, взяту з тексту, — видно, як документ називатиметься в списку й при експорті
+  const title = $('#docTitle'), auto = autoLabel();
+  if (title.placeholder !== (auto || 'Без назви')) title.placeholder = auto || 'Без назви';
+  title.title = title.value ? '' : 'Назва взята з першого заголовка. Клікніть, щоб задати свою';
+  document.title = (docLabel() !== 'Без назви' ? docLabel() + ' — ' : '') + 'TextCraft · Edvault'; }
 async function openDoc(id) {
   if (id === state.docId) { closeDrawer(); return; }
   await flushSave();

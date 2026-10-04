@@ -46,6 +46,8 @@ function exportClone() {
   const origBlocks = $$('.tc-prompt,pre.tc-code', editor);
   $$('.tc-prompt,pre.tc-code', c).forEach((b, i) => {
     b.setAttribute('data-copy', plainText(origBlocks[i] || b));
+    const code = b.tagName === 'PRE' && b.querySelector('code');
+    if (code && b.dataset.lang !== 'text') code.innerHTML = hlHtml(code.textContent, b.dataset.lang || '');
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'tc-copy';

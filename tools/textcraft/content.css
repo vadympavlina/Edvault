@@ -217,3 +217,13 @@
   .doc-header.size-tall .doc-header-bg{padding:40px 22px 38px}
   .doc-header.size-tall .doc-header-title{font-size:28px}
 }
+
+/* ── Підсвітка коду (у редакторі — через ::highlight, в експорті — через span.tk-*) ── */
+.tc-content pre.tc-code .tk-kw{color:#c792ea}
+.tc-content pre.tc-code .tk-str{color:#c3e88d}
+.tc-content pre.tc-code .tk-num,.tc-content pre.tc-code .tk-lit{color:#f78c6c}
+.tc-content pre.tc-code .tk-com{color:#7f8aa3;font-style:italic}
+.tc-content pre.tc-code .tk-fn{color:#82aaff}
+.tc-content pre.tc-code .tk-tag{color:#f07178}
+.tc-content pre.tc-code .tk-attr{color:#ffcb6b}
+.tc-content pre.tc-code .tk-prop{color:#89ddff}

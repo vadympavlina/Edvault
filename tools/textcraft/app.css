@@ -24,12 +24,6 @@ svg{flex-shrink:0}
   height:56px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px;
   background:var(--surface);border-bottom:1px solid var(--border);z-index:200;position:relative;
 }
-.back-link{
-  display:flex;align-items:center;gap:6px;height:34px;padding:0 10px 0 8px;border-radius:var(--r);
-  color:var(--text2);text-decoration:none;font-size:13px;font-weight:500;flex-shrink:0;
-  transition:background .12s,color .12s;
-}
-.back-link:hover{background:var(--surface2);color:var(--text)}
 .topbar-sep{width:1px;height:22px;background:var(--border);margin:0 4px;flex-shrink:0}
 .brand{display:flex;align-items:center;gap:9px;flex-shrink:0;margin-right:4px}
 .brand-mark{
@@ -551,3 +545,13 @@ body.tc-readonly #editor{cursor:default}
 .hdr-actions{margin:0;padding:12px 16px 14px 22px;border-top:1px solid var(--border)}
 #hdrRemove[hidden]{display:none}
 @media(max-width:560px){.hdr-row{grid-template-columns:1fr}}
+
+/* ── Підсвітка коду в редакторі (CSS Custom Highlight API) ── */
+::highlight(tc-kw){color:#c792ea}
+::highlight(tc-str){color:#c3e88d}
+::highlight(tc-num),::highlight(tc-lit){color:#f78c6c}
+::highlight(tc-com){color:#7f8aa3}
+::highlight(tc-fn){color:#82aaff}
+::highlight(tc-tag){color:#f07178}
+::highlight(tc-attr){color:#ffcb6b}
+::highlight(tc-prop){color:#89ddff}
