@@ -96,6 +96,29 @@ await step('проєкт зберігається у файл і відкрив�
   await page.waitForFunction(b => window.VideoCut.S.project.clips.length === b.clips && window.VideoCut.media.size === b.media, before, { timeout: 15000 });
 });
 
+await step('копіювання й вставка елемента у позиції курсора', async () => {
+  await page.evaluate(() => document.activeElement.blur());
+  await VC(() => window.VideoCut.seek(1));
+  await page.keyboard.press('KeyT'); await page.keyboard.press('Escape');
+  const o0 = await VC(() => window.VideoCut.S.project.overlays.length);
+  await page.locator('.it.ov').first().click();
+  await page.keyboard.press('Control+KeyC');
+  await VC(() => window.VideoCut.seek(6));
+  await page.keyboard.press('Control+KeyV');
+  const o = await VC(() => window.VideoCut.S.project.overlays.map(x => x.start));
+  assert.equal(o.length, o0 + 1);
+  assert.ok(o.some(x => Math.abs(x - 6) < 0.05));
+});
+
+await step('вікна «Прибрати паузи» і «Озвучення» відкриваються', async () => {
+  await page.evaluate(() => document.activeElement.blur());
+  await page.evaluate(() => document.querySelector('[data-m="4"]').click());
+  await page.locator('.mb-it', { hasText: 'Прибрати паузи' }).click();
+  assert.ok(await page.locator('#silModal.open').count());
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#silModal.open').count(), 0);
+});
+
 await step('жодної помилки в консолі сторінки', async () => assert.deepEqual(errors, []));
 
 await browser.close(); srv.close();

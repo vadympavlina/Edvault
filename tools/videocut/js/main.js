@@ -5,11 +5,14 @@ import { initPlayer, resizeCanvas, seek, toggle, pause, play, snapshot, requestD
 import { initTimeline, render as renderTimeline, zoomBy, zoomFit, setZoom } from './timeline.js';
 import { initLibrary, initInspector, importCaptionFile, showTab, showProject } from './panels.js';
 import { initPreviewLayer, renderHandles } from './preview.js';
-import { addToTimeline, addOverlay, splitAt, deleteSel, duplicateSel, cutRange, addCaption, findSilences, cutRanges, addVoice, freezeFrame, normalizeSel, transitionsAll, addTitleCard, addLayerAt, TEXT_PRESETS, CARD_STYLES } from './ops.js';
+import { addToTimeline, addOverlay, splitAt, deleteSel, duplicateSel, copySel, pasteClip, canPaste, cutRange, addCaption, findSilences, cutRanges, addVoice, freezeFrame, normalizeSel, transitionsAll, addTitleCard, addLayerAt, TEXT_PRESETS, CARD_STYLES } from './ops.js';
 import { initMenu } from './menu.js';
 import { LOOKS, TRANSITIONS } from './render.js';
 import { toSrt, toVtt } from './srt.js';
-import { exportVideo, exportAudio, exportSize, detectCodecs, canExport } from './export.js';
+import { exportVideo, exportAudio } from './export.js';
+import { openExport, isExporting } from './export-ui.js';
+import { openSilences } from './silences.js';
+import { openVoice, stopVoice, isRecording } from './voice.js';
 import { DB, takeHandoff } from './db.js';
 import { packProject, unpackProject, PROJ_EXT } from './projfile.js';
 import { initAsr, openAsr, asrBusy } from './asr.js';
@@ -102,7 +105,7 @@ on('project', syncTitle);
 $('btnHelp').addEventListener('click', () => openModal('helpModal'));
 document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => {
   if (o.id === 'confirmModal') return;
-  if (e.target === o || e.target.closest('[data-close]')) { if (o.id === 'exportModal' && exporting) return; closeModal(o.id); }
+  if (e.target === o || e.target.closest('[data-close]')) { if (o.id === 'exportModal' && isExporting()) return; closeModal(o.id); }
 }));
 
 // порожній стан перегляду
@@ -195,11 +198,11 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       const o = document.querySelector('.overlay.open');
       if (o.id === 'confirmModal') $('confirmNo').click();
-      else if (!(o.id === 'exportModal' && exporting)) closeModal(o.id);
+      else if (!(o.id === 'exportModal' && isExporting())) closeModal(o.id);
     }
     return;
   }
-  if (rec) { // під час запису голосу — лише зупинка
+  if (isRecording()) { // під час запису голосу — лише зупинка
     if (e.code === 'Space' || e.key === 'Escape') { e.preventDefault(); stopVoice(); }
     return;
   }
@@ -211,6 +214,9 @@ document.addEventListener('keydown', e => {
   if (mod && e.code === 'KeyS') { e.preventDefault(); saveNow(); toast('Проєкт збережено в цьому браузері', 'ok'); return; }
   if (typing) { if (e.key === 'Escape') e.target.blur(); return; }
   if (mod && e.code === 'KeyD') { e.preventDefault(); duplicateSel(); return; }
+  if (mod && e.code === 'KeyC') { e.preventDefault(); copySel(); return; }
+  if (mod && e.code === 'KeyX') { e.preventDefault(); copySel(true); return; }
+  if (mod && e.code === 'KeyV') { e.preventDefault(); pasteClip(); return; }
   if (mod && e.code === 'KeyO') { e.preventDefault(); pickFiles(''); return; }
   if (mod || e.altKey) return;
   const f = frame();
@@ -239,125 +245,6 @@ document.addEventListener('keydown', e => {
     default: return;
   }
 });
-
-// ══════════ Експорт ══════════
-let exporting = null, lastExport = null;
-const exOpt = { format: 'mp4', short: 1080, quality: 'high', range: 'all' };
-function segPick(id, key, conv = v => v) {
-  $(id).addEventListener('click', e => {
-    const b = e.target.closest('button[data-v]'); if (!b || b.disabled) return;
-    $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-    exOpt[key] = conv(b.dataset.v);
-    updateExportInfo();
-  });
-}
-segPick('exFormat', 'format');
-segPick('exRes', 'short', Number);
-segPick('exQuality', 'quality');
-segPick('exRange', 'range');
-$('btnExport').addEventListener('click', openExport);
-on('open-export', openExport);
-
-function openExport() {
-  if (!duration()) { toast('Спочатку додайте відео на таймлайн'); return; }
-  if (!canExport()) { toast('Експорт потребує сучасного браузера: Chrome, Edge, Safari 17+ або Firefox 130+', 'err', 6000); return; }
-  pause();
-  $('exSetup').hidden = false; $('exRun').hidden = true; $('exDone').hidden = true;
-  $('exName').value = S.project.name && S.project.name !== 'Новий проєкт' ? S.project.name : defaultName();
-  const hasMarks = S.markIn != null && S.markOut != null && S.markOut - S.markIn > 0.1;
-  $('exRangeWrap').hidden = !hasMarks;
-  if (!hasMarks) exOpt.range = 'all';
-  updateExportInfo();
-  openModal('exportModal');
-}
-function defaultName() {
-  const d = new Date(), p = n => String(n).padStart(2, '0');
-  return `відео-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-const exRange = () => (exOpt.range === 'marks' && S.markIn != null && S.markOut != null ? [S.markIn, S.markOut] : [0, duration()]);
-
-// приблизний розмір файлу, байт
-function estimateSize(len, W, H, audioOnly = false) {
-  const vbr = ({ low: 1, medium: 2.5, high: 5, max: 9 }[exOpt.quality] || 5) * (W * H) / (1920 * 1080) + 0.16;
-  return (audioOnly ? 0.16 : vbr) * 1e6 / 8 * len;
-}
-let infoSeq = 0;
-async function updateExportInfo() {
-  const audioOnly = exOpt.format === 'audio';
-  $('exResWrap').hidden = audioOnly;
-  $('exExt').textContent = audioOnly ? '.m4a' : '.' + exOpt.format;
-  const [a, b] = exRange();
-  const len = b - a;
-  const { W, H } = exportSize(exOpt.short);
-  const seq = ++infoSeq;
-  $('exInfo').innerHTML = 'Перевіряємо можливості браузера…';
-  const fmtKey = audioOnly ? 'mp4' : exOpt.format;
-  const codecs = await detectCodecs(fmtKey, W, H).catch(() => ({}));
-  if (seq !== infoSeq) return;
-  const names = { avc: 'H.264', hevc: 'H.265', vp9: 'VP9', vp8: 'VP8', av1: 'AV1', aac: 'AAC', opus: 'Opus', vorbis: 'Vorbis' };
-  const size = estimateSize(len, W, H, audioOnly);
-  let html;
-  if (audioOnly) html = codecs.a ? `Звук: <b>${names[codecs.a] || codecs.a}</b> · тривалість <b>${fmt(len)}</b> · приблизно <b>${fmtBytes(size)}</b>` : '<span class="warn">Браузер не вміє кодувати звук.</span>';
-  else if (!codecs.v) html = `<span class="warn">Браузер не вміє кодувати відео у ${exOpt.format.toUpperCase()} такого розміру. Спробуйте інший формат або меншу якість.</span>`;
-  else html = `<b>${W}×${H}</b>, ${S.project.fps} к/с · відео <b>${names[codecs.v] || codecs.v}</b>${codecs.a ? `, звук <b>${names[codecs.a] || codecs.a}</b>` : ''}<br>Тривалість <b>${fmt(len)}</b> · файл приблизно <b>${fmtBytes(size)}</b>` +
-    (exOpt.format === 'mp4' && codecs.v !== 'avc' ? '<br><span class="warn">Цей браузер не має кодека H.264 — MP4 може не відкритися на старих пристроях.</span>' : '');
-  $('exInfo').innerHTML = html;
-  $('exStart').disabled = audioOnly ? !codecs.a : !codecs.v;
-}
-
-$('exStart').addEventListener('click', startExport);
-$('exCancel').addEventListener('click', () => { if (exporting) exporting.abort(); });
-$('exAgain').addEventListener('click', () => { if (lastExport) downloadBlob(lastExport.blob, lastExport.name); });
-
-async function startExport() {
-  const audioOnly = exOpt.format === 'audio';
-  const ext = audioOnly ? 'm4a' : exOpt.format;
-  const name = safeName($('exName').value || defaultName()) + '.' + ext;
-  const range = exRange();
-  let writable = null;
-  // довгі відео пишемо одразу у файл (без утримання всього в пам'яті), якщо браузер це дозволяє
-  const { W: ew, H: eh } = exportSize(exOpt.short);
-  const estBytes = estimateSize(range[1] - range[0], ew, eh, audioOnly);
-  // без запису прямо у файл (Safari, Firefox) усе відео збирається в пам'яті — для великих файлів це ризик
-  if (!audioOnly && !window.showSaveFilePicker && estBytes > 800e6) {
-    const ok = await confirmDialog('Великий файл', `Готове відео займе близько ${fmtBytes(estBytes)}, а цей браузер збирає його в пам’яті — вкладка може завершитися помилкою. Надійніше експортувати в Chrome чи Edge, або вибрати меншу роздільність чи якість. Продовжити тут?`, 'Продовжити', false);
-    if (!ok) return;
-  }
-  if (!audioOnly && window.showSaveFilePicker && (range[1] - range[0] > 600 || estBytes > 250e6)) {
-    try {
-      const h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'Відео', accept: { [exOpt.format === 'mp4' ? 'video/mp4' : 'video/webm']: ['.' + ext] } }] });
-      writable = await h.createWritable();
-    } catch (e) { if (e.name === 'AbortError') return; writable = null; }
-  }
-  $('exSetup').hidden = true; $('exRun').hidden = false;
-  $('exBar').style.width = '0%'; $('exPct').textContent = '0%'; $('exEta').textContent = 'Готуємо…';
-  const ctrl = new AbortController();
-  exporting = ctrl;
-  const t0 = performance.now();
-  const onProgress = (p, info) => {
-    $('exBar').style.width = (p * 100).toFixed(1) + '%';
-    $('exPct').textContent = Math.floor(p * 100) + '%';
-    if (info && info.eta != null) $('exEta').textContent = `Залишилось ≈ ${fmt(info.eta)}${info.speed ? ` · швидкість ${info.speed.toFixed(1).replace('.', ',')}×` : ''}`;
-  };
-  try {
-    const opts = { format: audioOnly ? 'mp4' : exOpt.format, short: exOpt.short, quality: exOpt.quality, fps: S.project.fps, range, onProgress, signal: ctrl.signal, writable, onWarn: m => toast(m, '', 7000) };
-    const blob = audioOnly ? await exportAudio(opts) : await exportVideo(opts);
-    const secs = (performance.now() - t0) / 1000;
-    if (blob) { lastExport = { blob, name }; downloadBlob(blob, name); }
-    $('exRun').hidden = true; $('exDone').hidden = false;
-    $('exAgain').hidden = !blob;
-    $('exDoneInfo').textContent = `${name}${blob ? ' · ' + fmtBytes(blob.size) : ''} · за ${fmt(secs)}`;
-    toast('Експорт завершено', 'ok');
-    emit('exported');
-  } catch (e) {
-    console.error(e);
-    if (writable) try { await writable.abort(); } catch (er) { /* ignore */ }
-    $('exRun').hidden = true; $('exSetup').hidden = false;
-    if (e.name === 'AbortError') toast('Експорт скасовано');
-    else toast('Помилка експорту: ' + (e.message || e), 'err', 7000);
-  } finally { exporting = null; }
-}
-window.addEventListener('beforeunload', e => { if (exporting) { e.preventDefault(); e.returnValue = ''; } });
 
 // ══════════ Автозбереження ══════════
 let storageWarned = false;
@@ -503,130 +390,7 @@ if (window.matchMedia('(max-width: 980px)').matches) toast('Редактор н�
 // для автотестів
 window.VideoCut = { S, media, seek, commit, exportVideo, exportAudio, duration, layout };
 
-// ══════════ Прибрати паузи ══════════
-const silOpt = { level: 'mid', minLen: 0.8 };
-let silFound = [];
-function silSeg(id, key, conv) {
-  $(id).addEventListener('click', e => {
-    const b = e.target.closest('button[data-v]'); if (!b) return;
-    $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-    silOpt[key] = conv(b.dataset.v);
-    analyzeSilences();
-  });
-}
-silSeg('silLevel', 'level', v => v);
-silSeg('silMin', 'minLen', Number);
-function analyzeSilences() {
-  const r = findSilences({ level: silOpt.level, minLen: silOpt.minLen, pad: 0.15 });
-  silFound = r.list;
-  S.silPreview = silFound;
-  emit('silences');
-  const total = silFound.reduce((a, [x, y]) => a + y - x, 0);
-  let html;
-  if (r.missing && !silFound.length) html = '<span class="warn">Звук ще аналізується — зачекайте кілька секунд і відкрийте це вікно знову.</span>';
-  else if (!silFound.length) html = 'Пауз такої довжини не знайдено. Спробуйте коротшу паузу або сильніший режим.';
-  else html = `Знайдено <b>${silFound.length}</b> ${silFound.length === 1 ? 'паузу' : silFound.length < 5 ? 'паузи' : 'пауз'} · разом <b>${fmt(total, true)}</b>. Відео стане <b>${fmt(mainEnd() - total, true)}</b> замість ${fmt(mainEnd(), true)}.`;
-  $('silInfo').innerHTML = html;
-  $('silApply').disabled = !silFound.length;
-  $('silApply').lastChild.textContent = silFound.length ? `Прибрати ${silFound.length}` : 'Прибрати';
-}
-function openSilences() {
-  if (!S.project.clips.length) { toast('Спочатку додайте відео'); return; }
-  pause();
-  openModal('silModal');
-  analyzeSilences();
-  if (duration() > 0) zoomFit();
-}
-function clearSilPreview() { if (S.silPreview) { S.silPreview = null; emit('silences'); } }
-$('btnSilences').addEventListener('click', openSilences);
-on('open-silences', openSilences);
-$('silApply').addEventListener('click', () => {
-  if (!silFound.length) return;
-  const n = silFound.length;
-  const total = cutRanges(silFound);
-  silFound = [];
-  closeModal('silModal');
-  clearSilPreview();
-  toast(`Прибрано ${n} ${n === 1 ? 'паузу' : n < 5 ? 'паузи' : 'пауз'} · ${fmt(total, true)}`, 'ok', 4000);
-});
-new MutationObserver(() => { if (!$('silModal').classList.contains('open')) clearSilPreview(); }).observe($('silModal'), { attributes: true, attributeFilter: ['class'] });
-
-// ══════════ Озвучення (запис голосу) ══════════
-let rec = null; // { recorder, stream, chunks, start, mime, t0, timer }
-function openVoice() {
-  if (rec) { stopVoice(); return; }
-  if (!duration()) { toast('Спочатку додайте відео, яке будете озвучувати'); return; }
-  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { toast('Цей браузер не вміє записувати звук. Спробуйте Chrome або Edge.', 'err', 5000); return; }
-  pause();
-  if (S.t >= duration() - 0.5) seek(0);
-  $('voFrom').textContent = fmt(S.t, true);
-  $('voInfo').textContent = 'Браузер попросить дозвіл на мікрофон.';
-  openModal('voModal');
-}
-on('open-voice', openVoice);
-$('btnVoice').addEventListener('click', openVoice);
-$('btnRecStop').addEventListener('click', () => stopVoice());
-$('voStart').addEventListener('click', async () => {
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-  } catch (e) {
-    $('voInfo').innerHTML = '<span class="warn">Немає доступу до мікрофона. Дозвольте його в адресному рядку браузера й спробуйте ще раз.</span>';
-    return;
-  }
-  closeModal('voModal');
-  const mute = $('voMute').checked;
-  // відлік 3-2-1
-  const cnt = $('recCount');
-  cnt.hidden = false;
-  for (const n of [3, 2, 1]) { cnt.textContent = n; cnt.classList.remove('pop'); void cnt.offsetWidth; cnt.classList.add('pop'); await new Promise(r => setTimeout(r, 800)); }
-  cnt.hidden = true;
-  const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].find(t => MediaRecorder.isTypeSupported(t)) || '';
-  const recorder = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 128000 } : {});
-  rec = { recorder, stream, chunks: [], start: S.t, mime: recorder.mimeType || mime, t0: performance.now() };
-  recorder.ondataavailable = e => { if (e.data && e.data.size) rec.chunks.push(e.data); };
-  const started = new Promise(res => { recorder.onstart = res; });
-  recorder.start(250);
-  await started;
-  rec.latency = Math.max(0, Math.min(0.5, stream.getAudioTracks()[0]?.getSettings?.().latency || 0));
-  S.recMute = mute;
-  document.body.classList.add('recording');
-  $('recBadge').hidden = false;
-  rec.timer = setInterval(() => { $('recTime').textContent = fmt((performance.now() - rec.t0) / 1000); }, 200);
-  play();
-});
-// відео дограло до кінця — завершуємо запис
-on('play', () => { if (rec && !S.playing && !rec.stopping) stopVoice(); });
-
-async function stopVoice() {
-  if (!rec || rec.stopping) return;
-  const r = rec;
-  r.stopping = true;
-  clearInterval(r.timer);
-  const done = new Promise(res => { r.recorder.onstop = res; });
-  try { r.recorder.stop(); } catch (e) { /* ignore */ }
-  pause();
-  await done;
-  r.stream.getTracks().forEach(t => t.stop());
-  S.recMute = false;
-  document.body.classList.remove('recording');
-  $('recBadge').hidden = true;
-  rec = null;
-  const blob = new Blob(r.chunks, { type: r.mime || 'audio/webm' });
-  if (blob.size < 1000) { toast('Запис занадто короткий'); return; }
-  const ext = /mp4/.test(r.mime) ? 'm4a' : /ogg/.test(r.mime) ? 'ogg' : 'webm';
-  try {
-    toast('Обробляємо запис…', '', 20000);
-    const m = await addMedia(blob, `Голос ${fmt(r.start).replace(':', '-')}.${ext}`);
-    addVoice(m, r.start, r.latency || 0);
-    seek(r.start);
-    toast('Голос додано на звукову доріжку. Відтворіть, щоб послухати', 'ok', 4500);
-  } catch (e) {
-    console.error(e);
-    toast('Не вдалося зберегти запис: ' + (e.message || e), 'err', 6000);
-  }
-}
-window.addEventListener('beforeunload', e => { if (rec || asrBusy() || converting()) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (isRecording() || asrBusy() || converting()) { e.preventDefault(); e.returnValue = ''; } });
 
 // ══════════ Меню (Файл · Редагування · …) ══════════
 // Рідше вживані дії живуть тут, щоб не займати місце на екрані.
@@ -675,6 +439,9 @@ window.addEventListener('beforeunload', e => { if (rec || asrBusy() || convertin
       { label: 'Повторити', key: 'Ctrl+Shift+Z', enabled: canRedo, run: () => redo() },
       { sep: true },
       { label: 'Розрізати в позиції курсора', key: 'S', enabled: has, run: () => splitAt() },
+      { label: 'Копіювати', key: 'Ctrl+C', enabled: () => !!S.sel, run: () => copySel() },
+      { label: 'Вирізати', key: 'Ctrl+X', enabled: () => !!S.sel, run: () => copySel(true) },
+      { label: 'Вставити в позиції курсора', key: 'Ctrl+V', enabled: canPaste, run: () => pasteClip() },
       { label: 'Дублювати', key: 'Ctrl+D', enabled: () => !!S.sel, run: () => duplicateSel() },
       { label: 'Видалити виділене', key: 'Delete', enabled: () => !!S.sel, run: () => deleteSel() },
       { sep: true },
@@ -729,6 +496,7 @@ window.addEventListener('beforeunload', e => { if (rec || asrBusy() || convertin
       { label: 'Панель медіа й елементів', checked: () => !document.body.classList.contains('hide-lib'), run: () => narrow() ? document.body.classList.toggle('show-lib') : panel('hide-lib', document.body.classList.contains('hide-lib')) },
       { sep: true },
       { label: 'Прилипання на таймлайні', checked: () => S.snap, run: () => $('btnSnapToggle').click() },
+      { label: 'Повторювати відтворення', checked: () => !!S.loop, run: () => { S.loop = !S.loop; toast(S.loop ? 'Відтворення повторюється' : 'Повтор вимкнено'); } },
       { label: 'Наблизити таймлайн', key: '+', run: () => zoomBy(1.5) },
       { label: 'Віддалити таймлайн', key: '−', run: () => zoomBy(1 / 1.5) },
       { label: 'Показати весь таймлайн', key: 'Shift+Z', run: zoomFit },

@@ -181,7 +181,12 @@ function tick(now) {
     const m = media.get(l.clip.mediaId);
     if (m && m.kind === 'video' && !m.el.paused && m.el.readyState < 3) { startPerf = now; startT = S.t; t = S.t; }
   }
-  if (t >= d) { S.t = d; pause(); emit('time'); return; }
+  // відео поверх основного теж може «підвисати» — тоді час не біжить уперед за ним
+  if (t > S.t) for (const o of activeOv(S.t)) { const v = ovEls.get(o.id); if (v && !v.paused && v.readyState < 3 && v.readyState > 0) { startPerf = now; startT = S.t; t = S.t; break; } }
+  if (t >= d) {
+    if (S.loop && !S.recMute && d > 0.2) { S.t = 0; startPerf = now; startT = 0; syncElements(true); draw(); emit('time'); raf = requestAnimationFrame(tick); return; }
+    S.t = d; pause(); emit('time'); return;
+  }
   S.t = t;
   syncElements(false, L);
   draw();

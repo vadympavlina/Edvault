@@ -404,3 +404,39 @@ export async function freezeFrame(dur = 3) {
   toast(`Стоп-кадр на ${dur} с додано`, 'ok');
   return true;
 }
+
+// ── копіювати / вирізати / вставити ──
+let clipboard = null; // { kind, item }
+export const canPaste = () => !!clipboard;
+export function copySel(cut = false) {
+  const o = findSel(), s = S.sel;
+  if (!o || !s) { toast('Спочатку виділіть елемент на таймлайні'); return false; }
+  clipboard = { kind: s.kind, item: structuredClone(o) };
+  if (cut) { deleteSel(); toast('Вирізано — Ctrl+V вставить у позиції курсора'); }
+  else toast('Скопійовано — Ctrl+V вставить у позиції курсора');
+  return true;
+}
+export function pasteClip() {
+  if (!clipboard) { toast('Нічого вставляти — спершу скопіюйте елемент (Ctrl+C)'); return false; }
+  const { kind, item } = clipboard, p = S.project;
+  const copy = { ...structuredClone(item), id: uid(item.id[0]) };
+  if (kind !== 'caption' && item.mediaId && !media.has(item.mediaId)) { toast('Файл цього елемента вже прибрано з проєкту', 'err'); return false; }
+  if (kind === 'clip') {
+    delete copy.tr;
+    // вставляємо на межу кліпу, найближчу до курсора
+    const L = layout();
+    let idx = p.clips.length;
+    const cur = L.find(x => S.t >= x.start && S.t < x.end);
+    if (cur) { const i = L.indexOf(cur); idx = S.t - cur.start < cur.end - S.t ? i : i + 1; }
+    const at = idx < L.length ? L[idx].start : mainEnd();
+    p.clips.splice(idx, 0, copy);
+    rippleShift(at, clipDur(copy));
+  } else {
+    copy.start = Math.max(0, S.t);
+    (kind === 'overlay' ? p.overlays : kind === 'caption' ? p.captions : p.music).push(copy);
+    if (kind === 'caption') p.captions.sort((a, b) => a.start - b.start);
+  }
+  commit();
+  select(kind, copy.id);
+  return true;
+}
