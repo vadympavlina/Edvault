@@ -1,0 +1,40 @@
+/* TextCraft · Edvault — кольори, тіні, шрифти (спільні для редактора й експортованого HTML) */
+:root{
+  color-scheme:light;
+  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f7f8fa;--surface3:#eef0f4;
+  --border:#e2e5ea;--border2:#d0d5dd;
+  --text:#1a1d23;--text2:#4b5563;--muted:#8a919e;
+  --accent:#4F6BF4;--accent-hover:#3d57e0;--accent-light:#eef0fe;--accent-border:#c7d0fc;--on-accent:#ffffff;
+  --danger:#ef4444;--danger-light:#fef2f2;--success:#10b981;--warn:#f59e0b;
+  --shadow-sm:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.04);
+  --shadow-md:0 4px 16px rgba(16,24,40,.10),0 2px 6px rgba(16,24,40,.06);
+  --shadow-lg:0 24px 60px rgba(16,24,40,.16),0 4px 16px rgba(16,24,40,.08);
+  --r-sm:6px;--r:8px;--r-lg:12px;
+  --tip-bg:#eef2ff;--tip-bd:#d4dcfd;--tip-ac:#4F6BF4;
+  --ok-bg:#ecfdf5;--ok-bd:#bbf0d6;--ok-ac:#10b981;
+  --warn-bg:#fffbeb;--warn-bd:#fbe3a4;--warn-ac:#e09100;
+  --err-bg:#fef2f2;--err-bd:#fbd0d0;--err-ac:#ef4444;
+  --note-bg:#f5f3ff;--note-bd:#e0d9fd;--note-ac:#8b5cf6;
+  --code-bg:#1d2130;--code-head:#161927;--code-text:#e6e9f2;--code-label:#9aa3bb;
+  --icode-bg:#f1f3f9;--icode-text:#c0255c;
+  --float-bg:#1f2230;--float-text:#e9ebf2;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1117;--surface:#171a22;--surface2:#1d212b;--surface3:#252a35;
+  --border:#2a2f3b;--border2:#394050;
+  --text:#e7e9ef;--text2:#b3b9c6;--muted:#7f8797;
+  --accent:#7189ff;--accent-hover:#8a9dff;--accent-light:rgba(113,137,255,.14);--accent-border:rgba(113,137,255,.38);--on-accent:#0f1117;
+  --danger:#f87171;--danger-light:rgba(248,113,113,.12);--success:#34d399;--warn:#fbbf24;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.4);
+  --shadow-md:0 6px 20px rgba(0,0,0,.45);
+  --shadow-lg:0 24px 60px rgba(0,0,0,.6);
+  --tip-bg:rgba(113,137,255,.11);--tip-bd:rgba(113,137,255,.3);--tip-ac:#8a9dff;
+  --ok-bg:rgba(52,211,153,.10);--ok-bd:rgba(52,211,153,.28);--ok-ac:#34d399;
+  --warn-bg:rgba(251,191,36,.10);--warn-bd:rgba(251,191,36,.28);--warn-ac:#fbbf24;
+  --err-bg:rgba(248,113,113,.10);--err-bd:rgba(248,113,113,.28);--err-ac:#f87171;
+  --note-bg:rgba(167,139,250,.11);--note-bd:rgba(167,139,250,.3);--note-ac:#a78bfa;
+  --code-bg:#11141d;--code-head:#0c0e15;--code-text:#e6e9f2;--code-label:#8a93aa;
+  --icode-bg:#252a35;--icode-text:#ff7aa8;
+  --float-bg:#262a38;--float-text:#e9ebf2;
+}
