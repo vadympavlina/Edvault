@@ -55,7 +55,7 @@ const fontListeners = new Set();
 export const onCcFont = fn => fontListeners.add(fn); // перемалювати, коли шрифт довантажився
 // CSS з додатковими шрифтами підвантажується у фоні — чекаємо на нього, інакше document.fonts.load нічого не знайде
 const fontsCss = new Promise(res => {
-  if (window.__ccFontsReady) return res();
+  if (typeof window === 'undefined' || window.__ccFontsReady) return res();
   window.addEventListener('cc-fonts-css', res, { once: true });
   setTimeout(res, 6000);
 });
