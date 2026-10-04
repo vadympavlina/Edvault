@@ -15,7 +15,7 @@ export function initMenu(root, menus) {
       if (it.head) return `<div class="mb-head">${esc(it.head)}</div>`;
       const on = isOn(it), chk = it.checked ? it.checked() : null;
       return `<button type="button" class="mb-it" role="menuitem" data-i="${i}" ${on ? '' : 'disabled'}>
-        <span class="mb-ck">${chk ? icon('check') : ''}</span><span class="mb-l">${esc(it.label)}</span>
+        <span class="mb-ck">${chk ? icon('check') : it.ic && chk == null ? icon(it.ic) : ''}</span><span class="mb-l">${esc(it.label)}</span>
         ${it.sub ? `<span class="mb-k">${icon('chevR')}</span>` : it.key ? `<span class="mb-k">${esc(it.key)}</span>` : ''}</button>`;
     }).join('');
   }

@@ -58,7 +58,7 @@ await step('вікно автосубтитрів пропонує джерел�
   await page.waitForTimeout(800);
   await page.evaluate(() => document.activeElement.blur());
   await page.evaluate(() => window.dispatchEvent(new Event('x')));
-  await page.evaluate(() => document.querySelector('[data-m="4"]').click());
+  await page.evaluate(() => document.querySelector('[data-m="3"]').click());
   await page.locator('.mb-it', { hasText: 'Субтитри з мовлення' }).click();
   const opts = await page.$$eval('#asrSources input', a => a.map(i => [i.value, !i.disabled]));
   assert.deepEqual(Object.fromEntries(opts).speech, true);
@@ -112,7 +112,7 @@ await step('копіювання й вставка елемента у пози�
 
 await step('вікна «Прибрати паузи» і «Озвучення» відкриваються', async () => {
   await page.evaluate(() => document.activeElement.blur());
-  await page.evaluate(() => document.querySelector('[data-m="4"]').click());
+  await page.evaluate(() => document.querySelector('[data-m="3"]').click());
   await page.locator('.mb-it', { hasText: 'Прибрати паузи' }).click();
   assert.ok(await page.locator('#silModal.open').count());
   await page.keyboard.press('Escape');

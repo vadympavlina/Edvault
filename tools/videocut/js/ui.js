@@ -90,8 +90,10 @@ let pointerDown = false;
 const FIELD = /^(INPUT|TEXTAREA|SELECT)$/;
 function syncAttrs(a, b) {
   const keepRows = a.classList.contains('seg-rows'); // клас і стиль, які додає balanceSegs
+  const isItem = a.classList.contains('it'); // доступність елементів таймлайну виставляє timeline.js після малювання
   for (const at of [...a.attributes]) {
     if (keepRows && (at.name === 'class' || at.name === 'style')) continue;
+    if (isItem && /^(tabindex|role|aria-)/.test(at.name)) continue;
     if (!b.hasAttribute(at.name)) a.removeAttribute(at.name);
   }
   for (const at of b.attributes) {

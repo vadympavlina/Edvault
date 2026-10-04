@@ -410,112 +410,92 @@ window.addEventListener('beforeunload', e => { if (isRecording() || asrBusy() ||
     const body = kind === 'srt' ? toSrt(caps) : kind === 'vtt' ? toVtt(caps) : caps.map(c => c.text.replace(/\s*\n\s*/g, ' ')).join('\n');
     downloadBlob(new Blob([body], { type: 'text/plain' }), `${name}.${kind}`);
   };
-  // кліп під курсором або виділений
-  const curClip = () => {
-    if (S.sel && S.sel.kind === 'clip') return findSel();
-    const l = clipAt(S.t); return l ? l.clip : null;
-  };
-  const withClip = fn => () => { const c = curClip(); if (!c) return toast('Поставте курсор на кліп', 'err'); if (!S.sel || S.sel.id !== c.id) select('clip', c.id); fn(c); };
-  // дії, логіка яких уже є в панелі властивостей
-  const viaInspector = sel => withClip(() => { document.querySelector('#inspector ' + sel)?.click(); });
-  const isImg = () => { const c = curClip(); return c && media.get(c.mediaId)?.kind === 'image'; };
   const panel = (cls, on) => { document.body.classList.toggle(cls, !on); try { localStorage.setItem('vc_' + cls, document.body.classList.contains(cls) ? '1' : ''); } catch { /* немає доступу */ } };
   ['hide-lib'].forEach(c => { try { if (localStorage.getItem('vc_' + c)) document.body.classList.add(c); } catch { /* немає доступу */ } });
   const narrow = () => matchMedia('(max-width:980px)').matches;
   const showLibTab = t => { showTab(t); if (narrow()) document.body.classList.add('show-lib'); else panel('hide-lib', true); };
 
+  const hasSel = () => !!S.sel;
+  const audioSel = () => !!S.sel && (S.sel.kind === 'clip' || S.sel.kind === 'music');
+  // Меню зібране за змістом: спершу робота з файлами, потім правка, вставка, автоматичні інструменти, вигляд.
+  // Дії над кліпом (швидкість, фільтр, перехід, поворот…) живуть у панелі «Властивості» праворуч — тут їх немає.
   initMenu($('menubar'), [
     { label: 'Файл', items: [
-      { label: 'Новий проєкт', run: () => $('btnNew').click() },
-      { label: 'Параметри проєкту…', run: () => $('btnProj').click() },
-      { label: 'Додати файли…', key: 'Ctrl+O', run: () => pickFiles('') },
+      { label: 'Новий проєкт', ic: 'plus', run: () => $('btnNew').click() },
+      { label: 'Відкрити проєкт із файлу…', ic: 'upload', run: () => $('projInput').click() },
+      { label: 'Зберегти проєкт у файл…', ic: 'download', enabled: () => media.size > 0, run: saveProjectFile },
       { sep: true },
-      { label: 'Імпортувати субтитри (.srt, .vtt)…', run: () => $('capInput').click() },
-      { label: 'Зберегти субтитри', enabled: () => S.project.captions.length > 0, sub: [
-        { label: 'Файл .srt', run: () => saveCaps('srt') }, { label: 'Файл .vtt', run: () => saveCaps('vtt') }, { label: 'Звичайний текст', run: () => saveCaps('txt') } ] },
+      { label: 'Додати відео, фото, музику…', ic: 'media', key: 'Ctrl+O', run: () => pickFiles('') },
+      { label: 'Субтитри', ic: 'cc', sub: [
+        { label: 'Імпортувати з файлу (.srt, .vtt)…', run: () => $('capInput').click() },
+        { sep: true },
+        { label: 'Зберегти як .srt', enabled: () => S.project.captions.length > 0, run: () => saveCaps('srt') },
+        { label: 'Зберегти як .vtt', enabled: () => S.project.captions.length > 0, run: () => saveCaps('vtt') },
+        { label: 'Зберегти як звичайний текст', enabled: () => S.project.captions.length > 0, run: () => saveCaps('txt') } ] },
       { sep: true },
-      { label: 'Зберегти кадр як PNG', enabled: has, run: () => $('btnSnap').click() },
-      { label: 'Експорт відео…', key: 'Ctrl+E', enabled: has, run: openExport },
-      { label: 'Зберегти проєкт у файл…', enabled: () => media.size > 0, run: saveProjectFile },
-      { label: 'Відкрити проєкт із файлу…', run: () => $('projInput').click() },
-      { label: 'Зберегти проєкт у браузері', key: 'Ctrl+S', run: () => { saveNow(); toast('Проєкт збережено в цьому браузері', 'ok'); } },
+      { label: 'Експорт відео…', ic: 'download', key: 'Ctrl+E', enabled: has, run: openExport },
+      { label: 'Зберегти поточний кадр (PNG)', ic: 'camera', enabled: has, run: () => $('btnSnap').click() },
       { sep: true },
-      { label: 'До всіх інструментів', run: () => { location.href = '../tools.html'; } },
+      { label: 'Параметри проєкту…', ic: 'gear', run: () => $('btnProj').click() },
+      { label: 'Вийти до всіх інструментів', ic: 'back', run: () => { location.href = '../tools.html'; } },
     ] },
     { label: 'Редагування', items: [
-      { label: 'Скасувати', key: 'Ctrl+Z', enabled: canUndo, run: () => undo() },
-      { label: 'Повторити', key: 'Ctrl+Shift+Z', enabled: canRedo, run: () => redo() },
+      { label: 'Скасувати', ic: 'undo', key: 'Ctrl+Z', enabled: canUndo, run: () => undo() },
+      { label: 'Повторити', ic: 'redo', key: 'Ctrl+Shift+Z', enabled: canRedo, run: () => redo() },
       { sep: true },
-      { label: 'Розрізати в позиції курсора', key: 'S', enabled: has, run: () => splitAt() },
-      { label: 'Копіювати', key: 'Ctrl+C', enabled: () => !!S.sel, run: () => copySel() },
-      { label: 'Вирізати', key: 'Ctrl+X', enabled: () => !!S.sel, run: () => copySel(true) },
+      { label: 'Вирізати', key: 'Ctrl+X', enabled: hasSel, run: () => copySel(true) },
+      { label: 'Копіювати', ic: 'copy', key: 'Ctrl+C', enabled: hasSel, run: () => copySel() },
       { label: 'Вставити в позиції курсора', key: 'Ctrl+V', enabled: canPaste, run: () => pasteClip() },
-      { label: 'Дублювати', key: 'Ctrl+D', enabled: () => !!S.sel, run: () => duplicateSel() },
-      { label: 'Видалити виділене', key: 'Delete', enabled: () => !!S.sel, run: () => deleteSel() },
+      { label: 'Дублювати', key: 'Ctrl+D', enabled: hasSel, run: () => duplicateSel() },
+      { label: 'Видалити', ic: 'trash', key: 'Delete', enabled: hasSel, run: () => deleteSel() },
       { sep: true },
-      { label: 'Позначити початок шматка', key: 'I', enabled: has, run: () => mark('in') },
-      { label: 'Позначити кінець шматка', key: 'O', enabled: has, run: () => mark('out') },
-      { label: 'Вирізати позначений шматок', key: 'X', enabled: () => S.markIn != null && S.markOut != null, run: () => cutRange(S.markIn, S.markOut) },
+      { label: 'Розрізати в позиції курсора', ic: 'split', key: 'S', enabled: has, run: () => splitAt() },
+      { head: 'Вирізати шматок відео' },
+      { label: '1. Позначити початок', key: 'I', enabled: has, run: () => mark('in') },
+      { label: '2. Позначити кінець', key: 'O', enabled: has, run: () => mark('out') },
+      { label: '3. Вирізати позначене', ic: 'scissors', key: 'X', enabled: () => S.markIn != null && S.markOut != null, run: () => cutRange(S.markIn, S.markOut) },
       { label: 'Зняти позначки', enabled: () => S.markIn != null || S.markOut != null, run: clearMarks },
-      { sep: true },
-      { label: 'Зняти виділення', key: 'Esc', enabled: () => !!S.sel, run: () => select(null) },
     ] },
     { label: 'Додати', items: [
-      { label: 'Текст', sub: Object.entries(TEXT_PRESETS).map(([k, v]) => ({ label: v.label, run: () => { showLibTab('text'); addOverlay('text', { preset: k }); emit('focus-inspector'); } })) },
-      { label: 'Субтитр у позиції курсора', key: 'C', run: () => { showLibTab('captions'); newCaptionHere(); } },
-      { label: 'Заставка з назвою', sub: Object.keys(CARD_STYLES).map((k, i) => ({ label: ['Синя', 'Захід сонця', 'Зелена', 'Темна', 'Світла'][i] || k, run: async () => { try { await addTitleCard(k); emit('focus-inspector'); } catch (e) { toast('Не вдалося створити заставку', 'err'); } } })) },
-      { sep: true },
-      { label: 'Стрілка', enabled: has, run: () => addOverlay('arrow') },
-      { label: 'Рамка', enabled: has, run: () => addOverlay('rect') },
-      { label: 'Прожектор', enabled: has, run: () => addOverlay('spot') },
-      { label: 'Розмиття (сховати дані)', enabled: has, run: () => addOverlay('blur') },
-      { label: 'Прогрес-бар', enabled: has, run: () => addOverlay('progress') },
-      { label: 'Емодзі…', enabled: has, run: () => showLibTab('elements') },
-      { sep: true },
-      { label: 'Відео чи фото поверх…', enabled: has, run: () => pickFiles('layer') },
-      { label: 'Логотип чи картинка…', enabled: has, run: () => pickFiles('logo') },
-      { label: 'Музика чи звук…', run: () => pickFiles('') },
-      { label: 'Озвучити голосом…', key: 'R', enabled: has, run: openVoice },
-    ] },
-    { label: 'Кліп', items: [
-      { label: 'Швидкість', enabled: () => !!curClip() && !isImg(), sub: [0.5, 1, 1.25, 1.5, 2].map(v => ({ label: String(v).replace('.', ',') + '×', checked: () => (curClip()?.speed || 1) === v, run: viaInspector(`[data-set="speed"][data-v="${v}"]`) })) },
-      { label: 'Фільтр', enabled: () => !!curClip(), sub: Object.entries(LOOKS).map(([k, v]) => ({ label: v.name, checked: () => (curClip()?.look || 'none') === k, run: withClip(c => { c.look = k; commit(); }) })) },
-      { label: 'Перехід з попереднього кліпу', enabled: () => { const c = curClip(); return !!c && S.project.clips.indexOf(c) > 0; }, sub: [['', 'Немає'], ...Object.entries(TRANSITIONS)].map(([k, n]) => ({ label: n, checked: () => (curClip()?.tr?.type || '') === k, run: withClip(c => { if (k) c.tr = { type: k, d: (c.tr && c.tr.d) || 0.6 }; else delete c.tr; commit(); }) })) },
-      { sep: true },
-      { label: 'Без звуку', enabled: () => !!curClip() && !isImg(), checked: () => !!curClip()?.muted, run: viaInspector('[data-toggle="muted"]') },
-      { label: 'Вирівняти гучність', enabled: () => !!curClip() && !isImg(), run: withClip(() => normalizeSel()) },
-      { label: 'Плавна поява', enabled: () => !!curClip(), checked: () => curClip()?.fadeIn > 0, run: viaInspector('[data-toggle="fadeIn"]') },
-      { label: 'Плавне зникнення', enabled: () => !!curClip(), checked: () => curClip()?.fadeOut > 0, run: viaInspector('[data-toggle="fadeOut"]') },
-      { sep: true },
-      { label: 'Повернути праворуч', enabled: () => !!curClip(), run: viaInspector('[data-a="rot"][data-v="90"]') },
-      { label: 'Повернути ліворуч', enabled: () => !!curClip(), run: viaInspector('[data-a="rot"][data-v="-90"]') },
-      { label: 'Віддзеркалити', enabled: () => !!curClip(), checked: () => !!curClip()?.flip, run: viaInspector('[data-a="flip"]') },
-      { sep: true },
-      { label: 'Стоп-кадр на 3 секунди', enabled: () => !!curClip() && !isImg(), run: withClip(() => freezeFrame(3)) },
+      { head: 'Відео, фото, звук' },
+      { label: 'Відео чи фото поверх основного…', ic: 'pip', enabled: has, run: () => pickFiles('layer') },
+      { label: 'Логотип чи картинка…', ic: 'image', enabled: has, run: () => pickFiles('logo') },
+      { label: 'Музика чи звук…', ic: 'music', run: () => pickFiles('') },
+      { label: 'Озвучити голосом…', ic: 'mic', key: 'R', enabled: has, run: openVoice },
+      { head: 'Текст' },
+      { label: 'Текст на відео', ic: 'text', sub: Object.entries(TEXT_PRESETS).map(([k, v]) => ({ label: v.label, run: () => { showLibTab('text'); addOverlay('text', { preset: k }); emit('focus-inspector'); } })) },
+      { label: 'Субтитр у позиції курсора', ic: 'cc', key: 'C', run: () => { showLibTab('captions'); newCaptionHere(); } },
+      { label: 'Заставка з назвою', ic: 'film', sub: Object.keys(CARD_STYLES).map((k, i) => ({ label: ['Синя', 'Захід сонця', 'Зелена', 'Темна', 'Світла'][i] || k, run: async () => { try { await addTitleCard(k); emit('focus-inspector'); } catch (e) { toast('Не вдалося створити заставку', 'err'); } } })) },
+      { head: 'Пояснення на кадрі' },
+      { label: 'Стрілка', ic: 'arrow', enabled: has, run: () => addOverlay('arrow') },
+      { label: 'Рамка', ic: 'rect', enabled: has, run: () => addOverlay('rect') },
+      { label: 'Прожектор (затемнити решту)', ic: 'spot', enabled: has, run: () => addOverlay('spot') },
+      { label: 'Розмиття (сховати дані)', ic: 'blur', enabled: has, run: () => addOverlay('blur') },
+      { label: 'Прогрес-бар', ic: 'progress', enabled: has, run: () => addOverlay('progress') },
+      { label: 'Емодзі-стікер…', ic: 'smile', enabled: has, run: () => showLibTab('elements') },
     ] },
     { label: 'Автоматично', items: [
-      { label: 'Прибрати паузи й тишу…', enabled: has, run: openSilences },
-      { label: 'Субтитри з мовлення…', enabled: has, run: () => openAsr() },
+      { label: 'Субтитри з мовлення…', ic: 'wand', enabled: () => has() || S.project.music.length > 0, run: () => openAsr() },
+      { label: 'Прибрати паузи й тишу…', ic: 'scissors', enabled: has, run: openSilences },
       { label: 'Переходи між усіма кліпами', enabled: () => S.project.clips.length > 1, run: () => transitionsAll() },
+      { label: 'Вирівняти гучність виділеного', ic: 'volume', enabled: audioSel, run: () => normalizeSel() },
     ] },
     { label: 'Вигляд', items: [
       { label: 'Формат кадру', sub: [['16:9', 'YouTube, урок'], ['9:16', 'Reels, Shorts'], ['1:1', 'Квадрат'], ['4:3', 'Класичний']].map(([v, n]) => ({ label: `${v} — ${n}`, checked: () => S.project.aspect === v, run: () => { S.project.aspect = v; commit(); emit('aspect'); } })) },
-      { sep: true },
+      { label: 'Перегляд на весь екран', ic: 'full', key: 'F', enabled: has, run: toggleFullscreen },
       { label: 'Панель медіа й елементів', checked: () => !document.body.classList.contains('hide-lib'), run: () => narrow() ? document.body.classList.toggle('show-lib') : panel('hide-lib', document.body.classList.contains('hide-lib')) },
-      { sep: true },
-      { label: 'Прилипання на таймлайні', checked: () => S.snap, run: () => $('btnSnapToggle').click() },
-      { label: 'Повторювати відтворення', checked: () => !!S.loop, run: () => { S.loop = !S.loop; toast(S.loop ? 'Відтворення повторюється' : 'Повтор вимкнено'); } },
-      { label: 'Наблизити таймлайн', key: '+', run: () => zoomBy(1.5) },
-      { label: 'Віддалити таймлайн', key: '−', run: () => zoomBy(1 / 1.5) },
-      { label: 'Показати весь таймлайн', key: 'Shift+Z', run: zoomFit },
-      { sep: true },
-      { label: 'Перегляд на весь екран', key: 'F', enabled: has, run: toggleFullscreen },
       { label: 'Темна тема', checked: () => document.documentElement.dataset.theme === 'dark', run: () => $('btnTheme').click() },
+      { head: 'Таймлайн' },
+      { label: 'Прилипання до країв', checked: () => S.snap, run: () => $('btnSnapToggle').click() },
+      { label: 'Повторювати відтворення', checked: () => !!S.loop, run: () => { S.loop = !S.loop; toast(S.loop ? 'Відтворення повторюється' : 'Повтор вимкнено'); } },
+      { label: 'Наблизити', ic: 'zoomIn', key: '+', run: () => zoomBy(1.5) },
+      { label: 'Віддалити', ic: 'zoomOut', key: '−', run: () => zoomBy(1 / 1.5) },
+      { label: 'Показати весь проєкт', ic: 'fit', key: 'Shift+Z', run: zoomFit },
     ] },
     { label: 'Довідка', items: [
-      { label: 'Гарячі клавіші', key: '?', run: () => openModal('helpModal') },
-      { label: 'Підтримувані формати', run: () => toast('Відео: MP4, MOV, WebM, MKV, а також AVI, WMV, MPG, FLV, 3GP, MTS і MOV з iPhone (H.265) чи ProRes — їх редактор перетворює автоматично. Фото: JPG, PNG, WebP, GIF. Звук: MP3, WAV, M4A, OGG.', '', 9000) },
-      { label: 'Меню з клавіатури', key: 'F10', run: () => toast('F10 відкриває меню, стрілки — пересування, Enter — вибір, Esc — закрити', '', 6000) },
+      { label: 'Гарячі клавіші', ic: 'help', key: '?', run: () => openModal('helpModal') },
+      { label: 'Які формати підтримуються', run: () => toast('Відео: MP4, MOV, WebM, MKV, а також AVI, WMV, MPG, FLV, 3GP, MTS і MOV з iPhone (H.265) чи ProRes — їх редактор перетворює автоматично. Фото: JPG, PNG, WebP, GIF. Звук: MP3, WAV, M4A, OGG.', '', 9000) },
+      { label: 'Як користуватися меню з клавіатури', key: 'F10', run: () => toast('F10 відкриває меню, стрілки — пересування, Enter — вибір, Esc — закрити', '', 6000) },
     ] },
   ]);
 }
