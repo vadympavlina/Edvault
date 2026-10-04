@@ -110,10 +110,7 @@
     <div class="tb-l">
       <button class="btn btn-sm btn-icon" id="btnSplit" data-tip="Розрізати в позиції курсора" data-key="S"><span data-icon="split"></span></button>
       <button class="btn btn-sm btn-icon" id="btnDelete" data-tip="Видалити виділене" data-key="Delete"><span data-icon="trash"></span></button>
-      <span class="tb-sep" aria-hidden="true"></span>
-      <button class="btn btn-sm btn-icon" id="btnMarkIn" data-tip="Позначити початок шматка" data-key="I"><span data-icon="bracketL"></span></button>
-      <button class="btn btn-sm btn-icon" id="btnMarkOut" data-tip="Позначити кінець шматка" data-key="O"><span data-icon="bracketR"></span></button>
-      <button class="btn btn-sm" id="btnCutRange" data-tip="Вирізати позначений шматок з відео" data-key="X" disabled><span data-icon="scissors"></span><span class="hide-md">Вирізати шматок</span></button>
+      <button class="btn btn-sm btn-cut" id="btnCutRange" data-tip="Вирізати позначений шматок з відео" data-key="X" disabled hidden><span data-icon="scissors"></span><span class="hide-md">Вирізати шматок</span></button>
     </div>
     <div class="tb-c">
       <button class="btn btn-icon btn-sm hide-sm" id="btnStart" data-tip="На початок" data-key="Home"><span data-icon="prev"></span></button>
@@ -125,7 +122,6 @@
     </div>
     <div class="tb-r">
       <button class="btn btn-sm btn-icon on" id="btnSnapToggle" data-tip="Прилипання до країв елементів" data-key="Alt — тимчасово вимкнути"><span data-icon="magnet"></span></button>
-      <span class="tb-sep hide-sm" aria-hidden="true"></span>
       <button class="btn btn-sm btn-icon hide-sm" id="btnZoomOut" data-tip="Віддалити" data-key="−"><span data-icon="zoomOut"></span></button>
       <input type="range" class="hide-sm" id="tlZoom" min="0" max="100" value="50" aria-label="Масштаб таймлайну">
       <button class="btn btn-sm btn-icon hide-sm" id="btnZoomIn" data-tip="Наблизити" data-key="+"><span data-icon="zoomIn"></span></button>
@@ -314,7 +310,7 @@
 <div id="mediaPool" aria-hidden="true"></div>
 <div id="menuCmds" hidden>
   <button id="btnImport"></button><button id="btnNew"></button><button id="btnHelp"></button><button id="btnTheme"></button>
-  <button id="btnSilences"></button>
+  <button id="btnMarkIn"></button><button id="btnMarkOut"></button><button id="btnSilences"></button>
   <button id="btnVoice"></button><button id="btnSnap"></button>
 </div>
 <input type="file" id="fileInput" accept="video/*,audio/*,image/*,.mkv,.mov,.qt,.hevc,.avi,.wmv,.asf,.flv,.f4v,.mpg,.mpeg,.vob,.3gp,.3g2,.mts,.m2ts,.divx,.ogv,.dv,.rm,.rmvb,.mxf" multiple hidden>

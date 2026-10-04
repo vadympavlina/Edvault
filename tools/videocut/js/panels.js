@@ -241,7 +241,7 @@ const seg = (f, label, opts, cur, hint = '') =>
   `<div class="field"><label>${label}</label><div class="seg">${opts.map(([v, n]) => `<button data-set="${f}" data-v="${v}" class="${String(cur) === String(v) || (!isNaN(+v) && !isNaN(+cur) && near(v, cur)) ? 'on' : ''}">${n}</button>`).join('')}</div>${hint ? `<p class="hint">${hint}</p>` : ''}</div>`;
 const timeField = (f, label, val) => `<div class="field half"><label>${label}</label><input class="input" data-time="${f}" value="${fmt(val, true)}" inputmode="decimal"></div>`;
 const actions = (...btns) => `<div class="insp-actions">${btns.join('')}</div>`;
-const act = (a, ic, label, extra = '') => `<button class="btn btn-outline btn-sm" data-a="${a}" ${extra}>${icon(ic)}${label}</button>`;
+const act = (a, ic, label, extra = '') => `<button class="btn btn-outline btn-sm" data-a="${a}" data-tip="${label}" aria-label="${label}" ${extra}>${icon(ic)}<span>${label}</span></button>`;
 // кнопка-перемикач: вмикає значення `on`, вимикає в 0/false
 const chip = (f, label, cur, on, ic) => `<button class="chip${cur ? ' on' : ''}" data-toggle="${f}" data-on="${on}">${icon(cur ? 'check' : ic)}${label}</button>`;
 // розгортання «Точніше» пам'ятає, чи було відкрите

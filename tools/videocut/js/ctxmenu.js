@@ -32,6 +32,9 @@ export function initCtx() {
       X.push({ sep: true });
       X.push({ l: 'Додати субтитр тут', ic: 'cc', run: () => addCaption('') });
       X.push({ l: 'Додати текст тут', ic: 'text', run: () => addOverlay('text', { preset: 'plain' }) });
+      X.push({ sep: true });
+      X.push({ l: 'Позначити початок шматка', k: 'I', run: () => $('btnMarkIn').click() });
+      X.push({ l: 'Позначити кінець шматка', k: 'O', run: () => $('btnMarkOut').click() });
     }
     show(e.clientX, e.clientY, X);
   });

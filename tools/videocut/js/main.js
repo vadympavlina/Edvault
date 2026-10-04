@@ -188,12 +188,18 @@ $('btnZoomFit').addEventListener('click', zoomFit);
 function mark(which) {
   if (which === 'in') S.markIn = S.t; else S.markOut = S.t;
   if (S.markIn != null && S.markOut != null && S.markOut < S.markIn) [S.markIn, S.markOut] = [S.markOut, S.markIn];
-  $('btnCutRange').disabled = !(S.markIn != null && S.markOut != null && S.markOut - S.markIn > 0.05);
+  syncCut();
   emit('marks');
   toast(which === 'in' ? `Початок шматка: ${fmt(S.t, true)}` : `Кінець шматка: ${fmt(S.t, true)}`);
 }
-function clearMarks() { S.markIn = S.markOut = null; $('btnCutRange').disabled = true; emit('marks'); }
-on('project', d => { if (d && d.committed && S.markIn == null) $('btnCutRange').disabled = true; });
+function clearMarks() { S.markIn = S.markOut = null; syncCut(); emit('marks'); }
+// кнопка «Вирізати шматок» з'являється лише тоді, коли є позначки
+function syncCut() {
+  const b = $('btnCutRange');
+  b.hidden = S.markIn == null && S.markOut == null;
+  b.disabled = !(S.markIn != null && S.markOut != null && S.markOut - S.markIn > 0.05);
+}
+on('project', d => { if (d && d.committed) syncCut(); });
 
 // новий субтитр у позиції курсора, і одразу можна друкувати
 function newCaptionHere() {

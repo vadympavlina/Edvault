@@ -829,3 +829,53 @@ details.more summary{padding:8px 4px;color:var(--text2);width:auto}
 /* ліва панель: дрібні правки */
 .pr-name{position:static;padding:5px 2px 1px;border-radius:0;background:none;color:var(--muted);font-size:11.5px;font-weight:600}
 .cap textarea{resize:none}
+
+/* ══════════ Спокійніший інтерфейс: менше рамок, тіней і дрібних плиток ══════════ */
+/* бічні панелі — одне рівне полотно, розділи відділені тонкою лінією */
+.insp,.lib-body{background:var(--surface)}
+.insp{display:flex;flex-direction:column;padding:0 14px 28px}
+.insp > *{flex-shrink:0}
+.insp-head{order:-2;margin:0 -14px 6px;padding:12px 14px;border-bottom:0;box-shadow:0 1px 0 var(--border)}
+.insp-ico{width:32px;height:32px;border-radius:9px}
+.insp-ico .ico{width:16px;height:16px}
+.insp-head b{font-size:14px}
+
+/* дії над елементом — один ряд іконок угорі (підказка при наведенні), «Видалити» справа */
+.insp-actions{order:-1;display:flex;flex-wrap:nowrap;gap:2px;margin:0 0 4px;padding:8px 0;border-bottom:1px solid var(--border)}
+.insp-actions .btn{flex:0 0 auto;flex-direction:row;width:34px;min-height:34px;height:34px;padding:0;border:0;border-radius:9px;background:transparent;box-shadow:none;font-size:0;color:var(--text2)}
+.insp-actions .btn span{display:none}
+.insp-actions .btn .ico{width:18px;height:18px}
+.insp-actions .btn[data-danger]{margin-left:auto}
+
+/* розділи без карток */
+.isec{margin:0;padding:14px 0 2px;border:0;border-top:1px solid var(--border);border-radius:0;background:transparent;box-shadow:none}
+.isec:first-of-type{border-top:0;padding-top:8px}
+.isec-h{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--text)}
+.isec-h .ico{color:var(--muted)}
+.field > label{font-weight:500;color:var(--text2)}
+.insp .hint{display:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{height:28px;padding:0 11px;border-radius:14px;font-size:12px}
+.chip.on{box-shadow:none}
+
+/* згорнуті списки — рядки зі стрілкою, без рамок */
+details.fold{margin:4px 0 8px;border:0;border-top:1px solid var(--border);border-radius:0;background:transparent}
+details.fold summary{padding:10px 0}
+details.fold[open] summary{border-bottom:0}
+details.fold .fold-body{padding:2px 0 8px}
+details.more{margin:0}
+details.more summary{padding:12px 0;border-top:1px solid var(--border);width:auto;color:var(--text2)}
+.more-body{padding:4px 0 8px;border:0;border-radius:0;background:transparent;box-shadow:none}
+.isec .seg,.isec .input{background:var(--surface2)}
+
+/* ліва панель: плитки без тіней */
+.mcard,.preset,.elem,.cc-preset{background:var(--surface2);box-shadow:none}
+.mcard:hover{box-shadow:none;transform:none;border-color:var(--accent-border)}
+.drop{background:transparent}
+.cc-switch,details.fold{background:transparent}
+
+/* таймлайн: кнопка «Вирізати шматок» з'являється лише коли є позначки */
+.btn-cut{background:var(--accent-light);color:var(--accent);border-color:var(--accent-border)}
+.btn-cut:hover:not(:disabled){background:var(--accent-light);color:var(--accent);filter:brightness(.97)}
+.isec-h .ico{display:none}
+.chip:not(.on) .ico{display:none}
