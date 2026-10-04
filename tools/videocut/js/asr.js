@@ -1,5 +1,5 @@
 // Автоматичні субтитри: збираємо голос із таймлайну (16 кГц моно), ділимо на шматки по тиші й віддаємо Whisper у Worker.
-import { S, media, emit, mainEnd, duration, outputSize, layout, musicDur, findSel } from './state.js';
+import { S, media, emit, duration, outputSize, layout, musicDur, findSel } from './state.js';
 import { capStyle, capMaxChars, splitCaption, tidyCaptions } from './cc.js';
 import { renderBlock, resetAudioSinks } from './audio.js';
 import { setCaptionsIn } from './ops.js';

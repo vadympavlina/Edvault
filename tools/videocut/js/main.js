@@ -1,13 +1,12 @@
 // Точка входу відеоредактора Edvault.
-import { S, media, on, emit, commit, undo, redo, canUndo, canRedo, select, findSel, duration, layout, clipAt, newProject, resetHistory, mainEnd } from './state.js';
+import { S, media, on, emit, commit, undo, redo, canUndo, canRedo, select, duration, layout, newProject, resetHistory } from './state.js';
 import { addMedia, removeMedia, reviveMedia, removedMedia, purgeRemoved } from './media.js';
 import { initPlayer, resizeCanvas, seek, toggle, pause, play, snapshot, requestDraw } from './player.js';
 import { initTimeline, render as renderTimeline, zoomBy, zoomFit, setZoom } from './timeline.js';
 import { initLibrary, initInspector, importCaptionFile, showTab, showProject } from './panels.js';
 import { initPreviewLayer, renderHandles } from './preview.js';
-import { addToTimeline, addOverlay, splitAt, deleteSel, duplicateSel, copySel, pasteClip, canPaste, cutRange, addCaption, findSilences, cutRanges, addVoice, freezeFrame, normalizeSel, transitionsAll, addTitleCard, addLayerAt, TEXT_PRESETS, CARD_STYLES } from './ops.js';
+import { addToTimeline, addOverlay, splitAt, deleteSel, duplicateSel, copySel, pasteClip, canPaste, cutRange, addCaption, normalizeSel, transitionsAll, addTitleCard, addLayerAt, TEXT_PRESETS, CARD_STYLES } from './ops.js';
 import { initMenu } from './menu.js';
-import { LOOKS, TRANSITIONS } from './render.js';
 import { toSrt, toVtt } from './srt.js';
 import { exportVideo, exportAudio } from './export.js';
 import { openExport, isExporting } from './export-ui.js';

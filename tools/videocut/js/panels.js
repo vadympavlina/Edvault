@@ -7,17 +7,20 @@ import { seek } from './player.js';
 import { parseSubtitles } from './srt.js';
 import { renderCapTab, markActiveCaption, capTabClick, capTabInput, capTabChange, capTabToggle, captionInspector, ccAction, speedHtml } from './cc-panel.js';
 import { isLayer, LAYOUTS, layoutOf, applyLayout, cropSides, setCropSide, setScale, setShape, resetCrop } from './layer.js';
-import { $, esc, icon, fmt, fmtShort, parseTime, toast, confirmDialog, downloadBlob, safeName, fmtBytes, balanceSegs, keepFocus, typingIn, setHtml } from './ui.js';
+import { $, esc, icon, fmt, fmtShort, parseTime, toast, confirmDialog, fmtBytes, balanceSegs, keepFocus, typingIn, setHtml } from './ui.js';
 
 const COLORS = ['#ffffff', '#1a1d23', '#ef4444', '#f59e0b', '#ffd43b', '#10b981', '#0ea5e9', '#4F6BF4', '#8b5cf6', '#ec4899'];
 const EMOJIS = ['👍', '👏', '✅', '❌', '⭐', '🔥', '❗', '❓', '💡', '📌', '👉', '👆', '😀', '😮', '🤔', '🎉', '❤️', '⚠️', '🏆', '📝', '🎯', '🚀', '⏰', '🔍'];
 
 // ══════════ Ліва панель ══════════
 let tab = 'media';
+const tabScroll = {};
 export function initLibrary() {
   $('libTabs').addEventListener('click', e => {
     const b = e.target.closest('[data-tab]'); if (!b) return;
+    tabScroll[tab] = $('libBody').scrollTop;
     tab = b.dataset.tab; renderLibrary();
+    $('libBody').scrollTop = tabScroll[tab] || 0; // кожна вкладка пам'ятає, де ви зупинились
   });
   $('libBody').addEventListener('click', onLibClick);
   $('libBody').addEventListener('dblclick', e => {

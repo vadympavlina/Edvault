@@ -2,7 +2,7 @@
 import { S, on, emit, duration } from './state.js';
 import { pause } from './player.js';
 import { exportVideo, exportAudio, exportSize, detectCodecs, canExport } from './export.js';
-import { $, fmt, toast, openModal, closeModal, confirmDialog, downloadBlob, safeName, fmtBytes } from './ui.js';
+import { $, fmt, toast, openModal, confirmDialog, downloadBlob, safeName, fmtBytes } from './ui.js';
 
 // ══════════ Експорт ══════════
 let exporting = null, lastExport = null;
