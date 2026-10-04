@@ -502,3 +502,16 @@ body.fig-dragging,body.fig-dragging *{cursor:grabbing!important;user-select:none
   .editor figcaption:has(>br:only-child),.editor figcaption:empty{display:none}
   .editor figcaption::before,.editor p::before{content:none !important}
 }
+
+/* ═══════════ Документ відкрито в іншій вкладці: лише перегляд ═══════════ */
+.tc-lockbar{position:fixed;left:50%;top:132px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;max-width:min(720px,calc(100vw - 24px));padding:8px 8px 8px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--accent-border);box-shadow:var(--shadow-md);font-size:13px;color:var(--text)}
+.tc-lockbar[hidden]{display:none}
+.tc-lockbar-ic{display:flex;color:var(--accent)}
+.tc-lockbar-ic svg{width:18px;height:18px}
+.tc-lockbar-t{flex:1;min-width:0;line-height:1.4}
+.tc-lockbar-btn{flex:none;height:32px;padding:0 14px;border:0;border-radius:9px;background:var(--accent);color:var(--on-accent,#fff);font:600 13px 'Inter',sans-serif;cursor:pointer}
+.tc-lockbar-btn:hover{filter:brightness(1.06)}
+body.tc-readonly .toolbar{opacity:.45;pointer-events:none}
+body.tc-readonly #editor{cursor:default}
+.save-state.readonly .dot{background:var(--accent)}
+@media(max-width:640px){.tc-lockbar{top:auto;bottom:16px}}

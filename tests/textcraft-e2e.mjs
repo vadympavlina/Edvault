@@ -153,6 +153,34 @@ await step('імпорт Markdown створює новий документ', a
   assert.ok(list >= 2);
 });
 
+await step('друга вкладка з тим самим документом — лише перегляд, зміни не перезаписуються', async () => {
+  const p2 = await open(ctx);
+  assert.equal(await p2.evaluate(() => window.TextCraft.state.docId), await page.evaluate(() => window.TextCraft.state.docId));
+  await p2.waitForSelector('.tc-lockbar:not([hidden])');
+  assert.equal(await p2.evaluate(() => document.getElementById('editor').isContentEditable), false);
+  assert.equal(await page.evaluate(() => document.getElementById('editor').isContentEditable), true);
+  // правка в першій вкладці з'являється в другій
+  await page.click('#editor h1'); await page.keyboard.press('End'); await page.keyboard.type(' (оновлено)');
+  await page.evaluate(() => window.TextCraft.flushSave());
+  await p2.waitForFunction(() => /оновлено/.test(document.querySelector('#editor h1').textContent), null, { timeout: 5000 });
+  // друга вкладка забирає редагування — перша переходить у перегляд
+  await p2.click('.tc-lockbar-btn');
+  await p2.waitForFunction(() => document.getElementById('editor').isContentEditable, null, { timeout: 5000 });
+  await page.waitForFunction(() => !document.getElementById('editor').isContentEditable, null, { timeout: 5000 });
+  await p2.click('#editor h1'); await p2.keyboard.press('End'); await p2.keyboard.type(' 2');
+  await p2.evaluate(() => window.TextCraft.flushSave());
+  // перша вкладка не може затерти: її збереження вимкнено, а текст оновився
+  await page.evaluate(() => window.TextCraft.saveNow());
+  await page.waitForFunction(() => /оновлено\) 2/.test(document.querySelector('#editor h1').textContent), null, { timeout: 5000 });
+  const stored = await page.evaluate(async () => { const r = await window.TextCraft.Store.get(window.TextCraft.state.docId); return /<h1[^>]*>([^<]*)/.exec(r.html)[1]; });
+  assert.match(stored, /оновлено\) 2$/);
+  // друга вкладка закрилась — перша пропонує редагувати
+  await p2.close();
+  await page.waitForFunction(() => /закрилась/.test(document.querySelector('.tc-lockbar').textContent), null, { timeout: 5000 });
+  await page.click('.tc-lockbar-btn');
+  await page.waitForFunction(() => document.getElementById('editor').isContentEditable, null, { timeout: 5000 });
+});
+
 await step('жодної помилки в консолі сторінки', async () => assert.deepEqual(errors, []));
 
 await browser.close(); server.close();

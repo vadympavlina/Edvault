@@ -385,12 +385,14 @@ const History = {
     this.timer = setTimeout(() => this.commit(), 450);
   },
   undo() {
+    if (Tabs.readOnly) return;
     this.commit();
     if (this.index <= 0) { toast('Немає що скасовувати'); return; }
     this.index--;
     this.apply(this.stack[this.index]);
   },
   redo() {
+    if (Tabs.readOnly) return;
     this.commit();
     if (this.index >= this.stack.length - 1) return;
     this.index++;
@@ -416,6 +418,7 @@ function updateUndoButtons() {
 // Обгортка для будь-якої структурної дії: знімок ДО, дія, нормалізація, знімок ПІСЛЯ.
 // Якщо дія впала з помилкою — документ повертається до стану до неї.
 function mutate(fn) {
+  if (Tabs.readOnly) { toast('Документ редагується в іншій вкладці — натисніть «Редагувати тут»'); return undefined; }
   History.commit();
   let res;
   try {

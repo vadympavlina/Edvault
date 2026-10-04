@@ -191,15 +191,17 @@ const state = { docId: null, createdAt: 0, header: null, version: 0, savedVersio
 function defaultHeader() { return { enabled: false, tag: '', title: '', subtitle: '', color: '#4F6BF4', pattern: 'bubbles', logo: '', size: 'normal', align: 'left' }; }
 function setSaveState(s) {
   const el = $('#saveState');
+  if (Tabs.readOnly && s !== 'readonly') s = 'readonly';
   el.classList.toggle('dirty', s === 'dirty' || s === 'saving');
   el.classList.toggle('error', s === 'error');
-  $('#saveText').textContent = s === 'error' ? 'Не збережено' : (s === 'saving' || s === 'dirty' ? 'Збереження…' : 'Збережено');
-  el.setAttribute('data-tip', s === 'error'
+  el.classList.toggle('readonly', s === 'readonly');
+  $('#saveText').textContent = s === 'readonly' ? 'Лише перегляд' : s === 'error' ? 'Не збережено' : (s === 'saving' || s === 'dirty' ? 'Збереження…' : 'Збережено');
+  el.setAttribute('data-tip', s === 'readonly' ? 'Документ редагується в іншій вкладці — тут зміни не зберігаються' : s === 'error'
     ? 'Не вдалося зберегти: сховище браузера переповнене або недоступне. Зробіть експорт документа, щоб не втратити зміни.'
     : 'Документ автоматично зберігається в цьому браузері');
 }
 function markDirty() {
-  if (state.error) return;
+  if (state.error || Tabs.readOnly) return;
   setSaveState('dirty');
   scheduleSave();
 }
@@ -244,6 +246,7 @@ function buildRecord() {
 }
 function saveNow() {
   clearTimeout(state.saveTimer);
+  if (Tabs.readOnly) return Promise.resolve(); // документ редагує інша вкладка — тут не зберігаємо
   if (!state.docId) return Promise.resolve();
   if (state.saving) { state.saving.then(() => { if (state.version !== state.savedVersion) scheduleSave(); }); return state.saving; }
   if (state.version === state.savedVersion && !state.error) { setSaveState('saved'); return Promise.resolve(); }
@@ -254,6 +257,7 @@ function saveNow() {
   state.saving = Store.put(rec).then(() => {
     state.error = false;
     state.savedVersion = ver;
+    Tabs.saved();
     setSaveState(state.version === ver ? 'saved' : 'dirty');
     if (state.version !== ver) scheduleSave();
     if ($('#drawer').classList.contains('open')) renderDocList();
@@ -309,6 +313,7 @@ function loadDoc(rec) {
   if (first && !coarse.matches) { if (isEmptyBlock(first)) caretStart(first); else { lastRange = null; } }
   History.reset();
   if ($('#drawer').classList.contains('open')) renderDocList();
+  Tabs.claim(rec.id);
 }
 function updateDocTitle() { document.title = (docLabel() !== 'Без назви' ? docLabel() + ' — ' : '') + 'TextCraft · Edvault'; }
 async function openDoc(id) {

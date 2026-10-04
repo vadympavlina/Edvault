@@ -67,6 +67,7 @@ async function init() {
   fillIcons(document);
   exec('defaultParagraphSeparator', 'p');
   bindUi();
+  Tabs.init();
   updateUndoButtons();
   const ok = await Store.open();
   if (!ok) toast('Сховище браузера недоступне — документи не збережуться після закриття вкладки. Користуйтеся експортом.', 'err', { duration: 9000 });
