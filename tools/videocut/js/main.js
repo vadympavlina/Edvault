@@ -29,6 +29,7 @@ initPreviewLayer();
 initAsr();
 initConvert();
 on('open-asr', openAsr);
+on('proxy-start', m => toast(`«${m.name}» дуже велике (${m.width}×${m.height}). Готуємо легку копію, щоб перегляд не гальмував — експорт піде з оригіналу.`, '', 7000));
 
 // ── розмір перегляду ──
 const stage = $('stage');
@@ -293,7 +294,7 @@ async function restore() {
   }
   S.project = { ...newProject(), ...p };
   // файли, яких немає у списку проєкту (залишки після збоїв чи видалених), більше не потрібні
-  DB.blobKeys().then(keys => keys.filter(k => !list.some(x => x.id === k)).forEach(k => DB.delBlob(k).catch(() => {}))).catch(() => {});
+  DB.blobKeys().then(keys => keys.filter(k => !list.some(x => x.id === k || 'p_' + x.id === k)).forEach(k => DB.delBlob(k).catch(() => {}))).catch(() => {});
   resetHistory();
   emit('project', { committed: true, restored: true });
   emit('aspect');

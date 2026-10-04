@@ -145,6 +145,18 @@ await step('курсор у тексті не злітає після паузи
   assert.equal(await ta.inputValue(), 'aXbc');
 });
 
+await step('велике 4K-відео отримує легку копію для перегляду, експорт іде з оригіналу', async () => {
+  const big = join(tmp, 'big.webm');
+  ff('-f', 'lavfi', '-i', 'testsrc2=size=3840x2160:rate=30:duration=3', '-c:v', 'libvpx', '-b:v', '3M', '-deadline', 'realtime', '-cpu-used', '8', big);
+  await page.setInputFiles('#fileInput', big);
+  await page.waitForFunction(() => [...window.VideoCut.media.values()].some(m => m.width > 3000 && m.proxyUrl), null, { timeout: 120000 });
+  const r = await page.evaluate(() => { const m = [...window.VideoCut.media.values()].find(x => x.width > 3000); return { ow: m.width, ew: m.el.videoWidth, dur: m.duration }; });
+  assert.equal(r.ow, 3840);
+  await page.waitForFunction(() => { const m = [...window.VideoCut.media.values()].find(x => x.width > 3000); return m.el.videoWidth > 0; }, null, { timeout: 10000 });
+  const ew = await page.evaluate(() => [...window.VideoCut.media.values()].find(x => x.width > 3000).el.videoWidth);
+  assert.ok(ew <= 1280, 'перегляд має йти з легкою копією, а не з 4K: ' + ew);
+});
+
 await step('жодної помилки в консолі сторінки', async () => assert.deepEqual(errors, []));
 
 await browser.close(); srv.close();

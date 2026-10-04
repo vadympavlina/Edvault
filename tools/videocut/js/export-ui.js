@@ -1,5 +1,5 @@
 // Вікно експорту: вибір формату й якості, запуск, прогрес, скасування.
-import { S, on, emit, duration } from './state.js';
+import { S, media, on, emit, duration } from './state.js';
 import { pause } from './player.js';
 import { exportVideo, exportAudio, exportSize, detectCodecs, canExport } from './export.js';
 import { $, fmt, toast, openModal, confirmDialog, downloadBlob, safeName, fmtBytes } from './ui.js';
@@ -66,6 +66,7 @@ async function updateExportInfo() {
   else if (!codecs.v) html = `<span class="warn">Браузер не вміє кодувати відео у ${exOpt.format.toUpperCase()} такого розміру. Спробуйте інший формат або меншу якість.</span>`;
   else html = `<b>${W}×${H}</b>, ${S.project.fps} к/с · відео <b>${names[codecs.v] || codecs.v}</b>${codecs.a ? `, звук <b>${names[codecs.a] || codecs.a}</b>` : ''}<br>Тривалість <b>${fmt(len)}</b> · файл приблизно <b>${fmtBytes(size)}</b>` +
     (exOpt.format === 'mp4' && codecs.v !== 'avc' ? '<br><span class="warn">Цей браузер не має кодека H.264 — MP4 може не відкритися на старих пристроях.</span>' : '');
+  if ([...media.values()].some(m => m.proxyUrl)) html += '<br>Перегляд використовує легку копію великого відео, а експорт бере оригінал у повній якості.';
   $('exInfo').innerHTML = html;
   $('exStart').disabled = audioOnly ? !codecs.a : !codecs.v;
 }

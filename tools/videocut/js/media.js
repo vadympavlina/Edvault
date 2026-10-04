@@ -1,6 +1,7 @@
 // Імпорт медіафайлів: метадані, елементи для перегляду, мініатюри й хвилі звуку.
 import { Input, ALL_FORMATS, BlobSource, CanvasSink, AudioBufferSink } from '../vendor/mediabunny.min.mjs';
-import { media, emit, uid } from './state.js';
+import { S, media, emit, on, uid } from './state.js';
+import { needsProxy, makeProxy } from './proxy.js';
 import { DB } from './db.js';
 
 export const PEAKS_RATE = 50; // стовпчиків хвилі на секунду
@@ -103,8 +104,51 @@ export async function addMedia(blob, name, opts = {}) {
   }
   emit('media');
   if (m.kind !== 'image') queue(() => analyze(m));
+  if (needsProxy(m) && opts.proxy !== false) queue(() => buildProxy(m));
   return m;
 }
+
+// ── легка копія для перегляду (великі відео) ──
+// Перегляд грає копію, експорт — оригінал. Готова копія зберігається в IndexedDB під ключем 'p_<id>'.
+async function buildProxy(m) {
+  if (!media.has(m.id)) return;
+  try {
+    let blob = await DB.getBlob('p_' + m.id).catch(() => null);
+    if (!blob) {
+      m.proxy = { state: 'working', p: 0 };
+      emit('proxy', m.id);
+      emit('proxy-start', m);
+      m.proxyHandle = {};
+      let last = 0;
+      blob = await makeProxy(m.blob, { width: m.width, height: m.height }, p => {
+        m.proxy.p = p;
+        if (p - last >= 0.02) { last = p; emit('proxy', m.id); }
+      }, m.proxyHandle);
+      if (blob && media.has(m.id)) DB.putBlob('p_' + m.id, blob).catch(() => {});
+    }
+    if (!blob || !media.has(m.id)) { m.proxy = null; emit('proxy', m.id); return; }
+    m.proxyBlob = blob;
+    m.proxy = { state: 'ready', p: 1 };
+    swapToProxy(m);
+  } catch (e) {
+    console.warn('Не вдалося зробити копію для перегляду — працюємо з оригіналом', e);
+    m.proxy = null;
+    emit('proxy', m.id);
+  }
+}
+// підміна джерела відеоелемента без втрати позиції; під час відтворення чекаємо паузи
+function swapToProxy(m) {
+  if (!media.has(m.id) || !m.proxyBlob || m.proxyUrl) return;
+  if (S.playing) { const off = on('play', () => { if (!S.playing) { swapToProxy(m); } }); return off; }
+  const el = m.el;
+  m.proxyUrl = URL.createObjectURL(m.proxyBlob);
+  const t = el.currentTime;
+  el.addEventListener('loadedmetadata', () => { try { el.currentTime = t; } catch (e) { /* ignore */ } emit('proxy', m.id); emit('media'); }, { once: true });
+  el.src = m.proxyUrl;
+  el.load();
+}
+export const previewUrl = m => m.proxyUrl || m.url;
+export function cancelProxy(m) { if (m.proxyHandle) { m.proxyHandle.cancelled = true; m.proxyHandle.cancel?.(); } }
 
 // Видалені з проєкту файли лишаються в IndexedDB до кінця сесії, щоб «Скасувати» могло їх повернути
 const removed = new Map(); // id → назва
@@ -117,12 +161,14 @@ export async function reviveMedia(id) {
   removed.delete(id);
   return addMedia(blob, name, { id, persist: false });
 }
-export function purgeRemoved() { removed.forEach((_, id) => DB.delBlob(id).catch(() => {})); removed.clear(); }
+export function purgeRemoved() { removed.forEach((_, id) => { DB.delBlob(id).catch(() => {}); DB.delBlob('p_' + id).catch(() => {}); }); removed.clear(); }
 
 export function removeMedia(id, { forever = false } = {}) {
   const m = media.get(id);
   if (!m) return;
-  if (forever) DB.delBlob(id).catch(() => {}); else removed.set(id, m.name);
+  cancelProxy(m);
+  if (m.proxyUrl) URL.revokeObjectURL(m.proxyUrl);
+  if (forever) { DB.delBlob(id).catch(() => {}); DB.delBlob('p_' + id).catch(() => {}); } else removed.set(id, m.name);
   if (m.el && m.el.parentNode) { m.el.pause?.(); m.el.removeAttribute('src'); m.el.load?.(); m.el.remove(); }
   URL.revokeObjectURL(m.url);
   if (m.input) try { m.input.dispose?.(); } catch (e) { /* ignore */ }

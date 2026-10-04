@@ -599,3 +599,7 @@ body.recording .tl,body.recording .lib,body.recording .insp,body.recording .topb
 /* Прокрутка не «повзе» сама: браузер не підлаштовує її під зміни вмісту панелей */
 .insp,.lib-body,.tl-scroll,.modal,.mb-dd{overflow-anchor:none}
 .it:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+
+/* Бейдж «легка копія для перегляду» на картці великого відео */
+.mproxy{position:absolute;left:5px;top:5px;padding:2px 6px;border-radius:6px;font-size:10.5px;font-weight:600;color:#fff;background:rgba(17,24,39,.78);backdrop-filter:blur(2px)}
+.mproxy.ok{background:rgba(16,185,129,.9)}

@@ -40,6 +40,7 @@ export function initLibrary() {
   on('show-tab', t => { showTab(t); document.body.classList.add('show-lib'); });
   on('media', () => { if (tab === 'media' || tab === 'elements') renderLibrary(); });
   on('thumbs', () => { if (tab === 'media') renderLibrary(); });
+  on('proxy', () => { if (tab === 'media') renderLibrary(); });
   on('project', d => {
     if (tab !== 'captions' || (d && d.from === 'lib')) return;
     // текст субтитру змінюють праворуч — лише оновлюємо рядок у списку
@@ -80,6 +81,7 @@ function drawLibrary() {
           <div class="mthumb">${url ? `<img src="${url}" alt="">` : icon(m.kind === 'audio' ? 'music' : m.kind === 'image' ? 'image' : 'video')}
             ${m.kind !== 'image' ? `<span class="mdur">${fmt(m.duration)}</span>` : ''}
             ${m.analyzing ? '<span class="mbusy"></span>' : ''}
+            ${m.proxy && m.proxy.state === 'working' ? `<span class="mproxy" title="Готуємо легку копію для плавного перегляду. Експорт піде з оригіналу.">Копія ${Math.round(m.proxy.p * 100)}%</span>` : m.proxyUrl ? '<span class="mproxy ok" title="Перегляд іде з легкою копією (720p), а експорт — з оригіналу в повній якості.">720p</span>' : ''}
           </div>
           <div class="mname">${esc(m.name)}</div>
           <div class="mact">

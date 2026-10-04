@@ -3,6 +3,7 @@ import { S, media, emit, on, layout, clipAt, srcTime, duration, musicDur, output
 import { capStyle, loadCcFont, onCcFont } from './cc.js';
 import { renderScene, fadeAlpha } from './render.js';
 import { duckGain } from './duck.js';
+import { previewUrl } from './media.js';
 
 let canvas, ctx;
 let actx = null;
@@ -17,6 +18,7 @@ export function initPlayer(cv) {
   onCcFont(() => { if (!S.playing) requestDraw(); });
   on('media', () => { if (!S.playing) requestDraw(); });
   on('tails', () => { if (!S.playing) requestDraw(); });
+  on('proxy', () => { if (!S.playing) requestDraw(); });
 }
 
 export function resizeCanvas(maxW, maxH) {
@@ -82,10 +84,10 @@ function ovEl(o) {
   let v = ovEls.get(o.id);
   const m = media.get(o.mediaId);
   if (!m) return null;
-  if (v && v.dataset.media !== m.id) { v.removeAttribute('src'); v.load(); v.remove(); v = null; }
+  if (v && (v.dataset.media !== m.id || v.dataset.src !== previewUrl(m))) { v.removeAttribute('src'); v.load(); v.remove(); v = null; }
   if (!v) {
     v = document.createElement('video');
-    v.preload = 'auto'; v.playsInline = true; v.src = m.url; v.dataset.media = m.id;
+    v.preload = 'auto'; v.playsInline = true; v.src = previewUrl(m); v.dataset.media = m.id; v.dataset.src = previewUrl(m);
     v.addEventListener('loadeddata', () => { if (!S.playing) requestDraw(); });
     document.getElementById('mediaPool').appendChild(v);
     ovEls.set(o.id, v);
