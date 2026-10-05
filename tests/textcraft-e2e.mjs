@@ -186,6 +186,21 @@ await step('шапка: рівна, без дубля заголовка, пот
   assert.equal(await page.evaluate(() => document.querySelector('#editor > h1').textContent), t);
 });
 
+await step('готові шаблони шапки: «Домашнє завдання» ставить мітку, підзаголовок і колір', async () => {
+  await page.evaluate(() => document.querySelector('[data-act="header"]').click());
+  await page.waitForSelector('#headerModal.open');
+  assert.equal(await page.locator('#hdrPresets [data-preset]').count(), 8);
+  await page.click('#hdrPresets [data-preset="homework"]');
+  const r = await page.evaluate(() => ({ tag: document.getElementById('hdrTag').value, sub: document.getElementById('hdrSubtitle').value, on: document.querySelector('#hdrPresets .on')?.dataset.preset, prev: document.querySelector('#hdrPreview .doc-header-tag')?.textContent }));
+  assert.equal(r.tag, 'Домашнє завдання');
+  assert.equal(r.prev, 'Домашнє завдання');
+  assert.equal(r.on, 'homework');
+  assert.ok(r.sub);
+  await page.evaluate(() => { document.getElementById('hdrDup').checked = false; }); // заголовок у тексті потрібен наступним крокам
+  await page.click('#hdrApply');
+  assert.equal(await page.evaluate(() => document.querySelector('#docHeaderSlot .doc-header-tag').textContent), 'Домашнє завдання');
+});
+
 await step('друга вкладка з тим самим документом — лише перегляд, зміни не перезаписуються', async () => {
   const p2 = await open(ctx);
   assert.equal(await p2.evaluate(() => window.TextCraft.state.docId), await page.evaluate(() => window.TextCraft.state.docId));

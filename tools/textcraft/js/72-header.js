@@ -7,6 +7,28 @@ const HEADER_COLORS = ['#4F6BF4', '#0891b2', '#16a34a', '#f59e0b', '#ef4444', '#
 // вигляд: «Яскравий» — заливка кольором, «Світлий» — легкий відтінок і кольорова смуга зліва
 const HEADER_STYLES = [['solid', 'Яскравий'], ['soft', 'Світлий']];
 const HEADER_PATTERNS = [['none', 'Без'], ['dots', 'Крапки'], ['diagonal', 'Лінії'], ['grid', 'Сітка']];
+// готові шапки: мітка, підзаголовок і вигляд; заголовок і логотип лишаються ті, що є
+function schoolYear() { const d = new Date(), y = d.getFullYear() - (d.getMonth() < 7 ? 1 : 0); return 'Навчальний рік ' + y + '/' + (y + 1); }
+const HEADER_PRESETS = [
+  ['practice', 'Практична робота', { subtitle: 'Виконайте завдання по черзі й збережіть результат', color: '#4F6BF4', style: 'solid', pattern: 'grid' }],
+  ['homework', 'Домашнє завдання', { subtitle: 'Здати до наступного уроку', color: '#f59e0b', style: 'solid', pattern: 'dots' }],
+  ['guide', 'Інструкція', { subtitle: 'Виконуйте кроки по порядку', color: '#0891b2', style: 'soft', pattern: 'none' }],
+  ['program', 'Програма навчання', { subtitle: schoolYear, color: '#16a34a', style: 'solid', pattern: 'diagonal', size: 'tall' }],
+  ['lab', 'Лабораторна робота', { subtitle: 'Мета, обладнання, хід роботи, висновки', color: '#8b5cf6', style: 'solid', pattern: 'grid' }],
+  ['test', 'Контрольна робота', { subtitle: 'Варіант 1 · Час виконання — 45 хв', color: '#ef4444', style: 'soft', pattern: 'none' }],
+  ['lesson', 'Конспект уроку', { subtitle: '', color: '#1a1d23', style: 'soft', pattern: 'dots' }],
+  ['notice', 'Оголошення', { subtitle: '', color: '#ec4899', style: 'solid', pattern: 'diagonal' }],
+];
+function applyPreset(id) {
+  const p = HEADER_PRESETS.find(x => x[0] === id);
+  if (!p) return;
+  const v = p[2];
+  Object.assign(hdrDraft, { preset: id, tag: p[1], subtitle: typeof v.subtitle === 'function' ? v.subtitle() : v.subtitle,
+    color: v.color, style: v.style, pattern: v.pattern, size: v.size || 'normal', align: v.align || 'left' });
+  $('#hdrTag').value = hdrDraft.tag;
+  $('#hdrSubtitle').value = hdrDraft.subtitle;
+  renderHdrModal();
+}
 function shade(hex, pct) {
   const n = String(hex || '#4F6BF4').replace('#', '');
   const full = n.length === 3 ? n.split('').map(c => c + c).join('') : n;
@@ -74,6 +96,7 @@ function renderHdrModal() {
   const d = hdrDraft;
   const col = (d.color || '').toLowerCase();
   renderHdrPreview();
+  $('#hdrPresets').innerHTML = HEADER_PRESETS.map(([id, name, v]) => '<button type="button" class="hdr-preset' + (d.preset === id && d.tag === name ? ' on' : '') + '" data-preset="' + id + '"><i style="background:' + v.color + '"></i>' + name + '</button>').join('');
   const custom = !HEADER_COLORS.some(c => c.toLowerCase() === col);
   $('#hdrColors').innerHTML = HEADER_COLORS.map(c => '<button type="button" class="color-dot' + (c.toLowerCase() === col ? ' on' : '') + '" data-color="' + c + '" style="background:' + c + '" aria-label="Колір ' + c + '"></button>').join('') +
     '<label class="color-custom-wrap' + (custom ? ' on' : '') + '" data-tip="Свій колір"' + (custom ? ' style="background:' + esc(d.color) + '"' : '') + '><input type="color" id="hdrCustom" value="' + esc(d.color) + '"></label>';
@@ -101,6 +124,8 @@ $('#headerModal').addEventListener('click', e => {
   const t = e.target;
   const pick = (attr, key) => { const b = t.closest('[data-' + attr + ']'); if (!b) return false; hdrDraft[key] = b.dataset[attr]; renderHdrModal(); return true; };
   if (pick('color', 'color') || pick('style', 'style') || pick('pattern', 'pattern') || pick('size', 'size') || pick('align', 'align')) return;
+  const pr = t.closest('[data-preset]');
+  if (pr) { applyPreset(pr.dataset.preset); return; }
   if (t.closest('#hdrLogoRemove')) { e.stopPropagation(); hdrDraft.logo = ''; renderHdrModal(); return; }
   if (t.closest('#hdrLogoZone')) $('#logoInput').click();
 });

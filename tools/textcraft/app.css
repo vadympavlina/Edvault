@@ -528,6 +528,11 @@ body.tc-readonly #editor{cursor:default}
 .hdr-fields > .field-label:first-child{margin-top:0}
 .hdr-fields .field-label .opt{font-weight:400;color:var(--muted)}
 .hdr-fields .inp{width:100%}
+.hdr-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.hdr-preset{display:flex;align-items:center;gap:7px;min-height:34px;padding:6px 9px;border:1px solid var(--border);border-radius:9px;background:var(--surface);font-size:12.5px;font-weight:500;line-height:1.25;color:var(--text2);text-align:left}
+.hdr-preset i{width:10px;height:10px;border-radius:3px;flex:none}
+.hdr-preset:hover{border-color:var(--border2);color:var(--text)}
+.hdr-preset.on{border-color:var(--accent);color:var(--text);box-shadow:0 0 0 2px var(--accent-light)}
 .hdr-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .hdr-row .seg{margin:0;width:100%}
 .hdr-row .seg button{flex:1}
