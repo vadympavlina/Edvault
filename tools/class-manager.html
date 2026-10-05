@@ -618,7 +618,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   <div class="modal">
     <div class="modal-head">
       <span class="modal-title">Імпорт студентів</span>
-      <button class="modal-close" onclick="closeModal('import-modal')"><svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <button class="modal-close" onclick="closeModal('import-modal')" title="Закрити" aria-label="Закрити"><svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
     </div>
     <div class="import-drop" id="import-drop" onclick="document.getElementById('xlsx-file').click()">
       <svg viewBox="0 0 24 24" fill="none" style="color:var(--subtle)"><path d="M12 15V3M8 7l4-4 4 4M20 21H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -2472,7 +2472,7 @@ document.getElementById('dialog-modal').addEventListener('click',function(e){if(
   </div>
   <div class="tasks-add-row">
     <input class="tasks-add-inp" id="task-inp" placeholder="Нове завдання…" onkeydown="if(event.key==='Enter')addTask()">
-    <button class="btn btn-solid btn-icon" onclick="addTask()">
+    <button class="btn btn-solid btn-icon" onclick="addTask()" title="Додати завдання" aria-label="Додати завдання">
       <svg viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
   </div>

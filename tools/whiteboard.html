@@ -263,7 +263,6 @@
   .page-stage canvas.layer-preview { z-index: 4; pointer-events: none; }
   .page-stage canvas.layer-interact { z-index: 5; touch-action: none; }
   .page-stage canvas.layer-interact.interact-tool-laser { cursor: none; }
-  .wb-back { display: flex; align-items: center; justify-content: center; text-decoration: none; color: inherit; }
   .strip-clear { flex-shrink: 0; height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font: 600 12px 'Inter', sans-serif; cursor: pointer; margin-left: 8px; }
   .strip-clear:hover { color: var(--danger); border-color: var(--danger); }
   .export-menu { min-width: 250px; }
@@ -691,12 +690,6 @@
 
   /* ── верхня панель ── */
   .topbar { height: var(--topbar-h); justify-content: flex-start; gap: 6px; padding: 0 12px; box-shadow: none; z-index: 30; }
-  .back-link {
-    display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px 0 8px; border-radius: var(--r);
-    color: var(--text2); text-decoration: none; font-size: 13px; font-weight: 500; flex-shrink: 0;
-  }
-  .back-link:hover { background: var(--surface2); color: var(--text); }
-  .back-link svg { width: 16px; height: 16px; }
   .tb-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
   .brand { display: flex; align-items: center; gap: 9px; flex-shrink: 0; margin-right: 2px; }
   .topbar-logo { width: 30px; height: 30px; border-radius: 9px; color: #fff; box-shadow: 0 3px 10px rgba(79,107,244,.35); }
@@ -800,7 +793,6 @@
     .topbar { padding: 0 6px; gap: 2px; }
     .brand-name { display: none; }
     .tb-sep { margin: 0 2px; }
-    .back-link { padding: 0 6px; }
   }
   @media (max-width: 640px) {
     .main { flex-direction: column-reverse; }
@@ -822,11 +814,6 @@
 
 <div class="app">
   <header class="topbar">
-    <a class="back-link wb-back" href="../tools.html" title="До всіх інструментів Edvault">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-      <span class="hide-sm">Інструменти</span>
-    </a>
-    <div class="tb-sep"></div>
     <div class="brand">
       <div class="topbar-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></div>
       <span class="brand-name">Вайтборд</span>
@@ -1241,6 +1228,10 @@
 
   const PEN_COLORS = ['#1a1d23', '#ef4444', '#f5b942', '#16a34a', '#4F6BF4', '#a855f7', '#ec4899', '#0891b2', '#78716c', '#ffffff'];
   const STICKY_COLORS = ['#fef3c7', '#fde2e2', '#dcfce7', '#dbeafe', '#f3e8ff', '#fee2e2'];
+  // назви кольорів — для підказок і програм читання з екрана
+  const COLOR_NAMES = { '#1a1d23': 'Чорний', '#ef4444': 'Червоний', '#f5b942': 'Жовтий', '#16a34a': 'Зелений', '#4F6BF4': 'Синій', '#a855f7': 'Фіолетовий', '#ec4899': 'Рожевий', '#0891b2': 'Бірюзовий', '#78716c': 'Сірий', '#ffffff': 'Білий',
+    '#fef3c7': 'Жовтий', '#fde2e2': 'Рожевий', '#dcfce7': 'Зелений', '#dbeafe': 'Блакитний', '#f3e8ff': 'Бузковий', '#fee2e2': 'Червоний' };
+  const nameSwatch = (b, c) => { const n = COLOR_NAMES[c] || c; b.title = n; b.setAttribute('aria-label', n); };
   const TOOL_DEFAULT_SIZE = { laser: 6, pen: 3, highlighter: 18, eraser: 22, rect: 3, circle: 3, line: 3, arrow: 3, text: 22, sticky: 15, number: 44 };
   const BLANK_W = 1400, BLANK_H = 900;
   const STICKY_W = 190, STICKY_H = 170;
@@ -1927,7 +1918,7 @@
     palette.forEach(c => {
       const b = document.createElement('button');
       b.className = 'sel-color-swatch';
-      b.style.background = c;
+      b.style.background = c; nameSwatch(b, c);
       if (c === '#ffffff') b.style.boxShadow = '0 0 0 1.5px var(--border2), inset 0 0 0 1px var(--border2)';
       b.addEventListener('click', () => applySelColor(c));
       grid.appendChild(b);
@@ -2948,7 +2939,7 @@
       PEN_COLORS.forEach(c => {
         const b = document.createElement('button');
         b.className = 'swatch';
-        b.style.background = c;
+        b.style.background = c; nameSwatch(b, c);
         b.dataset.color = c;
         if (c === '#ffffff') b.style.boxShadow = '0 0 0 1.5px var(--border2), inset 0 0 0 1px var(--border2)';
         b.addEventListener('click', () => { state.color = c; document.getElementById('customColor').value = c; renderSwatches(); updateSizePreview(); });
@@ -2965,7 +2956,7 @@
       STICKY_COLORS.forEach(c => {
         const b = document.createElement('button');
         b.className = 'sticky-swatch';
-        b.style.background = c;
+        b.style.background = c; nameSwatch(b, c);
         b.dataset.color = c;
         b.addEventListener('click', () => { state.stickyColor = c; renderStickySwatches(); updateSizePreview(); });
         row.appendChild(b);
@@ -3288,7 +3279,7 @@
     PEN_COLORS.forEach(c => {
       const b = document.createElement('button');
       b.className = 'pt-color-swatch';
-      b.style.background = c;
+      b.style.background = c; nameSwatch(b, c);
       if (c === '#ffffff') b.style.boxShadow = '0 0 0 1.5px var(--border2), inset 0 0 0 1px var(--border2)';
       b.addEventListener('click', () => {
         state.color = c;

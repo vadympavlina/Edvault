@@ -56,9 +56,6 @@ input{font-family:inherit;font-size:inherit;color:inherit}
 
 /* ── Topbar ── */
 .topbar{height:56px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px;background:var(--surface);border-bottom:1px solid var(--border);z-index:30}
-.back-link{display:flex;align-items:center;gap:6px;height:34px;padding:0 10px 0 8px;border-radius:var(--r);color:var(--text2);text-decoration:none;font-size:13px;font-weight:500;flex-shrink:0}
-.back-link:hover{background:var(--surface2);color:var(--text)}
-.back-link .ico{width:16px;height:16px}
 .sep{width:1px;height:22px;background:var(--border);margin:0 4px;flex-shrink:0}
 .brand{display:flex;align-items:center;gap:9px;flex-shrink:0;margin-right:6px}
 .brand-mark{width:30px;height:30px;border-radius:9px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(79,107,244,.35)}
@@ -214,8 +211,6 @@ input{font-family:inherit;font-size:inherit;color:inherit}
 </head>
 <body>
 <header class="topbar">
-  <a class="back-link" href="../tools.html" data-tip="До всіх інструментів Edvault"><span data-icon="back"></span><span class="hide-sm">Інструменти</span></a>
-  <div class="sep hide-sm"></div>
   <div class="brand"><div class="brand-mark"><span data-icon="logo"></span></div><span class="brand-name">SnapEdit</span></div>
   <button class="btn" data-act="open" data-tip="Відкрити зображення" data-kbd="Ctrl+O"><span data-icon="folder"></span><span class="hide-md">Відкрити</span></button>
   <button class="btn" data-act="new" data-tip="Нове порожнє полотно"><span data-icon="plus"></span><span class="hide-md">Нове</span></button>

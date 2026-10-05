@@ -75,13 +75,13 @@
   .topbar-sep { width: 1px; height: 26px; background: var(--border); flex-shrink: 0; }
   .topbar-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
-  .back-btn, .back-link, .ghost-btn {
+  .back-btn, .ghost-btn {
     display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: 9px;
     border: 1.5px solid var(--border); background: var(--surface); color: var(--text2);
     font-size: 13px; font-weight: 600; cursor: pointer; transition: all .13s ease; flex-shrink: 0; text-decoration: none;
   }
-  .back-btn:hover, .back-link:hover, .ghost-btn:hover { border-color: var(--border2); background: var(--surface2); color: var(--text); }
-  .back-btn svg, .back-link svg, .ghost-btn svg { width: 14px; height: 14px; }
+  .back-btn:hover, .ghost-btn:hover { border-color: var(--border2); background: var(--surface2); color: var(--text); }
+  .back-btn svg, .ghost-btn svg { width: 14px; height: 14px; }
   .ghost-btn { font-weight: 700; }
 
   .name-input {
@@ -433,11 +433,6 @@
 <div id="view-catalog">
   <div class="topbar">
     <div class="topbar-left">
-      <a class="back-link" href="../tools.html" title="До всіх інструментів Edvault">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        <span class="hide-sm">Інструменти</span>
-      </a>
-      <div class="topbar-sep"></div>
       <div class="topbar-logo">
         <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" fill="white"/><rect x="13" y="4" width="7" height="7" fill="white" opacity=".55"/><rect x="4" y="13" width="7" height="7" fill="white" opacity=".55"/><rect x="13" y="13" width="7" height="7" fill="white"/></svg>
       </div>
