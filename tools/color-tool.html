@@ -109,6 +109,7 @@
     font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
   }
   .hint { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+  .hint-ic { width: 12px; height: 12px; vertical-align: -1px; }
 
   /* ---------- swatches ---------- */
   .shades { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px; }
@@ -361,7 +362,7 @@
       <button class="btn primary" id="gen-btn"></button>
       <select class="select" id="gen-mode"></select>
       <button class="btn" id="pal-undo" title="Попередня палітра"></button>
-      <span class="hint hide-sm">або натисни <b>пробіл</b>. Замок 🔒 залишає колір</span>
+      <span class="hint hide-sm">або натисни <b>пробіл</b>. Замок <svg class="hint-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> залишає колір</span>
       <span class="grow"></span>
       <button class="btn" id="pal-save"></button>
       <button class="btn" id="pal-export"></button>

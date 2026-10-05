@@ -1135,7 +1135,7 @@ function checkFile() {
     let ok = null;
     try { const r = await fetch('tools/' + encodeURIComponent(f), { method: 'HEAD', cache: 'no-store' }); ok = r.ok; } catch (e) { ok = null; }
     if (seq !== fileCheckSeq) return;
-    if (ok === true) { hint.className = 'hint ok'; hint.textContent = '✓ Файл tools/' + f + ' знайдено'; }
+    if (ok === true) { hint.className = 'hint ok'; hint.textContent = 'Файл tools/' + f + ' знайдено'; }
     else if (ok === false) { hint.className = 'hint bad'; hint.textContent = 'Файлу tools/' + f + ' немає в репозиторії — на сайті буде помилка 404'; }
     else hint.textContent = 'Не вдалося перевірити файл';
   }, 350);

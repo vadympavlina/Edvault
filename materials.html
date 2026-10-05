@@ -131,7 +131,7 @@
   </div>
   <div class="gate" id="gatePending" hidden>
     <div class="gate-card">
-      <div class="gate-ico">⏳</div>
+      <div class="gate-ico" data-ico="clock"></div>
       <div class="gate-title">Очікує підтвердження</div>
       <div class="gate-text">Запит на доступ надіслано викладачу. Щойно його підтвердять, натисніть «Оновити».</div>
       <div class="gate-actions"><button class="btn btn-outline" data-act="reload">Оновити</button><button class="btn btn-line" data-act="signout">Вийти</button></div>
@@ -139,7 +139,7 @@
   </div>
   <div class="gate" id="gateBlocked" hidden>
     <div class="gate-card">
-      <div class="gate-ico">🚫</div>
+      <div class="gate-ico" data-ico="ban"></div>
       <div class="gate-title">Доступ заблоковано</div>
       <div class="gate-text">Ваш обліковий запис заблоковано. Зверніться до викладача.</div>
       <div class="gate-actions"><button class="btn btn-line" data-act="signout">Вийти</button></div>
@@ -147,7 +147,7 @@
   </div>
   <div class="gate" id="gateMaint" hidden>
     <div class="gate-card">
-      <div class="gate-ico">🛠️</div>
+      <div class="gate-ico" data-ico="wrench"></div>
       <div class="gate-title">Технічна перерва</div>
       <div class="gate-text">Портал тимчасово закрито. Спробуйте трохи пізніше.</div>
       <div class="gate-actions"><button class="btn btn-outline" data-act="reload">Оновити</button></div>
@@ -206,6 +206,7 @@
     $('brandMark').innerHTML = ICON.book; $('searchIco').outerHTML = ICON.search;
     $('btnGrid').innerHTML = ICON.grid; $('btnList').innerHTML = ICON.list; $('btnSignOut').innerHTML = ICON.logout;
     $('gateAuthIco').innerHTML = ICON.book;
+    document.querySelectorAll('.gate-ico[data-ico]').forEach(el => { el.innerHTML = ICON[el.dataset.ico]; });
     $('googleSignInBtn').innerHTML = ICON.google + 'Увійти через Google';
     initThemeToggle($('btnTheme'));
 

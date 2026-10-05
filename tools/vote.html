@@ -218,6 +218,7 @@
     background: rgba(0,0,0,.6); color: #fff; border: none; cursor: pointer;
     display: flex; align-items: center; justify-content: center; font-size: 11px; line-height: 1;
   }
+  .photo-thumb .rm-photo svg { width: 11px; height: 11px; }
   .photo-thumb .rm-photo:hover { background: var(--danger); }
 
   /* =========== FULLSCREEN STAGE (voting / countdown / tie / results) =========== */
@@ -590,7 +591,6 @@
   .bar-head span:last-child { font: 800 16px 'JetBrains Mono', monospace; color: rgba(255,255,255,.8); white-space: nowrap; }
   .bar-track { height: 26px; border-radius: 10px; background: rgba(255,255,255,.08); overflow: hidden; }
   .bar-fill { height: 100%; width: 0; border-radius: 10px; transition: width 1.1s cubic-bezier(.16,1,.3,1); }
-  .bar-row.win .bar-head span:first-child::before { content: '🏆 '; }
   .bar-row.win .bar-track { box-shadow: 0 0 24px color-mix(in srgb, var(--c) 60%, transparent); }
   .yn-split { width: 100%; max-width: 980px; height: 90px; border-radius: 22px; overflow: hidden; display: flex; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
   .yn-split div { display: flex; align-items: center; justify-content: center; gap: 10px; font: 900 clamp(18px, 2.6vw, 30px) 'Inter', sans-serif; color: #fff; width: 0; transition: width 1.2s cubic-bezier(.16,1,.3,1); white-space: nowrap; overflow: hidden; }
@@ -598,7 +598,18 @@
   .yn-legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 7px; vertical-align: -1px; }
   .big-avg { text-align: center; }
   .big-avg .num { font: 900 clamp(80px, 13vw, 150px) 'JetBrains Mono', monospace; line-height: 1; background: linear-gradient(180deg, #fff, #fbbf24); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .big-avg .stars { font-size: clamp(30px, 4vw, 46px); letter-spacing: 6px; margin-top: 6px; }
+  .big-avg .stars { font-size: clamp(30px, 4vw, 46px); margin-top: 6px; color: #fbbf24; display: flex; gap: 6px; justify-content: center; }
+  .ic { width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.14em; }
+  .ic-row { display: inline-flex; gap: .12em; vertical-align: middle; }
+  .ic-win { color: #fbbf24; margin-right: .3em; }
+  .ic-gold { color: var(--gold); } .ic-silver { color: var(--silver); } .ic-bronze { color: var(--bronze); }
+  .tile-emoji { display: flex; justify-content: center; }
+  .tiles.rating .tile-emoji .ic-row { color: #fbbf24; }
+  .preview-row span, .yn-split div, .res-title h2, .top-words span, .sc-name { display: inline-flex; align-items: center; gap: .35em; }
+  .yn-split div { display: flex; }
+  .empty-state .icon-lg .ic, .type-card .te .ic { display: block; }
+  .empty-state .icon-lg { color: var(--text3, var(--text2)); }
+  .type-card .te { color: var(--accent); }
   .big-avg .meta { font-size: 15px; color: rgba(255,255,255,.6); font-weight: 600; margin-top: 8px; }
   .summary { width: 100%; max-width: 1000px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
   .sum-card { background: rgba(255,255,255,.07); border: 1.5px solid rgba(245,185,66,.4); border-radius: 18px; overflow: hidden; opacity: 0; transform: translateY(20px); transition: all .5s cubic-bezier(.16,1,.3,1); }
@@ -667,7 +678,7 @@
       </div>
     </div>
     <div class="empty-state" id="empty-state">
-      <div class="icon-lg">🖼️</div>
+      <div class="icon-lg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>
       <h3>Ще немає жодної роботи</h3>
       <p>Додай роботи учнів з фото. Фото можна вставити з буфера (Ctrl+V)</p>
       <button class="btn btn-primary" onclick="openWorkModal()">
@@ -678,7 +689,7 @@
     <div class="works-grid" id="works-grid"></div>
 
     <div class="panel" style="margin-top:22px">
-      <h3>🏅 Номінації</h3>
+      <h3>Номінації</h3>
       <div class="sub">Кожна номінація — окремий раунд з власним п'єдесталом. Наприкінці — підсумки з усіма переможцями.</div>
       <div class="chips" id="nom-chips"></div>
       <div class="chips" id="nom-suggest" style="margin-top:10px"></div>
@@ -863,7 +874,7 @@
 
   <!-- tie -->
   <div class="tie-stage" id="tie-view" style="display:none;">
-    <span class="tie-badge">⚡ Нічия за 1 місце</span>
+    <span class="tie-badge"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg> Нічия за 1 місце</span>
     <h2>Потрібне додаткове голосування</h2>
     <p>У цих варіантів однакова кількість голосів. Проведи ще один раунд лише серед них.</p>
     <div class="tie-list" id="tie-list"></div>
@@ -879,7 +890,7 @@
   <!-- podium (works) -->
   <div class="results-stage" id="results-view" style="display:none;">
     <div class="results-title">
-      <h2 id="results-heading">🏆 Результати голосування</h2>
+      <h2 id="results-heading">Результати голосування</h2>
       <p id="results-subtitle">Вітаємо переможців!</p>
     </div>
     <div class="podium" id="podium"></div>
@@ -948,16 +959,37 @@ applyTheme(document.documentElement.getAttribute('data-theme') === 'dark');
 // ────────────────────────────────────────────────────────────
 // НАЛАШТУВАННЯ ГОЛОСУВАННЯ
 // ────────────────────────────────────────────────────────────
+// іконки для типів, оцінок і результатів (у дизайні — лише іконки, без емодзі)
+const ICX = {
+  image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+  chart: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  thumbUp: '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+  thumbDown: '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
+  maybe: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+  star: '<path fill="currentColor" d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
+  cloud: '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
+  trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+  medal: '<path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15"/><path d="M11 12 5.12 2.2"/><path d="m13 12 5.88-9.8"/><path d="M8 7h8"/><circle cx="12" cy="17" r="5"/><path d="M12 18v-2h-.5"/>',
+  equal: '<line x1="5" x2="19" y1="9" y2="9"/><line x1="5" x2="19" y1="15" y2="15"/>',
+  f1: '<circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><path d="M7.5 8 10 9"/><path d="m14 9 2.5-1"/><path d="M9 10h.01"/><path d="M15 10h.01"/>',
+  f2: '<circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>',
+  f3: '<circle cx="12" cy="12" r="10"/><line x1="8" x2="16" y1="15" y2="15"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>',
+  f4: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>',
+  f5: '<circle cx="12" cy="12" r="10"/><path d="M18 13a6 6 0 0 1-6 5 6 6 0 0 1-6-5h12Z"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>'
+};
+const ic = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICX[n] || IC[n]}</svg>`;
+const stars = n => `<span class="ic-row">${ic('star').repeat(n)}</span>`;
+const MEDAL = ['ic-gold', 'ic-silver', 'ic-bronze'];
 const TYPES = [
-  { id: 'works', emoji: '🖼️', name: 'Конкурс робіт', desc: 'Роботи з фото, номінації і п’єдестал з конфеті' },
-  { id: 'poll', emoji: '📊', name: 'Опитування', desc: 'Питання і кілька варіантів відповіді' },
-  { id: 'yesno', emoji: '👍', name: 'Так чи ні', desc: 'Швидке питання — за чи проти' },
-  { id: 'rating', emoji: '⭐', name: 'Оцінка', desc: 'Оцінка від 1 до 5 — середній бал і розподіл' },
-  { id: 'words', emoji: '☁️', name: 'Хмара слів', desc: 'Відповіді одним словом — популярні стають більшими' }
+  { id: 'works', emoji: ic('image'), name: 'Конкурс робіт', desc: 'Роботи з фото, номінації і п’єдестал з конфеті' },
+  { id: 'poll', emoji: ic('chart'), name: 'Опитування', desc: 'Питання і кілька варіантів відповіді' },
+  { id: 'yesno', emoji: ic('thumbUp'), name: 'Так чи ні', desc: 'Швидке питання — за чи проти' },
+  { id: 'rating', emoji: ic('star'), name: 'Оцінка', desc: 'Оцінка від 1 до 5 — середній бал і розподіл' },
+  { id: 'words', emoji: ic('cloud'), name: 'Хмара слів', desc: 'Відповіді одним словом — популярні стають більшими' }
 ];
 const RATING_STYLES = {
-  stars: { name: 'Зірки', items: ['⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐'], labels: ['1', '2', '3', '4', '5'] },
-  faces: { name: 'Емоції', items: ['😞', '🙁', '😐', '🙂', '🤩'], labels: ['Погано', 'Так собі', 'Нормально', 'Добре', 'Супер'] },
+  stars: { name: 'Зірки', items: [1, 2, 3, 4, 5].map(stars), labels: ['1', '2', '3', '4', '5'] },
+  faces: { name: 'Емоції', items: ['f1', 'f2', 'f3', 'f4', 'f5'].map(n => ic(n)), labels: ['Погано', 'Так собі', 'Нормально', 'Добре', 'Супер'] },
   grade: { name: 'Оцінки 1–5', items: ['1', '2', '3', '4', '5'], labels: ['', '', '', '', ''] }
 };
 const NOM_SUGGEST = ['Найкреативніша', 'Найакуратніша', 'Найсміливіша ідея', 'Найкращий дизайн', 'Приз глядацьких симпатій', 'Найсмішніша', 'Найкорисніша'];
@@ -1119,9 +1151,9 @@ $('poll-q').oninput = e => { S.poll.q = e.target.value; };
 
 // ── так/ні ──
 const YN_ITEMS = () => [
-  { id: 'yes', label: 'Так', emoji: '👍', color: '#10b981' },
-  { id: 'no', label: 'Ні', emoji: '👎', color: '#ef4444' },
-  ...(S.yesno.maybe ? [{ id: 'maybe', label: 'Не знаю', emoji: '🤔', color: '#94a3b8' }] : [])
+  { id: 'yes', label: 'Так', emoji: ic('thumbUp'), color: '#10b981' },
+  { id: 'no', label: 'Ні', emoji: ic('thumbDown'), color: '#ef4444' },
+  ...(S.yesno.maybe ? [{ id: 'maybe', label: 'Не знаю', emoji: ic('maybe'), color: '#94a3b8' }] : [])
 ];
 function renderYnPreview() {
   $('yn-q').value = S.yesno.q; $('yn-maybe').checked = S.yesno.maybe;
@@ -1203,7 +1235,7 @@ window.openWorkModal = function (id) {
 };
 window.closeWorkModal = function () { $('modal-overlay').classList.remove('visible'); editingWorkId = null; modalPhotos = []; };
 function renderPhotoThumbs() {
-  $('photo-thumbs').innerHTML = modalPhotos.map((src, i) => `<div class="photo-thumb"><img src="${src}" alt=""><button type="button" class="rm-photo" onclick="removeModalPhoto(${i})">✕</button></div>`).join('');
+  $('photo-thumbs').innerHTML = modalPhotos.map((src, i) => `<div class="photo-thumb"><img src="${src}" alt=""><button type="button" class="rm-photo" onclick="removeModalPhoto(${i})" title="Прибрати фото" aria-label="Прибрати фото">${svg(IC.x)}</button></div>`).join('');
 }
 window.removeModalPhoto = function (i) { modalPhotos.splice(i, 1); renderPhotoThumbs(); };
 function addPhotoFile(file) {
@@ -1675,7 +1707,7 @@ window.acceptTie = function () {
   const winners = run.tied.map(item);
   run.results[run.nomIndex] = { nom: run.noms[run.nomIndex].name, winners, votes: run.votes[winners[0].id] || 0 };
   showStageView('res');
-  $('res-heading').textContent = '🤝 Нічия — перемагають усі лідери';
+  $('res-heading').innerHTML = ic('equal') + ' Нічия — перемагають усі лідери';
   $('res-sub').textContent = run.noms[run.nomIndex].name;
   $('res-body').innerHTML = `<div class="summary">${winners.map(w => sumCard(run.noms[run.nomIndex].name, w, run.votes[w.id] || 0)).join('')}</div>`;
   revealSum();
@@ -1691,14 +1723,14 @@ function showPodium(first) {
   if (rest[1]) data.push({ place: 3, it: rest[1].it, v: rest[1].v });
   run.results[run.nomIndex] = { nom: run.noms[run.nomIndex].name, winners: [first], votes: data[0].v, podium: data };
   showStageView('results');
-  $('results-heading').textContent = '🏆 ' + run.noms[run.nomIndex].name;
+  $('results-heading').innerHTML = ic('trophy', 'ic-win') + escapeHtml(run.noms[run.nomIndex].name);
   $('results-subtitle').textContent = run.noms.length > 1 ? `Номінація ${run.nomIndex + 1} з ${run.noms.length}` : 'Вітаємо переможців!';
   const byPlace = {}; data.forEach(d => byPlace[d.place] = d);
   $('podium').innerHTML = [2, 1, 3].filter(p => byPlace[p]).map(p => {
     const d = byPlace[p];
     return `<div class="podium-slot" data-place="${p}" id="podium-slot-${p}">
       <div class="podium-card">
-        <div class="pc-medal">${p === 1 ? '🥇' : p === 2 ? '🥈' : '🥉'}</div>
+        <div class="pc-medal">${p}</div>
         <div class="pc-photo">${d.it.photos[0] ? `<img src="${d.it.photos[0]}" alt="">` : `<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:900;color:rgba(255,255,255,.35)">${escapeHtml(d.it.label.slice(0, 1).toUpperCase())}</div>`}</div>
         <div class="pc-body"><div class="pc-name">${escapeHtml(d.it.label)}</div><div class="pc-votes">${d.v} ${pluralVotes(d.v)}</div></div>
       </div>
@@ -1715,7 +1747,7 @@ function showPodium(first) {
 function worksNextActions() {
   const acts = [{ label: 'Переголосувати', fn: rerunRound }];
   if (run.nomIndex < run.noms.length - 1) acts.push({ label: `Наступна номінація: ${run.noms[run.nomIndex + 1].name} →`, fn: nextNom, primary: true });
-  else if (run.noms.length > 1) acts.push({ label: '🏆 Підсумки всіх номінацій', fn: showSummary, primary: true });
+  else if (run.noms.length > 1) acts.push({ label: 'Підсумки всіх номінацій', fn: showSummary, primary: true });
   else acts.unshift({ label: 'До налаштувань', fn: backToSetup }), acts.push({ label: 'Копіювати результати', fn: copyResults });
   return acts;
 }
@@ -1732,12 +1764,12 @@ function rerunRound() { startRound(); }
 function backToSetup() { hideStage(); showStageView('voting'); run = null; renderSetup(); }
 function sumCard(nom, w, v) {
   return `<div class="sum-card"><div class="sc-nom">${escapeHtml(nom)}</div><div class="sc-photo">${w.photos && w.photos[0] ? `<img src="${w.photos[0]}" alt="">` : `<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:900;color:rgba(255,255,255,.3)">${escapeHtml(w.label.slice(0, 1).toUpperCase())}</div>`}</div>
-    <div class="sc-body"><div class="sc-name">🏆 ${escapeHtml(w.label)}</div><div class="sc-votes">${v} ${pluralVotes(v)}</div></div></div>`;
+    <div class="sc-body"><div class="sc-name">${ic('trophy', 'ic-win')}${escapeHtml(w.label)}</div><div class="sc-votes">${v} ${pluralVotes(v)}</div></div></div>`;
 }
 function revealSum() { document.querySelectorAll('#res-body .sum-card').forEach((c, i) => setTimeout(() => c.classList.add('shown'), 250 + i * 500)); }
 function showSummary() {
   showStageView('res');
-  $('res-heading').textContent = '🏆 Підсумки конкурсу';
+  $('res-heading').innerHTML = ic('trophy', 'ic-win') + 'Підсумки конкурсу';
   $('res-sub').textContent = 'Переможці всіх номінацій';
   $('res-body').innerHTML = `<div class="summary">${run.results.filter(Boolean).map(r => r.winners.map(w => sumCard(r.nom, w, r.votes)).join('')).join('')}</div>`;
   revealSum();
@@ -1750,7 +1782,7 @@ function barsHtml(rows, total, winnerIds) {
   return `<div class="bars">${rows.map(r => {
     const pct = total ? r.v / total * 100 : 0;
     return `<div class="bar-row${winnerIds.includes(r.it.id) ? ' win' : ''}" style="--c:${r.it.color}">
-      <div class="bar-head"><span>${r.it.emoji ? r.it.emoji + ' ' : ''}${escapeHtml(r.it.label || '')}</span><span>${r.v} · ${Math.round(pct)}%</span></div>
+      <div class="bar-head"><span>${winnerIds.includes(r.it.id) ? ic('trophy', 'ic-win') : ''}${r.it.emoji ? r.it.emoji + ' ' : ''}${escapeHtml(r.it.label || '')}</span><span>${r.v} · ${Math.round(pct)}%</span></div>
       <div class="bar-track"><div class="bar-fill" data-w="${pct}" style="background:${r.it.color}"></div></div>
     </div>`;
   }).join('')}</div>`;
@@ -1766,7 +1798,7 @@ function renderPollResult() {
   const rows = list.map(it => ({ it, v: run.votes[it.id] || 0 })).sort((a, b) => b.v - a.v);
   const max = rows[0].v, winners = rows.filter(r => r.v === max).map(r => r.it.id);
   showStageView('res');
-  $('res-heading').textContent = winners.length === 1 ? `🏆 ${item(winners[0]).label}` : '🤝 Нічия';
+  $('res-heading').innerHTML = winners.length === 1 ? ic('trophy', 'ic-win') + escapeHtml(item(winners[0]).label) : ic('equal') + ' Нічия';
   $('res-sub').textContent = (S.poll.q.trim() || 'Опитування') + ` · ${total} ${pluralVotes(total)}`;
   $('res-body').innerHTML = barsHtml(rows, total, winners);
   animateBars();
@@ -1783,7 +1815,7 @@ function renderYesNoResult() {
   const rows = list.map(it => ({ it, v: run.votes[it.id] || 0 }));
   const max = Math.max(...rows.map(r => r.v)), top = rows.filter(r => r.v === max);
   showStageView('res');
-  $('res-heading').textContent = top.length === 1 ? `Більшість — ${top[0].it.emoji} ${top[0].it.label} (${Math.round(max / total * 100)}%)` : '🤝 Голоси розділились порівну';
+  $('res-heading').innerHTML = top.length === 1 ? `Більшість — ${top[0].it.emoji} ${escapeHtml(top[0].it.label)} (${Math.round(max / total * 100)}%)` : ic('equal') + ' Голоси розділились порівну';
   $('res-sub').textContent = (S.yesno.q.trim() || 'Так чи ні?') + ` · ${total} ${pluralVotes(total)}`;
   $('res-body').innerHTML = `<div class="yn-split">${rows.filter(r => r.v).map(r => `<div data-w="${r.v / total * 100}" style="background:${r.it.color}">${r.it.emoji} ${Math.round(r.v / total * 100)}%</div>`).join('')}</div>
     <div class="yn-legend">${rows.map(r => `<span><i style="background:${r.it.color}"></i>${r.it.label}: <b>${r.v}</b></span>`).join('')}</div>`;
@@ -1801,7 +1833,7 @@ function renderRatingResult() {
   $('res-heading').textContent = S.rating.q.trim() || 'Оцінка';
   $('res-sub').textContent = `${total} ${total % 10 === 1 && total % 100 !== 11 ? 'оцінка' : (total % 10 >= 2 && total % 10 <= 4 && (total % 100 < 12 || total % 100 > 14)) ? 'оцінки' : 'оцінок'}`;
   const rows = scoped().slice().reverse().map(it => ({ it: { ...it, label: S.rating.style === 'grade' ? `Оцінка ${it.value}` : `${it.value} — ${it.label}` , emoji: S.rating.style === 'faces' ? it.emoji : '' }, v: run.votes[it.id] || 0 }));
-  $('res-body').innerHTML = `<div class="big-avg"><div class="num">${avg.toFixed(1)}</div><div class="stars">${'★'.repeat(full)}<span style="opacity:.25">${'★'.repeat(5 - full)}</span></div><div class="meta">середня оцінка з 5</div></div><div style="height:26px"></div>` + barsHtml(rows, total, []);
+  $('res-body').innerHTML = `<div class="big-avg"><div class="num">${avg.toFixed(1)}</div><div class="stars">${ic('star').repeat(full)}<span class="ic-row" style="opacity:.25">${ic('star').repeat(5 - full)}</span></div><div class="meta">середня оцінка з 5</div></div><div style="height:26px"></div>` + barsHtml(rows, total, []);
   animateBars();
   setTimeout(() => { if (avg >= 4) { playFanfare(); burstConfetti(); } else playTick(); }, 500);
   setActions('res-actions', [{ label: 'До налаштувань', fn: backToSetup }, { label: 'Оцінити ще раз', fn: rerunRound }, { label: 'Копіювати результати', fn: copyResults, primary: true }]);
@@ -1816,7 +1848,7 @@ function renderWordsResult(relayoutOnly) {
     const total = words.reduce((s, w) => s + w.count, 0);
     $('res-sub').textContent = `${words.length} різних слів · ${total} відповідей`;
     $('res-body').innerHTML = `<div class="cloud" id="res-cloud" style="width:100%;max-width:1100px;height:min(56vh,520px)"></div>
-      <div class="top-words">${words.slice(0, 3).map((w, i) => `<span>${['🥇', '🥈', '🥉'][i]} ${escapeHtml(w.text)} · ${w.count}</span>`).join('')}</div>`;
+      <div class="top-words">${words.slice(0, 3).map((w, i) => `<span>${ic('medal', MEDAL[i])} ${escapeHtml(w.text)} · ${w.count}</span>`).join('')}</div>`;
     setTimeout(() => { playFanfare(); burstConfetti(); }, 400);
     setActions('res-actions', [{ label: 'До налаштувань', fn: backToSetup }, { label: 'Продовжити збір слів', fn: () => { showStageView('voting'); renderStage(); } }, { label: 'Копіювати результати', fn: copyResults, primary: true }]);
   }

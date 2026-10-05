@@ -160,7 +160,7 @@ export function initStructure(ctx) {
       // пошук по всьому предмету
       const fl = Object.keys(F).filter(id => F[id].subjectId === cur.sid && norm(F[id].name).includes(q)).sort((a, b) => cmp(F[a].name, F[b].name));
       const ll = Object.keys(L).filter(id => L[id].subjectId === cur.sid && norm(L[id].title).includes(q)).sort((a, b) => cmp(L[a].title, L[b].title));
-      const where = fid => ' · 📁 ' + ([S[cur.sid].name, ...pathOf(fid).map(x => F[x].name)].join(' › '));
+      const where = fid => ' · ' + I.folder + esc([S[cur.sid].name, ...pathOf(fid).map(x => F[x].name)].join(' › '));
       viewKeys = [...fl.map(id => 'f:' + id), ...ll.map(id => 'l:' + id)];
       html = fl.map(id => itemRow('f', id, where(X.fParent(id)))).join('') + ll.map(id => itemRow('l', id, where(X.lFolder(L[id])))).join('');
       if (!viewKeys.length) html = '<div class="empty-row">Нічого не знайдено в цьому предметі</div>';

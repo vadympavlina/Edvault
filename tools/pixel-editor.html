@@ -92,6 +92,7 @@
   .name-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,107,244,.1); }
   .save-status { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
   .save-status svg { width: 13px; height: 13px; color: var(--success); }
+  .save-status.error svg { color: var(--danger); }
   .save-status.pending::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
 
   .retry-btn {
@@ -155,7 +156,8 @@
 
   .empty-state { text-align: center; padding: 70px 20px; display: none; }
   .empty-state.visible { display: block; }
-  .empty-icon { font-size: 40px; margin-bottom: 14px; }
+  .empty-icon { display: flex; justify-content: center; color: var(--muted); margin-bottom: 14px; }
+  .empty-icon svg { width: 44px; height: 44px; }
   .empty-state h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
   .empty-state p { font-size: 13.5px; color: var(--text2); margin-bottom: 18px; }
 
@@ -469,7 +471,7 @@
     <div class="no-results hidden" id="no-results">Нічого не знайдено</div>
 
     <div class="empty-state" id="empty-state">
-      <div class="empty-icon">👾</div>
+      <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
       <h3>Поки що порожньо</h3>
       <p>Намалюй персонажа, монетку чи тайл для гри — і оживи його анімацією</p>
       <button class="retry-btn" id="empty-new-btn" style="margin:0 auto">
@@ -1983,7 +1985,7 @@
       else if(kind === 'sheet') download(await canvasBlob(sheetCanvas(scale, cols)), `${base}-sheet.png`);
       else if(kind === 'gif') download(new Blob([encodeGIF(frames, W, H, scale, 1000 / fps, gifBg ? '#ffffff' : null)], { type:'image/gif' }), `${base}.gif`);
       else {
-        try{ await navigator.clipboard.writeText(codeSnippet()); ok.textContent = 'Скопійовано ✓'; }
+        try{ await navigator.clipboard.writeText(codeSnippet()); ok.textContent = 'Скопійовано'; }
         catch(e){ toast('Не вдалося скопіювати автоматично'); }
         return;
       }
@@ -2184,7 +2186,8 @@
   let autosaveTimer = null;
   function setSaveStatus(st){
     saveStatus.classList.toggle('pending', st === 'pending');
-    saveStatus.innerHTML = st === 'pending' ? 'Не збережено' : st === 'saved' ? svg(I.check) + 'Збережено' : st === 'error' ? '⚠ Не збережено' : '';
+    saveStatus.innerHTML = st === 'pending' ? 'Не збережено' : st === 'saved' ? svg(I.check) + 'Збережено' : st === 'error' ? svg('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>') + 'Не збережено' : '';
+    saveStatus.classList.toggle('error', st === 'error');
   }
   function markDirty(){
     if(loading) return;

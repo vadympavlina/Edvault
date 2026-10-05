@@ -129,7 +129,8 @@
 
   .state-block { text-align: center; padding: 90px 20px; display: none; }
   .state-block.visible { display: block; }
-  .state-block .icon-lg { font-size: 44px; margin-bottom: 14px; }
+  .state-block .icon-lg { display: flex; justify-content: center; color: var(--muted, #94a3b8); margin-bottom: 14px; }
+  .state-block .icon-lg svg { width: 44px; height: 44px; }
   .state-block h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
   .state-block p { font-size: 13px; color: var(--text2); }
   .spinner-lg { width: 32px; height: 32px; margin: 0 auto 16px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
@@ -250,7 +251,7 @@
     <div class="rules-notice" id="rules-notice">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       <div><b>Постав Firebase Rules перед використанням.</b> Без них будь-хто зможе прочитати чи змінити базу техніки. Правила — окремим блоком у чаті.</div>
-      <button class="rules-notice-close" onclick="document.getElementById('rules-notice').classList.add('hidden')">✕</button>
+      <button class="rules-notice-close" onclick="document.getElementById('rules-notice').classList.add('hidden')" title="Закрити" aria-label="Закрити"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
 
     <div class="page-header">
@@ -287,8 +288,8 @@
     </div>
 
     <div class="state-block visible" id="loading-block"><div class="spinner-lg"></div><p>Завантажуємо список техніки…</p></div>
-    <div class="state-block" id="error-block"><div class="icon-lg">⚠️</div><h3>Не вдалося завантажити дані</h3><p>Перевір з'єднання і спробуй ще раз</p><div style="margin-top:16px;"><button class="secondary-btn" onclick="loadEquipment()">Спробувати знову</button></div></div>
-    <div class="state-block" id="empty-block"><div class="icon-lg">📦</div><h3>Техніки ще немає</h3><p>Натисни «Додати техніку», щоб створити перший запис і QR-код</p></div>
+    <div class="state-block" id="error-block"><div class="icon-lg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div><h3>Не вдалося завантажити дані</h3><p>Перевір з'єднання і спробуй ще раз</p><div style="margin-top:16px;"><button class="secondary-btn" onclick="loadEquipment()">Спробувати знову</button></div></div>
+    <div class="state-block" id="empty-block"><div class="icon-lg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7"/></svg></div><h3>Техніки ще немає</h3><p>Натисни «Додати техніку», щоб створити перший запис і QR-код</p></div>
 
     <div class="eq-grid" id="eq-grid"></div>
   </div>

@@ -102,6 +102,7 @@
     .tr .info { flex: 1; min-width: 0; }
     .tr .name { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tr .meta { font-size: 12px; color: var(--subtle); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tr .meta svg, .it .meta svg { width: 12px; height: 12px; vertical-align: -2px; margin-right: 3px; }
     .tr .acts { display: flex; gap: 2px; flex-shrink: 0; }
     .tr.off .name { color: var(--subtle); }
     .tr.off .ico { opacity: .45; }
@@ -746,7 +747,7 @@
   const tagPill = t => t ? `<span class="pill" style="background:${esc(t.bg)};color:${esc(t.text)}">${esc(t.name)}</span>` : '';
   function lessonRow(id, l, short = false) {
     const tag = T[l.tagId];
-    const folder = l.folderId && F[l.folderId] ? ` · 📁 ${esc(F[l.folderId].name)}` : '';
+    const folder = l.folderId && F[l.folderId] ? ` · ${I.folder}${esc(F[l.folderId].name)}` : '';
     const meta = short ? `${esc(subjName(l.subjectId))}${l.updatedAt ? ' · ' + ago(l.updatedAt) : ''}` :
       `${esc(subjName(l.subjectId))}${folder} · ${count(l.pagesCount || 1, 'сторінка', 'сторінки', 'сторінок')}${l.linksCount ? ' · ' + count(l.linksCount, 'посилання', 'посилання', 'посилань') : ''}${l.materialsCount ? ' · ' + count(l.materialsCount, 'файл', 'файли', 'файлів') : ''}`;
     return `<div class="tr${!short && lesSel.has(id) ? ' sel' : ''}" data-lesson="${esc(id)}">${short ? '' : `<input type="checkbox" class="ck" data-ck="${esc(id)}" ${lesSel.has(id) ? 'checked' : ''} aria-label="Вибрати урок" />`}<span class="ico">${l.isUploaded ? I.file : I.doc}</span>
@@ -1103,7 +1104,7 @@
       <div class="fmt" id="fmt">
         <button type="button" data-w="h2" title="Заголовок">H2</button><button type="button" data-w="h3" title="Підзаголовок">H3</button><button type="button" data-w="p" title="Абзац">¶</button>
         <span class="sp"></span><button type="button" data-w="strong" title="Жирний"><b>Ж</b></button><button type="button" data-w="em" title="Курсив"><i>К</i></button><button type="button" data-w="code" title="Код">&lt;/&gt;</button>
-        <span class="sp"></span><button type="button" data-w="ul" title="Список">• —</button><button type="button" data-w="a" title="Посилання">🔗</button><button type="button" data-w="img" title="Зображення">🖼</button><button type="button" data-w="pre" title="Блок коду">{ }</button><button type="button" data-w="blockquote" title="Цитата">❝</button>
+        <span class="sp"></span><button type="button" data-w="ul" title="Список">• —</button><button type="button" data-w="a" title="Посилання">${I.link}</button><button type="button" data-w="img" title="Зображення">${I.image}</button><button type="button" data-w="pre" title="Блок коду">{ }</button><button type="button" data-w="blockquote" title="Цитата">${I.quote}</button>
         <span class="sp"></span><button type="button" id="btnPrev" title="Попередній перегляд" style="${ed.preview ? 'color:var(--accent);background:var(--accent-bg)' : ''}">${I.eye}</button>
       </div></div>
       <div class="ed-split${ed.preview ? ' prev' : ''}"><textarea class="code" id="pageCode" spellcheck="false" placeholder="<h2>Заголовок</h2>\n<p>Текст уроку в HTML…</p>">${esc(p.htmlContent || '')}</textarea>${ed.preview ? '<iframe class="preview" id="pagePreview" sandbox title="Попередній перегляд"></iframe>' : ''}</div>`;

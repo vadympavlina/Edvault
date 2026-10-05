@@ -328,7 +328,8 @@
 
   .empty-state { text-align: center; padding: 80px 20px; display: none; }
   .empty-state.visible { display: block; }
-  .empty-icon { font-size: 40px; margin-bottom: 16px; }
+  .empty-icon { display: flex; justify-content: center; color: var(--muted, var(--text2)); margin-bottom: 16px; }
+  .empty-icon svg { width: 44px; height: 44px; }
   .empty-state h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
   .empty-state p { font-size: 13.5px; color: var(--text2); margin-bottom: 18px; }
 
@@ -554,7 +555,8 @@
     color:var(--text); font-family:inherit; cursor:pointer; transition:all .14s ease;
   }
   .tpl-card:hover{ border-color:var(--accent); box-shadow:var(--shadow-md); transform:translateY(-2px); }
-  .tpl-emoji{ font-size:26px; line-height:1; margin-bottom:4px; }
+  .tpl-emoji{ display:flex; color:var(--accent); margin-bottom:4px; }
+  .tpl-emoji svg{ width:26px; height:26px; }
   .tpl-name{ font-size:14.5px; font-weight:800; }
   .tpl-desc{ font-size:12.5px; color:var(--text2); line-height:1.5; }
   .tpl-level{ font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; background:var(--accent-light); color:var(--accent); margin-top:4px; }
@@ -562,6 +564,7 @@
   .share-row{ display:flex; gap:8px; margin:6px 0 10px; }
   .share-row .modal-input{ margin:0; font-family:'JetBrains Mono', monospace; font-size:12px; }
   .share-note{ font-size:12px; color:var(--muted); line-height:1.5; }
+  .share-note .share-warn{ width:13px; height:13px; color:var(--warn); vertical-align:-2px; margin-right:5px; }
 
   .kbd-list{ display:grid; grid-template-columns:1fr auto; gap:8px 18px; margin-top:12px; font-size:13px; color:var(--text2); }
   .kbd-list .kbd-sec{ grid-column:1/-1; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-top:10px; }
@@ -582,6 +585,7 @@
   /* =========== EDITOR EXTRAS =========== */
   .save-status{ font-size:12px; color:var(--muted); font-weight:600; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
   .save-status svg{ width:13px; height:13px; color:var(--success); }
+  .save-status.error svg{ color:var(--danger); }
   .save-status.pending::before{ content:''; width:7px; height:7px; border-radius:50%; background:var(--warn); animation:pulse-dot 1.4s ease-in-out infinite; }
 
   .pane-head .icon-btn.pending{ color:#fff; background:var(--accent); animation:pulse-dot 1.4s ease-in-out infinite; }
@@ -621,6 +625,7 @@
 
   .console-line{ display:flex; gap:10px; }
   .console-line .console-text{ flex:1; min-width:0; }
+  .console-line .console-ic{ width:12px; height:12px; vertical-align:-1px; margin-right:6px; }
   .console-loc{ flex-shrink:0; color:var(--muted); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
   .console-loc:hover{ color:var(--accent); }
   .console-line.console-input{ color:var(--muted); }
@@ -686,7 +691,7 @@
     <div class="no-results hidden" id="no-results">Нічого не знайдено</div>
 
     <div class="empty-state" id="empty-state">
-      <div class="empty-icon">🧑‍💻</div>
+      <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg></div>
       <h3>Поки що порожньо</h3>
       <p>Створи перший проєкт — можна почати з готового шаблону: візитка, список справ, гра чи вікторина</p>
       <button class="retry-btn" id="empty-new-btn" style="margin:0 auto">
@@ -1085,33 +1090,33 @@
 
   // ---------- Project templates ----------
   const TEMPLATES = [
-    { id:'blank', emoji:'📄', name:'Порожній проєкт', desc:'Чистий аркуш: HTML, CSS і JS без нічого зайвого', level:'Будь-який рівень',
+    { id:'blank', icon:'file', name:'Порожній проєкт', desc:'Чистий аркуш: HTML, CSS і JS без нічого зайвого', level:'Будь-який рівень',
       html:'', css:'', js:'' },
-    { id:'hello', emoji:'👋', name:'Привіт, світ!', desc:'Заголовок, абзац і трохи стилів — найперший крок', level:'Початківці',
+    { id:'hello', icon:'hand', name:'Привіт, світ!', desc:'Заголовок, абзац і трохи стилів — найперший крок', level:'Початківці',
       html:'<main class="hello">\n  <h1>Привіт, світ! 👋</h1>\n  <p>Це моя перша вебсторінка. Зміни цей текст — і результат одразу з\'явиться знизу.</p>\n</main>',
       css:'body {\n  font-family: system-ui, sans-serif;\n  background: #f0f4ff;\n  color: #1e293b;\n  margin: 0;\n}\n\n.hello {\n  max-width: 560px;\n  margin: 80px auto;\n  padding: 32px;\n  text-align: center;\n  background: white;\n  border-radius: 20px;\n  box-shadow: 0 10px 30px rgba(79, 107, 244, 0.15);\n}\n\nh1 {\n  color: #4f6bf4;\n}',
       js:'' },
-    { id:'card', emoji:'🪪', name:'Візитка', desc:'Картка про себе з фото, хобі та кнопками-посиланнями', level:'Початківці',
+    { id:'card', icon:'card', name:'Візитка', desc:'Картка про себе з фото, хобі та кнопками-посиланнями', level:'Початківці',
       html:'<div class="card">\n  <div class="avatar">🦊</div>\n  <h1>Олена Коваленко</h1>\n  <p class="role">Учениця 8-Б класу</p>\n  <p class="about">Люблю малювати, програмувати і читати фантастику. Мрію створити власну гру!</p>\n  <ul class="tags">\n    <li>🎨 Малювання</li>\n    <li>💻 Код</li>\n    <li>📚 Книги</li>\n  </ul>\n  <div class="links">\n    <a href="#" class="btn">Мої роботи</a>\n    <a href="#" class="btn btn-outline">Написати</a>\n  </div>\n</div>',
       css:'body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  background: linear-gradient(135deg, #a5b4fc, #f0abfc);\n}\n\n.card {\n  width: 320px;\n  padding: 32px 28px;\n  text-align: center;\n  background: white;\n  border-radius: 24px;\n  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);\n}\n\n.avatar {\n  width: 96px;\n  height: 96px;\n  margin: 0 auto 12px;\n  font-size: 56px;\n  line-height: 96px;\n  border-radius: 50%;\n  background: #fef3c7;\n}\n\nh1 { margin: 0; font-size: 22px; }\n.role { margin: 4px 0 14px; color: #6366f1; font-weight: 600; }\n.about { color: #475569; line-height: 1.6; }\n\n.tags {\n  display: flex;\n  justify-content: center;\n  gap: 8px;\n  padding: 0;\n  list-style: none;\n}\n\n.tags li {\n  padding: 4px 10px;\n  font-size: 13px;\n  border-radius: 20px;\n  background: #eef2ff;\n}\n\n.links { display: flex; gap: 10px; margin-top: 20px; }\n\n.btn {\n  flex: 1;\n  padding: 10px;\n  border-radius: 12px;\n  background: #6366f1;\n  color: white;\n  text-decoration: none;\n  font-weight: 600;\n  transition: transform 0.15s;\n}\n\n.btn:hover { transform: translateY(-2px); }\n.btn-outline { background: white; color: #6366f1; border: 2px solid #6366f1; }',
       js:'' },
-    { id:'counter', emoji:'🔢', name:'Лічильник кліків', desc:'Кнопки, змінна і подія click — основи JavaScript', level:'Перші кроки в JS',
+    { id:'counter', icon:'counter', name:'Лічильник кліків', desc:'Кнопки, змінна і подія click — основи JavaScript', level:'Перші кроки в JS',
       html:'<div class="box">\n  <h1>Лічильник</h1>\n  <div id="count">0</div>\n  <div class="buttons">\n    <button id="minus">−</button>\n    <button id="reset">Скинути</button>\n    <button id="plus">+</button>\n  </div>\n</div>',
       css:'body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  background: #0f172a;\n  color: white;\n}\n\n.box { text-align: center; }\n\n#count {\n  font-size: 96px;\n  font-weight: 800;\n  margin: 10px 0 24px;\n  transition: transform 0.15s;\n}\n\n.buttons { display: flex; gap: 12px; justify-content: center; }\n\nbutton {\n  min-width: 64px;\n  padding: 12px 18px;\n  font-size: 20px;\n  border: none;\n  border-radius: 14px;\n  background: #4f6bf4;\n  color: white;\n  cursor: pointer;\n}\n\nbutton:hover { background: #6c85ff; }\n#reset { font-size: 15px; background: #334155; }',
       js:'// Змінна, у якій зберігаємо число\nlet count = 0;\n\nconst countEl = document.getElementById(\'count\');\n\nfunction show() {\n  countEl.textContent = count;\n  // колір змінюється залежно від знаку числа\n  countEl.style.color = count > 0 ? \'#4ade80\' : count < 0 ? \'#f87171\' : \'white\';\n  countEl.style.transform = \'scale(1.15)\';\n  setTimeout(() => countEl.style.transform = \'\', 120);\n}\n\ndocument.getElementById(\'plus\').addEventListener(\'click\', () => {\n  count++;\n  show();\n});\n\ndocument.getElementById(\'minus\').addEventListener(\'click\', () => {\n  count--;\n  show();\n});\n\ndocument.getElementById(\'reset\').addEventListener(\'click\', () => {\n  count = 0;\n  show();\n});\n\nconsole.log(\'Лічильник готовий! Відкрий консоль, щоб бачити такі повідомлення.\');' },
-    { id:'todo', emoji:'✅', name:'Список справ', desc:'Додавання, виконання і видалення завдань, збереження в браузері', level:'Середній',
+    { id:'todo', icon:'todo', name:'Список справ', desc:'Додавання, виконання і видалення завдань, збереження в браузері', level:'Середній',
       html:'<div class="todo">\n  <h1>📝 Мої справи</h1>\n  <form id="form">\n    <input id="input" placeholder="Що потрібно зробити?" autocomplete="off">\n    <button>Додати</button>\n  </form>\n  <ul id="list"></ul>\n  <p id="stats"></p>\n</div>',
       css:'body {\n  margin: 0;\n  font-family: system-ui, sans-serif;\n  background: #f1f5f9;\n}\n\n.todo {\n  max-width: 440px;\n  margin: 50px auto;\n  padding: 24px;\n  background: white;\n  border-radius: 18px;\n  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);\n}\n\nh1 { margin-top: 0; font-size: 24px; }\n\nform { display: flex; gap: 8px; }\n\ninput {\n  flex: 1;\n  padding: 10px 12px;\n  font-size: 15px;\n  border: 2px solid #e2e8f0;\n  border-radius: 10px;\n  outline: none;\n}\n\ninput:focus { border-color: #10b981; }\n\nbutton {\n  padding: 10px 16px;\n  border: none;\n  border-radius: 10px;\n  background: #10b981;\n  color: white;\n  font-weight: 600;\n  cursor: pointer;\n}\n\nul { list-style: none; padding: 0; }\n\nli {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  padding: 10px 4px;\n  border-bottom: 1px solid #f1f5f9;\n}\n\nli span { flex: 1; cursor: pointer; }\nli.done span { text-decoration: line-through; color: #94a3b8; }\n\n.del {\n  padding: 4px 9px;\n  background: #fee2e2;\n  color: #ef4444;\n}\n\n#stats { color: #64748b; font-size: 14px; }',
       js:'const form = document.getElementById(\'form\');\nconst input = document.getElementById(\'input\');\nconst list = document.getElementById(\'list\');\nconst stats = document.getElementById(\'stats\');\n\n// Завантажуємо збережені справи (або порожній масив)\nlet todos = JSON.parse(localStorage.getItem(\'todos\') || \'[]\');\n\nfunction save() {\n  localStorage.setItem(\'todos\', JSON.stringify(todos));\n}\n\nfunction render() {\n  list.innerHTML = \'\';\n  todos.forEach((todo, i) => {\n    const li = document.createElement(\'li\');\n    if (todo.done) li.classList.add(\'done\');\n\n    const text = document.createElement(\'span\');\n    text.textContent = todo.text;\n    text.onclick = () => { todo.done = !todo.done; save(); render(); };\n\n    const del = document.createElement(\'button\');\n    del.textContent = \'✕\';\n    del.className = \'del\';\n    del.onclick = () => { todos.splice(i, 1); save(); render(); };\n\n    li.append(text, del);\n    list.append(li);\n  });\n  const left = todos.filter(t => !t.done).length;\n  stats.textContent = todos.length ? `Залишилось: ${left} з ${todos.length}` : \'Список порожній 🎉\';\n}\n\nform.addEventListener(\'submit\', (e) => {\n  e.preventDefault();\n  const text = input.value.trim();\n  if (!text) return;\n  todos.push({ text, done: false });\n  input.value = \'\';\n  save();\n  render();\n});\n\nrender();' },
-    { id:'anim', emoji:'🎨', name:'CSS-анімації', desc:'Ключові кадри @keyframes: стрибки, обертання, пульсація', level:'Початківці',
+    { id:'anim', icon:'palette', name:'CSS-анімації', desc:'Ключові кадри @keyframes: стрибки, обертання, пульсація', level:'Початківці',
       html:'<div class="scene">\n  <div class="ball"></div>\n  <div class="square"></div>\n  <div class="heart">❤️</div>\n</div>\n<p class="hint">Наведи мишку на фігури 👆</p>',
       css:'body {\n  margin: 0;\n  font-family: system-ui, sans-serif;\n  background: #fdf4ff;\n  text-align: center;\n}\n\n.scene {\n  display: flex;\n  justify-content: center;\n  align-items: flex-end;\n  gap: 60px;\n  height: 260px;\n  padding-top: 40px;\n}\n\n.ball {\n  width: 70px;\n  height: 70px;\n  border-radius: 50%;\n  background: radial-gradient(circle at 30% 30%, #fde047, #f97316);\n  animation: bounce 0.8s ease-in infinite alternate;\n}\n\n@keyframes bounce {\n  from { transform: translateY(-160px); }\n  to { transform: translateY(0) scaleY(0.85); }\n}\n\n.square {\n  width: 70px;\n  height: 70px;\n  border-radius: 14px;\n  background: #8b5cf6;\n  animation: spin 3s linear infinite;\n}\n\n@keyframes spin {\n  to { transform: rotate(360deg); }\n}\n\n.heart {\n  font-size: 64px;\n  animation: pulse 1s ease-in-out infinite;\n}\n\n@keyframes pulse {\n  50% { transform: scale(1.25); }\n}\n\n.scene > div:hover { animation-play-state: paused; }\n.hint { color: #a855f7; }',
       js:'' },
-    { id:'game', emoji:'🎮', name:'Гра «Спіймай кульку»', desc:'Canvas, таймер і рахунок: клацай по кульках, поки не скінчився час', level:'Середній',
+    { id:'game', icon:'game', name:'Гра «Спіймай кульку»', desc:'Canvas, таймер і рахунок: клацай по кульках, поки не скінчився час', level:'Середній',
       html:'<div class="hud">\n  <span>Рахунок: <b id="score">0</b></span>\n  <span>Час: <b id="time">30</b></span>\n  <button id="start">Почати</button>\n</div>\n<canvas id="game" width="640" height="400"></canvas>',
       css:'body {\n  margin: 0;\n  font-family: system-ui, sans-serif;\n  background: #0b1020;\n  color: white;\n  text-align: center;\n}\n\n.hud {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 24px;\n  padding: 14px;\n  font-size: 18px;\n}\n\nbutton {\n  padding: 8px 18px;\n  font-size: 16px;\n  border: none;\n  border-radius: 10px;\n  background: #22c55e;\n  color: white;\n  cursor: pointer;\n}\n\ncanvas {\n  max-width: 100%;\n  background: #111833;\n  border-radius: 16px;\n  cursor: crosshair;\n}',
       js:'const canvas = document.getElementById(\'game\');\nconst ctx = canvas.getContext(\'2d\');\nconst scoreEl = document.getElementById(\'score\');\nconst timeEl = document.getElementById(\'time\');\n\nlet ball = null;\nlet score = 0;\nlet timeLeft = 0;\nlet timer = null;\n\nfunction newBall() {\n  const r = 14 + Math.random() * 22;\n  ball = {\n    x: r + Math.random() * (canvas.width - 2 * r),\n    y: r + Math.random() * (canvas.height - 2 * r),\n    r,\n    color: `hsl(${Math.random() * 360}, 85%, 60%)`\n  };\n}\n\nfunction draw() {\n  ctx.clearRect(0, 0, canvas.width, canvas.height);\n  if (ball) {\n    ctx.beginPath();\n    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);\n    ctx.fillStyle = ball.color;\n    ctx.fill();\n  } else {\n    ctx.fillStyle = \'white\';\n    ctx.font = \'24px system-ui\';\n    ctx.textAlign = \'center\';\n    ctx.fillText(\'Натисни «Почати»\', canvas.width / 2, canvas.height / 2);\n  }\n  requestAnimationFrame(draw);\n}\n\ncanvas.addEventListener(\'click\', (e) => {\n  if (!ball || timeLeft <= 0) return;\n  const rect = canvas.getBoundingClientRect();\n  const x = (e.clientX - rect.left) * (canvas.width / rect.width);\n  const y = (e.clientY - rect.top) * (canvas.height / rect.height);\n  if (Math.hypot(x - ball.x, y - ball.y) <= ball.r) {\n    score++;\n    scoreEl.textContent = score;\n    newBall();\n  }\n});\n\ndocument.getElementById(\'start\').addEventListener(\'click\', () => {\n  score = 0;\n  timeLeft = 30;\n  scoreEl.textContent = 0;\n  timeEl.textContent = timeLeft;\n  newBall();\n  clearInterval(timer);\n  timer = setInterval(() => {\n    timeLeft--;\n    timeEl.textContent = timeLeft;\n    if (timeLeft <= 0) {\n      clearInterval(timer);\n      ball = null;\n      alert(\'Час вийшов! Твій рахунок: \' + score);\n    }\n  }, 1000);\n});\n\ndraw();' },
-    { id:'quiz', emoji:'❓', name:'Вікторина', desc:'Питання з варіантами відповідей, перевірка і підсумок', level:'Середній',
+    { id:'quiz', icon:'quiz', name:'Вікторина', desc:'Питання з варіантами відповідей, перевірка і підсумок', level:'Середній',
       html:'<div class="quiz">\n  <div class="progress" id="progress"></div>\n  <h2 id="question"></h2>\n  <div id="answers"></div>\n  <button id="next" hidden>Далі →</button>\n</div>',
       css:'body {\n  margin: 0;\n  font-family: system-ui, sans-serif;\n  background: #ecfeff;\n}\n\n.quiz {\n  max-width: 520px;\n  margin: 50px auto;\n  padding: 28px;\n  background: white;\n  border-radius: 20px;\n  box-shadow: 0 10px 30px rgba(8, 145, 178, 0.15);\n}\n\n.progress { color: #0891b2; font-weight: 600; font-size: 14px; }\n\n#answers { display: grid; gap: 10px; margin: 18px 0; }\n\n#answers button {\n  padding: 12px 14px;\n  font-size: 16px;\n  text-align: left;\n  border: 2px solid #e2e8f0;\n  border-radius: 12px;\n  background: white;\n  cursor: pointer;\n}\n\n#answers button:hover:not(:disabled) { border-color: #06b6d4; }\n#answers .right { border-color: #22c55e; background: #dcfce7; }\n#answers .wrong { border-color: #ef4444; background: #fee2e2; }\n\n#next {\n  padding: 10px 20px;\n  font-size: 16px;\n  border: none;\n  border-radius: 12px;\n  background: #0891b2;\n  color: white;\n  cursor: pointer;\n}',
       js:'// Додай свої питання: текст, варіанти і номер правильного (з нуля)\nconst questions = [\n  { q: \'Яке місто є столицею України?\', a: [\'Львів\', \'Київ\', \'Одеса\', \'Харків\'], right: 1 },\n  { q: \'Скільки буде 7 × 8?\', a: [\'54\', \'56\', \'64\', \'48\'], right: 1 },\n  { q: \'Який тег робить заголовок першого рівня?\', a: [\'<p>\', \'<head>\', \'<h1>\', \'<title>\'], right: 2 }\n];\n\nlet current = 0;\nlet score = 0;\n\nconst questionEl = document.getElementById(\'question\');\nconst answersEl = document.getElementById(\'answers\');\nconst progressEl = document.getElementById(\'progress\');\nconst nextBtn = document.getElementById(\'next\');\n\nfunction showQuestion() {\n  const item = questions[current];\n  progressEl.textContent = `Питання ${current + 1} з ${questions.length}`;\n  questionEl.textContent = item.q;\n  answersEl.innerHTML = \'\';\n  nextBtn.hidden = true;\n\n  item.a.forEach((text, i) => {\n    const btn = document.createElement(\'button\');\n    btn.textContent = text;\n    btn.onclick = () => {\n      const buttons = answersEl.querySelectorAll(\'button\');\n      buttons.forEach(b => b.disabled = true);\n      buttons[item.right].classList.add(\'right\');\n      if (i === item.right) score++;\n      else btn.classList.add(\'wrong\');\n      nextBtn.hidden = false;\n    };\n    answersEl.append(btn);\n  });\n}\n\nnextBtn.onclick = () => {\n  current++;\n  if (current < questions.length) {\n    showQuestion();\n  } else {\n    progressEl.textContent = \'Готово!\';\n    questionEl.textContent = `Правильних відповідей: ${score} з ${questions.length} 🎉`;\n    answersEl.innerHTML = \'\';\n    nextBtn.hidden = true;\n  }\n};\n\nshowQuestion();' }
@@ -1202,6 +1207,16 @@
     more: '<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>',
     moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+    alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    xmark: '<path d="M18 6 6 18M6 6l12 12"/>',
+    code: '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
+    hand: '<path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
+    card: '<path d="M16 10h2"/><path d="M16 14h2"/><path d="M6.17 15a3 3 0 0 1 5.66 0"/><circle cx="9" cy="11" r="2"/><rect x="2" y="5" width="20" height="14" rx="2"/>',
+    counter: '<line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/>',
+    todo: '<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+    palette: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>',
+    game: '<line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="15" x2="15.01" y1="13" y2="13"/><line x1="18" x2="18.01" y1="11" y2="11"/><rect x="2" y="6" width="20" height="12" rx="2"/>',
+    quiz: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
     check: '<path d="M20 6 9 17l-5-5"/>'
   };
   const svg = (paths, extra='') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${paths}</svg>`;
@@ -1510,7 +1525,7 @@
       <p class="modal-sub">Обери, з чого почати. Будь-який шаблон можна повністю змінити.</p>
       <div class="tpl-grid">${TEMPLATES.map(t => `
         <button class="tpl-card" data-tpl="${t.id}">
-          <span class="tpl-emoji">${t.emoji}</span>
+          <span class="tpl-emoji">${svg(ICONS[t.icon])}</span>
           <span class="tpl-name">${escapeHtml(t.name)}</span>
           <span class="tpl-desc">${escapeHtml(t.desc)}</span>
           <span class="tpl-level">${escapeHtml(t.level)}</span>
@@ -1638,14 +1653,14 @@
     const box = openModal(`<h3 class="modal-title">Поділитися проєктом</h3>
       <p class="modal-sub">Увесь код зашитий у посилання — нікуди не завантажується. Хто відкриє його, отримає <b>власну копію</b> проєкту, а твій лишиться без змін.</p>
       <div class="share-row"><input class="modal-input" readonly value="${escapeAttr(url)}"><button class="retry-btn" data-copy>Копіювати</button></div>
-      <p class="share-note">${long ? '⚠️ Проєкт великий, тож посилання дуже довге — деякі месенджери можуть його обрізати. Тоді краще надіслати файл .zip.' : 'Посилання можна надіслати в месенджер, Classroom чи на пошту.'}</p>
+      <p class="share-note">${long ? svg(ICONS.alert, 'class="share-warn"') + 'Проєкт великий, тож посилання дуже довге — деякі месенджери можуть його обрізати. Тоді краще надіслати файл .zip.' : 'Посилання можна надіслати в месенджер, Classroom чи на пошту.'}</p>
       <div class="modal-actions" style="margin-top:14px"><button class="ghost-btn" data-x>Закрити</button></div>`, 'modal-md');
     const inp = box.querySelector('input');
     box.querySelector('[data-x]').onclick = closeModal;
     box.querySelector('[data-copy]').onclick = async (e) => {
       try{ await navigator.clipboard.writeText(url); }
       catch(err){ inp.select(); document.execCommand('copy'); }
-      e.currentTarget.textContent = 'Скопійовано ✓';
+      e.currentTarget.innerHTML = svg(ICONS.check) + 'Скопійовано';
     };
     setTimeout(() => { inp.focus(); inp.select(); }, 0);
   }
@@ -1889,7 +1904,7 @@
         plugins: Object.values(window.prettierPlugins || {}),
         tabWidth: 2, printWidth: 90
       })).replace(/\n+$/, '');
-      if(out === src.replace(/\n+$/, '')){ toast('Код уже впорядкований 👌'); return; }
+      if(out === src.replace(/\n+$/, '')){ toast('Код уже впорядкований'); return; }
       const line = cm.getCursor().line;
       const last = cm.lastLine();
       cm.operation(() => {
@@ -2123,10 +2138,11 @@
     if(empty) empty.remove();
     const line = document.createElement('div');
     line.className = 'console-line console-' + level;
-    const prefix = level === 'error' ? '✕ ' : level === 'warn' ? '⚠ ' : level === 'result' ? '← ' : level === 'input' ? '› ' : '';
+    const prefix = level === 'error' || level === 'warn' ? '' : level === 'result' ? '← ' : level === 'input' ? '› ' : '';
     const text = document.createElement('span');
     text.className = 'console-text';
     text.textContent = prefix + args.join(' ');
+    if(level === 'error' || level === 'warn') text.insertAdjacentHTML('afterbegin', svg(level === 'error' ? ICONS.xmark : ICONS.alert, 'class="console-ic"'));
     line.appendChild(text);
     const jsLine = docLine ? docLine - jsStartLine + 1 : 0;
     if(jsLine >= 1 && cmJs && jsLine <= cmJs.lineCount()){
@@ -2413,9 +2429,10 @@
   // ---------- Saving (automatic + Ctrl+S) ----------
   function setSaveStatus(state){
     saveStatus.classList.toggle('pending', state === 'pending');
+    saveStatus.classList.toggle('error', state === 'error');
     if(state === 'pending') saveStatus.textContent = 'Не збережено';
     else if(state === 'saved') saveStatus.innerHTML = svg(ICONS.check) + 'Збережено';
-    else if(state === 'error') saveStatus.textContent = '⚠ Не збережено';
+    else if(state === 'error') saveStatus.innerHTML = svg(ICONS.alert) + 'Не збережено';
     else saveStatus.textContent = '';
   }
   function markDirty(){
