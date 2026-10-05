@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Конвертер зображень · Edvault</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F6BF4'/%3E%3Cpath d='M9 12h11l-3-3M23 20H12l3 3' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<script>try { if (localStorage.getItem('edvault-theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}</script>
+<link rel="stylesheet" href="imgconv/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark"><span data-icon="convert"></span></div>
+    <div class="brand-text"><h1>Конвертер зображень</h1><p>PNG, JPG, WebP, AVIF, SVG, ICO · розмір і стиснення</p></div>
+  </div>
+  <span class="grow"></span>
+  <button class="icon-btn" id="themeBtn" title="Світла / темна тема"></button>
+</header>
+
+<div class="layout">
+  <main class="work">
+    <!-- порожньо -->
+    <label class="drop" id="drop" tabindex="0">
+      <input type="file" id="fileInput" multiple accept="image/*,.svg,.heic,.heif,.ico,.avif">
+      <span class="drop-ico"><span data-icon="upload"></span></span>
+      <b>Перетягніть зображення сюди</b>
+      <span class="drop-sub">або <u>виберіть файли</u> · можна вставити з буфера <kbd>Ctrl</kbd>+<kbd>V</kbd></span>
+      <span class="drop-formats">JPG · PNG · WebP · AVIF · GIF · SVG · BMP · ICO · HEIC</span>
+      <span class="drop-safe"><span data-icon="shield"></span>Файли не покидають ваш комп’ютер — усе відбувається в браузері</span>
+    </label>
+
+    <!-- список -->
+    <section class="files" id="files" hidden>
+      <div class="sumbar">
+        <div class="sum" id="sum"></div>
+        <span class="grow"></span>
+        <button class="btn" id="addBtn"><span data-icon="plus"></span>Додати</button>
+        <button class="btn" id="clearBtn"><span data-icon="trash"></span>Очистити</button>
+        <button class="btn btn-primary" id="zipBtn"><span data-icon="download"></span><span id="zipLabel">Завантажити все</span></button>
+      </div>
+      <div class="list" id="list"></div>
+    </section>
+  </main>
+
+  <aside class="side" id="side">
+    <div class="side-sec">
+      <div class="lbl">Швидкі налаштування</div>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="side-sec">
+      <div class="lbl">Формат</div>
+      <div class="fmt" id="fmt"></div>
+      <p class="hint" id="fmtHint"></p>
+    </div>
+
+    <div class="side-sec" id="qualSec">
+      <div class="lbl-row"><span class="lbl">Якість</span><span class="val" id="qVal"></span></div>
+      <input type="range" id="quality" min="5" max="100" step="1">
+      <div class="scale"><span>менший файл</span><span>краща якість</span></div>
+      <label class="check" id="png8Wrap"><input type="checkbox" id="png8"><span>Сильне стиснення PNG <em>до 256 кольорів, як TinyPNG</em></span></label>
+      <label class="check"><input type="checkbox" id="targetOn"><span>Не більше <input type="number" class="inp inp-sm" id="targetKb" min="5" step="10"> КБ <em>якість підбирається сама</em></span></label>
+    </div>
+
+    <div class="side-sec">
+      <div class="lbl">Розмір</div>
+      <div class="seg" id="rsMode"></div>
+      <div class="rs-body" id="rsBody"></div>
+      <label class="check" id="noUpWrap"><input type="checkbox" id="noUp"><span>Не збільшувати маленькі зображення</span></label>
+    </div>
+
+    <div class="side-sec">
+      <div class="lbl-row"><span class="lbl">Поворот</span><span class="val" id="rotVal"></span></div>
+      <div class="tools-row">
+        <button class="btn btn-icon" data-rot="-90" title="Повернути ліворуч"><span data-icon="rotl"></span></button>
+        <button class="btn btn-icon" data-rot="90" title="Повернути праворуч"><span data-icon="rotr"></span></button>
+        <button class="btn btn-icon" id="flipH" title="Віддзеркалити по горизонталі"><span data-icon="fliph"></span></button>
+        <button class="btn btn-icon" id="flipV" title="Віддзеркалити по вертикалі"><span data-icon="flipv"></span></button>
+      </div>
+    </div>
+
+    <details class="side-sec more">
+      <summary>Назви файлів, тло й інше</summary>
+      <div class="lbl">Назва файлу</div>
+      <input type="text" class="inp" id="namePat" spellcheck="false">
+      <div class="tokens" id="tokens"></div>
+      <div class="lbl" style="margin-top:14px">Тло замість прозорого <span class="opt">для JPG</span></div>
+      <div class="bg-row" id="bgRow"></div>
+      <label class="check"><input type="checkbox" id="keepSmaller"><span>Якщо файл став більшим — залишити оригінал <em>коли формат і розмір не змінюються</em></span></label>
+      <p class="hint"><span data-icon="shield"></span>Дані з фото (місце зйомки, модель телефону, дата) у результат не потрапляють.</p>
+      <button class="link-btn" id="resetBtn">Скинути налаштування</button>
+    </details>
+  </aside>
+</div>
+
+<div class="dragover" id="dragover"><div><span data-icon="upload"></span>Відпустіть, щоб додати</div></div>
+
+<div class="modal" id="cmp" hidden>
+  <div class="cmp-top">
+    <div class="cmp-title" id="cmpTitle"></div>
+    <span class="grow"></span>
+    <button class="btn" id="cmpZoom"><span data-icon="zoom"></span><span id="cmpZoomLbl">100%</span></button>
+    <button class="icon-btn" id="cmpClose" title="Закрити (Esc)"><span data-icon="x"></span></button>
+  </div>
+  <div class="cmp-stage" id="cmpStage">
+    <div class="cmp-box" id="cmpBox">
+      <img id="cmpA" alt=""><img id="cmpB" alt="">
+      <div class="cmp-line" id="cmpLine"><span data-icon="split"></span></div>
+      <span class="cmp-tag l" id="cmpTagA"></span><span class="cmp-tag r" id="cmpTagB"></span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="imgconv/js/main.js"></script>
+</body>
+</html>
