@@ -264,8 +264,6 @@
   .page-stage canvas.layer-preview { z-index: 4; pointer-events: none; }
   .page-stage canvas.layer-interact { z-index: 5; touch-action: none; }
   .page-stage canvas.layer-interact.interact-tool-laser { cursor: none; }
-  .strip-clear { flex-shrink: 0; height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font: 600 12px 'Inter', sans-serif; cursor: pointer; margin-left: 8px; }
-  .strip-clear:hover { color: var(--danger); border-color: var(--danger); }
   .export-menu { min-width: 250px; }
   #printArea { display: none; }
   @media print {
@@ -682,6 +680,7 @@
   .btn svg { width: 16px; height: 16px; }
   .btn.btn-icon { width: 34px; padding: 0; }
   .btn-icon:hover:not(:disabled) { box-shadow: none; border-color: transparent; }
+  .btn[hidden] { display: none; }
   .btn-outline, .btn-ghost { border-color: var(--border); background: var(--surface); }
   .btn-outline:hover:not(:disabled), .btn-ghost:hover:not(:disabled) { border-color: var(--border2); }
   .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; box-shadow: 0 2px 8px rgba(79,107,244,.28); }
@@ -769,8 +768,6 @@
   .page-pill-thumb { width: 36px; height: 26px; border-radius: 5px; }
   .strip-add { width: 32px; height: 32px; border-radius: 9px; border: 1px dashed var(--border2); }
   .strip-hint { font-size: 12px; font-weight: 500; }
-  .strip-clear { height: 32px; border-radius: var(--r); font: 500 12.5px 'Inter', sans-serif; }
-  .strip-clear:hover { background: var(--danger-light); }
 
   /* ── плаваючі елементи, меню, модалки ── */
   .toast { border-radius: 12px; font-size: 13px; font-weight: 500; padding: 10px 16px; box-shadow: 0 12px 32px rgba(0,0,0,.28); color: #e9ebf2; }
@@ -831,6 +828,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M21 13a9 9 0 1 1-3-6.7L21 9"/></svg>
     </button>
     <div class="tb-sep hide-sm"></div>
+    <button class="btn" id="btnNewBoard" title="Нова дошка: прибрати всі сторінки й PDF і почати з чистого аркуша">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 12v6M9 15h6"/></svg>
+      <span class="hide-md">Нова</span>
+    </button>
     <input type="file" id="pdfInput" accept="application/pdf" style="display:none;">
     <button class="btn hide-sm" id="btnOpenPdf" title="Відкрити PDF як сторінки дошки">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
@@ -1079,7 +1080,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
     <span class="strip-hint" id="stripHint">Дошка зберігається автоматично в цьому браузері</span>
-    <button class="strip-clear" id="btnNewBoard" title="Прибрати всі сторінки й почати з чистої дошки">Нова дошка</button>
   </div>
 </div>
 
@@ -1191,6 +1191,7 @@
       <p id="confirmMsg" style="margin:0 0 18px;font-size:14px;line-height:1.55;color:var(--text2)"></p>
       <div style="display:flex;justify-content:flex-end;gap:8px">
         <button class="btn btn-ghost" id="confirmNo">Скасувати</button>
+        <button class="btn btn-outline" id="confirmAlt" hidden>Інше</button>
         <button class="btn btn-primary" id="confirmYes">Так</button>
       </div>
     </div>
@@ -3093,12 +3094,25 @@
   document.getElementById('btnAddPage').addEventListener('click', addBlankPage);
   stripAddBtn.addEventListener('click', addBlankPage);
 
-  document.getElementById('btnOpenPdf').addEventListener('click', () => document.getElementById('pdfInput').click());
+  // чи є на дошці щось, крім однієї порожньої сторінки
+  const boardIsBlank = () => state.pages.length === 1 && state.pages[0].emptyHintEl
+    && state.pages[0].objects.length === 0 && !state.pages[0].hasStrokes;
+  let pdfReplace = false;
+  document.getElementById('btnOpenPdf').addEventListener('click', async () => {
+    pdfReplace = false;
+    if (!boardIsBlank()) {
+      const r = await confirmDialog('Відкрити PDF', 'На дошці вже є сторінки. Замінити їх новим PDF чи додати його сторінки в кінець? Під час заміни старі сторінки, малюнки й PDF буде видалено.', 'Замінити дошку', 'Додати в кінець');
+      if (!r) return;
+      pdfReplace = r === true;
+    }
+    document.getElementById('pdfInput').click();
+  });
   document.getElementById('pdfInput').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
     if (!window.pdfjsLib) { showToast('Не вдалося завантажити модуль PDF', 'error'); return; }
+    if (pdfReplace) { pdfReplace = false; await resetBoard(); }
 
     // оверлей прогресу замість "тихого" завантаження — видно, що саме відбувається, і скільки лишилось (додано)
     const overlay = document.getElementById('pdfLoadOverlay');
@@ -3597,12 +3611,15 @@
 
   // ═══════════════════════ ПІДТВЕРДЖЕННЯ ═══════════════════════
   let confirmResolve = null;
-  function confirmDialog(title, msg, okLabel) {
+  // altLabel — необов'язкова третя кнопка; тоді результат: true, 'alt' або false
+  function confirmDialog(title, msg, okLabel, altLabel) {
     return new Promise(res => {
       confirmResolve = res;
       document.getElementById('confirmTitle').textContent = title;
       document.getElementById('confirmMsg').textContent = msg;
       document.getElementById('confirmYes').textContent = okLabel || 'Так';
+      const alt = document.getElementById('confirmAlt');
+      alt.hidden = !altLabel; alt.textContent = altLabel || '';
       document.getElementById('confirmModal').classList.add('show');
       setTimeout(() => document.getElementById('confirmYes').focus(), 30);
     });
@@ -3613,6 +3630,7 @@
   }
   document.getElementById('confirmYes').addEventListener('click', () => closeConfirm(true));
   document.getElementById('confirmNo').addEventListener('click', () => closeConfirm(false));
+  document.getElementById('confirmAlt').addEventListener('click', () => closeConfirm('alt'));
   document.getElementById('confirmModal').addEventListener('click', (e) => { if (e.target.id === 'confirmModal') closeConfirm(false); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('confirmModal').classList.contains('show')) closeConfirm(false); });
 
@@ -3780,13 +3798,18 @@
       Persist.restoring = false;
     }
   }
-  document.getElementById('btnNewBoard').addEventListener('click', async () => {
-    if (!(await confirmDialog('Почати нову дошку?', 'Усі сторінки поточної дошки (малюнки, PDF, стікери) буде видалено з цього браузера. Якщо щось потрібно — спершу збережіть через кнопку експорту.', 'Нова дошка'))) return;
+  // прибрати всі сторінки (і PDF) та почати з одного чистого аркуша
+  async function resetBoard() {
     state.pages.forEach(p => p.stage.remove());
     state.pages = [];
     await Persist.clear();
     const first = createPage(null);
     switchToPage(first.id);
+  }
+  document.getElementById('btnNewBoard').addEventListener('click', async () => {
+    if (boardIsBlank()) { showToast('Дошка вже чиста', 'info'); return; }
+    if (!(await confirmDialog('Почати нову дошку?', 'Усі сторінки поточної дошки (малюнки, PDF, стікери) буде видалено з цього браузера. Якщо щось потрібно — спершу збережіть через кнопку «Зберегти».', 'Нова дошка'))) return;
+    await resetBoard();
     showToast('Створено нову дошку', 'success');
   });
   window.addEventListener('beforeunload', () => { Persist.save(); });
