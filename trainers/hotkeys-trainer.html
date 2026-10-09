@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Гарячі клавіші · Edvault</title>
+<link rel="icon" href="/icons/hotkeys-trainer.ico" sizes="32x32">
+<link rel="icon" href="/icons/hotkeys-trainer.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/hotkeys-trainer-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<script>try { if (localStorage.getItem('edvault-theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}</script>
+<link rel="stylesheet" href="hotkeystrainer/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <button class="brand" id="homeBtn" title="До рівнів">
+    <span class="brand-mark"><span data-icon="command"></span></span>
+    <span class="brand-text"><b>Гарячі клавіші</b><small>Копіювати, вставити, скасувати — без мишки</small></span>
+  </button>
+  <span class="grow"></span>
+  <span class="total" id="total"></span>
+  <button class="btn" id="reportBtn"><span data-icon="download"></span><span class="hide-sm">Мої результати</span></button>
+  <button class="icon-btn" id="themeBtn" title="Світла / темна тема"></button>
+</header>
+
+<!-- ═══ Рівні ═══ -->
+<main class="home" id="home">
+  <div class="home-in">
+    <section class="hero">
+      <div class="hero-text">
+        <span class="hero-kicker">Тренажер гарячих клавіш</span>
+        <h1>Робіть усе вдвічі швидше</h1>
+        <p>Ctrl + C, Ctrl + V, Ctrl + Z і ще десятки комбінацій для тексту, браузера й Windows. Натискайте по-справжньому — і дивіться, що станеться.</p>
+        <button class="btn btn-primary btn-hero" id="continueBtn"></button>
+      </div>
+      <div class="hero-stats">
+        <div class="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="ring-bg"/><circle cx="60" cy="60" r="52" class="ring-fg" id="ringFg"/></svg><div><b id="ringPct">0%</b><span>пройдено</span></div></div>
+        <div class="hero-nums"><div><b id="heroStars">0</b><span>зірок із <i id="heroMax"></i></span></div><div><b id="heroAcc">—</b><span>комбінацій вивчено</span></div></div>
+      </div>
+    </section>
+    <div id="chapters"></div>
+  </div>
+</main>
+
+<!-- ═══ Гра ═══ -->
+<main class="play" id="play" hidden>
+  <div class="play-in">
+    <div class="play-head">
+      <button class="btn btn-ghost" id="backBtn"><span data-icon="grid"></span>Усі рівні</button>
+      <div class="play-title"><span id="lvlChapter"></span><b id="lvlName"></b></div>
+      <span class="grow"></span>
+      <button class="btn" id="tipsBtn" hidden><span data-icon="book"></span>Пам’ятка</button>
+      <button class="btn btn-icon" id="prevBtn" title="Попередній рівень"><span data-icon="left"></span></button>
+      <span class="nav-num" id="navNum"></span>
+      <button class="btn btn-icon" id="nextBtn" title="Наступний рівень"><span data-icon="arrow"></span></button>
+    </div>
+    <div class="steps-row"><div class="dots" id="dots"></div><span class="timer" id="timer" hidden></span><span class="step-n" id="stepN"></span></div>
+    <div class="tips-panel" id="lvlHint" hidden></div>
+    <section class="stage" id="stage"></section>
+    <section class="feedback" id="feedback" hidden>
+      <div class="fb-head"><span class="fb-ico" id="fbIco"></span><b id="fbTitle"></b><span class="grow"></span><button class="btn btn-primary" id="fbNext">Далі<span data-icon="arrow"></span></button></div>
+      <p class="fb-why" id="fbWhy"></p>
+      <ul class="fb-list" id="fbList"></ul>
+    </section>
+    <section class="kbd-wrap" id="kbdWrap"><div class="keyboard" id="keyboard"></div></section>
+  </div>
+</main>
+
+<!-- ═══ Результат ═══ -->
+<div class="overlay" id="result" hidden>
+  <div class="modal result-modal">
+    <div class="res-stars" id="resStars"></div>
+    <h3 class="res-title" id="resTitle">Готово!</h3>
+    <p class="res-msg" id="resMsg"></p>
+    <div class="res-actions">
+      <button class="btn" id="resLevels"><span data-icon="grid"></span>До рівнів</button>
+      <button class="btn" id="resRetry"><span data-icon="refresh"></span>Ще раз</button>
+      <button class="btn btn-primary" id="resNext">Далі<span data-icon="arrow"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Мої результати ═══ -->
+<div class="overlay" id="report" hidden>
+  <div class="modal report">
+    <div class="modal-head"><h3>Мої результати</h3><button class="icon-btn" data-close title="Закрити"><span data-icon="x"></span></button></div>
+    <p class="muted">Завантажте картинку з усіма пройденими рівнями й надішліть її вчителю.</p>
+    <label class="lbl" for="studentName">Ім’я та прізвище, клас</label>
+    <input class="inp" id="studentName" maxlength="80" placeholder="Напр. «Олена Коваленко, 5-А»">
+    <div class="report-sum" id="reportSum"></div>
+    <div class="modal-actions">
+      <button class="link-btn" id="resetProgress">Скинути прогрес</button>
+      <span class="grow"></span>
+      <button class="btn btn-primary" id="downloadReport"><span data-icon="download"></span>Завантажити результати</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script type="module" src="hotkeystrainer/js/main.js"></script>
+</body>
+</html>
