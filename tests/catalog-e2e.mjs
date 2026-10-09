@@ -77,7 +77,9 @@ await step('тренажери: прогрес зі сховища кожног�
 await step('вигляд «список» запам’ятовується', async () => {
   await p.click('#vList');
   await p.reload(); await p.waitForSelector('.card');
-  assert.equal(await p.locator('#list .grid.list').count(), 3);
+  const grids = await p.locator('#list .grid').count();
+  assert.ok(grids > 1);
+  assert.equal(await p.locator('#list .grid.list').count(), grids);
   await p.click('#vGrid');
 });
 
