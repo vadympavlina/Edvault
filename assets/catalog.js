@@ -45,7 +45,7 @@ const KINDS = {
 };
 
 export function mountCatalog(kind) {
-  const K = KINDS[kind], other = kind === 'tools' ? 'trainers' : 'tools';
+  const K = KINDS[kind];
   const state = { filter: 'all', q: '', view: store.get(K.viewKey, 'grid') === 'list' ? 'list' : 'grid' };
   const catOf = id => K.cats.find(c => c.id === id);
   const prog = it => kind === 'trainers' ? trainerProgress(it) : null;
@@ -53,10 +53,6 @@ export function mountCatalog(kind) {
   document.getElementById('app').innerHTML = `
   <header class="topbar">
     <a class="brand" href="/" aria-label="Edvault — на головну"><span class="brand-mark">${I.logo}</span><span class="brand-name">Edvault</span></a>
-    <nav class="switch" aria-label="Розділи">
-      <a href="/tools/" class="${kind === 'tools' ? 'on' : ''}">${svg(I.tools)}Інструменти<span class="n">${TOOLS.length}</span></a>
-      <a href="/trainers/" class="${kind === 'trainers' ? 'on' : ''}">${svg(I.trainers)}Тренажери<span class="n">${TRAINERS.length}</span></a>
-    </nav>
     <span class="grow"></span>
     <button class="icon-btn" id="theme" title="Змінити тему"></button>
   </header>
@@ -85,7 +81,6 @@ export function mountCatalog(kind) {
       <p id="emptyMsg"></p>
       <button class="btn-primary" id="emptyReset">Показати всі</button>
     </div>
-    ${promoHtml(other)}
     <footer class="foot"><span>© Edvault</span><span>Підказка: <span class="kbd">/</span> — пошук, <span class="kbd">Enter</span> — відкрити перший результат</span></footer>
   </main>`;
   const $ = id => document.getElementById(id);
@@ -198,11 +193,3 @@ export function mountCatalog(kind) {
   render();
 }
 
-function promoHtml(other) {
-  const items = other === 'trainers' ? TRAINERS : TOOLS;
-  const pics = items.slice(0, 4).map(it => `<span style="background:${it.accent}">${svg(it.icon, '')}</span>`).join('');
-  const text = other === 'trainers'
-    ? ['Тренажери для учнів', `${TRAINERS.length} тренажерів із рівнями й зірками: мишка, файли, сліпий друк, алгоритми, перо й колір.`, 'До тренажерів']
-    : ['Інструменти для вчителя', `${TOOLS.length} інструментів для уроку: вайтборд, запис екрану, відеоредактор, голосування й інші.`, 'До інструментів'];
-  return `<a class="promo" href="/${other}/"><span class="promo-ic">${pics}</span><span><b>${text[0]}</b><small>${text[1]}</small></span><span class="go">${text[2]}${svg(I.arrow, '')}</span></a>`;
-}

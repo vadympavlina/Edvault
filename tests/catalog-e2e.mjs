@@ -10,13 +10,15 @@ const errors = [];
 const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 } });
 const p = await newPage(ctx, errors);
 
-await step('інструменти: усі картки в розділах, адреси без .html', async () => {
+await step('інструменти: усі картки в розділах, адреси без .html, без згадок про тренажери', async () => {
   await p.goto(server.url + '/tools/');
   await p.waitForSelector('.card');
   assert.equal(await p.locator('.card').count(), TOOLS.length);
   assert.equal(await p.locator('.section').count(), 4);
   const hrefs = await p.locator('.card').evaluateAll(a => a.map(x => x.getAttribute('href')));
   assert.ok(hrefs.every(h => /^\/tools\/[\w-]+$/.test(h)), hrefs.join(' '));
+  assert.equal(await p.locator('a[href^="/trainers"]').count(), 0);
+  assert.doesNotMatch(await p.textContent('body'), /[Тт]ренажер/);
 });
 
 await step('кожне посилання каталогу відкриває свою сторінку', async () => {
@@ -58,7 +60,7 @@ await step('тренажери: прогрес зі сховища кожног�
     localStorage.setItem('edvault-robot', JSON.stringify({ best: { 'seq-1': { stars: 3 }, 'seq-2': { stars: 2 } } }));
     localStorage.setItem('edvault-typing', JSON.stringify({ best: { uk: { a: { stars: 3 } }, en: { b: { stars: 1 } } } }));
   });
-  await p.click('.switch a[href="/trainers/"]');
+  await p.goto(server.url + '/trainers/');
   await p.waitForSelector('.card');
   assert.equal(await p.locator('.card').count(), TRAINERS.length);
   const robot = p.locator('.card[data-id="robot"]');
@@ -68,6 +70,8 @@ await step('тренажери: прогрес зі сховища кожног�
   assert.match(await p.locator('.card[data-id="typing-trainer"]').textContent(), /4 \/ 153/);
   assert.match(await p.locator('.card[data-id="pen-trainer"]').textContent(), /Почати/);
   assert.match(await p.textContent('#stats'), /9/);
+  assert.equal(await p.locator('a[href^="/tools"]').count(), 0);
+  assert.doesNotMatch(await p.textContent('body'), /Інструменти|інструментів/);
 });
 
 await step('вигляд «список» запам’ятовується', async () => {

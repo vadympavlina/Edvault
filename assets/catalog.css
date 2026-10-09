@@ -36,13 +36,6 @@ svg{display:block}
 .brand-mark{width:32px;height:32px;border-radius:9px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(79,107,244,.35);flex-shrink:0}
 .brand-mark svg{width:17px;height:17px}
 .brand-name{font-weight:800;font-size:16px;letter-spacing:-.02em}
-.switch{display:flex;gap:2px;padding:3px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;margin-left:10px}
-.switch a{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 14px;border-radius:8px;text-decoration:none;font-size:13.5px;font-weight:600;color:var(--text2)}
-.switch a:hover{color:var(--text)}
-.switch a.on{background:var(--surface);color:var(--accent);box-shadow:var(--shadow-sm)}
-.switch svg{width:16px;height:16px}
-.switch .n{font-size:11px;font-weight:700;min-width:20px;height:18px;padding:0 5px;border-radius:5px;background:var(--surface3);color:var(--muted);display:inline-flex;align-items:center;justify-content:center}
-.switch a.on .n{background:var(--accent-light);color:var(--accent)}
 .icon-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text2);display:flex;align-items:center;justify-content:center}
 .icon-btn:hover{background:var(--surface2);color:var(--text)}
 .icon-btn svg{width:17px;height:17px}
@@ -148,18 +141,6 @@ mark{background:color-mix(in srgb,var(--accent) 22%,transparent);color:inherit;b
 .grid.list .prog{width:200px;flex-shrink:0}
 .grid.list .card-foot span{display:none}
 
-/* банер переходу між каталогами */
-.promo{display:flex;align-items:center;gap:18px;margin-top:10px;padding:20px 24px;border-radius:18px;text-decoration:none;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-sm);transition:border-color .15s,box-shadow .15s,transform .15s}
-.promo:hover{border-color:var(--accent);box-shadow:var(--shadow-md);transform:translateY(-2px)}
-.promo-ic{display:flex}
-.promo-ic span{width:40px;height:40px;border-radius:12px;margin-left:-10px;display:flex;align-items:center;justify-content:center;color:#fff;border:3px solid var(--surface)}
-.promo-ic span:first-child{margin-left:0}
-.promo-ic svg{width:18px;height:18px}
-.promo b{display:block;font-size:16px;font-weight:800;letter-spacing:-.01em}
-.promo small{display:block;margin-top:3px;font-size:13px;color:var(--text2)}
-.promo .go{margin-left:auto;display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 16px;border-radius:10px;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:13.5px;white-space:nowrap}
-.promo .go svg{width:15px;height:15px}
-
 /* порожньо */
 .state{text-align:center;padding:60px 20px;color:var(--text2)}
 .state .big{width:56px;height:56px;border-radius:16px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
@@ -173,10 +154,7 @@ mark{background:color-mix(in srgb,var(--accent) 22%,transparent);color:inherit;b
 
 @media(max-width:760px){
   .hero{grid-template-columns:1fr;padding:24px}
-  .switch a{padding:0 10px}
-  .switch .n{display:none}
-  .page{padding:20px 14px 40px}
+      .page{padding:20px 14px 40px}
   .grid{grid-template-columns:1fr}
-  .promo{flex-wrap:wrap}
 }
 @media(prefers-reduced-motion:reduce){.card{animation:none}.card:hover{transform:none}}
