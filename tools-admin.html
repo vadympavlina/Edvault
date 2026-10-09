@@ -498,7 +498,7 @@ const catLabel = c => CATEGORY_LABELS[c] || (c ? c.charAt(0).toUpperCase() + c.s
 // Файли, що вже лежать у папці tools/ (підказки для поля «Файл»)
 // інструменти, які прибрано з сайту: їхні записи в базі вважаються застарілими
 const REMOVED_FILES = ['mailcraft.html'];
-const KNOWN_FILES = ['text-craft.html', 'whiteboard.html', 'screen-recorder.html', 'snap-editor.html', 'videocut.html', 'vote.html', 'class-manager.html', 'web-editor.html', 'pixel-editor.html', 'color-tool.html', 'image-convert.html', 'pen-trainer.html'];
+const KNOWN_FILES = ['text-craft.html', 'whiteboard.html', 'screen-recorder.html', 'snap-editor.html', 'videocut.html', 'vote.html', 'class-manager.html', 'web-editor.html', 'pixel-editor.html', 'color-tool.html', 'image-convert.html', 'pen-trainer.html', 'color-trainer.html'];
 
 const PALETTE = ['#4F6BF4', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#10b981', '#0ea5e9', '#14b8a6', '#64748b'];
 
@@ -743,6 +743,7 @@ const DEFAULT_TOOLS = {
   'class-manager': { order: 7, name: 'Менеджер класу', desc: 'Учні, розклад, відвідуваність і оцінки в одному місці.', type: 'internal', file: 'class-manager.html', tag: 'Клас', category: 'class', accent: '#10b981', icon: I('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
   'image-convert': { order: 8, name: 'Конвертер зображень', desc: 'Перетворення й стиснення: JPG, PNG, WebP, AVIF, SVG, ICO. Зміна розміру, обрізка, поворот, архів одним кліком.', type: 'internal', file: 'image-convert.html', tag: 'Медіа', category: 'media', accent: '#06b6d4', icon: I('<path d="M4 9h13l-4-4"/><path d="M20 15H7l4 4"/>') },
   'pen-trainer': { order: 9, name: 'Тренажер пера', desc: 'Тренажер інструмента «Перо» як в Illustrator і Figma: 26 рівнів від прямих ліній до літер, оцінка точності й результати для вчителя.', type: 'internal', file: 'pen-trainer.html', tag: 'Творчість', category: 'creative', accent: '#8b5cf6', icon: I('<path d="M12 19 19 12l3 3-7 7z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="m2 2 7.59 7.59"/><circle cx="11" cy="11" r="2"/>') },
+  'color-trainer': { order: 10, name: 'Колір на око', desc: 'Тренажер відчуття кольору: відтінок, насиченість, RGB і HEX, гармонії й градієнти. 28 рівнів, точність за ΔE2000, результати для вчителя.', type: 'internal', file: 'color-trainer.html', tag: 'Творчість', category: 'creative', accent: '#ec4899', icon: I('<path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>') },
 };
 
 const $ = id => document.getElementById(id);

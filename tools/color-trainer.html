@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Колір на око · Edvault</title>
+<link rel="icon" href="/icons/color-trainer.ico" sizes="32x32">
+<link rel="icon" href="/icons/color-trainer.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/color-trainer-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<script>try { if (localStorage.getItem('edvault-theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}</script>
+<link rel="stylesheet" href="colortrainer/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <button class="brand" id="homeBtn" title="До рівнів">
+    <span class="brand-mark"><span data-icon="pipette"></span></span>
+    <span class="brand-text"><b>Колір на око</b><small>Тренажер відчуття кольору</small></span>
+  </button>
+  <span class="grow"></span>
+  <span class="total" id="total"></span>
+  <button class="btn" id="reportBtn"><span data-icon="download"></span><span class="hide-sm">Мої результати</span></button>
+  <button class="icon-btn" id="themeBtn" title="Світла / темна тема"></button>
+</header>
+
+<!-- ═══ Рівні ═══ -->
+<main class="home" id="home">
+  <div class="home-in">
+    <section class="hero">
+      <div class="hero-text">
+        <span class="hero-kicker">Тренажер кольору</span>
+        <h1>Навчіться бачити колір, як дизайнер</h1>
+        <p>Відтінок, насиченість, яскравість, RGB і HEX, гармонії й найтонші переходи. Точність рахується так, як різницю бачить людське око.</p>
+        <button class="btn btn-primary btn-hero" id="continueBtn"></button>
+      </div>
+      <div class="hero-stats">
+        <div class="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="ring-bg"/><circle cx="60" cy="60" r="52" class="ring-fg" id="ringFg"/></svg><div><b id="ringPct">0%</b><span>пройдено</span></div></div>
+        <div class="hero-nums"><div><b id="heroStars">0</b><span>зірок із <i id="heroMax"></i></span></div><div><b id="heroAcc">—</b><span>середня точність</span></div></div>
+      </div>
+    </section>
+    <div id="chapters"></div>
+  </div>
+</main>
+
+<!-- ═══ Гра ═══ -->
+<main class="play" id="play" hidden>
+  <div class="stage" id="stage">
+    <div class="swatches" id="swatches">
+      <div class="sw" id="swTarget"><div class="sw-fill" id="swTargetFill"></div><span class="sw-label" id="swTargetLabel">Зразок</span><div class="sw-cover" id="swCover"></div></div>
+      <div class="sw" id="swUser"><div class="sw-fill" id="swUserFill"></div><span class="sw-label">Ваш колір</span></div>
+    </div>
+    <div class="controls" id="controls"></div>
+    <div class="order" id="order" hidden></div>
+  </div>
+
+  <aside class="panel">
+    <div class="nav-row">
+      <button class="btn btn-ghost" id="backBtn"><span data-icon="grid"></span>Усі рівні</button>
+      <span class="grow"></span>
+      <button class="btn btn-icon" id="prevBtn" title="Попередній рівень"><span data-icon="left"></span></button>
+      <span class="nav-num" id="navNum"></span>
+      <button class="btn btn-icon" id="nextBtn" title="Наступний рівень"><span data-icon="arrow"></span></button>
+    </div>
+    <div class="lvl-head">
+      <span class="lvl-chapter" id="lvlChapter"></span>
+      <h2 id="lvlName"></h2>
+      <p class="lvl-hint" id="lvlHint"></p>
+    </div>
+    <div class="rounds" id="rounds"></div>
+    <div class="feedback" id="feedback" hidden>
+      <div class="fb-top"><b id="fbAcc"></b><span id="fbDe"></span></div>
+      <div class="fb-pair" id="fbPair"></div>
+      <ul class="fb-tips" id="fbTips"></ul>
+    </div>
+    <button class="btn btn-primary btn-lg" id="checkBtn"><span data-icon="check"></span><span id="checkLabel">Перевірити</span> <kbd>Enter</kbd></button>
+    <details class="keys" id="keys">
+      <summary>Як працює колір</summary>
+      <dl>
+        <dt>Відтінок (H)</dt><dd>місце на колі кольорів: червоний, жовтий, зелений, синій…</dd>
+        <dt>Насиченість (S)</dt><dd>наскільки колір «чистий»: 0 — сірий, 100 — найяскравіший</dd>
+        <dt>Яскравість (B)</dt><dd>скільки світла: 0 — чорний, 100 — найсвітліший</dd>
+        <dt>RGB</dt><dd>скільки червоного, зеленого й синього світла (0–255)</dd>
+        <dt>HEX</dt><dd>ті самі R, G, B у 16-ковому записі: #RRGGBB</dd>
+        <dt>ΔE</dt><dd>різниця кольорів для ока: до 2 — майже не видно, 5+ — явно інший</dd>
+      </dl>
+    </details>
+  </aside>
+</main>
+
+<!-- ═══ Результат рівня ═══ -->
+<div class="overlay" id="result" hidden>
+  <div class="modal result-modal">
+    <div class="res-stars" id="resStars"></div>
+    <div class="res-acc"><b id="resAcc">0</b><span>% точності</span></div>
+    <p class="res-msg" id="resMsg"></p>
+    <div class="res-pairs" id="resPairs"></div>
+    <div class="res-actions">
+      <button class="btn" id="resLevels"><span data-icon="grid"></span>До рівнів</button>
+      <button class="btn" id="resRetry"><span data-icon="undo"></span>Ще раз</button>
+      <button class="btn btn-primary" id="resNext">Далі<span data-icon="arrow"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Мої результати ═══ -->
+<div class="overlay" id="report" hidden>
+  <div class="modal report">
+    <div class="modal-head"><h3>Мої результати</h3><button class="icon-btn" data-close title="Закрити"><span data-icon="x"></span></button></div>
+    <p class="muted">Завантажте картинку з усіма пройденими рівнями й надішліть її вчителю.</p>
+    <label class="lbl" for="studentName">Ім’я та прізвище, клас</label>
+    <input class="inp" id="studentName" maxlength="80" placeholder="Напр. «Олена Коваленко, 8-Б»">
+    <div class="report-sum" id="reportSum"></div>
+    <div class="modal-actions">
+      <button class="link-btn" id="resetProgress">Скинути прогрес</button>
+      <span class="grow"></span>
+      <button class="btn btn-primary" id="downloadReport"><span data-icon="download"></span>Завантажити результати</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script type="module" src="colortrainer/js/main.js"></script>
+</body>
+</html>
