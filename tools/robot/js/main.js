@@ -99,21 +99,21 @@ function changed() { if (level) { progress.drafts[level.id] = strip(prog); saveP
 const slot = (listId, i) => `<div class="slot${cursor.list === listId && cursor.i === i ? ' cur' : ''}" data-list="${listId}" data-i="${i}"></div>`;
 function blockHtml(b) {
   const d = BLOCKS[b.t], x = `<button class="blk-x" data-del="${b.id}" title="Прибрати блок">${icon('x')}</button>`;
-  if (b.t === 'F' || b.t === 'L' || b.t === 'R') return `<div class="blk" data-id="${b.id}" style="--c:${d.c}"><div class="blk-head" draggable="true">${icon(d.icon)}${d.name}<span class="grow"></span>${x}</div></div>`;
+  if (b.t === 'F' || b.t === 'L' || b.t === 'R') return `<div class="blk" data-id="${b.id}" style="--c:${d.c}"><div class="blk-head pz" draggable="true">${icon(d.icon)}${d.name}<span class="grow"></span>${x}</div></div>`;
   const sel = (opts) => `<select class="cond" data-cond="${b.id}">${opts.map(([v, n]) => `<option value="${v}"${b.c === v ? ' selected' : ''}>${n}</option>`).join('')}</select>`;
   let head = '';
   if (b.t === 'rep') head = `${icon(d.icon)}Повторити <span class="num"><button data-num="${b.id}" data-d="-1" title="Менше">−</button><b>${b.n}</b><button data-num="${b.id}" data-d="1" title="Більше">+</button></span> разів`;
   if (b.t === 'if') head = `${icon(d.icon)}Якщо ${sel(COND_IF)}`;
   if (b.t === 'while') head = `${icon(d.icon)}Поки ${sel(COND_WHILE)}`;
-  return `<div class="blk box" data-id="${b.id}" style="--c:${d.c}"><div class="blk-head" draggable="true">${head}<span class="grow"></span>${x}</div>
+  return `<div class="blk box" data-id="${b.id}" style="--c:${d.c}"><div class="blk-head pz" draggable="true">${head}<span class="grow"></span>${x}</div>
     <div class="blk-body">${listHtml(b.body, b.id + ':body')}</div>
-    ${b.t === 'if' ? `<div class="blk-else">інакше</div><div class="blk-body">${listHtml(b.alt, b.id + ':alt')}</div>` : ''}
-    <div class="blk-foot"></div></div>`;
+    ${b.t === 'if' ? `<div class="blk-else pz">інакше</div><div class="blk-body">${listHtml(b.alt, b.id + ':alt')}</div>` : ''}
+    <div class="blk-foot pz"></div></div>`;
 }
 const listHtml = (l, id) => slot(id, 0) + l.map((b, i) => blockHtml(b) + slot(id, i + 1)).join('');
 function renderProgram() {
   if (!lists()[cursor.list] || cursor.i > lists()[cursor.list].length) cursor = { list: 'main', i: prog.length };
-  $('program').innerHTML = listHtml(prog, 'main');
+  $('program').innerHTML = `<div class="hat pz no-notch">${icon('play')}Коли натиснуто «Запустити»</div>` + listHtml(prog, 'main');
   $('program').classList.toggle('empty', !prog.length);
   const n = countBlocks(prog), opt = level ? OPT[level.id] : 0;
   $('count').textContent = `${n} / найкраще ${opt} бл.`;
@@ -121,7 +121,7 @@ function renderProgram() {
   $('count').classList.toggle('best', n > 0 && n <= opt);
 }
 function renderPalette() {
-  $('palette').innerHTML = level.blocks.map(t => `<button class="pal" data-add="${t}" draggable="true" style="--c:${BLOCKS[t].c}">${icon(BLOCKS[t].icon)}${BLOCKS[t].name}</button>`).join('');
+  $('palette').innerHTML = level.blocks.map(t => `<button class="pal pz" data-add="${t}" draggable="true" style="--c:${BLOCKS[t].c}">${icon(BLOCKS[t].icon)}${BLOCKS[t].name}</button>`).join('');
 }
 function insert(node, listId = cursor.list, i = cursor.i) {
   const l = lists()[listId]; if (!l) return;
@@ -144,6 +144,7 @@ $('program').addEventListener('click', e => {
   const nb = t.closest('[data-num]');
   if (nb) { const f = find(nb.dataset.num); if (f) { snapshot(); f.b.n = Math.min(20, Math.max(1, f.b.n + +nb.dataset.d)); changed(); resetWorld(); } return; }
   if (t.closest('select')) return;
+  if (t.closest('.hat')) { cursor = { list: 'main', i: 0 }; renderProgram(); return; }
   const s = t.closest('.slot');
   if (s) { cursor = { list: s.dataset.list, i: +s.dataset.i }; renderProgram(); return; }
   const blk = t.closest('.blk');
