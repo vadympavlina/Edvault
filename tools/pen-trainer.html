@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Тренажер пера · Edvault</title>
+<link rel="icon" href="/icons/pen-trainer.ico" sizes="32x32">
+<link rel="icon" href="/icons/pen-trainer.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/pen-trainer-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<script>try { if (localStorage.getItem('edvault-theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}</script>
+<link rel="stylesheet" href="pentrainer/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <button class="brand" id="homeBtn" title="До рівнів">
+    <span class="brand-mark"><span data-icon="pen"></span></span>
+    <span class="brand-text"><b>Тренажер пера</b><small>Криві Безьє як в Illustrator і Figma</small></span>
+  </button>
+  <span class="grow"></span>
+  <span class="total" id="total"></span>
+  <button class="btn" id="reportBtn"><span data-icon="download"></span><span class="hide-sm">Мої результати</span></button>
+  <button class="icon-btn" id="themeBtn" title="Світла / темна тема"></button>
+</header>
+
+<!-- ═══ Рівні ═══ -->
+<main class="home" id="home">
+  <div class="home-in">
+    <section class="intro">
+      <div>
+        <h1>Навчіться малювати пером</h1>
+        <p>Обводьте фігури точками й ручками — від прямих ліній до літер. Кожен рівень оцінюється за точністю та кількістю точок.</p>
+      </div>
+      <div class="progress"><div class="progress-bar"><i id="progressBar"></i></div><span id="progressText"></span></div>
+    </section>
+    <div id="chapters"></div>
+  </div>
+</main>
+
+<!-- ═══ Гра ═══ -->
+<main class="play" id="play" hidden>
+  <div class="stage" id="stage">
+    <div class="board-wrap sample-wrap" id="sampleWrap" hidden>
+      <div class="board-label">Зразок</div>
+      <svg class="board sample" id="sample" viewBox="0 0 600 600"></svg>
+    </div>
+    <div class="board-wrap">
+      <div class="board-label" id="boardLabel" hidden>Ваше поле</div>
+      <svg class="board draw" id="board" viewBox="0 0 600 600" tabindex="0" aria-label="Поле для малювання пером"></svg>
+    </div>
+  </div>
+
+  <aside class="panel">
+    <div class="lvl-head">
+      <span class="lvl-chapter" id="lvlChapter"></span>
+      <h2 id="lvlName"></h2>
+      <p class="lvl-hint" id="lvlHint"></p>
+    </div>
+    <div class="stats">
+      <div><span>Точок</span><b id="statPts">0</b></div>
+      <div><span>Ідеально</span><b id="statIdeal">0</b></div>
+      <div><span>Найкраще</span><b id="statBest">—</b></div>
+    </div>
+    <div class="tools">
+      <button class="btn" id="hintBtn" title="Показати, де стоять ідеальні точки й ручки (H)"><span data-icon="eye"></span>Підказка</button>
+      <button class="btn" id="altBtn" title="Режим Alt без клавіатури: ламати ручки — зручно на планшеті">Alt</button>
+      <button class="btn btn-icon" id="undoBtn" title="Скасувати (Ctrl+Z)"><span data-icon="undo"></span></button>
+      <button class="btn btn-icon" id="redoBtn" title="Повторити (Ctrl+Shift+Z)"><span data-icon="redo"></span></button>
+      <button class="btn btn-icon" id="clearBtn" title="Почати спочатку (R)"><span data-icon="trash"></span></button>
+    </div>
+    <button class="btn btn-primary btn-lg" id="checkBtn"><span data-icon="check"></span>Перевірити <kbd>Enter</kbd></button>
+    <details class="keys" id="keys">
+      <summary>Як користуватися пером</summary>
+      <dl>
+        <dt>Клік</dt><dd>кутова точка</dd>
+        <dt>Натиснути й тягнути</dt><dd>плавна точка з ручками</dd>
+        <dt><kbd>Alt</kbd> під час тягнення</dt><dd>зламати ручку — гострий кут на кривій</dd>
+        <dt>Клік у першу точку</dt><dd>замкнути контур</dd>
+        <dt><kbd>Shift</kbd></dt><dd>кути по 45°</dd>
+        <dt>Тягнути точку чи ручку</dt><dd>підправити форму</dd>
+        <dt><kbd>Alt</kbd> + клік по точці</dt><dd>прибрати ручки (зробити кутом)</dd>
+        <dt><kbd>Esc</kbd></dt><dd>закінчити відкритий контур</dd>
+        <dt><kbd>Backspace</kbd></dt><dd>прибрати останню точку</dd>
+        <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt><dd>скасувати</dd>
+      </dl>
+    </details>
+  </aside>
+</main>
+
+<!-- ═══ Результат ═══ -->
+<div class="overlay" id="result" hidden>
+  <div class="modal result">
+    <svg class="res-preview" id="resPreview" viewBox="0 0 600 600"></svg>
+    <div class="res-body">
+      <div class="res-stars" id="resStars"></div>
+      <div class="res-acc"><b id="resAcc">0</b><span>% точності</span></div>
+      <p class="res-msg" id="resMsg"></p>
+      <div class="res-pts" id="resPts"></div>
+      <div class="res-actions">
+        <button class="btn" id="resLevels"><span data-icon="grid"></span>До рівнів</button>
+        <button class="btn" id="resRetry"><span data-icon="undo"></span>Ще раз</button>
+        <button class="btn btn-primary" id="resNext">Далі<span data-icon="arrow"></span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Мої результати ═══ -->
+<div class="overlay" id="report" hidden>
+  <div class="modal report">
+    <div class="modal-head"><h3>Мої результати</h3><button class="icon-btn" data-close title="Закрити"><span data-icon="x"></span></button></div>
+    <p class="muted">Завантажте картинку з усіма пройденими рівнями й надішліть її вчителю.</p>
+    <label class="lbl" for="studentName">Ім’я та прізвище, клас</label>
+    <input class="inp" id="studentName" maxlength="80" placeholder="Напр. «Олена Коваленко, 8-Б»">
+    <div class="report-sum" id="reportSum"></div>
+    <div class="modal-actions">
+      <button class="link-btn" id="resetProgress">Скинути прогрес</button>
+      <span class="grow"></span>
+      <button class="btn btn-primary" id="downloadReport"><span data-icon="download"></span>Завантажити результати</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script type="module" src="pentrainer/js/main.js"></script>
+</body>
+</html>
