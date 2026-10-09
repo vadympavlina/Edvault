@@ -57,14 +57,16 @@ export function mountCatalog(kind) {
     <button class="icon-btn" id="theme" title="Змінити тему"></button>
   </header>
   <main class="page">
-    <section class="hero${K.warm ? ' warm' : ''}">
-      <div>
-        <span class="hero-kicker">${K.kicker}</span>
+    <section class="head${K.warm ? ' warm' : ''}">
+      <div class="head-text">
+        <span class="kicker">${K.kicker}</span>
         <h1>${K.h1}</h1>
         <p>${K.lead}</p>
-        <label class="hero-search" role="search">${svg(I.search, '')}<input type="search" id="q" placeholder="${K.search}" autocomplete="off" spellcheck="false" aria-label="${K.search}"><span class="kbd" id="qKbd">/</span></label>
       </div>
-      <div class="hero-stats" id="stats"></div>
+      <div class="head-side">
+        <label class="search" role="search">${svg(I.search, '')}<input type="search" id="q" placeholder="${K.search}" autocomplete="off" spellcheck="false" aria-label="${K.search}"><span class="kbd" id="qKbd">/</span></label>
+        <div class="stats" id="stats"></div>
+      </div>
     </section>
     <section class="recent" id="recent" hidden><div class="label">${svg(I.clock, '')}Нещодавно відкриті</div><div class="recent-row" id="recentRow"></div></section>
     <div class="toolbar">
@@ -107,17 +109,24 @@ export function mountCatalog(kind) {
     if (i < 0 || norm(text).length !== String(text).length) return t;
     return esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>' + esc(text.slice(i + q.length));
   }
-  function cardHtml(it, i) {
+  function cardHtml(it) {
     const p = prog(it), c = catOf(it.cat);
     const chips = kind === 'trainers' ? [`${it.levels} ${plural(it.levels, 'рівень', 'рівні', 'рівнів')}`, it.grades] : it.tags;
-    const foot = p
-      ? `<div class="prog"><div class="prog-row"><span class="stars">${svg(I.star)}${p.stars} / ${p.max}</span><span class="grow"></span><span>${p.passed} з ${p.levels} ${plural(p.levels, 'рівня', 'рівнів', 'рівнів')}</span></div><div class="bar"><i style="width:${Math.round(p.passed / p.levels * 100)}%"></i></div></div>
-         <div class="card-foot"><span>${p.passed ? (p.passed >= p.levels ? 'Покращити результат' : 'Продовжити') : 'Почати'}</span>${svg(I.arrow)}</div>`
-      : `<div class="card-foot"><span>Відкрити</span>${svg(I.arrow)}</div>`;
-    return `<a class="card" href="${hrefOf(kind, it)}" data-id="${it.id}" style="--a:${it.accent};animation-delay:${Math.min(i, 12) * 30}ms">
-      <div class="card-top"><div class="ic">${svg(it.icon)}</div>${state.filter === 'all' && !state.q ? '' : `<span class="pill">${esc(c.name)}</span>`}</div>
-      <div class="card-body"><h3 class="card-name">${hl(it.name)}</h3><p class="card-desc">${hl(it.desc)}</p><div class="chips">${chips.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div></div>
-      ${foot}
+    const cat = state.filter === 'all' && !state.q ? '' : `<span class="card-cat">${esc(c.name)}</span>`;
+    if (p) {
+      const done = Math.round(p.passed / p.levels * 100);
+      return `<a class="card trainer" href="${hrefOf(kind, it)}" data-id="${it.id}" style="--a:${it.accent}">
+        <div class="cover"><span class="cover-ic">${svg(it.icon)}</span><span class="cover-n">${it.levels}<small>${plural(it.levels, 'рівень', 'рівні', 'рівнів')}</small></span></div>
+        <div class="card-body">${cat}<h3 class="card-name">${hl(it.name)}</h3><p class="card-desc">${hl(it.desc)}</p></div>
+        <div class="card-meta"><span class="chip">${esc(it.grades)}</span><span class="grow"></span><span class="stars">${svg(I.star)}${p.stars} / ${p.max}</span></div>
+        <div class="prog"><div class="bar"><i style="width:${done}%"></i></div><span>${p.passed} з ${p.levels}</span></div>
+        <div class="card-go"><span>${p.passed ? (p.passed >= p.levels ? 'Покращити результат' : 'Продовжити') : 'Почати'}</span>${svg(I.arrow)}</div>
+      </a>`;
+    }
+    return `<a class="card" href="${hrefOf(kind, it)}" data-id="${it.id}" style="--a:${it.accent}">
+      <div class="card-top"><span class="ic">${svg(it.icon)}</span><div class="card-title">${cat}<h3 class="card-name">${hl(it.name)}</h3></div></div>
+      <p class="card-desc">${hl(it.desc)}</p>
+      <div class="card-meta">${chips.map(x => `<span class="chip">${esc(x)}</span>`).join('')}<span class="grow"></span><span class="card-go">Відкрити${svg(I.arrow)}</span></div>
     </a>`;
   }
   const visible = () => K.items.filter(it => (state.filter === 'all' || it.cat === state.filter)
@@ -133,7 +142,7 @@ export function mountCatalog(kind) {
     if (state.filter === 'all' && !state.q) {
       $('list').innerHTML = K.cats.map(c => {
         const items = list.filter(it => it.cat === c.id);
-        return items.length ? `<section class="section" id="cat-${c.id}"><div class="section-head"><span class="section-ic">${svg(c.icon, '')}</span><div><h2>${esc(c.name)}</h2><p>${esc(c.desc)}</p></div><span class="n">${items.length} ${plural(items.length, ...K.word)}</span></div>${grid(items)}</section>` : '';
+        return items.length ? `<section class="section" id="cat-${c.id}"><div class="section-head"><h2>${esc(c.name)}</h2><span class="n">${items.length}</span><p>${esc(c.desc)}</p></div>${grid(items)}</section>` : '';
       }).join('');
     } else $('list').innerHTML = list.length ? grid(list) : '';
     $('empty').hidden = list.length > 0;
@@ -147,13 +156,14 @@ export function mountCatalog(kind) {
     $('recentRow').innerHTML = items.map(it => `<a class="recent-card" href="${hrefOf(kind, it)}" data-id="${it.id}" style="--a:${it.accent}"><span class="ic">${svg(it.icon)}</span><span>${esc(it.name)}</span></a>`).join('');
   }
   function renderStats() {
-    const stat = (icon, n, label) => `<div class="stat">${svg(icon)}<b>${n}</b><span>${label}</span></div>`;
+    const stat = (n, label) => `<div class="stat"><b>${n}</b><span>${label}</span></div>`;
     if (kind === 'trainers') {
       const ps = TRAINERS.map(t => trainerProgress(t));
       const stars = ps.reduce((s, p) => s + p.stars, 0), levels = TRAINERS.reduce((s, t) => s + t.levels, 0);
-      $('stats').innerHTML = stat(I.levels, levels, 'рівнів у тренажерах') + stat(I.star, stars, `${plural(stars, 'зірка', 'зірки', 'зірок')} здобуто`);
-    } else $('stats').innerHTML = stat(I.layers, TOOLS.length, plural(TOOLS.length, ...K.word)) + stat(I.free, '0 ₴', 'без реєстрації');
+      $('stats').innerHTML = stat(TRAINERS.length, plural(TRAINERS.length, ...K.word)) + stat(levels, 'рівнів') + stat(stars, `${plural(stars, 'зірка', 'зірки', 'зірок')} здобуто`);
+    } else $('stats').innerHTML = stat(TOOLS.length, plural(TOOLS.length, ...K.word)) + stat(K.cats.length, 'розділи') + stat('0 ₴', 'без реєстрації');
   }
+
 
   $('tabs').addEventListener('click', e => {
     const b = e.target.closest('.tab'); if (!b) return;
