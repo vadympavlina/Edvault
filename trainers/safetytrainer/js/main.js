@@ -1,6 +1,6 @@
 // Безпека в інтернеті · Edvault — рівні, завдання шести типів, розбір відповідей, прогрес і результати.
 import { CHAPTERS, LEVELS } from './levels.js';
-import { parseUrl, strength, segments, scoreMsg, scorePick, scoreRank, starsFor, COMMON } from './logic.js';
+import { parseUrl, strength, segments, scorePick, starsFor, COMMON } from './logic.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -17,6 +17,10 @@ const P = {
   up: '<path d="m18 15-6-6-6 6"/>', down: '<path d="m6 9 6 6 6-6"/>',
   play: '<polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/>',
   x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/>',
+  ruler: '<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2M11.5 9.5l2-2M8.5 6.5l2-2M17.5 15.5l2-2"/>',
+  pen: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
@@ -85,49 +89,63 @@ const totalStars = () => LEVELS.reduce((s, l) => s + (best(l.id)?.stars || 0), 0
 const avgAcc = () => { const b = LEVELS.map(l => best(l.id)).filter(Boolean); return b.length ? Math.round(b.reduce((s, x) => s + x.pct, 0) / b.length) : null; };
 
 /* ═════════ Гра ═════════ */
-let level = null, cur = -1, ti = 0, scores = [], task = null, answered = false, st = {};
+let level = null, cur = -1, ti = -1, scores = [], task = null, answered = false, st = {};
 const pct = s => Math.round(s * 100);
 
 function openLevel(i) {
   if (!LEVELS[i] || !unlocked(i)) { showHome(); return; }
   if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
-  cur = i; level = LEVELS[i]; ti = 0; scores = [];
+  cur = i; level = LEVELS[i]; scores = [];
   $('home').hidden = true; $('play').hidden = false; $('result').hidden = true;
   $('lvlChapter').textContent = CHAPTERS.find(c => c.id === level.chapter).name;
   $('lvlName').textContent = `${i + 1}. ${level.name}`;
-  $('lvlHint').textContent = level.hint;
+  $('lvlHint').innerHTML = tipsHtml();
+  $('lvlHint').hidden = true; $('tipsBtn').classList.remove('on');
   $('navNum').textContent = `${i + 1} / ${LEVELS.length}`;
   $('prevBtn').disabled = i === 0;
   $('nextBtn').disabled = !(i + 1 < LEVELS.length && unlocked(i + 1));
-  showTask();
+  showIntro();
   if (location.hash !== '#' + level.id) window.history.replaceState(null, '', '#' + level.id);
 }
+const tipsHtml = () => `<ul class="tips">${level.tips.map(([ic, t]) => `<li><span class="tip-ico">${icon(ic)}</span><span>${t}</span></li>`).join('')}</ul>`;
+// пам’ятка перед завданнями
+function showIntro() {
+  ti = -1; task = null; answered = false;
+  $('feedback').hidden = true; $('tipsBtn').hidden = true;
+  $('stage').className = 'stage intro';
+  $('stage').innerHTML = `<div class="intro-head"><span class="intro-ico">${icon('book')}</span><div><small>Пам’ятка перед рівнем</small><h2>${esc(level.name)}</h2></div></div>${tipsHtml()}
+    <div class="verdicts"><span class="note">${icon('info')}${level.tasks.length} ${plural(level.tasks.length, 'завдання', 'завдання', 'завдань')} · пам’ятку можна відкрити будь-коли</span><span class="grow"></span><button class="btn btn-primary btn-lg2" id="goBtn">${icon('play')}Почати</button></div>`;
+  $('goBtn').onclick = () => { ti = 0; showTask(); };
+  renderDots();
+  setTimeout(() => $('goBtn')?.focus({ preventScroll: true }), 30);
+}
+$('tipsBtn').onclick = () => { const h = !$('lvlHint').hidden; $('lvlHint').hidden = h; $('tipsBtn').classList.toggle('on', !h); };
 function renderDots() {
   $('dots').innerHTML = level.tasks.map((_, k) => {
     const s = scores[k];
     const cls = k === ti && !answered ? 'cur' : s == null ? '' : s >= 0.9 ? 'ok' : s > 0 ? 'part' : 'bad';
     return `<i class="${cls}"></i>`;
   }).join('');
-  $('stepN').textContent = `Завдання ${ti + 1} з ${level.tasks.length}`;
+  $('stepN').textContent = ti < 0 ? 'Пам’ятка' : `Завдання ${ti + 1} з ${level.tasks.length}`;
 }
 function showTask() {
   task = level.tasks[ti]; answered = false; st = {};
-  $('feedback').hidden = true;
+  $('feedback').hidden = true; $('tipsBtn').hidden = false;
   $('stage').className = 'stage k-' + task.kind;
   RENDER[task.kind]();
   renderDots();
   $('play').scrollTop = 0;
 }
-// показати розбір: score 0…1, why — пояснення, list — [{ok|miss|bad, text}]
+// розбір: score 0…1, why — пояснення (HTML із рівнів), list — [{s: ok|miss|bad, html}]
 function finish(score, why, list = []) {
   answered = true; scores[ti] = score;
   $('stage').classList.add('done');
   const kind = score >= 0.9 ? 'ok' : score > 0 ? 'part' : 'bad';
   $('feedback').className = 'feedback ' + kind;
   $('fbIco').innerHTML = icon(kind === 'ok' ? 'shieldOk' : kind === 'part' ? 'alert' : 'shieldX');
-  $('fbTitle').textContent = kind === 'ok' ? 'Правильно!' : kind === 'part' ? `Частково: ${pct(score)}%` : 'Не зовсім';
-  $('fbWhy').textContent = why || '';
-  $('fbList').innerHTML = list.map(x => `<li class="${x.s}">${icon(x.s === 'ok' ? 'check' : x.s === 'miss' ? 'alert' : 'x')}<span>${x.html || esc(x.text)}</span></li>`).join('');
+  $('fbTitle').textContent = kind === 'ok' ? 'Правильно!' : kind === 'part' ? `Майже: ${pct(score)}%` : 'Неправильно';
+  $('fbWhy').innerHTML = why || '';
+  $('fbList').innerHTML = list.map(x => `<li class="${x.s}">${icon(x.s === 'ok' ? 'check' : x.s === 'miss' ? 'alert' : x.s === 'info' ? 'search' : 'x')}<span>${x.html}</span></li>`).join('');
   $('fbNext').innerHTML = (ti + 1 < level.tasks.length ? 'Далі' : 'Завершити') + icon('arrow');
   $('feedback').hidden = false;
   renderDots();
@@ -135,33 +153,43 @@ function finish(score, why, list = []) {
 }
 $('fbNext').onclick = () => { if (ti + 1 < level.tasks.length) { ti++; showTask(); } else complete(); };
 
-/* ── адресний рядок ── */
-function addressBar(url, { clickable = false, reveal = null } = {}) {
+/* ── адресний рядок: після відповіді підсвічуємо ім’я сайту ── */
+function addressBar(url, reveal = false) {
   const u = parseUrl(url);
-  return `<div class="addr${u.secure ? '' : ' insecure'}"><span class="addr-lock" title="${u.secure ? 'Захищене з’єднання (https)' : 'Незахищене з’єднання (http)'}">${icon(u.secure ? 'lock' : 'unlock')}</span><span class="addr-url">${u.chunks.map((c, k) =>
-    clickable ? `<button class="ch ${c.part}" data-k="${k}">${esc(c.t)}</button>` : `<span class="ch ${c.part}${reveal && c.part === 'domain' ? ' real' : ''}">${esc(c.t)}</span>`).join('')}</span></div>`;
+  return `<div class="addr${u.secure ? '' : ' insecure'}"><span class="addr-lock" title="${u.secure ? 'Захищене з’єднання (https)' : 'Незахищене з’єднання (http)'}">${icon(u.secure ? 'lock' : 'unlock')}</span><span class="addr-url">${u.chunks.map(c => `<span class="ch ${c.part}${reveal && c.part === 'domain' ? ' real' : ''}">${esc(c.t)}</span>`).join('')}</span></div>`;
 }
+const domainLine = url => { const u = parseUrl(url); return `Ім’я сайту: <b>${esc(u.domain)}</b>${u.secure ? '' : ' · з’єднання без <b>https</b>'}`; };
 
-/* ── повідомлення з позначками ── */
-function segHtml(str, field) {
-  return segments(str).map(s => s.space ? esc(s.t) : `<span class="seg" data-flag="${s.flag ? esc(s.flag) : ''}" data-f="${field}">${esc(s.t)}</span>`).join(' ');
+/* ── повідомлення: підозрілі місця показуємо після відповіді ── */
+function segHtml(str) {
+  return segments(str).map(s => s.space ? esc(s.t) : s.flag ? `<span class="seg" data-flag="${esc(s.flag)}">${esc(s.t)}</span>` : esc(s.t)).join(' ');
 }
 function mockHtml(m) {
-  const S = (k, cls = '') => m[k] ? `<span class="${cls}">${segHtml(m[k], k)}</span>` : '';
+  const S = k => m[k] ? segHtml(m[k]) : '';
   if (m.type === 'email') return `<div class="mock email">
       <div class="em-top">${icon('mail')}<span>Вхідні</span></div>
       <div class="em-subj">${S('subject')}</div>
       <div class="em-from"><span class="avatar">${esc(m.fromName[0])}</span><div><b>${esc(m.fromName)}</b><small>&lt;${S('from')}&gt;</small></div><span class="em-to">кому: мені</span></div>
       <div class="em-body">${S('body')}</div>
       ${m.attach ? `<div class="em-attach">${icon('clip')}${S('attach')}</div>` : ''}
-      ${m.button ? `<div class="em-btn">${S('button')}</div>` : ''}
+      ${m.button ? `<div class="em-btn"><span class="btnlike">${S('button')}</span></div>` : ''}
       ${m.link ? `<div class="em-link">${icon('link')}${S('link')}</div>` : ''}
     </div>`;
-  if (m.type === 'sms') return `<div class="mock phone"><div class="ph-head">${icon('msg')}<b>${segHtml(m.from, 'from')}</b><small>SMS</small></div><div class="bubble in">${S('body')}</div></div>`;
-  if (m.type === 'chat') return `<div class="mock chat"><div class="ch-head"><span class="avatar">${esc(m.name[0])}</span><b>${esc(m.name)}</b><small>у мережі</small></div>${m.lines.map((l, k) => `<div class="bubble in">${segHtml(l, 'line' + k)}</div>`).join('')}</div>`;
-  if (m.type === 'popup') return `<div class="mock browser"><div class="br-bar"><span class="br-dots"><i></i><i></i><i></i></span><div class="addr small">${icon('lock')}<span>${segHtml(m.url, 'url')}</span></div></div><div class="br-page"><div class="pop"><div class="pop-ico">${icon('gift')}</div><h4>${S('title')}</h4><p>${S('body')}</p><span class="pop-btn">${esc(m.button)}</span></div></div></div>`;
-  if (m.type === 'post') return `<div class="mock post"><div class="post-head"><span class="avatar">${esc(m.name[0])}</span><div><b>${esc(m.name)}</b>${m.place ? `<small>${icon('pin')}${S('place')}</small>` : '<small>щойно</small>'}</div></div><div class="post-body">${S('body')}</div>${m.photo ? `<div class="post-photo">${icon('image')}${S('photo')}</div>` : ''}<div class="post-foot">${icon('star')}Подобається · Коментувати · Поширити</div></div>`;
+  if (m.type === 'sms') return `<div class="mock phone"><div class="ph-head">${icon('msg')}<b>${segHtml(m.from)}</b><small>SMS</small></div><div class="bubble in">${S('body')}</div></div>`;
+  if (m.type === 'chat') return `<div class="mock chat"><div class="ch-head"><span class="avatar">${esc(m.name[0])}</span><b>${esc(m.name)}</b><small>у мережі</small></div>${m.lines.map(l => `<div class="bubble in">${segHtml(l)}</div>`).join('')}</div>`;
+  if (m.type === 'popup') return `<div class="mock browser"><div class="br-bar"><span class="br-dots"><i></i><i></i><i></i></span><div class="addr small">${icon('lock')}<span>${segHtml(m.url)}</span></div></div><div class="br-page"><div class="pop"><div class="pop-ico">${icon('gift')}</div><h4>${S('title')}</h4><p>${S('body')}</p><span class="pop-btn">${esc(m.button)}</span></div></div></div>`;
+  if (m.type === 'post') return `<div class="mock post"><div class="post-head"><span class="avatar">${esc(m.name[0])}</span><div><b>${esc(m.name)}</b>${m.place ? `<small>${icon('pin')}${S('place')}</small>` : '<small>щойно</small>'}</div></div><div class="post-body">${S('body')}</div>${m.photo ? `<div class="post-photo">${icon('image')}<span>${S('photo')}</span></div>` : ''}<div class="post-foot">${icon('star')}Подобається · Коментувати · Поширити</div></div>`;
   return '';
+}
+const verdictBtns = (labels, values = [1, 0]) => `<div class="verdicts big"><button class="vbtn safe" data-v="${values[0]}">${icon('shieldOk')}${esc(labels[0])}</button><button class="vbtn scam" data-v="${values[1]}">${icon('shieldX')}${esc(labels[1])}</button></div>`;
+// rightV — значення правильної кнопки: її підсвічуємо, навіть якщо учень помилився
+function onVerdict(rightV, cb) {
+  $('stage').querySelector('.verdicts').addEventListener('click', e => {
+    const b = e.target.closest('.vbtn'); if (!b || answered) return;
+    $('stage').querySelectorAll('.vbtn').forEach(x => { x.disabled = true; if (x.dataset.v === String(rightV)) x.classList.add('right'); });
+    if (b.dataset.v !== String(rightV)) b.classList.add('wrong');
+    cb(b.dataset.v === String(rightV), b);
+  });
 }
 
 const RULES = {
@@ -171,9 +199,9 @@ const RULES = {
   lower: ['Мала літера', p => /\p{Ll}/u.test(p)],
   digit: ['Цифра', p => /\d/.test(p)],
   symbol: ['Спецсимвол: ! # ? % & …', p => /[^\p{L}\p{N}\s]/u.test(p)],
-  notCommon: ['Не з переліку найпопулярніших паролів', p => !!p && !COMMON.includes(p.toLowerCase())],
-  words4: ['Чотири або більше слів через дефіс чи пробіл', p => p.split(/[\s\-_]+/).filter(w => /^\p{L}{2,}$/u.test(w)).length >= 4],
-  noPersonal: ['Без імені, прізвища, кота, міста, захоплення й року Олі', (p, t) => !!p && !(t.personal || []).some(w => p.toLowerCase().includes(w))],
+  notCommon: ['Не простий (не 123456, не qwerty)', p => !!p && !COMMON.includes(p.toLowerCase())],
+  words4: ['Чотири слова через дефіс', p => p.split(/[\s\-_]+/).filter(w => /^\p{L}{2,}$/u.test(w)).length >= 4],
+  noPersonal: ['Без імені, прізвища, кота, міста й року Олі', (p, t) => !!p && !(t.personal || []).some(w => p.toLowerCase().includes(w))],
   score3: ['Надійність — «надійний» або краще', (p, t) => strength(p, t.personal).score >= 3],
 };
 function meterHtml(pw, personal) {
@@ -182,114 +210,51 @@ function meterHtml(pw, personal) {
 }
 
 const RENDER = {
-  domain() {
-    $('stage').innerHTML = `<h2 class="q">Клацніть справжнє ім’я сайту — куди насправді веде ця адреса?</h2>${addressBar(task.url, { clickable: true })}<p class="note">${icon('info')}Підказка: частини адреси можна клацати по одній.</p>`;
-    $('stage').querySelector('.addr-url').addEventListener('click', e => {
-      const b = e.target.closest('.ch'); if (!b || answered) return;
-      const ok = b.classList.contains('domain');
-      b.classList.add(ok ? 'right' : 'wrong');
-      $('stage').querySelector('.ch.domain').classList.add('real');
-      $('stage').querySelectorAll('.ch').forEach(x => { x.disabled = true; });
-      finish(ok ? 1 : 0, task.why, ok ? [] : [{ s: 'bad', html: `Ви обрали «${esc(b.textContent)}». Справжній сайт — <b>${esc(parseUrl(task.url).domain)}</b>.` }]);
+  yesno() {
+    $('stage').innerHTML = `<h2 class="q">${esc(task.q)}</h2>${task.url ? addressBar(task.url) : ''}${verdictBtns(task.labels || ['Так', 'Ні'])}`;
+    onVerdict(task.yes ? 1 : 0, ok => {
+      if (task.url) $('stage').querySelector('.addr').outerHTML = addressBar(task.url, true);
+      finish(ok ? 1 : 0, task.why, task.url ? [{ s: 'info', html: domainLine(task.url) }] : []);
     });
   },
-  url() {
-    $('stage').innerHTML = `<h2 class="q">${esc(task.q)}</h2>${addressBar(task.url)}<div class="verdicts"><button class="vbtn safe" data-v="1">${icon('shieldOk')}Безпечно</button><button class="vbtn scam" data-v="0">${icon('shieldX')}Небезпечно</button></div>`;
-    $('stage').querySelector('.verdicts').addEventListener('click', e => {
-      const b = e.target.closest('.vbtn'); if (!b || answered) return;
-      const said = b.dataset.v === '1', ok = said === task.safe;
-      b.classList.add(ok ? 'right' : 'wrong');
-      $('stage').querySelectorAll('.vbtn').forEach(x => { x.disabled = true; });
-      $('stage').querySelector('.addr').outerHTML = addressBar(task.url, { reveal: true });
-      finish(ok ? 1 : 0, task.why, [{ s: 'ok', html: `Справжнє ім’я сайту: <b>${esc(parseUrl(task.url).domain)}</b>${parseUrl(task.url).secure ? '' : ' · з’єднання без https'}` }]);
+  which() {
+    $('stage').innerHTML = `<h2 class="q">${esc(task.q)}</h2><div class="links">${task.options.map((u, k) => `<button class="lopt" data-k="${k}"><span class="opt-k">${'АБВ'[k]}</span>${addressBar(u)}</button>`).join('')}</div>`;
+    $('stage').querySelector('.links').addEventListener('click', e => {
+      const b = e.target.closest('.lopt'); if (!b || answered) return;
+      const k = +b.dataset.k, ok = k === task.answer;
+      $('stage').querySelectorAll('.lopt').forEach(x => {
+        x.disabled = true;
+        x.querySelector('.addr').outerHTML = addressBar(task.options[+x.dataset.k], true);
+        if (+x.dataset.k === task.answer) x.classList.add('right');
+      });
+      if (!ok) b.classList.add('wrong');
+      finish(ok ? 1 : 0, task.why);
     });
   },
   msg() {
-    const [safeL, scamL] = task.verdicts || ['Безпечно', 'Шахрайство'];
-    $('stage').innerHTML = `<h2 class="q">${task.verdicts ? 'Чи варто таке публікувати? Клацніть місця, що можуть нашкодити.' : 'Клацніть усі підозрілі місця, потім винесіть вердикт.'}</h2>${mockHtml(task.m)}
-      <div class="verdicts"><span class="marked-n" id="markedN">Позначено: 0</span><span class="grow"></span><button class="vbtn safe" data-v="0">${icon('shieldOk')}${safeL}</button><button class="vbtn scam" data-v="1">${icon('shieldX')}${scamL}</button></div>`;
-    const segs = [...$('stage').querySelectorAll('.seg')];
-    $('stage').querySelector('.mock').addEventListener('click', e => {
-      const s = e.target.closest('.seg'); if (!s || answered) return;
-      s.classList.toggle('marked');
-      $('markedN').textContent = `Позначено: ${segs.filter(x => x.classList.contains('marked')).length}`;
-    });
-    $('stage').querySelector('.verdicts').addEventListener('click', e => {
-      const b = e.target.closest('.vbtn'); if (!b || answered) return;
-      const saidScam = b.dataset.v === '1';
-      const flags = segs.filter(x => x.dataset.flag), hit = flags.filter(x => x.classList.contains('marked'));
-      const wrong = segs.filter(x => !x.dataset.flag && x.classList.contains('marked'));
-      const score = scoreMsg({ scam: task.scam, flags: flags.length, hit: hit.length, wrong: wrong.length, saidScam });
-      b.classList.add(saidScam === task.scam ? 'right' : 'wrong');
-      $('stage').querySelectorAll('.vbtn').forEach(x => { x.disabled = true; });
-      flags.forEach(x => x.classList.add(x.classList.contains('marked') ? 'found' : 'missed'));
-      wrong.forEach(x => x.classList.add('extra'));
-      const list = flags.map(x => ({ s: x.classList.contains('marked') ? 'ok' : 'miss', html: `<b>«${esc(x.textContent)}»</b> — ${esc(x.dataset.flag)}` }))
-        .concat(wrong.map(x => ({ s: 'bad', html: `<b>«${esc(x.textContent)}»</b> — тут усе гаразд.` })));
-      const verdictMsg = saidScam === task.scam ? '' : task.scam ? (task.verdicts ? 'Такий допис краще не публікувати. ' : 'Це шахрайство! ') : (task.verdicts ? 'Такий допис безпечний. ' : 'Це безпечне повідомлення. ');
-      finish(score, verdictMsg + task.why, list);
+    $('stage').innerHTML = `<h2 class="q">${esc(task.q || 'Цьому повідомленню можна довіряти?')}</h2>${mockHtml(task.m)}${verdictBtns(task.labels || ['Можна довіряти', 'Це обман'], [0, 1])}`;
+    onVerdict(task.scam ? 1 : 0, ok => {
+      const flags = [...$('stage').querySelectorAll('.seg')];
+      flags.forEach(x => x.classList.add('flag'));
+      const head = task.scam ? (task.labels ? 'Краще не публікувати. ' : 'Це обман. ') : (task.labels ? 'Таке можна публікувати. ' : 'Цьому можна довіряти. ');
+      finish(ok ? 1 : 0, head + task.why, flags.map(x => ({ s: 'miss', html: `<b>«${esc(x.textContent)}»</b> — ${esc(x.dataset.flag)}` })));
     });
   },
-  pick() {
-    st.order = shuffle(task.items.map((_, k) => k));
-    const head = task.app ? `<div class="app-head"><span class="app-ico">${icon(task.app === 'Карти' ? 'pin' : task.app === 'Ліхтарик' ? 'sun' : 'game')}</span><div><b>${esc(task.app)}</b><small>запитує доступ до:</small></div></div>`
-      : level.profile ? profileHtml(level.profile) : '';
-    $('stage').innerHTML = `<h2 class="q">${esc(task.q)}</h2>${head}<div class="cards">${st.order.map(k => { const it = task.items[k]; return `<button class="pcard${it.icon ? '' : ' mono'}" data-k="${k}">${it.icon ? icon(it.icon) : icon('key')}<span>${esc(it.t)}</span><i class="tick">${icon('check')}</i></button>`; }).join('')}</div>
-      <div class="verdicts"><span class="marked-n" id="markedN">Позначено: 0</span><span class="grow"></span><button class="btn btn-primary btn-lg2" id="checkBtn">${icon('check')}Перевірити</button></div>`;
-    const cards = [...$('stage').querySelectorAll('.pcard')];
-    $('stage').querySelector('.cards').addEventListener('click', e => {
-      const c = e.target.closest('.pcard'); if (!c || answered) return;
-      c.classList.toggle('on');
-      $('markedN').textContent = `Позначено: ${cards.filter(x => x.classList.contains('on')).length}`;
+  pair() {
+    st.side = Math.random() < 0.5;
+    const [l, r] = st.side ? [task.a, task.b] : [task.b, task.a];
+    $('stage').innerHTML = `<h2 class="q">${esc(task.q)}</h2><div class="pair">${[l, r].map((p, k) => `<button class="pw-card" data-p="${esc(p)}"><span class="opt-k">${'АБ'[k]}</span><code>${esc(p)}</code><span class="pw-meter"></span></button>`).join('')}</div>`;
+    $('stage').querySelector('.pair').addEventListener('click', e => {
+      const b = e.target.closest('.pw-card'); if (!b || answered) return;
+      const best = strength(task.a).bits > strength(task.b).bits ? task.a : task.b, ok = b.dataset.p === best;
+      $('stage').querySelectorAll('.pw-card').forEach(x => { x.disabled = true; x.querySelector('.pw-meter').innerHTML = meterHtml(x.dataset.p); if (x.dataset.p === best) x.classList.add('right'); });
+      if (!ok) b.classList.add('wrong');
+      finish(ok ? 1 : 0, task.why);
     });
-    $('checkBtn').onclick = () => {
-      if (answered) return;
-      const picked = cards.filter(x => x.classList.contains('on')).map(x => +x.dataset.k);
-      const correct = task.items.map((it, k) => it.bad ? k : -1).filter(k => k >= 0);
-      cards.forEach(c => { const k = +c.dataset.k, bad = task.items[k].bad, on = c.classList.contains('on'); c.classList.add(bad ? (on ? 'found' : 'missed') : on ? 'extra' : 'fine'); c.disabled = true; });
-      $('checkBtn').disabled = true;
-      const missed = correct.filter(k => !picked.includes(k)), extra = picked.filter(k => !correct.includes(k));
-      finish(scorePick(correct, picked), task.why, [
-        ...missed.map(k => ({ s: 'miss', html: `Варто було позначити: <b>${esc(task.items[k].t)}</b>` })),
-        ...extra.map(k => ({ s: 'bad', html: `Це можна: <b>${esc(task.items[k].t)}</b>` })),
-      ]);
-    };
-  },
-  rank() {
-    st.correct = [...task.items].sort((a, b) => strength(a, task.personal).bits - strength(b, task.personal).bits);
-    do st.order = shuffle(task.items); while (st.order.join() === st.correct.join());
-    const draw = () => {
-      $('rankList').innerHTML = st.order.map((p, k) => `<li class="rrow" draggable="${!answered}" data-k="${k}"><span class="grip">${icon('grip')}</span><span class="rnum">${k + 1}</span><code>${esc(p)}</code>${answered ? meterHtml(p, task.personal) : `<span class="grow"></span><button class="rbtn" data-mv="-1" data-k="${k}" ${k ? '' : 'disabled'} title="Вище">${icon('up')}</button><button class="rbtn" data-mv="1" data-k="${k}" ${k < st.order.length - 1 ? '' : 'disabled'} title="Нижче">${icon('down')}</button>`}</li>`).join('');
-    };
-    $('stage').innerHTML = `<h2 class="q">${esc(task.q)}</h2><div class="rank-ends"><span>${icon('shieldX')}найслабший</span></div><ol class="rank" id="rankList"></ol><div class="rank-ends"><span>${icon('shieldOk')}найнадійніший</span></div>
-      <div class="verdicts"><span class="grow"></span><button class="btn btn-primary btn-lg2" id="checkBtn">${icon('check')}Перевірити</button></div>`;
-    draw();
-    const list = $('rankList');
-    list.addEventListener('click', e => {
-      const b = e.target.closest('[data-mv]'); if (!b || answered) return;
-      const k = +b.dataset.k, j = k + +b.dataset.mv;
-      [st.order[k], st.order[j]] = [st.order[j], st.order[k]]; draw();
-    });
-    let from = null;
-    list.addEventListener('dragstart', e => { const r = e.target.closest('.rrow'); if (!r || answered) return; from = +r.dataset.k; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'rank'); r.classList.add('drag'); });
-    list.addEventListener('dragover', e => { if (from == null) return; e.preventDefault(); list.querySelectorAll('.over').forEach(x => x.classList.remove('over')); e.target.closest('.rrow')?.classList.add('over'); });
-    list.addEventListener('drop', e => {
-      e.preventDefault(); const r = e.target.closest('.rrow'); if (from == null || !r) return;
-      const [x] = st.order.splice(from, 1); st.order.splice(+r.dataset.k, 0, x); from = null; draw();
-    });
-    list.addEventListener('dragend', () => { from = null; list.querySelectorAll('.over, .drag').forEach(x => x.classList.remove('over', 'drag')); });
-    $('checkBtn').onclick = () => {
-      if (answered) return;
-      const score = scoreRank(st.order, st.correct);
-      answered = true; $('checkBtn').disabled = true;
-      const mine = [...st.order];
-      st.order = st.correct; draw();
-      finish(score, task.why, score === 1 ? [] : [{ s: 'bad', html: `Ваш порядок: ${mine.map(p => `<code>${esc(p)}</code>`).join(' → ')}` }, { s: 'ok', html: `Правильно: ${st.correct.map(p => `<code>${esc(p)}</code>`).join(' → ')}` }]);
-    };
   },
   make() {
     const prof = task.personal && level.profile ? profileHtml(level.profile) : '';
-    $('stage').innerHTML = `<h2 class="q">${esc(task.q)}</h2>${prof}<p class="warn">${icon('alert')}Не вводьте свій справжній пароль — придумайте новий. Тут нічого не зберігається й нікуди не надсилається.</p>
+    $('stage').innerHTML = `<h2 class="q">${esc(task.q)}</h2>${prof}<p class="warn">${icon('alert')}Не вводьте свій справжній пароль — придумайте новий. Тут нічого не зберігається.</p>
       <input class="pw" id="pw" type="text" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="Придумайте пароль">
       <div id="meter">${meterHtml('', task.personal)}</div>
       <ul class="rules" id="rules"></ul>
@@ -308,8 +273,32 @@ const RENDER = {
       if (answered) return;
       const s = strength($('pw').value, task.personal);
       $('pw').disabled = true; $('checkBtn').disabled = true;
-      finish(1, task.why, [{ s: 'ok', html: `Надійність: <b>${s.label}</b> · підбір займе: <b>${s.time}</b>` }]);
+      finish(1, task.why, [{ s: 'ok', html: `Надійність: <b>${s.label}</b> · підібрати можна за: <b>${s.time}</b>` }]);
       $('pw').value = '•'.repeat($('pw').value.length); // не тримаємо пароль на сторінці
+    };
+  },
+  pick() {
+    st.order = shuffle(task.items.map((_, k) => k));
+    const need = task.items.filter(i => i.bad).length;
+    const head = task.app ? `<div class="app-head"><span class="app-ico">${icon(task.app === 'Карти' ? 'pin' : task.app === 'Ліхтарик' ? 'sun' : 'game')}</span><div><b>${esc(task.app)}</b><small>запитує доступ до:</small></div></div>`
+      : level.profile ? profileHtml(level.profile) : '';
+    $('stage').innerHTML = `<h2 class="q">${esc(task.q)}</h2>${head}<div class="cards">${st.order.map(k => { const it = task.items[k]; return `<button class="pcard${it.icon ? '' : ' mono'}" data-k="${k}">${icon(it.icon || 'key')}<span>${esc(it.t)}</span><i class="tick">${icon('check')}</i></button>`; }).join('')}</div>
+      <div class="verdicts"><span class="marked-n" id="markedN"></span><span class="grow"></span><button class="btn btn-primary btn-lg2" id="checkBtn">${icon('check')}Перевірити</button></div>`;
+    const cards = [...$('stage').querySelectorAll('.pcard')];
+    const count = () => { $('markedN').textContent = `Позначено ${cards.filter(x => x.classList.contains('on')).length} з ${need}`; };
+    count();
+    $('stage').querySelector('.cards').addEventListener('click', e => { const c = e.target.closest('.pcard'); if (!c || answered) return; c.classList.toggle('on'); count(); });
+    $('checkBtn').onclick = () => {
+      if (answered) return;
+      const picked = cards.filter(x => x.classList.contains('on')).map(x => +x.dataset.k);
+      const correct = task.items.map((it, k) => it.bad ? k : -1).filter(k => k >= 0);
+      cards.forEach(c => { const k = +c.dataset.k, bad = task.items[k].bad, on = c.classList.contains('on'); c.classList.add(bad ? (on ? 'found' : 'missed') : on ? 'extra' : 'fine'); c.disabled = true; });
+      $('checkBtn').disabled = true;
+      const missed = correct.filter(k => !picked.includes(k)), extra = picked.filter(k => !correct.includes(k));
+      finish(scorePick(correct, picked), task.why, [
+        ...missed.map(k => ({ s: 'miss', html: `Треба було позначити: <b>${esc(task.items[k].t)}</b>` })),
+        ...extra.map(k => ({ s: 'bad', html: `Це можна: <b>${esc(task.items[k].t)}</b>` })),
+      ]);
     };
   },
   choice() {
@@ -322,7 +311,7 @@ const RENDER = {
       const o = task.options[+b.dataset.k], right = task.options.find(x => x.ok);
       $('stage').querySelectorAll('.opt').forEach(x => { x.disabled = true; if (task.options[+x.dataset.k].ok) x.classList.add('right'); });
       if (!o.ok) b.classList.add('wrong');
-      finish(o.ok ? 1 : 0, o.ok ? o.why : `${o.why} Правильно: «${right.t}». ${right.why}`);
+      finish(o.ok ? 1 : 0, o.ok ? esc(o.why) : `${esc(o.why)} Правильна відповідь: <b>«${esc(right.t)}»</b>. ${esc(right.why)}`);
     });
   },
 };
@@ -351,7 +340,7 @@ $('resLevels').onclick = () => showHome();
 
 /* ═════════ Головна ═════════ */
 const CH_ICON = { links: 'link', phish: 'mail', pass: 'key', privacy: 'user', scams: 'game' };
-const KIND_ICON = { domain: 'globe', url: 'link', msg: 'mail', pick: 'grid', rank: 'up', make: 'key', choice: 'info' };
+const KIND_ICON = { yesno: 'shield', which: 'link', msg: 'mail', pick: 'grid', pair: 'key', make: 'pen', choice: 'info' };
 function showHome() {
   cur = -1; level = null;
   $('play').hidden = true; $('result').hidden = true; $('home').hidden = false;
@@ -404,6 +393,7 @@ document.addEventListener('keydown', e => {
     return;
   }
   if ($('play').hidden || e.target.closest?.('input')) return;
+  if (ti < 0 && e.key === 'Enter' && document.activeElement?.tagName !== 'BUTTON') { e.preventDefault(); $('goBtn')?.click(); return; }
   if (answered && e.key === 'Enter' && document.activeElement?.tagName !== 'BUTTON') { e.preventDefault(); $('fbNext').click(); return; }
   if (!answered && task?.kind === 'choice') { const k = ['1', '2', '3', '4'].indexOf(e.key); if (k >= 0) $('stage').querySelector(`.opt[data-k="${k}"]`)?.click(); }
 });

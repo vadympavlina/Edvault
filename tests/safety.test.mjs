@@ -2,7 +2,7 @@
 //   node --test tests/*.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { registrable, parseUrl, strength, crackTime, scoreMsg, scorePick, scoreRank, starsFor, segments } from '../trainers/safetytrainer/js/logic.js';
+import { registrable, parseUrl, strength, crackTime, scorePick, starsFor, segments } from '../trainers/safetytrainer/js/logic.js';
 import { LEVELS, CHAPTERS } from '../trainers/safetytrainer/js/levels.js';
 
 test('справжнє ім’я сайту: піддомени, приманки на початку, «@», дво-рівневі зони', () => {
@@ -28,12 +28,7 @@ test('надійність паролів: популярні й особист�
 });
 
 test('бали за завдання', () => {
-  assert.equal(scoreMsg({ scam: true, flags: 4, hit: 4, wrong: 0, saidScam: true }), 1);
-  assert.equal(scoreMsg({ scam: true, flags: 4, hit: 4, wrong: 0, saidScam: false }), 0);
-  assert.equal(scoreMsg({ scam: true, flags: 4, hit: 0, wrong: 0, saidScam: true }), 0.4);
-  assert.equal(scoreMsg({ scam: false, flags: 0, hit: 0, wrong: 1, saidScam: false }), 0.8);
   assert.equal(scorePick([0, 1], [0, 1]), 1); assert.equal(scorePick([0, 1], [0, 2]), 0); assert.equal(scorePick([0, 1], [0]), 0.5);
-  assert.equal(scoreRank(['a', 'b', 'c'], ['a', 'b', 'c']), 1); assert.equal(scoreRank(['c', 'b', 'a'], ['a', 'b', 'c']), 0);
   assert.equal(starsFor(0.95), 3); assert.equal(starsFor(0.75), 2); assert.equal(starsFor(0.2), 1);
 });
 
@@ -43,29 +38,32 @@ test('розмітка повідомлень: підозрілі частини
   assert.ok(s.some(x => !x.flag && x.t.includes('посилка')));
 });
 
-test('рівні цілісні: кожне завдання має відповідь і пояснення', () => {
-  const ids = new Set();
+test('рівні цілісні й прості: пам’ятка, одна правильна відповідь, пояснення', () => {
+  const ids = new Set(), kinds = new Set();
   for (const l of LEVELS) {
     assert.ok(CHAPTERS.some(c => c.id === l.chapter), l.id);
     assert.ok(!ids.has(l.id)); ids.add(l.id);
-    assert.ok(l.tasks.length >= 3 && l.hint, l.id);
+    assert.ok(l.tasks.length >= 3 && l.tasks.length <= 5, l.id);
+    assert.equal(l.tips.length, 3, l.id + ': пам’ятка з трьох правил');
     for (const [k, t] of l.tasks.entries()) {
       const at = `${l.id} #${k + 1}`;
+      kinds.add(t.kind);
       if (t.kind !== 'choice') assert.ok(t.why, at + ': немає пояснення');
-      if (t.kind === 'domain' || t.kind === 'url') assert.ok(parseUrl(t.url).domain.includes('.'), at);
-      if (t.kind === 'url') assert.equal(typeof t.safe, 'boolean', at);
+      if (t.kind === 'yesno') { assert.equal(typeof t.yes, 'boolean', at); if (t.url) assert.ok(parseUrl(t.url).domain.includes('.'), at); }
+      if (t.kind === 'which') {
+        assert.ok(t.answer >= 0 && t.answer < t.options.length, at);
+        assert.equal(new Set(t.options.map(u => parseUrl(u).domain)).size, t.options.length, at + ': різні сайти');
+      }
       if (t.kind === 'msg') {
         const flags = Object.values(t.m).flat().filter(v => typeof v === 'string').flatMap(segments).filter(x => x.flag);
-        assert.equal(flags.length > 0, t.scam, at + ': ознаки є лише в небезпечних');
+        assert.equal(flags.length > 0, t.scam, at + ': підозрілі місця є лише в небезпечних');
       }
+      if (t.kind === 'pair') assert.ok(Math.abs(strength(t.a).bits - strength(t.b).bits) > 15, at + ': різниця має бути очевидною');
       if (t.kind === 'choice') { assert.equal(t.options.filter(o => o.ok).length, 1, at); assert.ok(t.options.every(o => o.why), at); }
-      if (t.kind === 'pick') { assert.ok(t.items.some(i => i.bad) && t.items.some(i => !i.bad), at); }
-      if (t.kind === 'rank') {
-        const bits = t.items.map(p => strength(p, t.personal).bits);
-        assert.equal(new Set(bits).size, bits.length, at + ': однакова надійність');
-      }
+      if (t.kind === 'pick') assert.ok(t.items.some(i => i.bad) && t.items.some(i => !i.bad), at);
       if (t.kind === 'make') assert.ok(t.rules.length, at);
     }
   }
+  assert.deepEqual([...kinds].sort(), ['choice', 'make', 'msg', 'pair', 'pick', 'which', 'yesno']);
   assert.equal(LEVELS.length, 20);
 });

@@ -86,24 +86,10 @@ export function crackTime(bits) {
 }
 
 /* ── бали за завдання (0…1) ── */
-// Повідомлення: правильний вердикт + знайдені ознаки; зайві позначки зменшують бал.
-export function scoreMsg({ scam, flags, hit, wrong, saidScam }) {
-  if (saidScam !== scam) return 0;
-  if (!scam) return Math.max(0.4, 1 - 0.2 * wrong);
-  if (!flags) return 1;
-  return Math.round((0.4 + 0.6 * Math.max(0, Math.min(1, (hit - 0.5 * wrong) / flags))) * 100) / 100;
-}
 // Вибір кількох: влучання мінус зайві.
 export function scorePick(correct, picked) {
   const hit = picked.filter(x => correct.includes(x)).length, wrong = picked.length - hit;
   return correct.length ? Math.max(0, Math.min(1, (hit - wrong) / correct.length)) : (wrong ? 0 : 1);
-}
-// Порядок: частка правильно впорядкованих пар; неідеальний порядок — не більше 0,8.
-export function scoreRank(order, correct) {
-  const pos = new Map(correct.map((x, i) => [x, i]));
-  let ok = 0, all = 0;
-  for (let i = 0; i < order.length; i++) for (let j = i + 1; j < order.length; j++) { all++; if (pos.get(order[i]) < pos.get(order[j])) ok++; }
-  return ok === all ? 1 : Math.round(ok / all * 0.8 * 100) / 100;
 }
 export const starsFor = avg => avg >= 0.9 ? 3 : avg >= 0.7 ? 2 : 1;
 
