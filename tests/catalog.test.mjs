@@ -42,6 +42,7 @@ test('кількість рівнів тренажерів збігається 
     'safety-trainer': (await import('../trainers/safetytrainer/js/levels.js')).LEVELS.length,
     'hotkeys-trainer': (await import('../trainers/hotkeystrainer/js/levels.js')).LEVELS.length,
     'network-trainer': (await import('../trainers/networktrainer/js/levels.js')).LEVELS.length,
+    'uiux-trainer': (await import('../trainers/uiuxtrainer/js/levels.js')).LEVELS.length,
   };
   for (const t of TRAINERS) assert.equal(t.levels, count[t.id], t.id);
 });

@@ -54,7 +54,7 @@ export const TRAINER_CATEGORIES = [
   { id: 'basics', name: 'Комп’ютерна грамотність', desc: 'Мишка, клавіатура й файли — основа роботи за комп’ютером.', icon: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>' },
   { id: 'code', name: 'Програмування', desc: 'Алгоритми, цикли й умови — без жодного рядка коду.', icon: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>' },
   { id: 'it', name: 'Мережі та IT', desc: 'Як влаштовані комп’ютерні мережі й інтернет — на живих схемах.', icon: '<rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3M12 12V8"/>' },
-  { id: 'design', name: 'Дизайн', desc: 'Відчуття кольору й робота з векторним пером.', icon: '<path d="M12 19 19 12l3 3-7 7z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="m2 2 7.59 7.59"/><circle cx="11" cy="11" r="2"/>' },
+  { id: 'design', name: 'Дизайн', desc: 'Відчуття кольору, векторне перо й зручні інтерфейси.', icon: '<path d="M12 19 19 12l3 3-7 7z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="m2 2 7.59 7.59"/><circle cx="11" cy="11" r="2"/>' },
 ];
 
 // progress — ключ у localStorage, де тренажер зберігає зірки; levels — скільки рівнів (перевіряє тест).
@@ -80,6 +80,9 @@ export const TRAINERS = [
   { id: 'network-trainer', file: 'network-trainer.html', cat: 'it', name: 'Мережі', accent: '#2563eb', grades: '7–11 клас',
     desc: 'Симулятор мережі: з’єднуйте пристрої кабелями, роздавайте IP-адреси, налаштовуйте роутер, шлюз, DNS і DHCP та перевіряйте зв’язок командою ping.',
     levels: 20, progress: 'edvault-network', icon: '<rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3M12 12V8"/>' },
+  { id: 'uiux-trainer', file: 'uiux-trainer.html', cat: 'design', name: 'UI/UX-дизайнер', accent: '#c026d3', grades: '6–11 клас',
+    desc: 'Порівнюйте два варіанти екрана, шукайте помилки дизайну й виправляйте їх самі: контраст, розмір тексту, відступи, головна кнопка, зрозумілі форми.',
+    levels: 20, progress: 'edvault-uiux', icon: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M9 21V9"/>' },
   { id: 'pen-trainer', file: 'pen-trainer.html', cat: 'design', name: 'Тренажер пера', accent: '#8b5cf6', grades: '7–11 клас',
     desc: 'Інструмент «Перо» як в Illustrator і Figma: від прямих ліній до літер, оцінка точності й покрокові підказки.',
     levels: 26, progress: 'edvault-pentrainer', icon: '<path d="M12 19 19 12l3 3-7 7z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="m2 2 7.59 7.59"/><circle cx="11" cy="11" r="2"/>' },
