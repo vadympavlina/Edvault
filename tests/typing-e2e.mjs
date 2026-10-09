@@ -8,7 +8,7 @@ const browser = await launch();
 const errors = [];
 const ctx = await browser.newContext({ viewport: { width: 1360, height: 860 }, acceptDownloads: true });
 const p = await newPage(ctx, errors);
-await p.goto(server.url + '/tools/typing-trainer.html');
+await p.goto(server.url + '/trainers/typing-trainer.html');
 await p.waitForFunction(() => window.TypingTrainer);
 
 // Playwright не вміє «натискати» кириличні клавіші, тож надсилаємо подію keydown напряму

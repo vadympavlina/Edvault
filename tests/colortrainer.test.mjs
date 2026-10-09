@@ -2,9 +2,9 @@
 //   node --test tests/*.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as c from '../tools/colortrainer/js/color.js';
-import { makeRound, scoreRound } from '../tools/colortrainer/js/round.js';
-import { LEVELS, CHAPTERS } from '../tools/colortrainer/js/levels.js';
+import * as c from '../trainers/colortrainer/js/color.js';
+import { makeRound, scoreRound } from '../trainers/colortrainer/js/round.js';
+import { LEVELS, CHAPTERS } from '../trainers/colortrainer/js/levels.js';
 
 test('HSB ↔ RGB ↔ HEX', () => {
   assert.equal(c.toHex(c.hsbToRgb({ h: 0, s: 100, b: 100 })), '#FF0000');

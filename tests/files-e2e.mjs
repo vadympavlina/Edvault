@@ -8,7 +8,7 @@ const browser = await launch();
 const errors = [];
 const ctx = await browser.newContext({ viewport: { width: 1360, height: 860 }, acceptDownloads: true });
 const p = await newPage(ctx, errors);
-await p.goto(server.url + '/tools/files-trainer.html');
+await p.goto(server.url + '/trainers/files-trainer.html');
 await p.waitForFunction(() => window.FilesTrainer);
 
 const open = i => p.evaluate(i => { const T = window.FilesTrainer; T.LEVELS.slice(0, i).forEach(L => { T.progress.best[L.id] ||= { stars: 1, steps: 99 }; }); T.openLevel(i); }, i);
@@ -179,7 +179,7 @@ await step('таблиця: сортування за розміром і вид
 });
 
 await step('прогрес зберігається після перезавантаження', async () => {
-  await p.goto(server.url + '/tools/files-trainer.html'); await p.waitForFunction(() => window.FilesTrainer);
+  await p.goto(server.url + '/trainers/files-trainer.html'); await p.waitForFunction(() => window.FilesTrainer);
   assert.equal(await p.evaluate(() => window.FilesTrainer.progress.best['nav-1'].stars), 3);
   assert.equal(await p.evaluate(() => window.FilesTrainer.progress.best['nav-4'].steps), 3);
 });

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SR, GRAIN, HOP, WIN, alignGrains } from '../tools/videocut/js/stretch.js';
+import { SR, GRAIN, HOP, WIN, alignGrains } from '../tools/videocut-app/js/stretch.js';
 
 // Складає зерна у вихід; starts — початки зерен у джерелі
 function ola(src, starts) {

@@ -2,8 +2,8 @@
 //   node --test tests/*.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseMap, check, countBlocks, starsFor, P } from '../tools/robot/js/world.js';
-import { LEVELS, CHAPTERS } from '../tools/robot/js/levels.js';
+import { parseMap, check, countBlocks, starsFor, P } from '../trainers/robot-app/js/world.js';
+import { LEVELS, CHAPTERS } from '../trainers/robot-app/js/levels.js';
 const { F, L, R, rep, iff, wh } = P;
 
 test('кожен рівень проходиться еталонним розв’язком на всіх картах', () => {

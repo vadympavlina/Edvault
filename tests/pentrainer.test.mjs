@@ -2,8 +2,8 @@
 //   node --test tests/*.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parsePath, toPath, score, alignTo, sample } from '../tools/pentrainer/js/geom.js';
-import { LEVELS, CHAPTERS } from '../tools/pentrainer/js/levels.js';
+import { parsePath, toPath, score, alignTo, sample } from '../trainers/pentrainer/js/geom.js';
+import { LEVELS, CHAPTERS } from '../trainers/pentrainer/js/levels.js';
 
 const shift = (path, a) => ({ anchors: path.anchors.map((p, k) => { const dx = Math.sin(k * 7) * a, dy = Math.cos(k * 5) * a; const m = h => h && { x: h.x + dx, y: h.y + dy }; return { x: p.x + dx, y: p.y + dy, hin: m(p.hin), hout: m(p.hout) }; }), closed: path.closed });
 

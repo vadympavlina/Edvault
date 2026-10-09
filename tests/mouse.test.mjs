@@ -2,8 +2,8 @@
 //   node --test tests/*.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rng, placeNext, marqueeRound, judgeSelection, normRect, dragLayout, accuracy, starsFor, fmtTime } from '../tools/mousetrainer/js/logic.js';
-import { LEVELS, CHAPTERS } from '../tools/mousetrainer/js/levels.js';
+import { rng, placeNext, marqueeRound, judgeSelection, normRect, dragLayout, accuracy, starsFor, fmtTime } from '../trainers/mousetrainer/js/logic.js';
+import { LEVELS, CHAPTERS } from '../trainers/mousetrainer/js/levels.js';
 
 test('рівні: усі поля на місці, цілі меншають у межах розділу', () => {
   const ids = new Set();

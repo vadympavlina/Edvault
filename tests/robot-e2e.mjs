@@ -8,7 +8,7 @@ const browser = await launch();
 const errors = [];
 const ctx = await browser.newContext({ viewport: { width: 1360, height: 860 }, acceptDownloads: true });
 const p = await newPage(ctx, errors);
-await p.goto(server.url + '/tools/robot.html');
+await p.goto(server.url + '/trainers/robot.html');
 await p.waitForFunction(() => window.RobotTrainer);
 const blocks = () => p.evaluate(() => JSON.stringify(window.RobotTrainer.program.map(function s(b) { return b.t + (b.n ? b.n : '') + (b.c ? ':' + b.c : '') + (b.body ? '[' + b.body.map(s).join(',') + ']' : '') + (b.alt && b.alt.length ? '{' + b.alt.map(s).join(',') + '}' : ''); })));
 const open = i => p.evaluate(i => { const T = window.RobotTrainer; T.LEVELS.slice(0, i).forEach(L => { T.progress.best[L.id] ||= { stars: 1, blocks: 99 }; }); T.openLevel(i); }, i);

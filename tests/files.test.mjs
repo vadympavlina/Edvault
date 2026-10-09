@@ -2,8 +2,8 @@
 //   node --test tests/*.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createFS, createSession, byPath, mkdir, rename, move, copy, remove, restore, emptyBin, search, validName, kindOf, typeName, fmtSize, uniqueName } from '../tools/filestrainer/js/fs.js';
-import { LEVELS, CHAPTERS } from '../tools/filestrainer/js/levels.js';
+import { createFS, createSession, byPath, mkdir, rename, move, copy, remove, restore, emptyBin, search, validName, kindOf, typeName, fmtSize, uniqueName } from '../trainers/filestrainer/js/fs.js';
+import { LEVELS, CHAPTERS } from '../trainers/filestrainer/js/levels.js';
 
 test('кожен рівень проходиться еталонним розв’язком, і на старті він не пройдений', () => {
   const ids = new Set();

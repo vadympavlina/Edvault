@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 // state.js не чіпає DOM під час імпорту; document потрібен лише деяким модулям, яких ми тут не вантажимо
-const st = await import('../tools/videocut/js/state.js');
+const st = await import('../tools/videocut-app/js/state.js');
 const { S, newProject, layout, mainEnd, duration, rippleShift, commit, undo, redo, resetHistory, snap, snapOn, clipAt, srcTime, editPoints } = st;
 
 const clip = (id, inn, out, speed = 1) => ({ id, mediaId: 'm', in: inn, out, speed });

@@ -2,9 +2,9 @@
 //   node --test tests/*.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LAYOUTS, keyFor, shiftFor, normChar } from '../tools/typingtrainer/js/layouts.js';
-import { LEVELS, CHAPTERS, makeText, lettersUpTo, summary, starsFor, weakText } from '../tools/typingtrainer/js/lessons.js';
-import { SENTENCES, PROVERBS, TEXTS } from '../tools/typingtrainer/js/words.js';
+import { LAYOUTS, keyFor, shiftFor, normChar } from '../trainers/typingtrainer/js/layouts.js';
+import { LEVELS, CHAPTERS, makeText, lettersUpTo, summary, starsFor, weakText } from '../trainers/typingtrainer/js/lessons.js';
+import { SENTENCES, PROVERBS, TEXTS } from '../trainers/typingtrainer/js/words.js';
 
 const rng = s => () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 

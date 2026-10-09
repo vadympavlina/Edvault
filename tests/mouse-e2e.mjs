@@ -8,7 +8,7 @@ const browser = await launch();
 const errors = [];
 const ctx = await browser.newContext({ viewport: { width: 1360, height: 860 }, acceptDownloads: true });
 const p = await newPage(ctx, errors);
-await p.goto(server.url + '/tools/mouse-trainer.html');
+await p.goto(server.url + '/trainers/mouse-trainer.html');
 await p.waitForFunction(() => window.MouseTrainer);
 
 const open = i => p.evaluate(i => { const T = window.MouseTrainer; T.LEVELS.slice(0, i).forEach(L => { T.progress.best[L.id] ||= { stars: 1, time: 99, misses: 9, acc: 50 }; }); T.openLevel(i); }, i);
@@ -170,7 +170,7 @@ await step('будинок за номером: чужий будинок — п
 });
 
 await step('прогрес зберігається після перезавантаження', async () => {
-  await p.goto(server.url + '/tools/mouse-trainer.html'); await p.waitForFunction(() => window.MouseTrainer);
+  await p.goto(server.url + '/trainers/mouse-trainer.html'); await p.waitForFunction(() => window.MouseTrainer);
   assert.equal(await p.evaluate(() => window.MouseTrainer.progress.best['click-1'].stars), 3);
   assert.ok(await p.locator('.lvl.perfect').count() >= 1);
 });

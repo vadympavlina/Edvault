@@ -8,7 +8,7 @@ const browser = await launch();
 const errors = [];
 const ctx = await browser.newContext({ viewport: { width: 1360, height: 860 }, acceptDownloads: true });
 const p = await newPage(ctx, errors);
-await p.goto(server.url + '/tools/pen-trainer.html');
+await p.goto(server.url + '/trainers/pen-trainer.html');
 await p.waitForFunction(() => window.PenTrainer);
 
 // координати поля 600×600 → екран
