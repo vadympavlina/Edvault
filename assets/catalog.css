@@ -84,11 +84,11 @@ svg{display:block}
 .label svg{width:13px;height:13px}
 .recent{margin-bottom:28px}
 .recent-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
-.recent-card{display:flex;align-items:center;gap:10px;height:54px;padding:0 12px;border-radius:12px;background:var(--surface);border:1px solid var(--border);text-decoration:none;box-shadow:var(--shadow-sm);transition:border-color .12s,transform .12s,box-shadow .12s;min-width:0}
+.recent-card{display:flex;align-items:center;gap:10px;min-height:54px;padding:8px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--border);text-decoration:none;box-shadow:var(--shadow-sm);transition:border-color .12s,transform .12s,box-shadow .12s;min-width:0}
 .recent-card:hover{border-color:var(--a);transform:translateY(-1px);box-shadow:var(--shadow-md)}
 .recent-card .ic{width:32px;height:32px;border-radius:9px}
 .recent-card .ic svg{width:16px;height:16px}
-.recent-card span{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent-card span{font-size:13.5px;font-weight:600;line-height:1.3}
 
 /* ── розділи й картки ── */
 .section{margin-bottom:34px}
@@ -137,7 +137,7 @@ mark{background:color-mix(in srgb,var(--accent) 22%,transparent);color:inherit;b
 .grid.list .card-top .pill,.grid.list .chips{display:none}
 .grid.list .card .ic{width:42px;height:42px;border-radius:12px}
 .grid.list .card-name{font-size:14.5px;margin:0 0 2px}
-.grid.list .card-desc{font-size:13px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.grid.list .card-desc{font-size:13px}
 .grid.list .prog{width:200px;flex-shrink:0}
 .grid.list .card-foot span{display:none}
 
