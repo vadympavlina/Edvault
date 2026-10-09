@@ -31,8 +31,9 @@ export const HELP = {
   more: ['Показує текст (по сторінках у справжньому Windows).', 'MORE файл\nкоманда | MORE', ['more Розклад.txt', 'tree | more']],
   move: ['Переміщає файли й папки або перейменовує їх.', 'MOVE [/Y] джерело призначення', ['move Нотатки.txt Школа', 'move *.jpg ..\\Pictures', 'move Школа Навчання'], 'Якщо призначення — існуюча папка, елемент переїде в неї. Інакше — отримає нову назву.'],
   notepad: ['Відкриває Блокнот.', 'NOTEPAD [файл]', ['notepad', 'notepad Нотатки.txt', 'notepad новий.txt']],
+  nslookup: ['Знаходить IP-адресу сайту за його ім’ям (через DNS).', 'NSLOOKUP ім’я_сайту', ['nslookup edvault.online', 'nslookup google.com']],
   path: ['Показує шляхи пошуку програм.', 'PATH', ['path']],
-  ping: ['Перевіряє зв’язок з іншим комп’ютером або сайтом.', 'PING [-t] [-n кількість] [-l розмір] адреса', ['ping edvault.online', 'ping 192.168.1.1', 'ping -n 10 google.com', 'ping -t 8.8.8.8'], '-t — надсилати без зупинки (зупинити — Ctrl+C), -n — скільки разів, -l — розмір пакета. Адреси в цій мережі: 192.168.1.1 — роутер, 192.168.1.10 — шкільний сервер.'],
+  ping: ['Перевіряє зв’язок з іншим комп’ютером або сайтом.', 'PING [-t] [-n кількість] [-l розмір] адреса', ['ping edvault.online', 'ping 192.168.1.1', 'ping -n 10 google.com', 'ping -t 8.8.8.8'], '-t — надсилати без зупинки (зупинити — Ctrl+C), -n — скільки разів, -l — розмір пакета. Можна писати будь-який сайт (google.com, rozetka.com.ua) або IP-адресу. У цій мережі: 192.168.1.1 — роутер, 192.168.1.10 — шкільний сервер, 192.168.1.27 — цей комп’ютер.'],
   popd: ['Повертається в папку, збережену PUSHD.', 'POPD', ['popd']],
   pushd: ['Запам’ятовує поточну папку й переходить в іншу.', 'PUSHD шлях', ['pushd D:\\Фото']],
   rd: ['Видаляє папку.', 'RD [/S] [/Q] шлях', ['rd Порожня', 'rd /s Стара', 'rd /s /q Стара'], 'Без /S видаляє лише порожню папку. /S — разом із вмістом, /Q — без підтвердження. Видаляє назавжди, не в Кошик.'],
@@ -632,14 +633,14 @@ export class Cmd {
     if (!host) { this.print('', 'Синтаксис: ping [-t] [-n кількість] [-l розмір] адреса', '', '  -t           Надсилати пакети, доки не натиснете Ctrl+C.', '  -n кількість  Скільки разів надіслати (звичайно 4).', '  -l розмір    Розмір пакета в байтах (звичайно 32).'); return false; }
     if (!(o.n >= 1 && o.n <= 100)) { this.print('Неправильне значення параметра -n, допустимо від 1 до 100.'); return false; }
     if (!(o.l >= 0 && o.l <= 65500)) { this.print('Неправильне значення параметра -l, допустимо від 0 до 65500.'); return false; }
-    const KNOWN = { 'edvault.online': ['185.199.108.153', 18], 'www.edvault.online': ['185.199.108.153', 18], 'google.com': ['142.250.74.110', 14], 'www.google.com': ['142.250.74.110', 14], 'youtube.com': ['142.250.74.46', 15], 'wikipedia.org': ['185.15.59.224', 31], 'ukr.net': ['212.42.76.252', 9], 'school.local': ['192.168.1.10', 1], localhost: ['127.0.0.1', 0], [lc(HOST)]: ['192.168.1.27', 0] };
+    const KNOWN = { ...SITES, [lc(HOST)]: ['192.168.1.27', 0] };
     const IPS = { '127.0.0.1': 0, '192.168.1.27': 0, '192.168.1.1': 1, '192.168.1.10': 1, '8.8.8.8': 12, '1.1.1.1': 11, '185.199.108.153': 18, '142.250.74.110': 14 };
     let ip, base;
     if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
       if (host.split('.').some(x => +x > 255)) { this.print(`Перевірка зв’язку не змогла знайти вузол ${host}. Перевірте ім’я та повторіть спробу.`); return false; }
       ip = host; base = IPS[host] ?? (/^(10|192\.168|172\.(1[6-9]|2\d|3[01]))\./.test(host) ? null : 40 + (host.split('.').reduce((a, b) => a + +b, 0) % 60));
     } else {
-      const k = KNOWN[lc(host)];
+      const k = KNOWN[lc(host)] || resolveSite(host);
       if (!k) { this.print(`Перевірка зв’язку не змогла знайти вузол ${host}. Перевірте ім’я та повторіть спробу.`); return false; }
       [ip, base] = k;
     }
@@ -662,6 +663,15 @@ export class Cmd {
     if (this.host.live === false) { for (let i = 0; i < (o.t ? 4 : o.n); i++) this.print(reply()); this.print(...stats()); return got > 0; }
     // у вікні консолі рядки з’являються раз на секунду; Ctrl+C зупиняє -t
     this.flags.stream = { every: base == null ? 1600 : 700, next: () => (o.t || sent < o.n) ? reply() : null, end: stats, stop: () => [...stats(), 'Control-C', '^C'] };
+    return true;
+  }
+  c_nslookup(t) {
+    const host = t.find(x => !x.startsWith('-'));
+    if (!host) { this.print('Синтаксис: nslookup ім’я_сайту'); return false; }
+    this.print('Сервер:  school-dns.school.local', 'Address:  192.168.1.10', '');
+    const k = (SITES[lc(host)] || resolveSite(host))?.[0];
+    if (!k) { this.print(`*** school-dns.school.local не вдається знайти ${host}: Non-existent domain`); return false; }
+    this.print('Не заслуговує довіри відповідь:', `Ім’я:    ${lc(host)}`, `Address:  ${k}`);
     return true;
   }
   c_set(t, rest) {
@@ -727,3 +737,15 @@ export function wildRename(name, pattern) {
   return apply(nb, pb) + (pe == null ? (pattern.includes('.') ? '' : (ne ? '.' + ne : '')) : '.' + apply(ne, pe));
 }
 function splitExt(n) { const i = n.lastIndexOf('.'); return i > 0 ? [n.slice(0, i), n.slice(i + 1)] : [n]; }
+
+// Відомі сайти: [IP-адреса, звичайна затримка в мс]
+export const SITES = { 'edvault.online': ['185.199.108.153', 18], 'www.edvault.online': ['185.199.108.153', 18], 'google.com': ['142.250.74.110', 14], 'www.google.com': ['142.250.74.110', 14], 'youtube.com': ['142.250.74.46', 15], 'wikipedia.org': ['185.15.59.224', 31], 'ukr.net': ['212.42.76.252', 9], 'school.local': ['192.168.1.10', 1], localhost: ['127.0.0.1', 0] };
+// Будь-який правильно записаний сайт «існує»: стала IP-адреса й затримка з назви (щоразу однакові)
+const TLD = ['com', 'net', 'org', 'ua', 'edu', 'gov', 'io', 'info', 'online', 'укр', 'de', 'uk', 'pl', 'eu', 'app', 'dev', 'me', 'tv', 'fm', 'ai', 'site', 'store', 'school', 'local'];
+export function resolveSite(host) {
+  const h = lc(String(host)).replace(/\.$/, '');
+  if (!/^(?:[\p{L}\d](?:[\p{L}\d-]{0,61}[\p{L}\d])?\.)+[\p{L}]{2,}$/u.test(h) || !TLD.includes(h.split('.').at(-1))) return null;
+  let x = 2166136261; for (const c of h) x = Math.imul(x ^ c.codePointAt(0), 16777619) >>> 0;
+  const ip = [[31, 77, 91, 104, 142, 151, 172, 176, 185, 193, 195, 212][x % 12], 16 + (x >>> 4) % 200, (x >>> 12) % 256, 1 + (x >>> 20) % 254].join('.');
+  return [ip, h.endsWith('.ua') || h.endsWith('.укр') ? 6 + x % 14 : 18 + x % 45];
+}

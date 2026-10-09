@@ -134,6 +134,10 @@ test('cmd: програми, довідка, доповнення', () => {
   assert.match(run(c, 'ping -n 2 -l 64 192.168.1.1'), /число байтів=64[\s\S]*надіслано = 2/);
   assert.match(run(c, 'ping 192.168.1.99'), /Час очікування запиту минув[\s\S]*втрачено = 4/);
   assert.match(run(c, 'ping нема.такого'), /не змогла знайти вузол/);
+  const r1 = run(c, 'ping -n 1 rozetka.com.ua'), r2 = run(c, 'ping -n 1 rozetka.com.ua');
+  assert.match(r1, /Відповідь від \d+\.\d+\.\d+\.\d+/); assert.equal(r1, r2, 'той самий сайт — та сама адреса');
+  assert.match(run(c, 'nslookup youtube.com'), /Address:\s+142\.250/);
+  assert.match(run(c, 'nslookup нема.такого'), /Non-existent domain/);
   const live = new Cmd(new FS(), {});
   const r = live.run('ping -t google.com');
   assert.ok(r.stream && r.stream.next() && r.stream.next(), 'потік відповідей');
