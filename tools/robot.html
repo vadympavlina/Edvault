@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Алгоритми з роботом · Edvault</title>
+<link rel="icon" href="/icons/robot.ico" sizes="32x32">
+<link rel="icon" href="/icons/robot.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/robot-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<script>try { if (localStorage.getItem('edvault-theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}</script>
+<link rel="stylesheet" href="robot/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <button class="brand" id="homeBtn" title="До рівнів">
+    <span class="brand-mark"><span data-icon="bot"></span></span>
+    <span class="brand-text"><b>Алгоритми з роботом</b><small>Складіть програму з блоків — робот її виконає</small></span>
+  </button>
+  <span class="grow"></span>
+  <span class="total" id="total"></span>
+  <button class="btn" id="reportBtn"><span data-icon="download"></span><span class="hide-sm">Мої результати</span></button>
+  <button class="icon-btn" id="themeBtn" title="Світла / темна тема"></button>
+</header>
+
+<!-- ═══ Рівні ═══ -->
+<main class="home" id="home">
+  <div class="home-in">
+    <section class="hero">
+      <div class="hero-text">
+        <span class="hero-kicker">Тренажер алгоритмів</span>
+        <h1>Навчіть робота дійти до прапорця</h1>
+        <p>Команди, цикли, умови й лабіринти. Чим коротша програма, тим більше зірок — як у справжніх програмістів.</p>
+        <button class="btn btn-primary btn-hero" id="continueBtn"></button>
+      </div>
+      <div class="hero-stats">
+        <div class="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="ring-bg"/><circle cx="60" cy="60" r="52" class="ring-fg" id="ringFg"/></svg><div><b id="ringPct">0%</b><span>пройдено</span></div></div>
+        <div class="hero-nums"><div><b id="heroStars">0</b><span>зірок із <i id="heroMax"></i></span></div><div><b id="heroShort">0</b><span>найкоротших програм</span></div></div>
+      </div>
+    </section>
+    <div id="chapters"></div>
+  </div>
+</main>
+
+<!-- ═══ Гра ═══ -->
+<main class="play" id="play" hidden>
+  <section class="world-side">
+    <div class="play-head">
+      <button class="btn btn-ghost" id="backBtn"><span data-icon="grid"></span>Усі рівні</button>
+      <div class="play-title"><span id="lvlChapter"></span><b id="lvlName"></b></div>
+      <span class="grow"></span>
+      <button class="btn btn-icon" id="prevBtn" title="Попередній рівень"><span data-icon="left"></span></button>
+      <span class="nav-num" id="navNum"></span>
+      <button class="btn btn-icon" id="nextBtn" title="Наступний рівень"><span data-icon="arrow"></span></button>
+    </div>
+    <div class="map-tabs" id="mapTabs"></div>
+    <div class="world-wrap"><svg class="world" id="world"></svg></div>
+    <div class="status" id="status"></div>
+    <div class="run-bar">
+      <button class="btn btn-primary btn-run" id="runBtn"><span data-icon="play"></span><span id="runLabel">Запустити</span></button>
+      <button class="btn" id="stepBtn" title="Виконати один крок"><span data-icon="step"></span>Крок</button>
+      <button class="btn" id="resetBtn" title="Повернути робота на старт"><span data-icon="undo"></span>На старт</button>
+      <label class="speed" title="Швидкість"><span data-icon="gauge"></span><input type="range" id="speed" min="1" max="5" value="3"></label>
+    </div>
+  </section>
+
+  <aside class="code-side">
+    <p class="lvl-hint" id="lvlHint"></p>
+    <div class="palette" id="palette"></div>
+    <div class="prog-head"><b>Програма</b><span class="grow"></span><span class="count" id="count"></span><button class="link-btn" id="clearBtn">Очистити</button></div>
+    <div class="program" id="program"></div>
+    <p class="tip">Клацніть блок угорі, щоб додати його туди, де блимає лінія. Блоки можна перетягувати. Клавіші: <kbd>↑</kbd> вперед, <kbd>←</kbd> <kbd>→</kbd> повороти, <kbd>Backspace</kbd> прибрати, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> запустити.</p>
+  </aside>
+</main>
+
+<!-- ═══ Результат ═══ -->
+<div class="overlay" id="result" hidden>
+  <div class="modal result-modal">
+    <div class="res-stars" id="resStars"></div>
+    <h3 class="res-title">Робот дійшов!</h3>
+    <p class="res-msg" id="resMsg"></p>
+    <div class="res-actions">
+      <button class="btn" id="resLevels"><span data-icon="grid"></span>До рівнів</button>
+      <button class="btn" id="resRetry"><span data-icon="undo"></span>Покращити</button>
+      <button class="btn btn-primary" id="resNext">Далі<span data-icon="arrow"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Мої результати ═══ -->
+<div class="overlay" id="report" hidden>
+  <div class="modal report">
+    <div class="modal-head"><h3>Мої результати</h3><button class="icon-btn" data-close title="Закрити"><span data-icon="x"></span></button></div>
+    <p class="muted">Завантажте картинку з усіма пройденими рівнями й надішліть її вчителю.</p>
+    <label class="lbl" for="studentName">Ім’я та прізвище, клас</label>
+    <input class="inp" id="studentName" maxlength="80" placeholder="Напр. «Олена Коваленко, 5-А»">
+    <div class="report-sum" id="reportSum"></div>
+    <div class="modal-actions">
+      <button class="link-btn" id="resetProgress">Скинути прогрес</button>
+      <span class="grow"></span>
+      <button class="btn btn-primary" id="downloadReport"><span data-icon="download"></span>Завантажити результати</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script type="module" src="robot/js/main.js"></script>
+</body>
+</html>
