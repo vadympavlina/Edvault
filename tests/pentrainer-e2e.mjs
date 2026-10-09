@@ -96,6 +96,42 @@ await step('за зразком: малюємо меншим і в іншому 
   assert.ok(res.acc >= 90, 'точність ' + res.acc);
 });
 
+await step('кожен рівень проходиться точно за покроковою підказкою', async () => {
+  const total = await p.evaluate(() => window.PenTrainer.LEVELS.length);
+  const bad = [];
+  for (let i = 0; i < total; i++) {
+    const id = await p.evaluate(i => window.PenTrainer.LEVELS[i].id, i);
+    await open(id);
+    const plan = await p.evaluate(async () => {
+      const g = await import('./pentrainer/js/geom.js'), st = await import('./pentrainer/js/steps.js');
+      const L = window.PenTrainer.LEVELS[window.PenTrainer.current], t = g.parsePath(L.d);
+      return { anchors: t.anchors, steps: st.planSteps(t) };
+    });
+    if (!(await p.evaluate(() => document.getElementById('hintBtn').classList.contains('on')))) await p.keyboard.press('h');
+    for (const [k, s] of plan.steps.entries()) {
+      const a = plan.anchors[s.i];
+      // підказка, яку бачить учень у цей момент, — саме цей крок
+      const label = await p.textContent('#stepLabel'), shown = await p.textContent('#stepText');
+      if (label !== `Крок ${k + 1} / ${plan.steps.length}` || shown !== s.text) bad.push(`${id}: на кроці ${k + 1} показано «${label}: ${shown}»`);
+      if (s.act === 'click') await click(a.x, a.y);
+      else {
+        if (s.altHold) await p.keyboard.down('Alt');
+        await p.mouse.move(...await at(a.x, a.y)); await p.mouse.down();
+        await p.mouse.move(...await at(s.to.x, s.to.y), { steps: 6 });
+        if (s.alt) { await p.keyboard.down('Alt'); await p.mouse.move(...await at(s.alt.x, s.alt.y), { steps: 6 }); }
+        await p.mouse.up();
+        if (s.alt || s.altHold) await p.keyboard.up('Alt');
+      }
+      if (s.then === 'click') await click(a.x, a.y);
+      if (s.then === 'drag') await drag(a.x, a.y, s.thenTo.x, s.thenTo.y);
+    }
+    const r = await result();
+    if (r.acc < 90 || r.stars < 2) bad.push(`${id}: ${r.acc}% ${r.stars}★`);
+  }
+  if (bad.length) console.log(bad.join('\n'));
+  assert.deepEqual(bad, []);
+});
+
 await step('прогрес зберігається після перезавантаження', async () => {
   await p.reload(); await p.waitForFunction(() => window.PenTrainer);
   const b = await p.evaluate(() => window.PenTrainer.progress.best.circle);

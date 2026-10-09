@@ -2,6 +2,7 @@
 import { CHAPTERS, LEVELS } from './levels.js';
 import { parsePath, toPath, score, alignTo } from './geom.js';
 import { PenEditor } from './editor.js';
+import { planSteps, currentStep } from './steps.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -19,6 +20,8 @@ const P = {
   check: '<path d="M20 6 9 17l-5-5"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
   arrow: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  left: '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
+  play: '<polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/>',
   x: '<path d="M18 6 6 18M6 6l12 12"/>',
   lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   star: '<path fill="currentColor" stroke="none" d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
@@ -55,12 +58,19 @@ function thumb(level, b) {
   const closed = parsePath(level.d).closed;
   return `<svg viewBox="40 40 520 520"><path class="t${closed ? '' : ' open'}" d="${level.d}"/>${b && b.d ? `<path class="u" d="${esc(b.d)}"/>` : ''}</svg>`;
 }
+// наступний рівень для кнопки «Продовжити»: перший відкритий без зірок, інакше — перший без трьох зірок
+function nextToPlay() {
+  let i = LEVELS.findIndex((l, k) => unlocked(k) && !best(l.id)?.stars);
+  if (i < 0) i = LEVELS.findIndex(l => (best(l.id)?.stars || 0) < 3);
+  return i;
+}
 function renderHome() {
-  $('chapters').innerHTML = CHAPTERS.map(ch => {
+  $('chapters').innerHTML = CHAPTERS.map((ch, ci) => {
     const items = LEVELS.map((l, i) => ({ l, i })).filter(x => x.l.chapter === ch.id);
-    return `<section class="chapter"><div class="chapter-head"><h2>${ch.name}</h2><span>${ch.desc}</span></div><div class="levels">${items.map(({ l, i }) => {
+    const got = items.reduce((s, { l }) => s + (best(l.id)?.stars || 0), 0);
+    return `<section class="chapter"><div class="chapter-head"><span class="ch-num">${ci + 1}</span><div class="ch-text"><h2>${ch.name}</h2><span>${ch.desc}</span></div><span class="ch-stars">${icon('star')}${got} / ${items.length * 3}</span></div><div class="levels">${items.map(({ l, i }) => {
       const b = best(l.id), open = unlocked(i);
-      return `<button class="lvl" data-level="${i}" ${open ? '' : 'disabled title="Спершу пройдіть попередній рівень"'}>
+      return `<button class="lvl${b?.stars === 3 ? ' perfect' : ''}${open && !b ? ' fresh' : ''}" data-level="${i}" ${open ? '' : 'disabled title="Спершу пройдіть попередній рівень"'}>
         <div class="lvl-thumb">${open ? thumb(l, b) : `<span class="lvl-lock">${icon('lock')}</span>`}</div>
         <span class="lvl-num">${i + 1}</span>${l.mode === 'copy' ? '<span class="mode-tag">зразок</span>' : ''}
         <div class="lvl-name">${esc(l.name)}</div>
@@ -68,11 +78,18 @@ function renderHome() {
       </button>`;
     }).join('')}</div></section>`;
   }).join('');
-  const st = totalStars(), max = LEVELS.length * 3;
+  const st = totalStars(), max = LEVELS.length * 3, pct = Math.round(passed() / LEVELS.length * 100);
+  const accs = LEVELS.map(l => best(l.id)).filter(Boolean);
   $('total').innerHTML = icon('star') + st + ' / ' + max;
-  $('progressBar').style.width = (passed() / LEVELS.length * 100) + '%';
-  $('progressText').textContent = `Пройдено ${passed()} з ${LEVELS.length} рівнів`;
+  $('heroStars').textContent = st; $('heroMax').textContent = max;
+  $('heroAcc').textContent = accs.length ? Math.round(accs.reduce((s, b) => s + b.acc, 0) / accs.length) + '%' : '—';
+  $('ringPct').textContent = pct + '%';
+  $('ringFg').style.strokeDashoffset = String(326.7 * (1 - pct / 100));
+  const n = nextToPlay();
+  $('continueBtn').hidden = n < 0;
+  if (n >= 0) { $('continueBtn').innerHTML = icon('play') + (passed() ? 'Продовжити' : 'Почати') + `: рівень ${n + 1} · ${esc(LEVELS[n].name)}`; $('continueBtn').dataset.level = n; }
 }
+$('continueBtn').onclick = () => openLevel(+$('continueBtn').dataset.level);
 $('chapters').addEventListener('click', e => { const b = e.target.closest('[data-level]'); if (b && !b.disabled) openLevel(+b.dataset.level); });
 $('homeBtn').onclick = () => showHome();
 
@@ -83,7 +100,7 @@ const svgEl = (tag, attrs, parent) => { const e = document.createElementNS(NS, t
 
 function drawGrid(svg, before) {
   const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'grid');
-  for (let v = 50; v < 600; v += 50) { svgEl('line', { x1: v, y1: 0, x2: v, y2: 600 }, g); svgEl('line', { x1: 0, y1: v, x2: 600, y2: v }, g); }
+  for (let v = 50; v < 600; v += 50) { svgEl('line', { x1: v, y1: 0, x2: v, y2: 600, class: v === 300 ? 'mid' : '' }, g); svgEl('line', { x1: 0, y1: v, x2: 600, y2: v, class: v === 300 ? 'mid' : '' }, g); }
   svg.insertBefore(g, before || null);
   return g;
 }
@@ -92,17 +109,66 @@ function drawTarget(svg, level, before) {
   p.setAttribute('d', level.d); p.setAttribute('class', 'target' + (target.closed ? '' : ' open'));
   svg.insertBefore(p, before || null);
 }
-// ідеальні точки й ручки
-function drawGuide(svg, before) {
+// Підказка: ручки фігури (бліді), номери точок, а для поточного кроку — кільце й стрілка «куди тягнути»
+let steps = [], guideHost = null;
+// стрілка показує напрям; коротку ручку подовжуємо, щоб її було видно
+function arrow(g, from, to, cls) {
+  const dx = to.x - from.x, dy = to.y - from.y, L0 = Math.hypot(dx, dy);
+  if (L0 < 1) return null;
+  const L = Math.max(L0, 70), ux = dx / L0, uy = dy / L0;
+  to = { x: from.x + ux * L, y: from.y + uy * L };
+  const hx = to.x - ux * 14, hy = to.y - uy * 14;
+  svgEl('line', { x1: from.x + ux * 12, y1: from.y + uy * 12, x2: hx, y2: hy, class: 'arr ' + cls }, g);
+  svgEl('path', { d: `M${to.x} ${to.y} L${hx - uy * 8} ${hy + ux * 8} L${hx + uy * 8} ${hy - ux * 8} Z`, class: 'arr-head ' + cls }, g);
+  return to;
+}
+function drawGuide() {
+  if (!guideHost) return;
+  guideHost.svg.querySelector(':scope > .guide')?.remove();
+  if (!hintOn) return;
   const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'guide');
+  const N = target.anchors.length;
   target.anchors.forEach((a, i) => {
-    for (const h of [a.hin, a.hout]) if (h && !((!target.closed) && ((i === 0 && h === a.hin) || (i === target.anchors.length - 1 && h === a.hout)))) {
-      svgEl('line', { x1: a.x, y1: a.y, x2: h.x, y2: h.y }, g); svgEl('circle', { cx: h.x, cy: h.y, r: 5 }, g);
+    for (const [h, w] of [[a.hin, 'in'], [a.hout, 'out']]) {
+      if (!h || (!target.closed && ((i === 0 && w === 'in') || (i === N - 1 && w === 'out')))) continue;
+      svgEl('line', { x1: a.x, y1: a.y, x2: h.x, y2: h.y, class: 'h-line' }, g); svgEl('circle', { cx: h.x, cy: h.y, r: 5, class: 'h-dot' }, g);
     }
-    svgEl('rect', { x: a.x - 6, y: a.y - 6, width: 12, height: 12, rx: 2 }, g);
   });
-  svg.insertBefore(g, before || null);
-  return g;
+  const cs = currentStep(steps, editor.state, target);
+  const s = cs.step;
+  // номер — трохи назовні від фігури, щоб не закривав саму точку
+  const cx = target.anchors.reduce((v, a) => v + a.x, 0) / N, cy = target.anchors.reduce((v, a) => v + a.y, 0) / N;
+  target.anchors.forEach((a, i) => {
+    const isNext = s && s.i === i;
+    const done = !s ? !cs.off : i < (s.close ? N : s.i);
+    const grp = svgEl('g', { class: 'num' + (isNext ? ' next' : done ? ' done' : '') }, g);
+    if (isNext) svgEl('circle', { cx: a.x, cy: a.y, r: 20, class: 'pulse' }, grp);
+    svgEl('circle', { cx: a.x, cy: a.y, r: 6, class: 'spot' }, grp);
+    let ox = a.x - cx, oy = a.y - cy; const ol = Math.hypot(ox, oy) || 1;
+    if (ol < 1) { ox = 0; oy = -1; }
+    const bx = a.x + ox / ol * 26, by = a.y + oy / ol * 26;
+    svgEl('circle', { cx: bx, cy: by, r: 11, class: 'badge' }, grp);
+    const t = svgEl('text', { x: bx, y: by + 4.5 }, grp); t.textContent = i + 1;
+  });
+  if (s) {
+    const a = target.anchors[s.i];
+    if (cs.phase === 'then') { if (s.then === 'drag') arrow(g, a, s.thenTo, 'go'); }
+    else if (s.act === 'drag') {
+      arrow(g, a, s.to, 'go');
+      if (s.alt) { const e = arrow(g, a, s.alt, 'alt'); if (e) { const lbl = svgEl('g', { class: 'alt-tag' }, g); svgEl('rect', { x: e.x + 8, y: e.y - 10, width: 34, height: 20, rx: 5 }, lbl); svgEl('text', { x: e.x + 25, y: e.y + 4 }, lbl).textContent = 'Alt'; } }
+    }
+  }
+  guideHost.svg.insertBefore(g, guideHost.before);
+}
+function updateStep() {
+  const card = $('stepCard');
+  card.hidden = false;
+  if (!hintOn) { $('stepLabel').textContent = 'Підказку вимкнено'; $('stepText').textContent = 'Увімкніть «Підказку» (H), щоб бачити номери точок і куди тягнути.'; $('stepBar').style.width = '0'; card.className = 'step-card off'; return; }
+  const cs = currentStep(steps, editor.state, target);
+  card.className = 'step-card' + (cs.done ? ' done' : cs.off ? ' warn' : '');
+  $('stepLabel').textContent = cs.done ? 'Готово' : cs.off ? 'Увага' : `Крок ${cs.index + 1} / ${cs.total}`;
+  $('stepText').textContent = cs.step ? (cs.text || cs.step.text) : cs.text;
+  $('stepBar').style.width = (cs.done ? 100 : cs.step ? (cs.index / cs.total) * 100 : 0) + '%';
 }
 function renderBoards() {
   const lvl = LEVELS[cur], board = $('board'), sample = $('sample');
@@ -111,21 +177,17 @@ function renderBoards() {
   const copy = lvl.mode === 'copy';
   $('sampleWrap').hidden = !copy; $('boardLabel').hidden = !copy;
   drawGrid(board, editor.layer);
-  if (copy) {
-    drawGrid(sample); drawTarget(sample, lvl);
-    if (hintOn) drawGuide(sample);
-  } else {
-    drawTarget(board, lvl, editor.layer);
-    if (hintOn) drawGuide(board, editor.layer);
-  }
+  if (copy) { drawGrid(sample); drawTarget(sample, lvl); guideHost = { svg: sample, before: null }; }
+  else { drawTarget(board, lvl, editor.layer); guideHost = { svg: board, before: editor.layer }; }
+  drawGuide(); updateStep();
   $('hintBtn').classList.toggle('on', hintOn);
   fitBoards();
 }
 // поле завжди квадратне й максимально велике; зразок — менший, поруч
 function fitBoards() {
   if (cur < 0) return;
-  const st = $('stage'), copy = LEVELS[cur].mode === 'copy';
-  const cs = getComputedStyle(st), padX = parseFloat(cs.paddingLeft) * 2, padY = parseFloat(cs.paddingTop) * 2;
+  const st = document.querySelector('.boards'), copy = LEVELS[cur].mode === 'copy';
+  const padX = 0, padY = 0;
   const label = copy ? 22 : 0, gap = 22;
   const w = st.clientWidth - padX, h = st.clientHeight - padY - label;
   const size = Math.floor(Math.max(200, copy ? Math.min(h, (w - gap) / 1.42) : Math.min(w, h)));
@@ -139,9 +201,13 @@ function openLevel(i) {
   cur = i;
   const lvl = LEVELS[i];
   target = parsePath(lvl.d);
+  steps = planSteps(target);
   hintOn = lvl.guide;
   $('home').hidden = true; $('play').hidden = false; $('result').hidden = true;
-  $('lvlChapter').textContent = `Рівень ${i + 1} · ${CHAPTERS.find(c => c.id === lvl.chapter).name}`;
+  $('lvlChapter').textContent = CHAPTERS.find(c => c.id === lvl.chapter).name + (lvl.mode === 'copy' ? ' · малюйте на чистому полі' : '');
+  $('navNum').textContent = `${i + 1} / ${LEVELS.length}`;
+  $('prevBtn').disabled = i === 0;
+  $('nextBtn').disabled = !(i + 1 < LEVELS.length && unlocked(i + 1));
   $('lvlName').textContent = lvl.name;
   $('lvlHint').textContent = lvl.hint;
   $('statIdeal').textContent = target.anchors.length;
@@ -166,7 +232,11 @@ function updateStats() {
   $('statPts').classList.toggle('over', target && n > target.anchors.length);
   $('undoBtn').disabled = !editor.undoStack.length;
   $('redoBtn').disabled = !editor.redoStack.length;
+  if (cur >= 0) { drawGuide(); updateStep(); }
 }
+$('backBtn').onclick = () => showHome();
+$('prevBtn').onclick = () => openLevel(cur - 1);
+$('nextBtn').onclick = () => openLevel(cur + 1);
 $('hintBtn').onclick = () => { hintOn = !hintOn; renderBoards(); };
 $('altBtn').onclick = () => { editor.altLock = !editor.altLock; $('altBtn').classList.toggle('on', editor.altLock); };
 $('undoBtn').onclick = () => editor.undo();
@@ -315,4 +385,4 @@ export async function reportImage(name) {
 /* ═════════ Старт ═════════ */
 const fromHash = LEVELS.findIndex(l => '#' + l.id === location.hash);
 if (fromHash >= 0 && unlocked(fromHash)) openLevel(fromHash); else showHome();
-window.PenTrainer = { editor, LEVELS, get progress() { return progress; }, openLevel, check, reportImage };
+window.PenTrainer = { editor, LEVELS, get progress() { return progress; }, get current() { return cur; }, openLevel, check, reportImage };

@@ -28,12 +28,17 @@
 <!-- ═══ Рівні ═══ -->
 <main class="home" id="home">
   <div class="home-in">
-    <section class="intro">
-      <div>
-        <h1>Навчіться малювати пером</h1>
-        <p>Обводьте фігури точками й ручками — від прямих ліній до літер. Кожен рівень оцінюється за точністю та кількістю точок.</p>
+    <section class="hero">
+      <div class="hero-text">
+        <span class="hero-kicker">Тренажер інструмента «Перо»</span>
+        <h1>Малюйте кривими, як у професійних програмах</h1>
+        <p>Точки, ручки й гострі кути — від прямих ліній до літер. Кожен рівень оцінюється за точністю й кількістю точок.</p>
+        <button class="btn btn-primary btn-hero" id="continueBtn"></button>
       </div>
-      <div class="progress"><div class="progress-bar"><i id="progressBar"></i></div><span id="progressText"></span></div>
+      <div class="hero-stats">
+        <div class="ring" id="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="ring-bg"/><circle cx="60" cy="60" r="52" class="ring-fg" id="ringFg"/></svg><div><b id="ringPct">0%</b><span>пройдено</span></div></div>
+        <div class="hero-nums"><div><b id="heroStars">0</b><span>зірок із <i id="heroMax"></i></span></div><div><b id="heroAcc">—</b><span>середня точність</span></div></div>
+      </div>
     </section>
     <div id="chapters"></div>
   </div>
@@ -42,33 +47,48 @@
 <!-- ═══ Гра ═══ -->
 <main class="play" id="play" hidden>
   <div class="stage" id="stage">
-    <div class="board-wrap sample-wrap" id="sampleWrap" hidden>
-      <div class="board-label">Зразок</div>
-      <svg class="board sample" id="sample" viewBox="0 0 600 600"></svg>
+    <div class="boards">
+      <div class="board-wrap" id="sampleWrap" hidden>
+        <div class="board-label">Зразок</div>
+        <svg class="board sample" id="sample" viewBox="0 0 600 600"></svg>
+      </div>
+      <div class="board-wrap">
+        <div class="board-label" id="boardLabel" hidden>Ваше поле</div>
+        <svg class="board draw" id="board" viewBox="0 0 600 600" tabindex="0" aria-label="Поле для малювання пером"></svg>
+      </div>
     </div>
-    <div class="board-wrap">
-      <div class="board-label" id="boardLabel" hidden>Ваше поле</div>
-      <svg class="board draw" id="board" viewBox="0 0 600 600" tabindex="0" aria-label="Поле для малювання пером"></svg>
+    <div class="dock" role="toolbar" aria-label="Інструменти">
+      <button class="dock-btn" id="hintBtn" title="Підказка: номери точок і куди тягнути (H)"><span data-icon="eye"></span><span>Підказка</span></button>
+      <button class="dock-btn" id="altBtn" title="Режим Alt без клавіатури — для планшета"><b class="alt-key">Alt</b></button>
+      <span class="dock-sep"></span>
+      <button class="dock-btn" id="undoBtn" title="Скасувати (Ctrl+Z)"><span data-icon="undo"></span></button>
+      <button class="dock-btn" id="redoBtn" title="Повторити (Ctrl+Shift+Z)"><span data-icon="redo"></span></button>
+      <span class="dock-sep"></span>
+      <button class="dock-btn" id="clearBtn" title="Почати спочатку (R)"><span data-icon="trash"></span></button>
     </div>
   </div>
 
   <aside class="panel">
+    <div class="nav-row">
+      <button class="btn btn-ghost" id="backBtn"><span data-icon="grid"></span>Усі рівні</button>
+      <span class="grow"></span>
+      <button class="btn btn-icon" id="prevBtn" title="Попередній рівень"><span data-icon="left"></span></button>
+      <span class="nav-num" id="navNum"></span>
+      <button class="btn btn-icon" id="nextBtn" title="Наступний рівень"><span data-icon="arrow"></span></button>
+    </div>
     <div class="lvl-head">
       <span class="lvl-chapter" id="lvlChapter"></span>
       <h2 id="lvlName"></h2>
       <p class="lvl-hint" id="lvlHint"></p>
     </div>
+    <div class="step-card" id="stepCard">
+      <div class="step-top"><span class="step-label" id="stepLabel"></span><span class="step-bar"><i id="stepBar"></i></span></div>
+      <p class="step-text" id="stepText"></p>
+    </div>
     <div class="stats">
       <div><span>Точок</span><b id="statPts">0</b></div>
-      <div><span>Ідеально</span><b id="statIdeal">0</b></div>
+      <div><span>Потрібно</span><b id="statIdeal">0</b></div>
       <div><span>Найкраще</span><b id="statBest">—</b></div>
-    </div>
-    <div class="tools">
-      <button class="btn" id="hintBtn" title="Показати, де стоять ідеальні точки й ручки (H)"><span data-icon="eye"></span>Підказка</button>
-      <button class="btn" id="altBtn" title="Режим Alt без клавіатури: ламати ручки — зручно на планшеті">Alt</button>
-      <button class="btn btn-icon" id="undoBtn" title="Скасувати (Ctrl+Z)"><span data-icon="undo"></span></button>
-      <button class="btn btn-icon" id="redoBtn" title="Повторити (Ctrl+Shift+Z)"><span data-icon="redo"></span></button>
-      <button class="btn btn-icon" id="clearBtn" title="Почати спочатку (R)"><span data-icon="trash"></span></button>
     </div>
     <button class="btn btn-primary btn-lg" id="checkBtn"><span data-icon="check"></span>Перевірити <kbd>Enter</kbd></button>
     <details class="keys" id="keys">
@@ -77,9 +97,12 @@
         <dt>Клік</dt><dd>кутова точка</dd>
         <dt>Натиснути й тягнути</dt><dd>плавна точка з ручками</dd>
         <dt><kbd>Alt</kbd> під час тягнення</dt><dd>зламати ручку — гострий кут на кривій</dd>
+        <dt>Клік по щойно поставленій точці</dt><dd>прибрати передню ручку (далі — пряма)</dd>
+        <dt>Натиснути на неї й тягнути</dt><dd>витягти лише одну ручку</dd>
         <dt>Клік у першу точку</dt><dd>замкнути контур</dd>
         <dt><kbd>Shift</kbd></dt><dd>кути по 45°</dd>
         <dt>Тягнути точку чи ручку</dt><dd>підправити форму</dd>
+        <dt><kbd>Ctrl</kbd> + тягнути</dt><dd>підправити під час малювання</dd>
         <dt><kbd>Alt</kbd> + клік по точці</dt><dd>прибрати ручки (зробити кутом)</dd>
         <dt><kbd>Esc</kbd></dt><dd>закінчити відкритий контур</dd>
         <dt><kbd>Backspace</kbd></dt><dd>прибрати останню точку</dd>

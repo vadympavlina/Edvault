@@ -3,7 +3,8 @@
 //   Alt під час перетягування — ламає ручку (змінюється лише та, що попереду);
 //   клік у першу точку — замкнути контур; Shift — кути по 45°;
 //   після малювання: тягніть точки й ручки; Alt+клік по точці — прибрати ручки, Alt+тягнути — витягти нові;
-//   клік по кінцевій точці відкритого контуру — продовжити малювати.
+//   клік по кінцевій точці відкритого контуру — продовжити малювати;
+//   під час малювання клік по щойно поставленій точці — прибрати передню ручку, натиснути й тягнути — витягти одну ручку.
 import { cloneAnchors, toPath, dist } from './geom.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -113,6 +114,10 @@ export class PenEditor {
       if (h && h.kind === 'anchor' && h.i === 0 && this.anchors.length >= 2) {
         this.snapshot(); this.closed = true; this.drawing = false;
         this.drag = { type: 'close', i: 0, start: p, moved: false, hout0: this.anchors[0].hout };
+      } else if (h && h.kind === 'anchor' && h.i === this.anchors.length - 1 && !(e.ctrlKey || e.metaKey)) {
+        // як в Illustrator: натиснути на щойно поставлену точку й тягнути — витягти лише передню ручку;
+        // просто клацнути по ній — прибрати передню ручку (далі піде пряма)
+        this.snapshot(); this.drag = { type: 'single', i: h.i, start: p, moved: false };
       } else if (h && h.kind === 'handle' && (h.i === this.anchors.length - 1 || e.ctrlKey || e.metaKey)) {
         this.startHandle(h, p);
       } else if (h && h.kind === 'anchor' && (e.ctrlKey || e.metaKey)) {
@@ -160,7 +165,10 @@ export class PenEditor {
     const d = this.drag, a = this.anchors[d.i];
     if (dist(p, d.start) > 2 * this.px) d.moved = true;
     if (!d.moved) return;
-    if (d.type === 'new' || d.type === 'pull') {
+    if (d.type === 'single') {
+      if (e.shiftKey) p = snap45(a, p);
+      a.hout = p;
+    } else if (d.type === 'new' || d.type === 'pull') {
       if (e.shiftKey) p = snap45(a, p);
       a.hout = p;
       // Alt — передня ручка рухається окремо, задня лишається там, де була
@@ -193,6 +201,7 @@ export class PenEditor {
     if (!d) return;
     const a = this.anchors[d.i];
     if (d.type === 'new' && !d.moved && a) { a.hin = null; a.hout = null; }
+    if (d.type === 'single' && !d.moved) { if (a.hout) a.hout = null; else this.undoStack.pop(); }
     // клік без руху нічого не змінив — прибираємо зайвий крок скасування
     if (!d.moved && (d.type === 'anchor' || d.type === 'handle' || d.type === 'pull')) this.undoStack.pop();
     // клік по кінцевій точці відкритого контуру — продовжуємо малювати від неї
@@ -219,6 +228,7 @@ export class PenEditor {
   }
   render() {
     const s = this.px, r = 4.5 * s, hr = 3.5 * s;
+    this.svg.classList.toggle('drawing', this.drawing);
     this.pathEl.setAttribute('d', toPath(this.anchors, this.closed));
     this.pathEl.style.strokeWidth = 2.5 * s;
     this.previewEl.style.strokeWidth = 1.5 * s;
