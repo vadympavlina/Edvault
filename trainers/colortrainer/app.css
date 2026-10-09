@@ -268,3 +268,8 @@ kbd { font: 600 11px 'JetBrains Mono', monospace; padding: 1px 5px; border: 1px 
 @media (max-width: 900px) { .stage { padding: 16px; } .harmony { flex-direction: column; } }
 .lvl-num { z-index: 1; background: rgba(255,255,255,.88); color: #4b5563; padding: 1px 5px; border-radius: 5px; }
 html[data-theme="dark"] .lvl-num { background: rgba(20,23,28,.8); color: #a8b0bd; }
+
+/* картка рівня: обкладинка вгорі, зірки внизу — однаково в усіх картках ряду */
+.lvl { display: flex; flex-direction: column; justify-content: flex-start; }
+.lvl-meta { margin-top: auto; padding-top: 5px; }
+.lvl-acc { white-space: nowrap; }

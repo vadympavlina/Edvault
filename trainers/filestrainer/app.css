@@ -363,3 +363,8 @@ html[data-theme="dark"] { --page: #e8ecf1; --page-line: #9aa3b2; --page-fold: #c
 .result-modal { max-width: 460px; text-align: center; }
 .result-modal .res-stars, .result-modal .res-actions { justify-content: center; }
 .res-title { font-size: 22px; font-weight: 800; margin-top: 8px; }
+
+/* картка рівня: обкладинка вгорі, зірки внизу — однаково в усіх картках ряду */
+.lvl { display: flex; flex-direction: column; justify-content: flex-start; }
+.lvl-meta { margin-top: auto; padding-top: 5px; }
+.lvl-acc { white-space: nowrap; }

@@ -270,3 +270,8 @@ html[data-theme="dark"] { --f0: #3a2328; --f1: #3a3122; --f2: #213326; --f3: #1f
 .res-keys .cap small { font-size: 10px; color: var(--danger); margin-left: 4px; }
 .area { height: 180px; padding: 12px; resize: vertical; margin-top: 12px; line-height: 1.5; font-family: inherit; }
 @media (max-width: 760px) { .weak { grid-template-columns: 1fr; } .live { grid-template-columns: repeat(3, 1fr); } .live-bar { grid-column: 1 / -1; } .k { height: 38px; font-size: 13px; } }
+
+/* картка рівня: обкладинка вгорі, зірки внизу — однаково в усіх картках ряду */
+.lvl { display: flex; flex-direction: column; justify-content: flex-start; }
+.lvl-meta { margin-top: auto; padding-top: 5px; }
+.lvl-acc { white-space: nowrap; }

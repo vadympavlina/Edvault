@@ -393,8 +393,8 @@ button.ch:hover:not(:disabled) { background: var(--accent-light); border-color: 
 .lvl-thumb .lvl-lock { color: rgba(255,255,255,.85); }
 .lvl:disabled .lvl-thumb { background: var(--surface2); }
 .lvl:disabled .lvl-thumb .lvl-lock { color: var(--muted); }
-.lvl-num { color: rgba(255,255,255,.85); }
-.lvl:disabled .lvl-num { color: var(--muted); }
+.lvl-num { top: 18px; left: 18px; z-index: 1; color: #fff; background: rgba(15,23,42,.22); padding: 2px 7px; border-radius: 6px; line-height: 1.3; }
+.lvl:disabled .lvl-num { color: var(--muted); background: var(--surface3); }
 
 .result-modal { max-width: 460px; text-align: center; }
 .result-modal .res-stars, .result-modal .res-actions { justify-content: center; }
@@ -570,3 +570,8 @@ kbd { font: 700 .92em 'JetBrains Mono', monospace; padding: 2px 8px; border: 1px
 .th-caps kbd { font-size: 10.5px; padding: 1px 5px; border-bottom-width: 2px; background: rgba(255,255,255,.92); color: #1e293b; border-color: rgba(255,255,255,.6); }
 .th-caps .caps i { color: rgba(255,255,255,.85); font-size: 11px; }
 @media (max-width: 900px) { .kb-nav { display: none; } .key small { display: none; } }
+
+/* картка рівня: обкладинка вгорі, зірки внизу — однаково в усіх картках ряду */
+.lvl { display: flex; flex-direction: column; justify-content: flex-start; }
+.lvl-meta { margin-top: auto; padding-top: 5px; }
+.lvl-acc { white-space: nowrap; }

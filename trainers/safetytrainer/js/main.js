@@ -162,7 +162,8 @@ const domainLine = url => { const u = parseUrl(url); return `Ім’я сайт�
 
 /* ── повідомлення: підозрілі місця показуємо після відповіді ── */
 function segHtml(str) {
-  return segments(str).map(s => s.space ? esc(s.t) : s.flag ? `<span class="seg" data-flag="${esc(s.flag)}">${esc(s.t)}</span>` : esc(s.t)).join(' ');
+  // шматки з’єднуються одним пробілом — без подвійних
+  return segments(str).filter(s => !s.space).map(s => s.flag ? `<span class="seg" data-flag="${esc(s.flag)}">${esc(s.t.trim())}</span>` : esc(s.t.trim())).join(' ');
 }
 function mockHtml(m) {
   const S = k => m[k] ? segHtml(m[k]) : '';

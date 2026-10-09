@@ -310,3 +310,8 @@ html[data-theme="dark"] { --tile: #232a35; --tile2: #1f2530; --wall: #0f131a; --
 .result-modal { max-width: 460px; text-align: center; }
 .result-modal .res-stars, .result-modal .res-actions { justify-content: center; }
 @media (max-width: 1000px) { .play { grid-template-columns: 1fr; overflow: auto; } .world-side { overflow: visible; } .world { height: auto; width: 100%; max-height: 60vh; } .code-side { border-left: 0; border-top: 1px solid var(--border); } }
+
+/* картка рівня: обкладинка вгорі, зірки внизу — однаково в усіх картках ряду */
+.lvl { display: flex; flex-direction: column; justify-content: flex-start; }
+.lvl-meta { margin-top: auto; padding-top: 5px; }
+.lvl-acc { white-space: nowrap; }

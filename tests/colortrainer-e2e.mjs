@@ -27,11 +27,13 @@ await step('головна: 7 розділів, відкритий лише пе
 
 await step('відтінок: повзунок змінює колір, підказки лише про відтінок', async () => {
   await p.click('#continueBtn');
-  const before = await p.evaluate(() => window.ColorTrainer.user.h);
+  // клік навпроти загаданого відтінку — свідомо погана відповідь
+  const target = await p.evaluate(() => window.ColorTrainer.round.target.h);
   const bb = await p.locator('.hue-bar').boundingBox();
-  await p.mouse.click(bb.x + bb.width * ((before / 360 + 0.5) % 1), bb.y + 13);
+  await p.mouse.click(bb.x + bb.width * ((target / 360 + 0.5) % 1), bb.y + 13);
   const after = await p.evaluate(() => window.ColorTrainer.user);
-  assert.ok(Math.abs(after.h - before) > 90);
+  const arc = (a, b) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); };
+  assert.ok(arc(after.h, target) > 150, `відтінок ${after.h} мав стати протилежним до ${target}`);
   await p.keyboard.press('Enter');
   const f = await fb();
   assert.ok(f.acc < 60);

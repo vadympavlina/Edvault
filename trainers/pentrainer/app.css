@@ -251,3 +251,8 @@ kbd { font: 600 11px 'JetBrains Mono', monospace; padding: 1px 5px; border: 1px 
 .step-text { margin-top: 7px; font-size: 14px; line-height: 1.5; font-weight: 500; }
 .lvl-head h2 { font-size: 22px; }
 @media (max-width: 900px) { .hero { grid-template-columns: 1fr; } }
+
+/* картка рівня: обкладинка вгорі, зірки внизу — однаково в усіх картках ряду */
+.lvl { display: flex; flex-direction: column; justify-content: flex-start; }
+.lvl-meta { margin-top: auto; padding-top: 5px; }
+.lvl-acc { white-space: nowrap; }

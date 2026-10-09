@@ -334,3 +334,8 @@ html[data-theme="dark"] .street { background: linear-gradient(180deg, #1a2416, #
 .res-nums div { background: var(--surface2); border-radius: 12px; padding: 10px; }
 .res-nums b { display: block; font: 800 22px 'JetBrains Mono', monospace; }
 .res-nums span { font-size: 12px; color: var(--muted); }
+
+/* картка рівня: обкладинка вгорі, зірки внизу — однаково в усіх картках ряду */
+.lvl { display: flex; flex-direction: column; justify-content: flex-start; }
+.lvl-meta { margin-top: auto; padding-top: 5px; }
+.lvl-acc { white-space: nowrap; }

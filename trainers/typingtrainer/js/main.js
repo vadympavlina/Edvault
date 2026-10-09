@@ -89,13 +89,13 @@ function renderHome() {
   $('chapters').innerHTML = CHAPTERS.map((ch, ci) => {
     const items = levels().map((l, i) => ({ l, i })).filter(x => x.l.chapter === ch.id);
     const got = items.reduce((s, { l }) => s + (best(l.id)?.stars || 0), 0);
-    return `<section class="chapter"><div class="chapter-head"><span class="ch-num">${ci + 1}</span><div class="ch-text"><h2>${ch.name}</h2><span>${ch.desc} Мета для трьох зірок: ${ch.cpm} зн/хв і 97% точності.</span></div><span class="ch-stars">${icon('star')}${got} / ${items.length * 3}</span></div><div class="levels">${items.map(({ l, i }) => {
+    return `<section class="chapter"><div class="chapter-head"><span class="ch-num">${ci + 1}</span><div class="ch-text"><h2>${ch.name}</h2><span>${ch.desc} Мета для трьох зірок: ${ch.cpm} зн/⁠хв і 97% точності.</span></div><span class="ch-stars">${icon('star')}${got} / ${items.length * 3}</span></div><div class="levels">${items.map(({ l, i }) => {
       const b = best(l.id), open = unlocked(i);
       return `<button class="lvl${b?.stars === 3 ? ' perfect' : ''}${open && !b ? ' fresh' : ''}" data-level="${i}" ${open ? '' : 'disabled title="Спершу пройдіть попередній рівень"'}>
         <div class="lvl-thumb">${open ? capsFor(l) : `<span class="lvl-lock">${icon('lock')}</span>`}</div>
         <span class="lvl-num">${i + 1}</span>
         <div class="lvl-name">${esc(l.name)}</div>
-        <div class="lvl-meta">${starsHtml(b?.stars || 0)}<span class="lvl-acc">${b ? b.cpm + ' зн/хв' : ''}</span></div>
+        <div class="lvl-meta">${starsHtml(b?.stars || 0)}<span class="lvl-acc">${b ? b.cpm + ' зн/⁠хв' : ''}</span></div>
       </button>`;
     }).join('')}</div></section>`;
   }).join('');
@@ -250,8 +250,8 @@ function showResult(s, stars, prev) {
   if (stars == null) msg = 'Чудове тренування!';
   else if (stars === 0) msg = 'Точність нижча за 90% — спробуйте повільніше. Швидкість прийде сама.';
   else if (stars === 3) msg = 'Відмінно! Швидко й точно.';
-  else if (s.acc < 97) msg = `Для трьох зірок потрібна точність 97% і швидкість ${ch.cpm} зн/хв. Зосередьтеся на точності.`;
-  else msg = `Точність чудова! Для трьох зірок додайте швидкості — до ${ch.cpm} зн/хв.`;
+  else if (s.acc < 97) msg = `Для трьох зірок потрібна точність 97% і швидкість ${ch.cpm} зн/⁠хв. Зосередьтеся на точності.`;
+  else msg = `Точність чудова! Для трьох зірок додайте швидкості — до ${ch.cpm} зн/⁠хв.`;
   if (prev && s.cpm > prev.cpm && stars >= prev.stars) msg += ' Новий рекорд швидкості!';
   $('resMsg').textContent = msg;
   const errs = Object.entries(run.keys).filter(([, v]) => v.e).sort((a, b) => b[1].e - a[1].e).slice(0, 5);
@@ -296,7 +296,7 @@ $('reportBtn').onclick = () => {
   const sums = Object.keys(LAYOUTS).map(k => {
     const bs = LEVELS[k].map(l => progress.best[k][l.id]).filter(Boolean);
     if (!bs.length) return '';
-    return `<b>${LAYOUTS[k].name}:</b> пройдено ${bs.filter(b => b.stars).length} з ${LEVELS[k].length}, найкраща швидкість ${Math.max(...bs.map(b => b.cpm))} зн/хв, середня точність ${Math.round(bs.reduce((s, b) => s + b.acc, 0) / bs.length)}%`;
+    return `<b>${LAYOUTS[k].name}:</b> пройдено ${bs.filter(b => b.stars).length} з ${LEVELS[k].length}, найкраща швидкість ${Math.max(...bs.map(b => b.cpm))} зн/⁠хв, середня точність ${Math.round(bs.reduce((s, b) => s + b.acc, 0) / bs.length)}%`;
   }).filter(Boolean);
   $('reportSum').innerHTML = sums.length ? sums.join('<br>') : 'Ще немає пройдених рівнів.';
   $('report').hidden = false;
@@ -341,7 +341,7 @@ export async function reportImage(name) {
   for (const k of blocks) {
     const ls = LEVELS[k], bs = ls.map(l => progress.best[k][l.id]).filter(Boolean);
     x.fillStyle = '#1a1d23'; x.font = font(800, 20); x.fillText('Розкладка: ' + LAYOUTS[k].name, PAD, y);
-    const stats = [['Пройдено', `${bs.filter(b => b.stars).length} / ${ls.length}`], ['Найкраща швидкість', bs.length ? Math.max(...bs.map(b => b.cpm)) + ' зн/хв' : '—'], ['Середня точність', bs.length ? Math.round(bs.reduce((s, b) => s + b.acc, 0) / bs.length) + '%' : '—']];
+    const stats = [['Пройдено', `${bs.filter(b => b.stars).length} / ${ls.length}`], ['Найкраща швидкість', bs.length ? Math.max(...bs.map(b => b.cpm)) + ' зн/⁠хв' : '—'], ['Середня точність', bs.length ? Math.round(bs.reduce((s, b) => s + b.acc, 0) / bs.length) + '%' : '—']];
     stats.forEach(([t, v], i) => { const bx = PAD + i * 250; x.fillStyle = '#9ca3af'; x.font = font(600, 13); x.fillText(t, bx, y + 30); x.fillStyle = '#1a1d23'; x.font = font(800, 22); x.fillText(v, bx, y + 58); });
     const weak = weakKeys(k, 8);
     x.fillStyle = '#9ca3af'; x.font = font(600, 13); x.fillText('Слабкі клавіші', PAD + 760, y + 30);
@@ -356,7 +356,7 @@ export async function reportImage(name) {
       x.fillStyle = '#1a1d23'; x.font = font(600, 15); x.fillText(l.name, ox + 30, oy);
       if (b) {
         for (let s = 0; s < 3; s++) { starPath(x, ox + 330 + s * 18, oy - 5, 7); x.fillStyle = s < b.stars ? '#f5b942' : '#e2e5ea'; x.fill(); }
-        x.fillStyle = '#1a1d23'; x.font = font(700, 14, true); x.fillText(`${b.cpm} зн/хв · ${b.acc}%`, ox + 390, oy);
+        x.fillStyle = '#1a1d23'; x.font = font(700, 14, true); x.fillText(`${b.cpm} зн/⁠хв · ${b.acc}%`, ox + 390, oy);
       } else { x.fillStyle = '#b0b6c2'; x.font = font(500, 13); x.fillText('не пройдено', ox + 330, oy); }
     });
     y += half * ROW + 40;
