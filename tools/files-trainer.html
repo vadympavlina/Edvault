@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Файли й папки · Edvault</title>
+<link rel="icon" href="/icons/files-trainer.ico" sizes="32x32">
+<link rel="icon" href="/icons/files-trainer.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/files-trainer-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<script>try { if (localStorage.getItem('edvault-theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}</script>
+<link rel="stylesheet" href="filestrainer/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <button class="brand" id="homeBtn" title="До рівнів">
+    <span class="brand-mark"><span data-icon="folder"></span></span>
+    <span class="brand-text"><b>Файли й папки</b><small>Тренажер провідника: створюйте, переносьте, шукайте</small></span>
+  </button>
+  <span class="grow"></span>
+  <span class="total" id="total"></span>
+  <button class="btn" id="reportBtn"><span data-icon="download"></span><span class="hide-sm">Мої результати</span></button>
+  <button class="icon-btn" id="themeBtn" title="Світла / темна тема"></button>
+</header>
+
+<!-- ═══ Рівні ═══ -->
+<main class="home" id="home">
+  <div class="home-in">
+    <section class="hero">
+      <div class="hero-text">
+        <span class="hero-kicker">Тренажер провідника</span>
+        <h1>Наведіть лад у комп’ютері</h1>
+        <p>Папки, імена, розширення, кошик і пошук. Усе — у безпечному «комп’ютері» в браузері: тут нічого не зламаєш.</p>
+        <button class="btn btn-primary btn-hero" id="continueBtn"></button>
+      </div>
+      <div class="hero-stats">
+        <div class="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="ring-bg"/><circle cx="60" cy="60" r="52" class="ring-fg" id="ringFg"/></svg><div><b id="ringPct">0%</b><span>пройдено</span></div></div>
+        <div class="hero-nums"><div><b id="heroStars">0</b><span>зірок із <i id="heroMax"></i></span></div><div><b id="heroBest">0</b><span>рівнів за найменше кроків</span></div></div>
+      </div>
+    </section>
+    <div id="chapters"></div>
+  </div>
+</main>
+
+<!-- ═══ Гра ═══ -->
+<main class="play" id="play" hidden>
+  <section class="ex-side">
+    <div class="play-head">
+      <button class="btn btn-ghost" id="backBtn"><span data-icon="grid"></span>Усі рівні</button>
+      <div class="play-title"><span id="lvlChapter"></span><b id="lvlName"></b></div>
+      <span class="grow"></span>
+      <button class="btn btn-icon" id="prevBtn" title="Попередній рівень"><span data-icon="left"></span></button>
+      <span class="nav-num" id="navNum"></span>
+      <button class="btn btn-icon" id="nextBtn" title="Наступний рівень"><span data-icon="arrow"></span></button>
+    </div>
+
+    <div class="ex" id="ex">
+      <div class="ex-bar">
+        <button class="ex-nav" id="navBack" title="Назад (Alt+←)"><span data-icon="left"></span></button>
+        <button class="ex-nav" id="navFwd" title="Вперед (Alt+→)"><span data-icon="arrow"></span></button>
+        <button class="ex-nav" id="navUp" title="Вгору (Backspace)"><span data-icon="up"></span></button>
+        <div class="ex-addr" id="addr"></div>
+        <label class="ex-search"><span data-icon="search"></span><input id="search" placeholder="Пошук" autocomplete="off" spellcheck="false"><button class="ex-clear" id="searchClear" title="Очистити пошук" hidden><span data-icon="x"></span></button></label>
+      </div>
+      <div class="ex-cmds" id="cmds">
+        <button class="cmd" data-cmd="newFolder" title="Нова папка (Ctrl+Shift+N)"><span data-icon="folderPlus"></span>Нова папка</button>
+        <span class="cmd-sep"></span>
+        <button class="cmd" data-cmd="cut" title="Вирізати (Ctrl+X)"><span data-icon="scissors"></span>Вирізати</button>
+        <button class="cmd" data-cmd="copy" title="Копіювати (Ctrl+C)"><span data-icon="copy"></span>Копіювати</button>
+        <button class="cmd" data-cmd="paste" title="Вставити (Ctrl+V)"><span data-icon="paste"></span>Вставити</button>
+        <span class="cmd-sep"></span>
+        <button class="cmd" data-cmd="rename" title="Перейменувати (F2)"><span data-icon="pen"></span>Перейменувати</button>
+        <button class="cmd" data-cmd="del" title="Видалити (Delete)"><span data-icon="trash"></span>Видалити</button>
+        <button class="cmd" data-cmd="restore" title="Повернути на місце"><span data-icon="undo"></span>Відновити</button>
+        <button class="cmd" data-cmd="emptyBin" title="Видалити все з кошика назавжди"><span data-icon="trashX"></span>Очистити кошик</button>
+        <span class="grow"></span>
+        <div class="seg" id="viewSeg">
+          <button data-view="icons" title="Значки"><span data-icon="grid"></span></button>
+          <button data-view="details" title="Таблиця з розміром і типом"><span data-icon="list"></span></button>
+        </div>
+      </div>
+      <div class="ex-body">
+        <nav class="ex-tree" id="tree"></nav>
+        <div class="ex-main" id="main" tabindex="0"></div>
+      </div>
+      <div class="ex-status" id="status"></div>
+    </div>
+  </section>
+
+  <aside class="task" id="task">
+    <div class="task-goals">
+      <b class="task-label">Завдання</b>
+      <ul class="goals" id="goals"></ul>
+    </div>
+    <p class="task-hint" id="hint"></p>
+    <div class="task-steps">
+      <div><span>Кроки</span><b id="steps">0</b></div>
+      <div><span>Найкраще</span><b id="par">0</b></div>
+    </div>
+    <div class="task-actions">
+      <button class="btn" id="undoBtn" title="Ctrl+Z"><span data-icon="undo"></span>Скасувати</button>
+      <button class="btn" id="resetBtn"><span data-icon="refresh"></span>Почати заново</button>
+    </div>
+    <details class="keys">
+      <summary>Клавіші й прийоми</summary>
+      <dl>
+        <dt>Двічі клацнути</dt><dd>відкрити папку чи файл</dd>
+        <dt><kbd>Ctrl</kbd> + клацання</dt><dd>виділити кілька</dd>
+        <dt>Тягнути по порожньому</dt><dd>виділити рамкою</dd>
+        <dt><kbd>Ctrl</kbd>+<kbd>A</kbd></dt><dd>виділити все</dd>
+        <dt>Перетягнути на папку</dt><dd>перемістити (з <kbd>Ctrl</kbd> — копіювати)</dd>
+        <dt><kbd>Ctrl</kbd>+<kbd>X</kbd> / <kbd>C</kbd> / <kbd>V</kbd></dt><dd>вирізати / копіювати / вставити</dd>
+        <dt><kbd>F2</kbd></dt><dd>перейменувати</dd>
+        <dt><kbd>Delete</kbd></dt><dd>у кошик</dd>
+        <dt><kbd>Backspace</kbd></dt><dd>на папку вище</dd>
+        <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd></dt><dd>нова папка</dd>
+        <dt>Права кнопка</dt><dd>меню з діями</dd>
+      </dl>
+    </details>
+  </aside>
+</main>
+
+<!-- ═══ Перегляд файлу ═══ -->
+<div class="overlay" id="viewer" hidden>
+  <div class="modal viewer">
+    <div class="modal-head"><span class="viewer-ico" id="viewerIco"></span><h3 id="viewerName"></h3><button class="icon-btn" data-close title="Закрити (Esc)"><span data-icon="x"></span></button></div>
+    <div class="viewer-body" id="viewerBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Підтвердження ═══ -->
+<div class="overlay" id="confirm" hidden>
+  <div class="modal confirm">
+    <div class="confirm-ico"><span data-icon="alert"></span></div>
+    <h3 id="confirmTitle"></h3>
+    <p class="muted" id="confirmText"></p>
+    <div class="modal-actions"><span class="grow"></span><button class="btn" id="confirmNo">Скасувати</button><button class="btn btn-primary" id="confirmYes">Так</button></div>
+  </div>
+</div>
+
+<!-- ═══ Результат ═══ -->
+<div class="overlay" id="result" hidden>
+  <div class="modal result-modal">
+    <div class="res-stars" id="resStars"></div>
+    <h3 class="res-title" id="resTitle">Готово!</h3>
+    <p class="res-msg" id="resMsg"></p>
+    <div class="res-actions">
+      <button class="btn" id="resLevels"><span data-icon="grid"></span>До рівнів</button>
+      <button class="btn" id="resRetry"><span data-icon="refresh"></span>Ще раз</button>
+      <button class="btn btn-primary" id="resNext">Далі<span data-icon="arrow"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Мої результати ═══ -->
+<div class="overlay" id="report" hidden>
+  <div class="modal report">
+    <div class="modal-head"><h3>Мої результати</h3><button class="icon-btn" data-close title="Закрити"><span data-icon="x"></span></button></div>
+    <p class="muted">Завантажте картинку з усіма пройденими рівнями й надішліть її вчителю.</p>
+    <label class="lbl" for="studentName">Ім’я та прізвище, клас</label>
+    <input class="inp" id="studentName" maxlength="80" placeholder="Напр. «Олена Коваленко, 5-А»">
+    <div class="report-sum" id="reportSum"></div>
+    <div class="modal-actions">
+      <button class="link-btn" id="resetProgress">Скинути прогрес</button>
+      <span class="grow"></span>
+      <button class="btn btn-primary" id="downloadReport"><span data-icon="download"></span>Завантажити результати</button>
+    </div>
+  </div>
+</div>
+
+<div class="ctx" id="ctx" hidden></div>
+<div class="toast" id="toast"></div>
+<script type="module" src="filestrainer/js/main.js"></script>
+</body>
+</html>
