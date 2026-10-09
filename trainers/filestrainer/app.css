@@ -217,14 +217,14 @@ html[data-theme="dark"] { --page: #e8ecf1; --page-line: #9aa3b2; --page-fold: #c
 .crumb:hover { background: var(--surface3); color: var(--text); }
 .crumb:last-of-type { color: var(--text); }
 .crumb.q { display: inline-flex; align-items: center; color: var(--accent); }
-.ex-search { flex: none; width: 240px; height: 34px; display: flex; align-items: center; gap: 7px; padding: 0 6px 0 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface2); color: var(--muted); }
+.ex-search { flex: none; width: clamp(170px, 20vw, 240px); height: 34px; display: flex; align-items: center; gap: 7px; padding: 0 6px 0 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface2); color: var(--muted); }
 .ex-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); background: var(--surface); }
 .ex-search svg { width: 15px; height: 15px; flex: none; }
 .ex-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; font-size: 13px; color: var(--text); }
 .ex-clear { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
 .ex-clear:hover { background: var(--surface3); color: var(--text); }
 .ex-clear svg { width: 13px; height: 13px; }
-.ex-cmds { flex: none; display: flex; align-items: center; gap: 2px; padding: 6px 10px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.ex-cmds { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 6px 10px; border-bottom: 1px solid var(--border); }
 .cmd { height: 32px; padding: 0 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--text2); white-space: nowrap; }
 .cmd:hover:not(:disabled) { background: var(--surface2); color: var(--text); }
 .cmd:disabled { opacity: .38; cursor: default; }
