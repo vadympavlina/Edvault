@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Сліпий друк · Edvault</title>
+<link rel="icon" href="/icons/typing-trainer.ico" sizes="32x32">
+<link rel="icon" href="/icons/typing-trainer.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/typing-trainer-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script>try { if (localStorage.getItem('edvault-theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}</script>
+<link rel="stylesheet" href="typingtrainer/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <button class="brand" id="homeBtn" title="До рівнів">
+    <span class="brand-mark"><span data-icon="keyboard"></span></span>
+    <span class="brand-text"><b>Сліпий друк</b><small>Друкуйте всіма пальцями, не дивлячись на клавіатуру</small></span>
+  </button>
+  <span class="grow"></span>
+  <div class="seg" id="layoutSeg" role="group" aria-label="Розкладка"></div>
+  <span class="total" id="total"></span>
+  <button class="btn" id="reportBtn"><span data-icon="download"></span><span class="hide-sm">Мої результати</span></button>
+  <button class="icon-btn" id="themeBtn" title="Світла / темна тема"></button>
+</header>
+
+<!-- ═══ Рівні ═══ -->
+<main class="home" id="home">
+  <div class="home-in">
+    <section class="hero">
+      <div class="hero-text">
+        <span class="hero-kicker">Тренажер сліпого друку</span>
+        <h1>Друкуйте швидко й без помилок</h1>
+        <p>Від двох клавіш на основному ряду до цілих абзаців. Клавіатура на екрані підкаже, яким пальцем натискати, а програма запам’ятає, де ви помиляєтеся.</p>
+        <div class="hero-btns">
+          <button class="btn btn-primary btn-hero" id="continueBtn"></button>
+          <button class="btn btn-hero-ghost" id="customBtn"><span data-icon="text"></span>Свій текст</button>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="ring-bg"/><circle cx="60" cy="60" r="52" class="ring-fg" id="ringFg"/></svg><div><b id="ringPct">0%</b><span>пройдено</span></div></div>
+        <div class="hero-nums"><div><b id="heroCpm">—</b><span>найкраща швидкість, зн/хв</span></div><div><b id="heroAcc">—</b><span>середня точність</span></div></div>
+      </div>
+    </section>
+    <section class="weak" id="weak">
+      <div class="weak-text">
+        <h2>Ваші слабкі клавіші</h2>
+        <p id="weakText"></p>
+        <button class="btn" id="weakBtn"><span data-icon="target"></span>Потренувати слабкі клавіші</button>
+      </div>
+      <div class="kb kb-mini" id="weakKb"></div>
+    </section>
+    <div id="chapters"></div>
+  </div>
+</main>
+
+<!-- ═══ Друк ═══ -->
+<main class="play" id="play" hidden>
+  <div class="play-in">
+    <div class="play-head">
+      <button class="btn btn-ghost" id="backBtn"><span data-icon="grid"></span>Усі рівні</button>
+      <div class="play-title"><span id="lvlChapter"></span><b id="lvlName"></b></div>
+      <span class="grow"></span>
+      <button class="btn btn-icon" id="restartBtn" title="Почати спочатку (Esc)"><span data-icon="undo"></span></button>
+      <button class="btn btn-icon" id="kbToggle" title="Показувати клавіатуру"><span data-icon="keyboard"></span></button>
+    </div>
+    <div class="live">
+      <div><span>Швидкість</span><b id="liveCpm">0</b><small>зн/хв</small></div>
+      <div><span>Точність</span><b id="liveAcc">100</b><small>%</small></div>
+      <div><span>Час</span><b id="liveTime">0:00</b></div>
+      <div class="live-bar"><i id="liveBar"></i></div>
+    </div>
+    <div class="warn" id="layoutWarn" hidden><span data-icon="alert"></span><span id="layoutWarnText"></span></div>
+    <div class="text-box" id="textBox" tabindex="0" aria-label="Текст для друку">
+      <div class="viewport"><div class="text" id="text"></div></div>
+    </div>
+    <div class="finger" id="finger"></div>
+    <div class="kb" id="kb"></div>
+  </div>
+</main>
+
+<!-- ═══ Результат ═══ -->
+<div class="overlay" id="result" hidden>
+  <div class="modal result-modal">
+    <div class="res-stars" id="resStars"></div>
+    <div class="res-big">
+      <div><b id="resCpm">0</b><span>знаків за хвилину</span></div>
+      <div><b id="resAcc">0</b><span>% точність</span></div>
+    </div>
+    <p class="res-msg" id="resMsg"></p>
+    <div class="res-keys" id="resKeys"></div>
+    <div class="res-actions">
+      <button class="btn" id="resLevels"><span data-icon="grid"></span>До рівнів</button>
+      <button class="btn" id="resRetry"><span data-icon="undo"></span>Ще раз</button>
+      <button class="btn btn-primary" id="resNext">Далі<span data-icon="arrow"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Свій текст ═══ -->
+<div class="overlay" id="custom" hidden>
+  <div class="modal">
+    <div class="modal-head"><h3>Свій текст</h3><button class="icon-btn" data-close title="Закрити"><span data-icon="x"></span></button></div>
+    <p class="muted">Вставте будь-який текст — вірш, правило, абзац із підручника. Зірки за нього не рахуються, але швидкість і точність ви побачите.</p>
+    <textarea class="inp area" id="customText" maxlength="3000" placeholder="Вставте або надрукуйте текст…"></textarea>
+    <div class="modal-actions"><span class="grow"></span><button class="btn btn-primary" id="customStart"><span data-icon="play"></span>Друкувати</button></div>
+  </div>
+</div>
+
+<!-- ═══ Мої результати ═══ -->
+<div class="overlay" id="report" hidden>
+  <div class="modal report">
+    <div class="modal-head"><h3>Мої результати</h3><button class="icon-btn" data-close title="Закрити"><span data-icon="x"></span></button></div>
+    <p class="muted">Завантажте картинку з результатами й надішліть її вчителю.</p>
+    <label class="lbl" for="studentName">Ім’я та прізвище, клас</label>
+    <input class="inp" id="studentName" maxlength="80" placeholder="Напр. «Олена Коваленко, 8-Б»">
+    <div class="report-sum" id="reportSum"></div>
+    <div class="modal-actions">
+      <button class="link-btn" id="resetProgress">Скинути прогрес</button>
+      <span class="grow"></span>
+      <button class="btn btn-primary" id="downloadReport"><span data-icon="download"></span>Завантажити результати</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script type="module" src="typingtrainer/js/main.js"></script>
+</body>
+</html>
