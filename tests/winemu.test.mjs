@@ -1,0 +1,143 @@
+// Емулятор Windows: файлова система й командний рядок.
+//   node --test tests/*.test.mjs
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { FS, resolve, wildcard, validName, HOME, binaryText } from '../emulators/windowsemu/js/fs.js';
+import { Cmd, tokenize, wildRename, COMMANDS } from '../emulators/windowsemu/js/cmd.js';
+
+const fresh = () => { const fs = new FS(); const opened = []; const tasks = [{ name: 'notepad.exe', pid: 2210 }]; const c = new Cmd(fs, { live: false, open: (a, p) => opened.push([a, p]), tasks: () => tasks, kill: by => tasks.filter(x => x.name === by.im || x.pid === by.pid) }); return { fs, c, opened }; };
+const run = (c, line) => c.run(line).out.join('\n');
+
+test('шляхи й шаблони', () => {
+  assert.equal(resolve('C:\\Users\\Учень', '..'), 'C:\\Users');
+  assert.equal(resolve('C:\\Users\\Учень', '\\Windows'), 'C:\\Windows');
+  assert.equal(resolve('C:\\Users\\Учень', 'D:\\Фото'), 'D:\\Фото');
+  assert.equal(resolve('C:\\', '..\\..'), 'C:\\');
+  assert.equal(resolve('C:\\Users\\Учень', 'Documents/Школа'), 'C:\\Users\\Учень\\Documents\\Школа');
+  assert.ok(wildcard('*.txt').test('Нотатки.TXT'));
+  assert.ok(!wildcard('?.txt').test('ab.txt'));
+  assert.ok(validName('Нова папка'));
+  for (const bad of ['a/b', 'a:b', 'con', 'x?', 'точка.', '']) assert.ok(!validName(bad), bad);
+  assert.deepEqual(tokenize('copy "Нова папка" D:\\ /y'), ['copy', 'Нова папка', 'D:\\', '/y']);
+  assert.equal(wildRename('Нотатки.txt', '*.md'), 'Нотатки.md');
+  assert.equal(wildRename('a.txt', '*.bak'), 'a.bak');
+});
+
+test('файлова система: створення, перейменування, переміщення, копія, кошик', () => {
+  const fs = new FS();
+  fs.mkdir(HOME + '\\Desktop\\Проєкт\\Код');
+  assert.ok(fs.isDir(HOME + '\\desktop\\проєкт\\код'), 'без урахування регістру');
+  fs.writeFile(HOME + '\\Desktop\\Проєкт\\план.txt', 'рядок');
+  assert.equal(fs.readFile(HOME + '\\Desktop\\Проєкт\\план.txt'), 'рядок');
+  assert.throws(() => fs.mkdir(HOME + '\\Desktop\\Проєкт'), /вже існує/);
+  fs.rename(HOME + '\\Desktop\\Проєкт\\план.txt', 'ідеї.txt');
+  fs.move(HOME + '\\Desktop\\Проєкт\\ідеї.txt', 'D:\\');
+  assert.ok(fs.isFile('D:\\ідеї.txt'));
+  fs.copy('D:\\ідеї.txt', HOME + '\\Documents');
+  assert.ok(fs.isFile(HOME + '\\Documents\\ідеї.txt') && fs.isFile('D:\\ідеї.txt'));
+  assert.throws(() => fs.move(HOME + '\\Desktop\\Проєкт', HOME + '\\Desktop\\Проєкт\\Код'), /саму в себе/);
+  assert.throws(() => fs.remove('C:\\Windows', { recursive: true }), /Відмовлено/);
+  assert.throws(() => fs.rename(HOME + '\\Documents', 'Доки'), /Відмовлено/);
+  fs.recycle(HOME + '\\Desktop\\Проєкт');
+  assert.equal(fs.s.bin.length, 1);
+  assert.ok(!fs.node(HOME + '\\Desktop\\Проєкт'));
+  fs.restore(fs.s.bin[0].id);
+  assert.ok(fs.isDir(HOME + '\\Desktop\\Проєкт\\Код'));
+  const json = JSON.parse(JSON.stringify(fs.s));
+  assert.ok(new FS(json).isDir(HOME + '\\Desktop\\Проєкт'), 'стан зберігається як JSON');
+  assert.ok(binaryText(fs.node('D:\\Фото\\Осінь.jpg')).length > 20);
+});
+
+test('cmd: dir, cd, md, rd, ren, move, copy, del, type, echo > файл', () => {
+  const { fs, c } = fresh();
+  assert.match(run(c, 'dir'), /Вміст папки C:\\Users\\Учень[\s\S]*<DIR>\s+Documents/);
+  assert.doesNotMatch(run(c, 'dir'), /desktop\.ini/, 'приховані не видно');
+  assert.match(run(c, 'dir /a'), /desktop\.ini/);
+  run(c, 'cd Documents');
+  assert.equal(c.prompt, 'C:\\Users\\Учень\\Documents>');
+  assert.equal(run(c, 'dir /b'), 'Нотатки.txt\nРеферат з історії.docx\nШкола');
+  assert.equal(run(c, 'dir /b /ad'), 'Школа');
+  run(c, 'md "Нова папка" Проєкти\\2026');
+  assert.ok(fs.isDir(HOME + '\\Documents\\Нова папка') && fs.isDir(HOME + '\\Documents\\Проєкти\\2026'));
+  assert.match(run(c, 'md Школа'), /вже існує/);
+  run(c, 'echo Перший рядок > план.txt'); run(c, 'echo Другий >> план.txt');
+  assert.equal(fs.readFile(HOME + '\\Documents\\план.txt'), 'Перший рядок\r\nДругий\r\n');
+  assert.equal(run(c, 'type план.txt'), 'Перший рядок\nДругий\n');
+  run(c, 'ren план.txt "План дня.txt"');
+  assert.ok(fs.isFile(HOME + '\\Documents\\План дня.txt'));
+  assert.match(run(c, 'copy "План дня.txt" D:\\'), /Скопійовано файлів: 1/);
+  assert.match(run(c, 'move *.txt Школа'), /Переміщено файлів: 2/);
+  assert.ok(fs.isFile(HOME + '\\Documents\\Школа\\Нотатки.txt'));
+  run(c, 'cd ..');
+  assert.equal(c.cwd, HOME);
+  run(c, 'cd \\'); assert.equal(c.cwd, 'C:\\');
+  run(c, 'D:'); assert.equal(c.cwd, 'D:\\');
+  run(c, 'cd /d C:\\Users\\Учень\\Documents');
+  assert.match(run(c, 'rd "Нова папка"'), /^$/);
+  assert.ok(!fs.node(HOME + '\\Documents\\Нова папка'));
+  assert.match(run(c, 'rd Проєкти'), /Каталог не порожній/);
+  const r = c.run('rd /s Проєкти');
+  assert.ok(r.ask); assert.match(r.out.join(''), /Ви впевнені \(Y\/N\)/);
+  c.run('y');
+  assert.ok(!fs.node(HOME + '\\Documents\\Проєкти'));
+  run(c, 'del /q Школа\\Нотатки.txt');
+  assert.ok(!fs.node(HOME + '\\Documents\\Школа\\Нотатки.txt'));
+  assert.equal(fs.s.bin.length, 0, 'del видаляє назавжди, не в Кошик');
+  assert.match(run(c, 'del C:\\Windows\\win.ini'), /Відмовлено в доступі/);
+  assert.match(run(c, 'cd НемаТакої'), /не вдається знайти вказаний шлях/);
+  assert.match(run(c, 'привіт'), /не є внутрішньою або зовнішньою/);
+});
+
+test('cmd: перезапис, xcopy, tree, find, sort, attrib, set, конвеєри й ланцюжки', () => {
+  const { fs, c } = fresh();
+  run(c, 'cd Documents');
+  run(c, 'copy Нотатки.txt Школа');
+  const r = c.run('copy Нотатки.txt Школа');
+  assert.ok(r.ask); assert.match(r.out.join(''), /Перезаписати .*\(Yes\/No\/All\)/);
+  assert.match(c.run('y').out.join(''), /Скопійовано файлів: 1/);
+  assert.match(run(c, 'xcopy Школа D:\\Копія /e /i'), /Скопійовано файлів: 3/);
+  assert.ok(fs.isFile('D:\\Копія\\Розклад.txt'));
+  assert.match(run(c, 'tree /f'), /└───Школа[\s\S]*Розклад\.txt/);
+  assert.equal(run(c, 'find "Вівторок" Школа\\Розклад.txt').split('\n').at(-1), 'Вівторок: англійська, біологія, інформатика');
+  assert.equal(run(c, 'dir /b | find ".txt"'), 'Нотатки.txt');
+  assert.equal(run(c, 'dir /b | sort /r').split('\n')[0], 'Школа');
+  assert.equal(run(c, 'mkdir A && echo створено'), 'створено');
+  assert.equal(run(c, 'cd Нема && echo так || echo ні').split('\n').at(-1), 'ні');
+  run(c, 'attrib +r Нотатки.txt');
+  assert.match(run(c, 'del Нотатки.txt'), /Відмовлено в доступі/);
+  assert.match(run(c, 'attrib Нотатки.txt'), /R\s+C:\\Users\\Учень\\Documents\\Нотатки\.txt/);
+  run(c, 'attrib +h Школа');
+  assert.doesNotMatch(run(c, 'dir /b'), /Школа/);
+  run(c, 'set ім’я=Олена');
+  assert.equal(run(c, 'echo Привіт, %ім’я%! Ти %USERNAME%'), 'Привіт, Олена! Ти Учень');
+  run(c, 'type nul > порожній.txt');
+  assert.equal(fs.readFile(HOME + '\\Documents\\порожній.txt'), '');
+  assert.match(run(c, 'ren *.txt *.md'), /^$/);
+  assert.ok(fs.isFile(HOME + '\\Documents\\порожній.md'));
+});
+
+test('cmd: програми, довідка, доповнення', () => {
+  const { c, opened } = fresh();
+  run(c, 'notepad Documents\\Нотатки.txt'); run(c, 'start .'); run(c, 'explorer D:\\');
+  assert.deepEqual(opened, [['notepad', HOME + '\\Documents\\Нотатки.txt'], ['explorer', HOME], ['explorer', 'D:\\']]);
+  assert.match(run(c, 'tasklist'), /notepad\.exe\s+2210/);
+  assert.match(run(c, 'taskkill /im notepad.exe'), /УСПІХ/);
+  assert.ok(c.run('exit').exit);
+  assert.ok(c.run('cls').clear);
+  assert.match(run(c, 'help'), /XCOPY/);
+  assert.match(run(c, 'dir /?'), /Приклади:/);
+  assert.ok(COMMANDS.length >= 40, 'команд: ' + COMMANDS.length);
+  assert.equal(c.complete('cd Doc'), 'cd Documents');
+  assert.equal(c.complete('type Desktop\\При'), 'type Desktop\\Привіт.txt');
+  assert.equal(c.complete('xco'), 'xcopy ');
+  assert.match(run(c, 'ping edvault.online'), /отримано = 4/);
+  assert.match(run(c, 'ping -n 2 -l 64 192.168.1.1'), /число байтів=64[\s\S]*надіслано = 2/);
+  assert.match(run(c, 'ping 192.168.1.99'), /Час очікування запиту минув[\s\S]*втрачено = 4/);
+  assert.match(run(c, 'ping нема.такого'), /не змогла знайти вузол/);
+  const live = new Cmd(new FS(), {});
+  const r = live.run('ping -t google.com');
+  assert.ok(r.stream && r.stream.next() && r.stream.next(), 'потік відповідей');
+  assert.match(r.stream.stop().join('\n'), /надіслано = 2[\s\S]*\^C/);
+  assert.match(run(c, 'ipconfig'), /192\.168\.1\.27/);
+  assert.equal(run(c, 'whoami'), 'school-pc\\учень');
+});
