@@ -1,7 +1,7 @@
 // Мережі · Edvault — пам’ятка, жива схема мережі (кабелі мишкою, налаштування пристроїв, ping),
 // перевірка цілей з анімацією пакетів, запитання, прогрес і результати для вчителя.
 import { CHAPTERS, LEVELS } from './levels.js';
-import { MASKS, parseIp, isHost, devOf, portOf, canLink, effective, ping, checkGoals, goalLabel, netStars, starsFor, cloneNet, usedBy, applyOp } from './logic.js';
+import { MASKS, parseIp, isHost, devOf, portOf, canLink, effective, ping, checkGoals, netStars, starsFor, cloneNet, usedBy, applyOp } from './logic.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -184,7 +184,10 @@ function renderInspector() {
   const box = $('insp'); if (!box) return;
   const d = sel && dev(sel);
   if (!d) {
-    box.innerHTML = `<div class="insp-empty">${icon('cursor')}<p>Клацніть по пристрою на схемі, щоб побачити й змінити його налаштування.</p></div>`;
+    const types = Object.keys(TYPE_NAME).filter(t => net.devices.some(x => x.type === t));
+    const WHAT = { pc: 'комп’ютер учня', laptop: 'ноутбук', server: 'зберігає сайти й дані', printer: 'друкує для всіх', switch: 'з’єднує пристрої в одну мережу', router: 'з’єднує різні мережі й інтернет', cloud: 'сайти й DNS-сервери' };
+    box.innerHTML = `<div class="insp-empty">${icon('cursor')}<p>Клацніть по пристрою на схемі, щоб побачити й змінити його налаштування.</p></div>
+      <ul class="legend">${types.map(t => `<li class="t-${t}">${icon(t === 'cloud' ? 'cloud' : t)}<span><b>${TYPE_NAME[t]}</b> — ${WHAT[t]}</span></li>`).join('')}</ul>`;
     return;
   }
   const head = `<div class="insp-head"><span class="insp-ic t-${d.type}">${icon(d.type === 'cloud' ? 'cloud' : d.type)}</span><div><b>${esc(d.name)}</b>${d.name === TYPE_NAME[d.type] ? '' : `<small>${TYPE_NAME[d.type]}</small>`}</div></div>`;
@@ -269,11 +272,16 @@ function animate(list, done) {
 }
 
 /* ═════════ Цілі ═════════ */
+// кінець маршруту: пристрій зі схеми або сайт / адреса в інтернеті
+function goalEnd(to) {
+  const d = dev(to);
+  return d ? `<span class="g-end t-${d.type}">${icon(d.type === 'cloud' ? 'cloud' : d.type)}<b>${esc(d.name)}</b></span>` : `<span class="g-end t-cloud">${icon('globe')}<b class="mono">${esc(to)}</b></span>`;
+}
 function renderGoals() {
   const ul = $('goalList'); if (!ul) return;
   ul.innerHTML = level.goals.map((g, i) => {
     const r = results?.[i];
-    return `<li class="${r ? (r.ok ? 'ok' : 'bad') : ''}"><span class="g-ic">${r ? icon(r.ok ? 'check' : 'x') : icon('mail')}</span><div><b>${esc(goalLabel(net, g))}</b>${r ? `<span>${esc(r.reason)}</span>` : ''}</div></li>`;
+    return `<li class="${r ? (r.ok ? 'ok' : 'bad') : ''}"><div class="g-top"><span class="g-route">${goalEnd(g.from)}<span class="g-to"><span class="g-arrow">${icon('arrow')}</span>${goalEnd(g.to)}</span></span><span class="g-ic" title="${r ? (r.ok ? 'Працює' : 'Не працює') : 'Ще не перевірено'}">${r ? icon(r.ok ? 'check' : 'x') : icon('mail')}</span></div>${r ? `<p class="g-why">${esc(r.reason)}</p>` : ''}</li>`;
   }).join('');
   renderDots();
 }
@@ -299,7 +307,6 @@ function openLevel(i) {
   if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   cur = i; level = LEVELS[i]; scores = [];
   $('home').hidden = true; $('play').hidden = false; $('result').hidden = true;
-  $('play').classList.toggle('wide', level.kind === 'net');
   $('lvlChapter').textContent = CHAPTERS.find(c => c.id === level.chapter).name;
   $('lvlName').textContent = `${i + 1}. ${level.name}`;
   $('lvlHint').innerHTML = tipsHtml(); $('lvlHint').hidden = true; $('tipsBtn').classList.remove('on');
@@ -312,6 +319,7 @@ function openLevel(i) {
 const tipsHtml = () => `<ul class="tips">${level.tips.map(([ic, t]) => `<li><span class="tip-ico">${icon(ic)}</span><span>${t}</span></li>`).join('')}</ul>`;
 function showIntro() {
   ti = -1; task = null; answered = false; results = null; animId++;
+  $('play').classList.remove('wide');
   $('feedback').hidden = true; $('tipsBtn').hidden = true;
   $('stage').className = 'stage intro';
   const n = level.kind === 'net' ? level.goals.length : level.tasks.length;
@@ -335,6 +343,7 @@ function renderDots() {
 function showNet() {
   net = cloneNet(level); edits = new Set(level.edit.split(' ')); sel = null; results = null; pingLog = []; answered = false;
   st = { fails: 0, hint: false };
+  $('play').classList.add('wide');
   $('feedback').hidden = true; $('tipsBtn').hidden = false;
   $('stage').className = 'stage k-net';
   $('stage').innerHTML = `<h2 class="q">${esc(level.task)}</h2>
