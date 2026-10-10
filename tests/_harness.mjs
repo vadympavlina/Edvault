@@ -40,3 +40,13 @@ export async function step(name, fn) {
   try { await fn(); console.log('ok  ', ++n, name); }
   catch (e) { console.log('FAIL', ++n, name, '\n   ', (e && e.message || String(e)).split('\n').slice(0, 4).join('\n    ')); process.exitCode = 1; }
 }
+
+// Вхід у Windows-емулятор (екран блокування: admin / admin)
+export async function signIn(p) {
+  await p.locator('#lock .lk-face').waitFor();
+  await p.locator('#lock').click();
+  await p.fill('#lock .lk-user', 'admin');
+  await p.fill('#lock .lk-pass', 'admin');
+  await p.press('#lock .lk-pass', 'Enter');
+  await p.waitForSelector('#lock', { state: 'hidden' });
+}

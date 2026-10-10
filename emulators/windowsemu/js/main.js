@@ -10,6 +10,8 @@ import { fwOf, record, evaluate, PROFILES, PROGRAMS } from './fw.js';
 import { installProps } from './props.js';
 import { procState, SYS_PROCS, appInfo } from './procs.js';
 import { installRealtime, avStatus } from './defender.js';
+import { primary, reach, syncNET, WIFI } from './net.js';
+import { installLock } from './lock.js';
 
 const lc = s => s.toLocaleLowerCase('uk');
 const KEY = 'edvault-windows';
@@ -65,11 +67,12 @@ sys.open = (app, path) => {
   if (LAZY[app]) return openLazy(app, path);
 };
 // великі програми підвантажуються, коли знадобляться (і заздалегідь — у вільний час після старту)
-const LAZY = { taskmgr: () => import('./taskmgr.js'), settings: () => import('./settings.js'), browser: () => import('./browser.js'), security: () => import('./firewall.js'), firewallcpl: () => import('./firewall.js'), wfmsc: () => import('./wfmsc.js') };
+const LAZY = { taskmgr: () => import('./taskmgr.js'), settings: () => import('./settings.js'), browser: () => import('./browser.js'), security: () => import('./firewall.js'), firewallcpl: () => import('./firewall.js'), wfmsc: () => import('./wfmsc.js'), ncpa: () => import('./netui.js') };
 async function openLazy(app, path) {
   const m = await LAZY[app]();
   if (app === 'taskmgr') { const w = WM.wins.find(x => x.app === 'taskmgr'); if (w) return WM.focus(w); return new m.TaskManager(sys, path || 'proc'); }
-  if (app === 'settings') { const w = WM.wins.find(x => x.app === 'settings'); if (w) return WM.focus(w); return new m.SettingsApp(sys); }
+  if (app === 'settings') { const w = WM.wins.find(x => x.app === 'settings'); if (w) { WM.focus(w); if (path) w.app_?.go(path); return w.app_; } const a = new m.SettingsApp(sys, path); a.win.app_ = a; return a; }
+  if (app === 'ncpa') { const w = WM.wins.find(x => x.app === 'ncpa'); if (w) return WM.focus(w); return new m.NetConnections(sys); }
   if (app === 'browser') { const w = WM.active()?.app === 'browser' ? WM.active() : WM.wins.filter(x => x.app === 'browser').sort((a, b) => b.z - a.z)[0]; if (w && path) { WM.focus(w); w.browser.newTab(); w.browser.go(path); return w.browser; } if (w && !path) return WM.focus(w); const b = new m.Browser(sys, path); b.win.browser = b; return b; }
   if (app === 'security') { const w = WM.wins.find(x => x.app === 'security'); if (w) { WM.focus(w); w.app_?.go(path || 'firewall'); return; } const a = new m.SecurityApp(sys, path || 'home'); a.win.app_ = a; return a; }
   if (app === 'firewallcpl') { const w = WM.wins.find(x => x.app === 'firewallcpl'); if (w) { WM.focus(w); w.app_?.go(path || 'main'); return; } const a = new m.FirewallCpl(sys, path || 'main'); a.win.app_ = a; return a; }
@@ -103,7 +106,7 @@ sys.openFile = async p => {
 // «Виконати…» з Диспетчера завдань
 sys.run = (t, admin) => {
   const a = t.trim().replace(/^"|"$/g, ''), k = lc(a).replace(/\.exe$/, '');
-  const map = { cmd: admin ? 'cmd-admin' : 'cmd', notepad: 'notepad', explorer: 'explorer', taskmgr: 'taskmgr', browser: 'browser', msedge: 'browser', chrome: 'browser', 'wf.msc': 'wfmsc', wfmsc: 'wfmsc', 'firewall.cpl': 'firewallcpl', 'ms-settings:': 'settings', control: 'firewallcpl', calc: null };
+  const map = { cmd: admin ? 'cmd-admin' : 'cmd', notepad: 'notepad', explorer: 'explorer', taskmgr: 'taskmgr', browser: 'browser', msedge: 'browser', chrome: 'browser', 'wf.msc': 'wfmsc', wfmsc: 'wfmsc', 'ncpa.cpl': 'ncpa', ncpa: 'ncpa', 'firewall.cpl': 'firewallcpl', 'ms-settings:': 'settings', control: 'firewallcpl', calc: null };
   if (k in map && map[k]) { sys.open(map[k]); return true; }
   if (/^(https?:\/\/|www\.)/i.test(a) || /^\d+\.\d+\.\d+\.\d+$/.test(a)) { sys.open('browser', a); return true; }
   if (/^[a-z]:/i.test(a) && fs.node(a)) { sys.openFile(fs.real(a)); return true; }
@@ -398,6 +401,21 @@ function renderShield() {
 $('#fwTray').addEventListener('click', () => { const av = avStatus(fs); sys.open('security', av.bad ? 'virus' : PROFILES.some(p => !fwOf(fs).profiles[p].on) ? 'firewall' : 'home'); });
 fs.on(w => { if (w === 'fw' || w === 'reset' || w === 'av') renderShield(); });
 installRealtime(sys);
+
+/* ═════════ Мережа: значок у треї ═════════ */
+const NOWIFI = '<path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M5 12.86a10 10 0 0 1 14 0M2 8.82a15 15 0 0 1 20 0" opacity=".3"/>';
+function renderNet() {
+  syncNET(fs);
+  const a = primary(fs), inet = a && reach(fs, '8.8.8.8').ok, b = $('#netTray');
+  const lvl = a?.id === 'wifi' ? WIFI.find(w => w.ssid === a.ssid)?.signal || 0 : 0;
+  const glyph = !a ? `${NOWIFI}<path d="m4 4 16 16"/>` : a.id === 'eth' ? '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>' : ['M12 20h.01', 'M8.5 16.43a5 5 0 0 1 7 0', 'M5 12.86a10 10 0 0 1 14 0', 'M2 8.82a15 15 0 0 1 20 0'].map((d, i) => `<path d="${d}"${i < lvl ? '' : ' opacity=".3"'}/>`).join('');
+  b.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg>${a && !inet ? '<i class="warn-dot">!</i>' : ''}`;
+  b.title = !a ? 'Немає підключення до Інтернету' : `${a.ssid || a.net.name}\n${inet ? 'Доступ до Інтернету' : 'Немає доступу до Інтернету'}`;
+}
+$('#netTray').addEventListener('click', async e => { const b = e.currentTarget, m = await import('./netui.js'); m.toggleNetFlyout(sys, b); });
+const netLater = batched(renderNet);
+fs.on(w => { if (w === 'net' || w === 'reset') netLater(); });
+renderNet();
 sys.closeAll = () => WM.wins.slice().forEach(w => w.close(true));
 renderShield();
 // Інші комп’ютери шкільної мережі час від часу «стукають» до цього ПК — події видно в «Спостереженні»
@@ -410,7 +428,7 @@ const KNOCKS = [
 ];
 let knock = 0;
 setInterval(() => {
-  if (document.hidden) return;
+  if (document.hidden || !primary(fs)) return;
   const pkt = { dir: 'in', ...KNOCKS[knock++ % KNOCKS.length] };
   record(fs, pkt, evaluate(fwOf(fs), pkt));
 }, 17000);
@@ -435,14 +453,14 @@ const START_PINS = [
 let startOpen = false;
 function openStart() {
   startOpen = true; $('#start').hidden = false; $('#startBtn').classList.add('on');
-  $('#stQ').value = ''; renderStart(); setTimeout(() => $('#stQ').focus(), 20);
+  $('#stQ').value = ''; renderStart(); $('#stQ').focus(); setTimeout(() => { if (startOpen && !$('#start').contains(document.activeElement)) $('#stQ').focus(); }, 20);
 }
 function closeStart() { if (!startOpen) return; startOpen = false; $('#start').hidden = true; $('#startBtn').classList.remove('on'); }
 sys.closeStart = closeStart;
 function searchAll(q) {
   const out = [], lq = lc(q);
-  const apps = [['Провідник', 'explorer', ['explorer', 'провідник', 'файли']], ['Командний рядок', 'cmd', ['cmd', 'командний', 'консоль', 'термінал']], ['Блокнот', 'notepad', ['notepad', 'блокнот', 'текст']], ['Кошик', 'bin', ['кошик', 'recycle']], ['Безпека Windows', 'security', ['безпека', 'захисник', 'defender', 'security', 'антивірус']], ['Брандмауер Захисника Windows', 'firewallcpl', ['брандмауер', 'firewall', 'фаєрвол', 'файрвол', 'мережевий екран']], ['Брандмауер у режимі підвищеної безпеки', 'wfmsc', ['wf.msc', 'wf', 'брандмауер', 'firewall', 'правила', 'додаткові']], ['Командний рядок (адміністратор)', 'cmd-admin', ['cmd', 'адміністратор', 'admin']], ['Браузер', 'browser', ['браузер', 'browser', 'інтернет', 'edge', 'chrome', 'сайт', 'роутер']], ['Диспетчер завдань', 'taskmgr', ['диспетчер', 'taskmgr', 'task manager', 'процеси', 'служби']], ['Параметри', 'settings', ['параметри', 'налаштування', 'settings', 'скинути', 'відновлення']]];
-  for (const [t, a, keys] of apps) if (keys.some(k => k.startsWith(lq) || lc(t).includes(lq))) out.push({ t, sub: 'Застосунок', icon: appIcon({ bin: 'bin', wfmsc: 'firewall', firewallcpl: 'firewall', 'cmd-admin': 'cmd' }[a] || a, 24), on: () => sys.open(a) });
+  const apps = [['Провідник', 'explorer', ['explorer', 'провідник', 'файли']], ['Командний рядок', 'cmd', ['cmd', 'командний', 'консоль', 'термінал']], ['Блокнот', 'notepad', ['notepad', 'блокнот', 'текст']], ['Кошик', 'bin', ['кошик', 'recycle']], ['Безпека Windows', 'security', ['безпека', 'захисник', 'defender', 'security', 'антивірус']], ['Брандмауер Захисника Windows', 'firewallcpl', ['брандмауер', 'firewall', 'фаєрвол', 'файрвол', 'мережевий екран']], ['Брандмауер у режимі підвищеної безпеки', 'wfmsc', ['wf.msc', 'wf', 'брандмауер', 'firewall', 'правила', 'додаткові']], ['Командний рядок (адміністратор)', 'cmd-admin', ['cmd', 'адміністратор', 'admin']], ['Браузер', 'browser', ['браузер', 'browser', 'інтернет', 'edge', 'chrome', 'сайт', 'роутер']], ['Диспетчер завдань', 'taskmgr', ['диспетчер', 'taskmgr', 'task manager', 'процеси', 'служби']], ['Параметри', 'settings', ['параметри', 'налаштування', 'settings', 'скинути', 'відновлення', 'обліковий', 'пароль']], ['Мережеві підключення', 'ncpa', ['мережа', 'мережеві', 'ncpa', 'адаптер', 'ethernet', 'ip', 'wi-fi', 'wifi', 'інтернет']], ['Мережа й Інтернет', 'settings:network', ['мережа', 'інтернет', 'wi-fi', 'wifi', 'діагностика']]];
+  for (const [t, a, keys] of apps) if (keys.some(k => k.startsWith(lq) || lc(t).includes(lq))) out.push({ t, sub: 'Застосунок', icon: appIcon({ bin: 'bin', wfmsc: 'firewall', firewallcpl: 'firewall', 'cmd-admin': 'cmd', 'settings:network': 'ncpa' }[a] || a, 24), on: () => a === 'settings:network' ? sys.open('settings', 'network') : sys.open(a) });
   const walk = (p, depth) => { if (depth > 8 || out.length > 14) return; for (const c of fs.list(p)) { const cp = p.replace(/\\$/, '') + '\\' + c.name; if (lc(c.name).includes(lq)) out.push({ t: c.name, sub: parentPath(cp), icon: nodeIcon(c, cp, 24), on: () => sys.openFile(cp) }); if (c.type === 'dir' && !c.attrs.s) walk(cp, depth + 1); } };
   walk(HOME, 0); walk('D:\\', 0);
   return out.slice(0, 9);
@@ -468,6 +486,12 @@ $('#start').addEventListener('click', e => {
   const p = e.target.closest('[data-p]'); if (p) { closeStart(); START_PINS[+p.dataset.p].on(); return; }
   const r = e.target.closest('[data-r]'); if (r) { closeStart(); sys.startRes[+r.dataset.r].on(); return; }
   const o = e.target.closest('[data-open]'); if (o) { closeStart(); sys.openFile(o.dataset.open); return; }
+  if (e.target.closest('.st-user')) {
+    const b = e.target.closest('.st-user');
+    menu(0, 0, [{ t: 'Змінити параметри облікового запису', icon: 'person', on: () => { closeStart(); sys.open('settings', 'accounts'); } }, '-', { t: 'Заблокувати', icon: 'lock', on: () => { closeStart(); sys.lock(); } }, { t: 'Вийти', icon: 'logout', on: () => { closeStart(); sys.signOut(); } }], { anchor: b });
+    const m = document.querySelector('.cm-root'); if (m) { const r = m.getBoundingClientRect(), a = b.getBoundingClientRect(); m.style.top = (a.top - r.height - 6) + 'px'; m.style.left = a.left + 'px'; }
+    return;
+  }
   if (e.target.closest('#powerBtn')) {
     menu(0, 0, [{ t: 'Перезавантажити', icon: 'refresh', on: () => reboot() }, '-', { t: 'Скинути комп’ютер до початкового стану…', icon: 'restore', on: () => resetAll() }], { anchor: e.target.closest('#powerBtn') });
     const m = document.querySelector('.cm-root'); if (m) { const r = m.getBoundingClientRect(), a = $('#powerBtn').getBoundingClientRect(); m.style.top = (a.top - r.height - 6) + 'px'; m.style.left = (a.right - r.width) + 'px'; }
@@ -480,6 +504,7 @@ async function reboot() {
   if (WM.wins.length) return;
   sys.procs = procState(); sys.trayShield(true); sys.routerSession = null;
   $('#boot').hidden = false; $('#boot').classList.add('on');
+  sys.lock();
   setTimeout(() => { $('#boot').classList.remove('on'); setTimeout(() => { $('#boot').hidden = true; }, 400); }, 1400);
 }
 async function resetAll() {
@@ -504,7 +529,7 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.key === 'Escape') { e.preventDefault(); startOpen ? closeStart() : openStart(); }
 });
 $('#taskbar').addEventListener('contextmenu', e => {
-  if (e.target.closest('#tbApps [data-app], #startBtn, .tray, #fwTray, #clock')) return;
+  if (e.target.closest('#tbApps [data-app], #startBtn, .tray, #fwTray, #netTray, #clock')) return;
   e.preventDefault();
   menu(e.clientX, e.clientY, [{ t: 'Диспетчер завдань', icon: appIcon('taskmgr', 16), on: () => sys.open('taskmgr') }, { t: 'Параметри', icon: appIcon('settings', 16), on: () => sys.open('settings') }]);
   const m = document.querySelector('.cm-root'); if (m) { const r = m.getBoundingClientRect(); m.style.top = (innerHeight - 52 - r.height) + 'px'; }
@@ -512,15 +537,20 @@ $('#taskbar').addEventListener('contextmenu', e => {
 document.addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea, .con')) e.preventDefault(); });
 
 /* ═════════ Старт ═════════ */
+installLock(sys);
+sys.lock();
 desktop.bind();
 desktop.render();
 renderTaskbar();
 setTimeout(() => { $('#boot').classList.remove('on'); setTimeout(() => { $('#boot').hidden = true; }, 400); }, 700);
-window.WinEmu = { fs, sys, WM, desktop, open: sys.open, openStart, closeStart };
+window.WinEmu = { fs, sys, WM, desktop, open: sys.open, openStart, closeStart, lock: () => sys.lock() };
 (window.requestIdleCallback || setTimeout)(() => sys.preload().catch(() => {}));
 if (broken) setTimeout(() => sys.toast('Збережений стан комп’ютера був пошкоджений, тому його повернуто до початкового.'), 1200);
 // емулятор — одна сторінка: жодна форма чи посилання не повинні переводити зі сторінки (і губити відкриті вікна)
 document.addEventListener('submit', e => e.preventDefault());
+// Alt+← / Alt+→ і бокові кнопки мишки керують «Назад/Вперед» усередині емулятора (Браузер, Провідник), а не виводять зі сторінки
+document.addEventListener('keydown', e => { if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') || e.key === 'BrowserBack' || e.key === 'BrowserForward') e.preventDefault(); });
+for (const t of ['mouseup', 'mousedown']) document.addEventListener(t, e => { if (e.button === 3 || e.button === 4) e.preventDefault(); });
 // натискання на вимкнену кнопку (зокрема на її іконку) ніколи не виконує дію
 for (const t of ['click', 'dblclick', 'auxclick']) document.addEventListener(t, e => { if (e.target.closest?.('button:disabled, .ma.off, .cm-it.off')) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 document.addEventListener('click', e => { if (e.target.closest?.('a[href]')) e.preventDefault(); });

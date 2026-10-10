@@ -188,7 +188,7 @@ export class FirewallCpl {
     const row = e.target.closest('[data-ai]'); if (row && !e.target.closest('input')) { this.selApp = +row.dataset.ai; return this.render(); }
     if (e.target.closest('[data-unlock]')) { if (await elevate('Брандмауер Захисника Windows', appIcon('firewall', 32))) { this.unlocked = true; this.draft = { apps: JSON.parse(JSON.stringify(allowedApps(fw))) }; this.render(); } return; }
     if (e.target.closest('[data-details]')) { const ap = (this.draft?.apps || allowedApps(fw))[this.selApp]; if (ap) alertBox(`${ap.name}\n\nПравил: ${ap.rules.length}.\n${ap.rules.map(r => '• ' + r.name.trim()).join('\n')}\n\n${ap.rules[0]?.desc || ''}`, 'Відомості про програму', 'info'); return; }
-    if (e.target.closest('[data-remove]')) { if (!this.draft || !this.unlocked) return; const ap = this.draft.apps[this.selApp]; if (!ap) return; if (await dialog({ title: 'Видалити програму', icon: 'question', text: `Видалити «${ap.name}» зі списку дозволених програм?`, buttons: [{ t: 'Так', v: true, primary: true }, { t: 'Ні', v: false, cancel: true }] })) { ap.removed = true; this.draft.apps.splice(this.selApp, 1); (this.draft.removed ||= []).push(ap.key); this.selApp = null; this.render(); } return; }
+    if (e.target.closest('[data-remove]')) { if (!this.draft || !this.unlocked) return; const ap = this.draft.apps[this.selApp]; if (!ap) return; if (await dialog({ title: 'Видалити програму', icon: 'question', text: `Видалити «${ap.name}» зі списку дозволених програм?`, buttons: [{ t: 'Так', v: true, primary: true }, { t: 'Ні', v: false, cancel: true }] }) && this.draft?.apps.includes(ap)) { ap.removed = true; this.draft.apps.splice(this.draft.apps.indexOf(ap), 1); (this.draft.removed ||= []).push(ap.key); this.selApp = null; this.render(); } return; }
     if (e.target.closest('[data-addapp]')) return this.draft && this.unlocked ? this.addApp() : undefined;
     if (e.target.closest('[data-ok]')) {
       if (this.page === 'allow') {
@@ -235,6 +235,7 @@ export class FirewallCpl {
         const name = known.find(k => k[1].toLowerCase() === path.toLowerCase())?.[0] || path.split('\\').pop().replace(/\.exe$/i, '');
         const nets = api.$('[data-nets]').value, profiles = nets === 'both' ? ['private', 'public'] : [nets];
         const r = { id: newId(fw), name, desc: 'Додано через «Дозволити іншу програму».', group: '', dir: 'in', enabled: true, action: 'allow', profiles, program: path, service: 'any', protocol: 'any', localPorts: 'any', remotePorts: 'any', icmp: 'any', localAddr: 'any', remoteAddr: 'any', edge: 'block', iface: 'all', predefined: false };
+        if (!this.draft || !this.win.el.isConnected) return;
         this.draft.apps.push({ key: name, name, rules: [r], custom: true, private: profiles.includes('private'), public: profiles.includes('public'), added: r });
         this.render();
       },

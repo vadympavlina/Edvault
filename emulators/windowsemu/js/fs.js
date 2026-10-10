@@ -3,6 +3,8 @@
 // атрибути «прихований» (h) і «лише читання» (r), захищені системні папки, Кошик.
 
 export const USER = 'Учень';
+// обліковий запис для входу: ім’я admin, пароль admin; звичайний користувач (не адміністратор)
+export const LOGIN = 'admin', LOGIN_PASS = 'admin';
 export const HOME = 'C:\\Users\\' + USER;
 // Відомі папки: справжня назва → як їх показує Провідник
 export const KNOWN = { Desktop: 'Робочий стіл', Documents: 'Документи', Downloads: 'Завантаження', Pictures: 'Зображення', Music: 'Музика', Videos: 'Відео' };

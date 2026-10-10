@@ -29,6 +29,6 @@ export function uac({ app, icon, file = 'C:\\Windows\\System32\\mmc.exe' }) {
     $('.uac-more').onclick = () => { const i = $('.uac-info'); i.hidden = !i.hidden; $('.uac-more').textContent = i.hidden ? 'Показати додаткові відомості' : 'Сховати додаткові відомості'; };
     const key = e => { if (e.key === 'Escape') { e.stopPropagation(); done(false); } else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (document.activeElement === user && !pass.value) pass.focus(); else yes(); } };
     document.addEventListener('keydown', key, true);
-    setTimeout(() => user.focus(), 30);
+    user.focus(); setTimeout(() => { if (!el.contains(document.activeElement)) user.focus(); }, 30);
   });
 }

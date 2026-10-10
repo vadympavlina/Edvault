@@ -7,6 +7,7 @@ import { appIcon, ui } from './icons.js';
 import { WM, dialog, alertBox, menu, esc, modal } from './ui.js';
 import { sitePage, EDU_SITES, FAVICON } from './sites.js';
 import { routerPage, ROUTER_HOSTS, rstate } from './router.js';
+import { primary, reach, resolveName } from './net.js';
 
 const DL = HOME + '\\Downloads';
 const NEWTAB = 'browser://newtab/';
@@ -104,30 +105,33 @@ export class Browser {
       toast: m => this.sys.toast(m),
     };
   }
-  // мережа: DNS → брандмауер → чи є там сервер
+  // мережа: підключення → DNS → брандмауер → чи дійде пакет → чи є там сервер
   resolve(u, tab) {
     if (u.protocol === 'browser:') return this.internal(u);
     const host = lc(u.hostname), fw = fwOf(this.fs);
     const port = +u.port || (u.protocol === 'https:' ? 443 : 80);
+    const me = primary(this.fs);
     let ip = isIp(host) ? host : null;
+    if (host === 'localhost') ip = '127.0.0.1';
+    if (ip !== '127.0.0.1' && !me) return errorPage('ERR_INTERNET_DISCONNECTED', u.host);
     if (!ip) {
-      if (host === 'localhost') ip = '127.0.0.1';
-      else {
-        const dnsPkt = { dir: 'out', protocol: 'UDP', localPort: 53000 + (Date.now() % 900), remotePort: 53, remoteIp: NET.dns, program: PROGRAMS.svchost };
-        const d = evaluate(fw, dnsPkt); record(this.fs, dnsPkt, d);
-        if (!d.allow || this.sys.procs?.services?.Dnscache === false) return errorPage('ERR_NAME_NOT_RESOLVED', host, d.allow ? 'dnsSvc' : 'dnsFw');
-        ip = ROUTER_HOSTS.includes(host) ? rstate(this.fs).lan.ip : EDU_SITES[host]?.ip || (SITES[host] || resolveSite(host))?.[0];
-        if (!ip) return errorPage('ERR_NAME_NOT_RESOLVED', host);
-      }
+      const dnsPkt = { dir: 'out', protocol: 'UDP', localPort: 53000 + (Date.now() % 900), remotePort: 53, remoteIp: NET.dns, program: PROGRAMS.svchost };
+      const d = evaluate(fw, dnsPkt); record(this.fs, dnsPkt, d);
+      if (!d.allow || this.sys.procs?.services?.Dnscache === false) return errorPage('ERR_NAME_NOT_RESOLVED', host, d.allow ? 'dnsSvc' : 'dnsFw');
+      const r = resolveName(this.fs, host, x => ROUTER_HOSTS.includes(x) ? rstate(this.fs).lan.ip : EDU_SITES[x]?.ip || (SITES[x] || resolveSite(x))?.[0]);
+      if (!r.ok) return errorPage('ERR_NAME_NOT_RESOLVED', host, r.err === 'nx' ? '' : 'dnsNet');
+      ip = r.ip;
     }
-    if (ip === '127.0.0.1' || ip === NET.ip) return errorPage('ERR_CONNECTION_REFUSED', u.host, 'self');
+    if (ip === '127.0.0.1' || ip === me?.ip) return errorPage('ERR_CONNECTION_REFUSED', u.host, 'self');
     const pkt = { dir: 'out', protocol: 'TCP', localPort: 50000 + (Date.now() % 9000), remotePort: port, remoteIp: ip, program: PROGRAMS.browser };
     const r = evaluate(fw, pkt); record(this.fs, pkt, r);
     if (!r.allow) return errorPage('ERR_NETWORK_ACCESS_DENIED', u.host, r.rule ? r.rule.name.trim() : r.why);
-    // локальна мережа: роутер відповідає за своєю адресою LAN (її можна змінити в налаштуваннях роутера)
-    if (ip === rstate(this.fs).lan.ip) return port === 80 || port === 443 ? routerPage(u, this.ctx(tab, u)) : errorPage('ERR_CONNECTION_REFUSED', u.host);
-    if (/^192\.168\.1\.\d+$/.test(ip)) return ip === NET.dns ? errorPage('ERR_CONNECTION_REFUSED', u.host, 'server') : errorPage('ERR_CONNECTION_TIMED_OUT', u.host, 'lan');
-    if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip)) return errorPage('ERR_CONNECTION_TIMED_OUT', u.host, 'other');
+    // локальна мережа школи: роутер відповідає за своєю адресою LAN (її можна змінити в налаштуваннях роутера)
+    const school = me.net.subnet === '192.168.1.0';
+    if (school && ip === rstate(this.fs).lan.ip && reach(this.fs, me.net.router).ok) return port === 80 || port === 443 ? routerPage(u, this.ctx(tab, u)) : errorPage('ERR_CONNECTION_REFUSED', u.host);
+    const R = reach(this.fs, ip);
+    if (!R.ok) return R.err === 'timeout' ? errorPage('ERR_CONNECTION_TIMED_OUT', u.host, R.lan === undefined && /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip) ? 'other' : 'net') : errorPage('ERR_ADDRESS_UNREACHABLE', u.host, R.err);
+    if (R.lan) return ip === me.net.dns && ip !== me.net.router ? errorPage('ERR_CONNECTION_REFUSED', u.host, 'server') : ip === me.net.router ? errorPage('ERR_CONNECTION_REFUSED', u.host, school ? '' : 'cafe') : errorPage('ERR_CONNECTION_TIMED_OUT', u.host, 'lan');
     const site = sitePage(u, this.ctx(tab, u));
     if (site) return site;
     return offlinePage(u);
@@ -334,15 +338,17 @@ export class Browser {
 
 /* ── сторінки помилок ── */
 const ERRS = {
-  ERR_NAME_NOT_RESOLVED: (h, why) => [`Не вдалося знайти IP-адресу сервера ${h}.`, why === 'dnsFw' ? ['Брандмауер блокує запити до DNS-сервера. Перевірте правило «Основні мережеві засоби — DNS (UDP — вихідний)» у wf.msc.', 'Перевірте командою <code>nslookup ' + esc(h) + '</code>.'] : why === 'dnsSvc' ? ['Службу «DNS-клієнт» (Dnscache) зупинено. Запустіть її в Диспетчері завдань → «Служби».'] : ['Перевірте, чи правильно написано адресу.', 'Перевірте командою <code>nslookup ' + esc(h) + '</code>.', 'Пошукайте сайт у <a href="https://poshuk.edvault/">Пошуку</a>.']],
+  ERR_NAME_NOT_RESOLVED: (h, why) => [`Не вдалося знайти IP-адресу сервера ${h}.`, why === 'dnsFw' ? ['Брандмауер блокує запити до DNS-сервера. Перевірте правило «Основні мережеві засоби — DNS (UDP — вихідний)» у wf.msc.', 'Перевірте командою <code>nslookup ' + esc(h) + '</code>.'] : why === 'dnsSvc' ? ['Службу «DNS-клієнт» (Dnscache) зупинено. Запустіть її в Диспетчері завдань → «Служби».'] : why === 'dnsNet' ? ['DNS-сервер не відповідає. Перевірте адресу DNS-сервера у властивостях IPv4 (або виберіть «Отримати адресу DNS-сервера автоматично»).', 'Перевірте командою <code>nslookup ' + esc(h) + '</code>.'] : ['Перевірте, чи правильно написано адресу.', 'Перевірте командою <code>nslookup ' + esc(h) + '</code>.', 'Пошукайте сайт у <a href="https://poshuk.edvault/">Пошуку</a>.']],
   ERR_NETWORK_ACCESS_DENIED: (h, why) => [`Доступ до мережі заборонено.`, [why && why !== 'default' && why !== 'blockall' ? `Підключення заблокувало правило брандмауера «${esc(why)}».` : 'Брандмауер не дозволяє браузеру виходити в мережу (вихідні підключення без правила заблоковано).', 'Відкрийте «Брандмауер Захисника Windows у режимі підвищеної безпеки» (wf.msc) → «Правила для вихідних підключень».', 'Спробуйте <code>curl ' + esc(h) + '</code> у Командному рядку — він теж перевіряє брандмауер.']],
-  ERR_CONNECTION_TIMED_OUT: (h, why) => [`Сайт ${h} надто довго не відповідає.`, why === 'other' ? ['Такої адреси немає у вашій мережі.', 'Адресу роутера можна дізнатися командою <code>ipconfig</code> — рядок «Основний шлюз». У цій мережі це <a href="http://192.168.1.1/">192.168.1.1</a>.'] : ['Пристрій із цією адресою є в мережі, але на ньому немає вебсайту.', 'Перевірте зв’язок командою <code>ping ' + esc(h) + '</code>.']],
-  ERR_CONNECTION_REFUSED: (h, why) => [`Сайт ${h} не дозволив підключитися.`, why === 'self' ? ['Це адреса вашого власного комп’ютера, а на ньому не запущено вебсервер.'] : why === 'server' ? ['Це шкільний DNS-сервер: він відповідає на запити про імена сайтів, але вебсторінок не має.'] : ['На цьому порту немає вебсервера.']],
+  ERR_CONNECTION_TIMED_OUT: (h, why) => [`Сайт ${h} надто довго не відповідає.`, why === 'net' ? ['Пакети не доходять до сайту. Перевірте підключення командою <code>ping ' + esc(h) + '</code> і <code>tracert ' + esc(h) + '</code>.'] : why === 'other' ? ['Такої адреси немає у вашій мережі.', 'Адресу роутера можна дізнатися командою <code>ipconfig</code> — рядок «Основний шлюз». У цій мережі це <a href="http://192.168.1.1/">192.168.1.1</a>.'] : ['Пристрій із цією адресою є в мережі, але на ньому немає вебсайту.', 'Перевірте зв’язок командою <code>ping ' + esc(h) + '</code>.']],
+  ERR_CONNECTION_REFUSED: (h, why) => [`Сайт ${h} не дозволив підключитися.`, why === 'self' ? ['Це адреса вашого власного комп’ютера, а на ньому не запущено вебсервер.'] : why === 'server' ? ['Це шкільний DNS-сервер: він відповідає на запити про імена сайтів, але вебсторінок не має.'] : why === 'cafe' ? ['Це роутер чужої мережі (кав’ярні): налаштування може відкрити лише його власник.'] : ['На цьому порту немає вебсервера.']],
   ERR_INVALID_URL: h => ['Неправильна адреса.', ['Перевірте, чи правильно написано адресу.']],
+  ERR_INTERNET_DISCONNECTED: () => ['Немає підключення до Інтернету.', ['Перевірте значок мережі в правому нижньому куті: чи підключено кабель або Wi‑Fi.', 'Якщо ви виконували <code>ipconfig /release</code>, поверніть адресу командою <code>ipconfig /renew</code>.', 'Запустіть «Діагностику» в Параметрах → «Мережа й Інтернет».']],
+  ERR_ADDRESS_UNREACHABLE: (h, why) => [`Сайт ${h} недоступний.`, why === 'unreach' ? ['Основний шлюз указано неправильно: пакети йдуть не до роутера.', 'Перевірте властивості IPv4 адаптера або командою <code>ipconfig</code>.'] : ['Комп’ютер не знає, куди надсилати пакети: немає основного шлюзу або IP-адреса не з цієї мережі.', 'Перевірте налаштування IPv4 («Мережеві підключення» → «Властивості») або виберіть «Отримати IP-адресу автоматично».']],
 };
 function errorPage(code, host, why) {
   const [title, tips] = ERRS[code](esc(host), why);
-  return { error: true, title: host, html: `<div class="err"><div class="err-ic">${ui(code === 'ERR_NETWORK_ACCESS_DENIED' ? 'shield' : 'globe', 54)}</div><h1>${code === 'ERR_NETWORK_ACCESS_DENIED' ? 'Немає доступу до Інтернету' : 'Не вдається отримати доступ до сайту'}</h1><p>${title}</p><p>Спробуйте:</p><ul>${tips.map(t => `<li>${t}</li>`).join('')}</ul><p class="err-code">${code}</p><button class="btn primary" data-b="reload">Перезавантажити</button></div>` };
+  return { error: true, title: host, html: `<div class="err"><div class="err-ic">${ui(code === 'ERR_NETWORK_ACCESS_DENIED' ? 'shield' : code === 'ERR_INTERNET_DISCONNECTED' ? 'network' : 'globe', 54)}</div><h1>${code === 'ERR_NETWORK_ACCESS_DENIED' || code === 'ERR_INTERNET_DISCONNECTED' ? 'Немає доступу до Інтернету' : 'Не вдається отримати доступ до сайту'}</h1><p>${title}</p><p>Спробуйте:</p><ul>${tips.map(t => `<li>${t}</li>`).join('')}</ul><p class="err-code">${code}</p><button class="btn primary" data-b="reload">Перезавантажити</button></div>` };
 }
 // справжні сайти існують, але їх немає в навчальному інтернеті
 function offlinePage(u) {

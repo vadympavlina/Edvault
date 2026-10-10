@@ -143,5 +143,5 @@ test('cmd: програми, довідка, доповнення', () => {
   assert.ok(r.stream && r.stream.next() && r.stream.next(), 'потік відповідей');
   assert.match(r.stream.stop().join('\n'), /надіслано = 2[\s\S]*\^C/);
   assert.match(run(c, 'ipconfig'), /192\.168\.1\.27/);
-  assert.equal(run(c, 'whoami'), 'school-pc\\учень');
+  assert.equal(run(c, 'whoami'), 'edvault-pc\\admin');
 });

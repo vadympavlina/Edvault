@@ -59,6 +59,6 @@ export function procState() {
 const APP_INFO = {
   explorer: ['Провідник', 'explorer.exe', 26000, 0.3], cmd: ['Обробник команд Windows', 'cmd.exe', 4300, 0.1], notepad: ['Блокнот', 'notepad.exe', 14800, 0.1],
   security: ['Безпека Windows', 'SecHealthUI.exe', 41200, 0.2], firewallcpl: ['Панель керування', 'explorer.exe', 22000, 0.1], wfmsc: ['Консоль керування Microsoft', 'mmc.exe', 38900, 0.3],
-  taskmgr: ['Диспетчер завдань', 'Taskmgr.exe', 31200, 1.1], browser: ['Браузер', 'browser.exe', 186000, 1.6], settings: ['Параметри', 'SystemSettings.exe', 52300, 0.2],
+  taskmgr: ['Диспетчер завдань', 'Taskmgr.exe', 31200, 1.1], browser: ['Браузер', 'browser.exe', 186000, 1.6], settings: ['Параметри', 'SystemSettings.exe', 52300, 0.2], ncpa: ['Мережеві підключення', 'explorer.exe', 18400, 0.1],
 };
 export const appInfo = a => APP_INFO[a] || [a, a + '.exe', 12000, 0.1];

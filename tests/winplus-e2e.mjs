@@ -2,7 +2,7 @@
 // пошук у Провіднику, браузер із навчальними сайтами, вебінтерфейс роутера. Потрібні Playwright і Chromium.
 //   node tests/winplus-e2e.mjs
 import assert from 'node:assert/strict';
-import { startServer, launch, newPage, step } from './_harness.mjs';
+import { startServer, launch, newPage, step, signIn } from './_harness.mjs';
 
 const server = await startServer();
 const browser = await launch();
@@ -11,7 +11,7 @@ const ctx = await browser.newContext({ viewport: { width: 1366, height: 820 } })
 const p = await newPage(ctx, errors);
 await p.goto(server.url + '/emulators/windows');
 await p.waitForFunction(() => window.WinEmu);
-await p.waitForSelector('#boot', { state: 'hidden' });
+await p.waitForSelector('#boot', { state: 'hidden' }); await signIn(p);
 
 const H = 'C:\\Users\\Учень';
 const node = path => p.evaluate(path => { const n = WinEmu.fs.node(path); return n ? { name: n.name, attrs: n.attrs, size: n.binary ? n.size : n.content.length } : null; }, path);
@@ -110,7 +110,7 @@ await step('завершення критичного процесу — «си�
   await p.waitForSelector('#bsod');
   assert.match(await p.locator('#bsod').innerText(), /CRITICAL_PROCESS_DIED/);
   await p.waitForSelector('#bsod', { state: 'detached', timeout: 15000 });
-  await p.waitForSelector('#boot', { state: 'hidden' });
+  await p.waitForSelector('#boot', { state: 'hidden' }); await signIn(p);
   assert.equal(await p.evaluate(() => WinEmu.WM.wins.length), 0);
   assert.equal(await p.evaluate(() => WinEmu.sys.procs.killed.size), 0, 'після перезавантаження всі процеси знову запущені');
 });
@@ -269,7 +269,7 @@ await step('консоль відкриває браузер і Диспетче
   await p.check('[data-sure]');
   await p.click('.reset-dlg .btn.primary');
   await p.waitForSelector('#resetting', { state: 'detached', timeout: 8000 });
-  await p.waitForSelector('#boot', { state: 'hidden' });
+  await p.waitForSelector('#boot', { state: 'hidden' }); await signIn(p);
   assert.equal(await node(H + '\\Documents\\Моє.txt'), null);
   assert.ok(await node(H + '\\Documents\\Нотатки.txt'));
   assert.equal(await p.evaluate(() => WinEmu.fs.s.router || null), null, 'роутер теж скинуто');

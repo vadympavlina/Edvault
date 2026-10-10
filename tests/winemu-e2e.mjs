@@ -1,7 +1,7 @@
 // Браузерна перевірка «Емулятор Windows» (потрібні Playwright і Chromium).
 //   node tests/winemu-e2e.mjs
 import assert from 'node:assert/strict';
-import { startServer, launch, newPage, step } from './_harness.mjs';
+import { startServer, launch, newPage, step, signIn } from './_harness.mjs';
 
 const server = await startServer();
 const browser = await launch();
@@ -10,7 +10,7 @@ const ctx = await browser.newContext({ viewport: { width: 1366, height: 820 } })
 const p = await newPage(ctx, errors);
 await p.goto(server.url + '/emulators/windows');
 await p.waitForFunction(() => window.WinEmu);
-await p.waitForSelector('#boot', { state: 'hidden' });
+await p.waitForSelector('#boot', { state: 'hidden' }); await signIn(p);
 
 const H = 'C:\\Users\\Учень';
 const node = path => p.evaluate(path => { const n = WinEmu.fs.node(path); return n ? { type: n.type, name: n.name, content: n.content } : null; }, path);
@@ -183,10 +183,11 @@ await step('меню «Пуск»: пошук і відкриття файлу',
 
 await step('вікна: згорнути, розгорнути, перетягнути', async () => {
   const w = active();
+  await w.evaluate(el => Promise.all(el.getAnimations().map(a => a.finished)));
   const box = await w.boundingBox();
   await p.mouse.move(box.x + 200, box.y + 16); await p.mouse.down(); await p.mouse.move(box.x + 320, box.y + 90, { steps: 5 }); await p.mouse.up();
   const b2 = await w.boundingBox();
-  assert.ok(Math.abs(b2.x - box.x - 120) < 3 && Math.abs(b2.y - box.y - 74) < 3);
+  assert.ok(Math.abs(b2.x - box.x - 120) < 3 && Math.abs(b2.y - box.y - 74) < 3, JSON.stringify([box, b2]));
   await w.locator('[data-act="max"]').click();
   assert.equal((await w.boundingBox()).width, 1366);
   const before = await p.locator('.win.min').count();
@@ -200,7 +201,7 @@ await step('усе зберігається після перезавантаж�
   await p.goto(server.url + '/emulators/windows');
   await p.waitForFunction(() => window.WinEmu);
   assert.ok(await node(H + '\\Documents\\Проєкти\\План — копія.txt'));
-  await p.waitForSelector('#boot', { state: 'hidden' });
+  await p.waitForSelector('#boot', { state: 'hidden' }); await signIn(p);
   await p.click('#startBtn'); await p.click('#powerBtn');
   await p.click('.cm-it:has-text("Скинути")');
   await p.click('.dlg .btn:has-text("Скинути")');

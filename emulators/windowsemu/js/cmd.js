@@ -1,9 +1,10 @@
 // Емулятор Windows · командний рядок (cmd) без DOM. Працює з файловою системою FS,
 // а відкриття вікон, список і закриття задач — через host (його дає інтерфейс).
 import { fwOf, evaluate, record, NET, PROGRAMS, PROFILES, PROFILE_NAME, defaults as fwDefaults, validPorts, validAddr, actionText, profilesText, protoText, portsText, addrText, newId } from './fw.js';
-import { FS, ERR, FsError, HOME, USER, DRIVE_LABEL, resolve, parsePath, parentPath, nameOfPath, joinPath, wildcard, hasWild, isInside, fmtDate, fmtTime, fmtNum, isText, validName } from './fs.js';
+import { adapters, primary, reach, resolveName, netOf, syncNET, arpNote, sameNet, prefixOf, WIFI, MAC, NETWORKS, wifiConnect, wifiDisconnect } from './net.js';
+import { FS, ERR, FsError, HOME, USER, LOGIN, DRIVE_LABEL, resolve, parsePath, parentPath, nameOfPath, joinPath, wildcard, hasWild, isInside, fmtDate, fmtTime, fmtNum, isText, validName } from './fs.js';
 
-export const HOST = 'SCHOOL-PC';
+export const HOST = 'EDVAULT-PC';
 const lc = s => s.toLocaleLowerCase('uk');
 
 /* ── довідка ── */
@@ -26,7 +27,14 @@ export const HELP = {
   find: ['Шукає рядки з текстом у файлі або у виводі іншої команди.', 'FIND [/I] [/C] [/V] "текст" [файл]', ['find "математика" Розклад.txt', 'dir /b | find ".txt"', 'find /c "a" Нотатки.txt'], '/I — без урахування регістру, /C — лише кількість, /V — рядки БЕЗ тексту.'],
   help: ['Список команд або довідка про команду.', 'HELP [команда]\nкоманда /?', ['help', 'help dir', 'copy /?']],
   hostname: ['Показує ім’я комп’ютера.', 'HOSTNAME', ['hostname']],
-  ipconfig: ['Показує мережеві налаштування.', 'IPCONFIG [/ALL]', ['ipconfig']],
+  tracert: ['Показує шлях пакетів до сайту: через які роутери вони проходять.', 'TRACERT [-d] [-h кількість] адреса', ['tracert poshuk.edvault', 'tracert 8.8.8.8'], 'Кожен рядок — один «перехід» (роутер). Перший завжди ваш основний шлюз.'],
+  netstat: ['Показує мережеві підключення й відкриті порти.', 'NETSTAT [-a] [-n] [-b]', ['netstat', 'netstat -an', 'netstat -b'], '-a — також порти, що очікують підключення (LISTENING); -n — адреси числами; -b — яка програма створила підключення.'],
+  arp: ['Показує таблицю ARP: які MAC-адреси мають сусіди в мережі.', 'ARP -A', ['arp -a'], 'Запис з’являється, коли комп’ютер звертається до сусіда, наприклад після ping 192.168.1.1.'],
+  getmac: ['Показує MAC-адреси мережевих адаптерів.', 'GETMAC [/V]', ['getmac', 'getmac /v']],
+  route: ['Показує таблицю маршрутизації.', 'ROUTE PRINT', ['route print']],
+  net: ['Відомості про облікові записи (net user).', 'NET USER [ім’я]', ['net user', 'net user admin']],
+  ncpa: ['Відкриває «Мережеві підключення».', 'NCPA.CPL', ['ncpa.cpl']],
+  ipconfig: ['Показує мережеві налаштування.', 'IPCONFIG [/ALL | /RELEASE | /RENEW | /FLUSHDNS | /DISPLAYDNS]', ['ipconfig', 'ipconfig /all', 'ipconfig /release', 'ipconfig /renew', 'ipconfig /flushdns'], '/RELEASE — віддати IP-адресу, отриману від DHCP; /RENEW — отримати нову; /FLUSHDNS — очистити кеш DNS.'],
   md: ['Створює папку (одразу з усіма вкладеними).', 'MD шлях [шлях …]', ['md Проєкти', 'md "Нова папка"', 'md Школа\\2026\\Вересень', 'md A B C'], 'Назву з пробілами беріть у лапки.'],
   mkdir: 'md',
   more: ['Показує текст (по сторінках у справжньому Windows).', 'MORE файл\nкоманда | MORE', ['more Розклад.txt', 'tree | more']],
@@ -184,7 +192,7 @@ export class Cmd {
     m = /^echo[.:](.*)$/i.exec(text); if (m) { this.print(m[1]); return true; }
     if (/^[a-z]:$/i.test(text)) return this.drive(text[0].toUpperCase());
     const name = /^\S+/.exec(text)[0], rest = text.slice(name.length).replace(/^\s/, '');
-    const key = { 'wf.msc': 'wfmsc', 'firewall.cpl': 'firewallcpl', 'windowsdefender:': 'defender', 'ms-settings:': 'settings', msedge: 'browser', chrome: 'browser', iexplore: 'browser' }[lc(name)] || lc(name).replace(/\.(exe|com)$/, '');
+    const key = { 'ncpa.cpl': 'ncpa', 'ms-settings:network': 'netsettings', 'wf.msc': 'wfmsc', 'firewall.cpl': 'firewallcpl', 'windowsdefender:': 'defender', 'ms-settings:': 'settings', msedge: 'browser', chrome: 'browser', iexplore: 'browser' }[lc(name)] || lc(name).replace(/\.(exe|com)$/, '');
     const tokens = tokenize(rest);
     if (tokens.includes('/?')) return this.c_help([key]);
     const k = typeof HELP[key] === 'string' ? HELP[key] : key;
@@ -612,23 +620,80 @@ export class Cmd {
   c_time(t) { const d = new Date(); this.print(t.length ? fmtTime(d) : `Поточний час: ${fmtTime(d)}:${String(d.getSeconds()).padStart(2, '0')},00`); return true; }
   c_ver() { this.print('', 'Microsoft Windows [Version 10.0.22631.4317]'); return true; }
   c_vol(t) { const d = (t[0] || this.cwd)[0].toUpperCase(); if (!this.fs.s.drives[d]) { this.print('Системі не вдається знайти вказаний диск.'); return false; } this.print(` Том у пристрої ${d} має мітку ${DRIVE_LABEL[d]}`, ` Серійний номер тому: ${d === 'C' ? '6A3F-1C2B' : '2E71-9D04'}`); return true; }
-  c_whoami() { this.print(lc(HOST) + '\\' + lc(USER)); return true; }
+  c_whoami(t) {
+    if (/groups/i.test(t[0] || '')) { this.print('', 'ВІДОМОСТІ ПРО ГРУПИ', '-----------------', '', 'Ім’я групи                     Тип', '============================== ==========', 'Усі                            Відома група', 'BUILTIN\\Користувачі            Псевдонім', this.admin ? 'BUILTIN\\Адміністратори         Псевдонім' : '', 'NT AUTHORITY\\ІНТЕРАКТИВНІ      Відома група'); return true; }
+    this.print(lc(HOST) + '\\' + LOGIN); return true;
+  }
+  c_net(t) {
+    const L = t.map(x => lc(x));
+    if (L[0] === 'user' || L[0] === 'users') {
+      if (!L[1]) { this.print('', `Облікові записи користувачів для \\\\${HOST}`, '', '-'.repeat(79), 'admin                    Адміністратор            Гість', 'Команду виконано успішно.', ''); return true; }
+      if (L[2] != null) { this.print('Системна помилка 5.', '', 'Відмовлено в доступі. Пароль облікового запису на навчальному комп’ютері змінює лише вчитель.'); return false; }
+      if (L[1] === 'admin') { this.print('Ім’я користувача               admin', `Повне ім’я                     ${USER}`, 'Коментар                       Обліковий запис учня', 'Обліковий запис активний       Так', 'Пароль можна змінювати         Ні', 'Пароль обов’язковий            Так', `Профіль користувача            ${HOME}`, 'Членство в локальних групах    *Користувачі', 'Команду виконано успішно.'); return true; }
+      if (L[1] === 'адміністратор' || L[1] === 'administrator') { this.print('Ім’я користувача               Адміністратор', 'Коментар                       Вбудований обліковий запис адміністратора', 'Членство в локальних групах    *Адміністратори', 'Команду виконано успішно.'); return true; }
+      this.print('Не вдається знайти ім’я користувача.', '', 'Додаткову довідку можна отримати, ввівши NET HELPMSG 2221.'); return false;
+    }
+    this.print('Синтаксис цієї команди:', '', 'NET USER [ім’я]'); return !L.length;
+  }
+  c_ncpa() { this.host.open?.('ncpa'); return true; }
+  c_netsettings() { this.host.open?.('settings', 'network'); return true; }
   c_hostname() { this.print(HOST); return true; }
   c_path() { this.print('PATH=' + this.env.PATH); return true; }
   c_systeminfo() {
     const free = this.fs.free('C');
-    this.print('', `Ім’я вузла:                   ${HOST}`, 'Назва ОС:                     Microsoft Windows 11 Освіта', 'Версія ОС:                    10.0.22631 Збірка 22631', `Зареєстрований власник:       ${USER}`, 'Виробник системи:             Edvault', 'Тип системи:                  x64-based PC', 'Процесори:                    1 процесор(и)', 'Повний обсяг фізичної пам’яті: 8 192 МБ', `Вільно на диску C:            ${Math.round(free / 1073741824)} ГБ`, 'Мережеві адаптери:            1 — Ethernet, IP-адреса 192.168.1.27');
+    this.print('', `Ім’я вузла:                   ${HOST}`, 'Назва ОС:                     Microsoft Windows 11 Освіта', 'Версія ОС:                    10.0.22631 Збірка 22631', `Зареєстрований власник:       ${USER}`, 'Виробник системи:             Edvault', 'Тип системи:                  x64-based PC', 'Процесори:                    1 процесор(и)', 'Повний обсяг фізичної пам’яті: 8 192 МБ', `Вільно на диску C:            ${Math.round(free / 1073741824)} ГБ`, `Мережеві адаптери:            ${adapters(this.fs).map(a => a.name + (a.ip ? ', IP-адреса ' + a.ip : ' (' + ({ disabled: 'вимкнено', disconnected: 'не підключено', noip: 'без IP-адреси' }[a.status] || '') + ')')).join('; ')}`);
     return true;
   }
   c_ipconfig(t) {
-    const all = /all/i.test(t[0] || '');
-    this.print('', 'Налаштування IP для Windows', '');
-    if (all) this.print(`   Ім’я вузла . . . . . . . . . . . : ${HOST}`, '');
-    this.print('Адаптер Ethernet Ethernet:', '', '   DNS-суфікс для підключення . . . : school.local');
-    if (all) this.print('   Фізична адреса . . . . . . . . . : 00-1A-2B-3C-4D-5E', '   DHCP увімкнено . . . . . . . . . : Так');
-    this.print('   IPv4-адреса . . . . . . . . . . . : 192.168.1.27', '   Маска підмережі . . . . . . . . . : 255.255.255.0', '   Основний шлюз . . . . . . . . . . : 192.168.1.1');
-    if (all) this.print('   DNS-сервери . . . . . . . . . . . : 192.168.1.10', '                                       8.8.8.8');
+    const k = lc(t[0] || ''), S = netOf(this.fs);
+    const changed = () => { syncNET(this.fs); this.fs.emit('net'); };
+    if (k === '/flushdns') { S.dnsCache = {}; this.fs.emit('net'); this.print('', 'Налаштування IP для Windows', '', 'Кеш DNS-визначника успішно очищено.'); return true; }
+    if (k === '/displaydns') {
+      this.print('', 'Налаштування IP для Windows', '');
+      const list = Object.entries(S.dnsCache);
+      if (!list.length) { this.print('    Кеш DNS порожній. Він заповнюється, коли ви відкриваєте сайти чи виконуєте ping за ім’ям.'); return true; }
+      for (const [h, v] of list) this.print(`    ${h}`, '    ----------------------------------------', `    Ім’я запису . . . . . : ${h}`, '    Тип запису . . . . . : 1', `    Час життя . . . . . . : ${Math.max(1, 300 - Math.round((Date.now() - v.at) / 1000))}`, `    Запис (вузол) A . . . : ${v.ip}`, '');
+      return true;
+    }
+    if (k === '/release' || k === '/renew') {
+      const list = ['eth', 'wifi'].filter(id => S[id].on && S[id].dhcp && (id === 'eth' ? S.eth.cable : S.wifi.ssid));
+      if (!list.length) { this.print('', 'Налаштування IP для Windows', '', 'Не вдалося виконати операцію: немає адаптерів з автоматичною адресою (DHCP), підключених до мережі.'); return false; }
+      for (const id of list) S[id].released = k === '/release';
+      if (k === '/release') S.dnsCache = {};
+      changed();
+      this.print('', 'Налаштування IP для Windows', '');
+      if (k === '/release') this.print('IP-адресу звільнено. Тепер комп’ютер не має адреси й не може користуватися мережею.', 'Щоб отримати нову адресу від DHCP-сервера (роутера), виконайте ipconfig /renew.', '');
+    } else if (k && k !== '/all') { this.print('', `Помилка: неправильний параметр ${t[0]}.`, 'Допустимо: /all, /release, /renew, /flushdns, /displaydns.'); return false; }
+    const all = k === '/all';
+    if (k !== '/release' && k !== '/renew') this.print('', 'Налаштування IP для Windows', '');
+    if (all) this.print(`   Ім’я вузла . . . . . . . . . . . : ${HOST}`, '   Тип вузла . . . . . . . . . . . . : Гібридний', '');
+    for (const a of adapters(this.fs)) {
+      this.print(`Адаптер ${a.id === 'eth' ? 'Ethernet' : 'бездротової локальної мережі'} ${a.name}:`, '');
+      if (a.status === 'disabled' || a.status === 'disconnected') {
+        this.print('   Стан носія. . . . . . . . . . . . : Носій відключено', '   DNS-суфікс для підключення . . . :');
+        if (all) this.print(`   Опис. . . . . . . . . . . . . . . : ${a.desc}`, `   Фізична адреса. . . . . . . . . . : ${a.mac}`);
+        this.print(''); continue;
+      }
+      this.print(`   DNS-суфікс для підключення . . . : ${a.dhcp ? a.suffix || '' : ''}`);
+      if (all) this.print(`   Опис. . . . . . . . . . . . . . . : ${a.desc}`, `   Фізична адреса. . . . . . . . . . : ${a.mac}`, `   DHCP увімкнено. . . . . . . . . . : ${a.dhcp ? 'Так' : 'Ні'}`);
+      if (a.status === 'noip') { this.print('   IPv4-адреса . . . . . . . . . . . : 0.0.0.0', '   Основний шлюз . . . . . . . . . . :', ''); continue; }
+      this.print(`   IPv4-адреса . . . . . . . . . . . : ${a.ip}`, `   Маска підмережі . . . . . . . . . : ${a.mask}`, `   Основний шлюз . . . . . . . . . . : ${a.gw || ''}`);
+      if (all) { if (a.dhcp) this.print(`   DHCP-сервер . . . . . . . . . . . : ${a.net.router}`); this.print(`   DNS-сервери . . . . . . . . . . . : ${a.dns[0] || ''}`, ...a.dns.slice(1).map(d => `                                       ${d}`)); }
+      this.print('');
+    }
     return true;
+  }
+  // текст відповіді, коли пакет не доходить
+  netFail(r, ip) { return r.err === 'unreach' ? `Відповідь від ${r.via.ip}: Заданий вузол недоступний.` : r.err === 'timeout' ? 'Час очікування запиту минув.' : 'PING: помилка передавання. Загальна помилка.'; }
+  // ім’я → IP (DNS + брандмауер). → { ip } або { err }
+  lookup(host) {
+    const h = lc(host);
+    if (h === 'localhost') return { ip: '127.0.0.1' };
+    if (h === lc(HOST)) return { ip: primary(this.fs)?.ip || '127.0.0.1' };
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) return { ip: h };
+    if (!this.dnsOk()) return { err: 'fw' };
+    const r = resolveName(this.fs, h, x => (SITES[x] || resolveSite(x))?.[0]);
+    return r.ok ? { ip: r.ip } : { err: r.err, server: r.server };
   }
   // ping: відповіді з’являються по одній (stream), -n кількість, -l розмір, -t без зупинки (Ctrl+C)
   c_ping(t) {
@@ -646,26 +711,20 @@ export class Cmd {
     if (!host) { this.print('', 'Синтаксис: ping [-t] [-n кількість] [-l розмір] адреса', '', '  -t           Надсилати пакети, доки не натиснете Ctrl+C.', '  -n кількість  Скільки разів надіслати (звичайно 4).', '  -l розмір    Розмір пакета в байтах (звичайно 32).'); return false; }
     if (!(o.n >= 1 && o.n <= 100)) { this.print('Неправильне значення параметра -n, допустимо від 1 до 100.'); return false; }
     if (!(o.l >= 0 && o.l <= 65500)) { this.print('Неправильне значення параметра -l, допустимо від 0 до 65500.'); return false; }
-    const KNOWN = { ...SITES, [lc(HOST)]: ['192.168.1.27', 0] };
-    const IPS = { '127.0.0.1': 0, '192.168.1.27': 0, '192.168.1.1': 1, '192.168.1.10': 1, '8.8.8.8': 12, '1.1.1.1': 11, '185.199.108.153': 18, '142.250.74.110': 14 };
-    let ip, base;
-    if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
-      if (host.split('.').some(x => +x > 255)) { this.print(`Перевірка зв’язку не змогла знайти вузол ${host}. Перевірте ім’я та повторіть спробу.`); return false; }
-      ip = host; base = IPS[host] ?? (/^(10|192\.168|172\.(1[6-9]|2\d|3[01]))\./.test(host) ? null : 40 + (host.split('.').reduce((a, b) => a + +b, 0) % 60));
-    } else {
-      if (!['localhost', lc(HOST)].includes(lc(host)) && !this.dnsOk()) { this.print(`Перевірка зв’язку не змогла знайти вузол ${host}. Перевірте ім’я та повторіть спробу.`); return false; }
-      const k = KNOWN[lc(host)] || resolveSite(host);
-      if (!k) { this.print(`Перевірка зв’язку не змогла знайти вузол ${host}. Перевірте ім’я та повторіть спробу.`); return false; }
-      [ip, base] = k;
-    }
-    const local = ip === '127.0.0.1' || ip === '192.168.1.27';
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(host) && host.split('.').some(x => +x > 255)) { this.print(`Перевірка зв’язку не змогла знайти вузол ${host}. Перевірте ім’я та повторіть спробу.`); return false; }
+    const L = this.lookup(host);
+    if (L.err) { this.print(`Перевірка зв’язку не змогла знайти вузол ${host}. Перевірте ім’я та повторіть спробу.`); return false; }
+    const ip = L.ip, R = reach(this.fs, ip), local = !!R.local;
+    const known = (SITES[lc(host)] || [])[1];
+    const base = local ? 0 : R.lan ? 1 : known ?? (ip === '8.8.8.8' ? 12 : ip === '1.1.1.1' ? 11 : 18 + (ip.split('.').reduce((a, b) => a + +b, 0) % 40));
+    if (R.lan) arpNote(this.fs, ip); else if (R.ok && !local) arpNote(this.fs, R.via.gw);
     // брандмауер: вихідний луна-запит ICMPv4 від PING.EXE
     const blocked = !local && !this.fwCheck({ dir: 'out', protocol: 'ICMPv4', icmpType: 8, remoteIp: ip, program: PROGRAMS.ping }).allow;
     let sent = 0, got = 0; const times = [];
     const reply = () => {
       sent++;
       if (blocked) return 'PING: помилка передавання. Загальна помилка.';
-      if (base == null) return 'Час очікування запиту минув.';
+      if (!R.ok) return this.netFail(R, ip);
       const ms = base + ((sent * 7) % 5) + Math.floor(o.l / 1500);
       got++; times.push(ms);
       return `Відповідь від ${ip}: число байтів=${o.l} час${local ? '<1мс' : '=' + ms + 'мс'} TTL=${local ? 128 : base <= 1 ? 64 : 57}`;
@@ -679,16 +738,92 @@ export class Cmd {
     this.print('', `Обмін пакетами з ${host}${ip !== host ? ` [${ip}]` : ''} з ${o.l} байтами даних:`);
     if (this.host.live === false) { for (let i = 0; i < (o.t ? 4 : o.n); i++) this.print(reply()); this.print(...stats()); return got > 0; }
     // у вікні консолі рядки з’являються раз на секунду; Ctrl+C зупиняє -t
-    this.flags.stream = { every: base == null ? 1600 : 700, next: () => (o.t || sent < o.n) ? reply() : null, end: stats, stop: () => [...stats(), 'Control-C', '^C'] };
+    this.flags.stream = { every: !R.ok && R.err === 'timeout' ? 1600 : 700, next: () => (o.t || sent < o.n) ? reply() : null, end: stats, stop: () => [...stats(), 'Control-C', '^C'] };
     return true;
   }
   c_nslookup(t) {
-    const host = t.find(x => !x.startsWith('-'));
-    if (!host) { this.print('Синтаксис: nslookup ім’я_сайту'); return false; }
-    this.print('Сервер:  school-dns.school.local', 'Address:  192.168.1.10', '');
-    const k = (SITES[lc(host)] || resolveSite(host))?.[0];
-    if (!k) { this.print(`*** school-dns.school.local не вдається знайти ${host}: Non-existent domain`); return false; }
-    this.print('Не заслуговує довіри відповідь:', `Ім’я:    ${lc(host)}`, `Address:  ${k}`);
+    const host = t.find(x => !x.startsWith('-')), srvArg = t.filter(x => !x.startsWith('-'))[1];
+    if (!host) { this.print('Синтаксис: nslookup ім’я_сайту [DNS-сервер]'); return false; }
+    const a = primary(this.fs);
+    const server = srvArg || a?.dns[0];
+    if (!a || !server) { this.print(`*** Не вдається знайти ім’я сервера для адреси: немає ${a ? 'DNS-сервера' : 'підключення до мережі'}.`, '*** Стандартні сервери недоступні'); return false; }
+    const names = { '192.168.1.10': 'school-dns.school.local', '8.8.8.8': 'dns.google', '8.8.4.4': 'dns.google', '1.1.1.1': 'one.one.one.one', '192.168.1.1': 'router.school.local', '10.0.0.1': 'router.lan' };
+    const sname = names[server] || 'UnKnown';
+    const S = netOf(this.fs), saved = S.wifi.dns;
+    // nslookup із вказаним сервером питає саме його
+    const r = srvArg ? (() => { const a2 = { ...a, dns: [srvArg] }; const isDns = ip => ip === a.net.dns || ip === a.net.router || ['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1', '9.9.9.9'].includes(ip); if (!reach(this.fs, srvArg).ok || !isDns(srvArg)) return { ok: false, err: 'timeout' }; const ip = (SITES[lc(host)] || resolveSite(host))?.[0]; return ip ? { ok: true, ip } : { ok: false, err: 'nx' }; })() : (this.dnsOk() ? resolveName(this.fs, host, x => (SITES[x] || resolveSite(x))?.[0]) : { ok: false, err: 'timeout' });
+    if (!r.ok && r.err === 'timeout') { this.print(`DNS request timed out.`, '    timeout was 2 seconds.', `Сервер:  ${sname}`, `Address:  ${server}`, '', `*** Час очікування запиту до ${sname} минув`); return false; }
+    this.print(`Сервер:  ${sname}`, `Address:  ${server}`, '');
+    if (!r.ok) { this.print(`*** ${sname} не вдається знайти ${host}: Non-existent domain`); return false; }
+    this.print('Не заслуговує довіри відповідь:', `Ім’я:    ${lc(host)}`, `Address:  ${r.ip}`);
+    return true;
+  }
+  c_tracert(t) {
+    const host = t.find((x, i) => !x.startsWith('-') && !/^-h$/i.test(t[i - 1] || '')), numeric = t.some(x => /^-d$/i.test(x));
+    if (!host) { this.print('', 'Синтаксис: tracert [-d] адреса'); return false; }
+    const L = this.lookup(host);
+    if (L.err) { this.print(`Не вдається визначити ім’я цільової системи ${host}.`); return false; }
+    const ip = L.ip, R = reach(this.fs, ip);
+    const NAMES = { '192.168.1.1': 'router.school.local', '10.0.0.1': 'router.lan', '100.64.0.1': 'gw.provider.ua', '10.20.0.1': 'core1.provider.ua', '193.25.180.1': 'ua-ix.net' };
+    const hopName = h => numeric || !NAMES[h] ? h : `${NAMES[h]} [${h}]`;
+    const lines = [];
+    if (R.local) lines.push(`  1    <1 мс    <1 мс    <1 мс  ${hopName(ip)}`);
+    else if (R.ok) R.hops.forEach((h, i) => { const b = i === 0 ? 1 : 3 + i * 4; lines.push(`${String(i + 1).padStart(3)}  ${String(b).padStart(4)} мс ${String(b + 1).padStart(4)} мс ${String(b).padStart(4)} мс  ${h === ip && ip !== host ? `${host} [${ip}]` : hopName(h)}`); });
+    else if (R.err === 'unreach') lines.push(`  1  ${R.via.ip}  повідомляє: Заданий вузол недоступний.`);
+    else if (R.err === 'general') lines.push('Помилка передавання: загальна помилка.');
+    else { if (R.hops) lines.push(`  1     1 мс     1 мс     1 мс  ${hopName(R.hops[0])}`); for (let i = lines.length; i < 4; i++) lines.push(`${String(i + 1).padStart(3)}     *        *        *     Час очікування запиту минув.`); }
+    this.print('', `Трасування маршруту до ${ip !== host ? `${host} [${ip}]` : ip}`, 'з максимальною кількістю переходів 30:', '');
+    if (R.ok && !R.local && R.hops?.[0]) arpNote(this.fs, R.hops[0]);
+    if (this.host.live === false) { this.print(...lines, '', 'Трасування завершено.'); return R.ok; }
+    let i = 0;
+    this.flags.stream = { every: 600, next: () => i < lines.length ? lines[i++] : null, end: () => ['', 'Трасування завершено.'], stop: () => ['', 'Control-C', '^C'] };
+    return true;
+  }
+  c_netstat(t) {
+    const f = lc(t.join('')), all = f.includes('a'), num = f.includes('n'), prog = f.includes('b');
+    const a = primary(this.fs), me = a?.ip;
+    const rows = [];
+    const host = (ip, port) => (num ? ip : ({ '127.0.0.1': 'localhost', [me]: HOST }[ip] || ip)) + ':' + (num ? port : ({ 443: 'https', 80: 'http', 53: 'domain', 445: 'microsoft-ds', 135: 'epmap', 139: 'netbios-ssn', 3389: 'ms-wbt-server' }[port] || port));
+    if (all) for (const [p, port, pr] of [['TCP', 135, 'svchost.exe'], ['TCP', 445, 'System'], ['TCP', 5040, 'svchost.exe'], ['TCP', 7680, 'svchost.exe'], ['UDP', 5353, 'svchost.exe'], ['UDP', 5355, 'svchost.exe']]) rows.push([p, host('0.0.0.0', port), p === 'TCP' ? '0.0.0.0:0' : '*:*', p === 'TCP' ? 'LISTENING' : '', pr]);
+    if (me) {
+      const ev = fwOf(this.fs).events.filter(e => e.dir === 'out' && e.allow && e.protocol === 'TCP').slice(0, 6);
+      ev.forEach((e, i) => rows.push(['TCP', host(me, 50000 + i * 7), host(e.remoteIp, e.remotePort), i < 2 ? 'ESTABLISHED' : 'TIME_WAIT', (e.program || '').split('\\').pop() || 'browser.exe']));
+      rows.push(['TCP', host(me, 49712), host('52.112.120.10', 443), 'ESTABLISHED', 'ms-teams.exe'], ['TCP', host(me, 49733), host('13.107.42.14', 443), 'ESTABLISHED', 'OneDrive.exe']);
+    }
+    this.print('', 'Активні підключення', '', '  Протокол  Локальна адреса          Зовнішня адреса          Стан');
+    for (const r of rows) { this.print(`  ${r[0].padEnd(9)} ${r[1].padEnd(24)} ${r[2].padEnd(24)} ${r[3]}`); if (prog) this.print(` [${r[4]}]`); }
+    if (!me) this.print('', '  Немає активного мережевого підключення.');
+    return true;
+  }
+  c_arp(t) {
+    if (!/^-a$|^\/a$|^-g$/i.test(t[0] || '')) { this.print('', 'Показує таблицю ARP — відповідність IP-адрес і MAC-адрес сусідів.', '', '  ARP -a'); return !t.length; }
+    const a = primary(this.fs);
+    if (!a) { this.print('Записів ARP не знайдено.'); return true; }
+    const S = netOf(this.fs), list = Object.entries(S.arp).filter(([ip]) => sameNet(a.ip, ip, a.mask));
+    const bc = a.ip.split('.').slice(0, 3).join('.') + '.255';
+    this.print('', `Інтерфейс: ${a.ip} --- 0x${a.id === 'eth' ? 7 : 12}`, '  Адреса в Інтернеті   Фізична адреса        Тип');
+    for (const [ip, mac] of list) this.print(`  ${ip.padEnd(20)} ${mac.padEnd(21)} динамічний`);
+    for (const [ip, mac] of [[bc, 'ff-ff-ff-ff-ff-ff'], ['224.0.0.22', '01-00-5e-00-00-16'], ['224.0.0.251', '01-00-5e-00-00-fb'], ['239.255.255.250', '01-00-5e-7f-ff-fa'], ['255.255.255.255', 'ff-ff-ff-ff-ff-ff']]) this.print(`  ${ip.padEnd(20)} ${mac.padEnd(21)} статичний`);
+    return true;
+  }
+  c_getmac(t) {
+    const v = /\/v/i.test(t[0] || '');
+    if (v) { this.print('', 'Ім’я підключення  Мережевий адаптер                   Фізична адреса      Ім’я транспорту', '================= =================================== =================== =========================================================='); for (const a of adapters(this.fs)) this.print(`${a.name.padEnd(17)} ${a.desc.slice(0, 35).padEnd(35)} ${a.mac.padEnd(19)} ${a.status === 'connected' || a.status === 'noip' ? '\\Device\\Tcpip_{' + (a.id === 'eth' ? '4D36E972' : '7A1B2C3D') + '}' : 'Носій відключено'}`); return true; }
+    this.print('', 'Фізична адреса      Ім’я транспорту', '=================== ==========================================================');
+    for (const a of adapters(this.fs)) this.print(`${a.mac.padEnd(19)} ${a.status === 'connected' || a.status === 'noip' ? '\\Device\\Tcpip_{' + (a.id === 'eth' ? '4D36E972' : '7A1B2C3D') + '}' : 'Носій відключено'}`);
+    return true;
+  }
+  c_route(t) {
+    if (lc(t[0] || '') !== 'print') { this.print('', 'Використання: ROUTE PRINT'); return false; }
+    const a = primary(this.fs);
+    this.print('===========================================================================', 'Таблиця маршрутів IPv4', '===========================================================================', 'Активні маршрути:', 'Мережа призначення    Маска мережі      Шлюз              Інтерфейс       Метрика');
+    if (a) {
+      const net = a.ip.split('.').slice(0, 3).join('.') + '.0';
+      if (a.gw) this.print(`          0.0.0.0          0.0.0.0  ${a.gw.padStart(15)}  ${a.ip.padStart(14)}     25`);
+      this.print(`${net.padStart(17)}  ${a.mask.padStart(15)}         На зв’язку  ${a.ip.padStart(14)}    281`);
+    }
+    this.print('        127.0.0.0        255.0.0.0         На зв’язку       127.0.0.1    331', '===========================================================================');
+    if (a && !a.gw) this.print('', 'Немає маршруту за замовчуванням (0.0.0.0): основний шлюз не вказано, тож в інтернет пакети не підуть.');
     return true;
   }
   // брандмауер
@@ -712,12 +847,14 @@ export class Cmd {
     if (!m) { this.print(`curl: (3) URL using bad/illegal format or missing URL`); return false; }
     const proto = (m[1] || 'https').toLowerCase(), host = lc(m[2]), port = +(m[3] || (proto === 'http' ? 80 : 443));
     const local = ['localhost', '127.0.0.1', lc(HOST)].includes(host);
-    if (!local && !/^\d+\.\d+\.\d+\.\d+$/.test(host) && !this.dnsOk()) { this.print(`curl: (6) Could not resolve host: ${host}`); return false; }
-    const ip = /^\d+\.\d+\.\d+\.\d+$/.test(host) ? host : local ? '127.0.0.1' : (SITES[host] || resolveSite(host))?.[0];
-    if (!ip) { this.print(`curl: (6) Could not resolve host: ${host}`); return false; }
+    const L = local ? { ip: '127.0.0.1' } : this.lookup(host);
+    if (L.err) { this.print(`curl: (6) Could not resolve host: ${host}`); return false; }
+    const ip = L.ip;
     if (local) { this.print(`curl: (7) Failed to connect to ${host} port ${port} after 0 ms: Could not connect to server`); return false; }
     const res = this.fwCheck({ dir: 'out', protocol: 'TCP', localPort: 49152 + Math.floor(Math.random() * 9000), remotePort: port, remoteIp: ip, program: PROGRAMS.curl });
     if (!res.allow) { this.print(`curl: (28) Failed to connect to ${host} port ${port} after 21046 ms: Timed out`); return false; }
+    const R = reach(this.fs, ip);
+    if (!R.ok) { this.print(R.err === 'timeout' ? `curl: (28) Failed to connect to ${host} port ${port} after 21046 ms: Timed out` : `curl: (7) Failed to connect to ${host} port ${port} after 0 ms: Could not connect to server`); return false; }
     if (![80, 443, 8080].includes(port)) { this.print(`curl: (7) Failed to connect to ${host} port ${port} after 31 ms: Could not connect to server`); return false; }
     if (head) { this.print(`HTTP/1.1 200 OK`, `Server: ${host === 'edvault.online' ? 'GitHub.com' : 'nginx'}`, 'Content-Type: text/html; charset=utf-8', `Date: ${new Date().toUTCString()}`, 'Cache-Control: max-age=600', ''); return true; }
     this.print('<!DOCTYPE html>', '<html lang="uk">', `<head><meta charset="utf-8"><title>${host}</title></head>`, `<body><h1>Вітаємо на ${host}!</h1></body>`, '</html>');
@@ -729,7 +866,23 @@ export class Cmd {
     const kv = list => { const o = {}; for (const x of list) { const i = x.indexOf('='); if (i > 0) o[lc(x.slice(0, i))] = x.slice(i + 1); } return o; };
     const ok = () => { this.print('ОК.', ''); return true; };
     if (!L.length || L[0] === '/?' || L[0] === 'help') { this.print('', 'Використання: netsh advfirewall …', '', '  netsh advfirewall show allprofiles            — стан брандмауера в усіх профілях', '  netsh advfirewall set allprofiles state off   — вимкнути (on — увімкнути)', '  netsh advfirewall firewall show rule name=all  — усі правила', '  netsh advfirewall firewall add rule name="Мій сайт" dir=out action=block remoteip=8.8.8.8', '  netsh advfirewall firewall delete rule name="Мій сайт"', '  netsh advfirewall reset                        — стандартні параметри', '', 'Змінювати параметри можна лише в командному рядку від імені адміністратора.'); return true; }
-    if (L[0] === 'interface' || L[0] === 'int') { this.print('', `Конфігурація для інтерфейсу "${NET.adapter}"`, '    DHCP увімкнено:                         Так', `    IP-адреса:                              ${NET.ip}`, '    Префікс підмережі:                      192.168.1.0/24 (маска 255.255.255.0)', `    Основний шлюз:                          ${NET.gateway}`, `    DNS-сервери:                            ${NET.dns}`, ''); return true; }
+    if (L[0] === 'interface' || L[0] === 'int') {
+      for (const ad of adapters(this.fs)) {
+        this.print('', `Конфігурація для інтерфейсу "${ad.name}"`);
+        if (ad.status === 'disabled' || ad.status === 'disconnected') { this.print('    Стан:                                   Відключено'); continue; }
+        this.print(`    DHCP увімкнено:                         ${ad.dhcp ? 'Так' : 'Ні'}`, `    IP-адреса:                              ${ad.ip || '—'}`, ad.mask ? `    Префікс підмережі:                      ${ad.ip.split('.').slice(0, 3).join('.')}.0/${prefixOf(ad.mask)} (маска ${ad.mask})` : '', `    Основний шлюз:                          ${ad.gw || '—'}`, `    DNS-сервери${ad.dhcp && !ad.manual ? ', налаштовані через DHCP' : ' (статичні)'}:  ${ad.dns.join(', ') || 'немає'}`);
+      }
+      this.print(''); return true;
+    }
+    if (L[0] === 'wlan') {
+      const S = netOf(this.fs);
+      if (L[1] === 'show' && /^network/.test(L[2] || '')) { if (!S.wifi.on) { this.print('Бездротову мережу вимкнено.'); return false; } this.print('', `Ім’я інтерфейсу : Бездротова мережа`, `Видно мереж: ${WIFI.length}`, ''); WIFI.forEach((w, i) => this.print(`SSID ${i + 1} : ${w.ssid}`, `    Тип мережі              : Інфраструктура`, `    Автентифікація          : ${w.sec}`, `    Сигнал                  : ${w.signal * 24 + 3}%`, '')); return true; }
+      if (L[1] === 'show' && /^interface/.test(L[2] || '')) { const ad = adapters(this.fs)[1]; this.print('', 'На комп’ютері є 1 інтерфейс:', '', `    Ім’я                   : Бездротова мережа`, `    Опис                   : ${ad.desc}`, `    Фізична адреса         : ${ad.mac.toLowerCase().replace(/-/g, ':')}`, `    Стан                   : ${ad.ssid ? 'підключено' : ad.on ? 'відключено' : 'вимкнено'}`, ...(ad.ssid ? [`    SSID                   : ${ad.ssid}`, `    Сигнал                 : ${WIFI.find(w => w.ssid === ad.ssid).signal * 24 + 3}%`] : []), ''); return true; }
+      if (L[1] === 'show' && /^profile/.test(L[2] || '')) { const p = Object.keys(S.wifi.saved); this.print('', 'Профілі користувача', '-------------------', ...(p.length ? p.map(x => `    Профіль усіх користувачів : ${x}`) : ['    <немає>']), ''); return true; }
+      if (L[1] === 'connect') { const name = kv(t.slice(2)).name || kv(t.slice(2)).ssid; if (!name) { this.print('Укажіть ім’я мережі: netsh wlan connect name=SCHOOL-WIFI'); return false; } const ssid = WIFI.find(w => lc(w.ssid) === lc(name))?.ssid; if (!ssid || !S.wifi.saved[ssid] && WIFI.find(w => w.ssid === ssid).pass) { this.print(`На інтерфейсі «Бездротова мережа» немає профілю «${name}». Спершу підключіться через значок мережі й збережіть пароль.`); return false; } const r = wifiConnect(this.fs, ssid); if (!r.ok) { this.print(r.err); return false; } syncNET(this.fs); this.fs.emit('net'); this.print('Запит на підключення успішно виконано.'); return true; }
+      if (L[1] === 'disconnect') { wifiDisconnect(this.fs); syncNET(this.fs); this.fs.emit('net'); this.print('Запит на відключення від інтерфейсу «Бездротова мережа» успішно виконано.'); return true; }
+      this.print('', 'netsh wlan show networks | show interfaces | show profiles | connect name=… | disconnect'); return false;
+    }
     if (L[0] !== 'advfirewall') { this.print(`Не вдалося знайти таку команду: ${t.join(' ')}`, 'Наберіть «netsh /?», щоб побачити підказку.'); return false; }
     const which = w => ({ allprofiles: PROFILES, currentprofile: [NET.profile], domainprofile: ['domain'], privateprofile: ['private'], publicprofile: ['public'] }[w]);
     if (L[1] === 'show') {
@@ -879,7 +1032,7 @@ export function wildRename(name, pattern) {
 function splitExt(n) { const i = n.lastIndexOf('.'); return i > 0 ? [n.slice(0, i), n.slice(i + 1)] : [n]; }
 
 // Відомі сайти: [IP-адреса, звичайна затримка в мс]
-export const SITES = { 'edvault.online': ['185.199.108.153', 18], 'www.edvault.online': ['185.199.108.153', 18], 'google.com': ['142.250.74.110', 14], 'www.google.com': ['142.250.74.110', 14], 'youtube.com': ['142.250.74.46', 15], 'wikipedia.org': ['185.15.59.224', 31], 'ukr.net': ['212.42.76.252', 9], 'school.local': ['192.168.1.10', 1], localhost: ['127.0.0.1', 0] };
+export const SITES = { 'edvault.online': ['185.199.108.153', 18], 'www.edvault.online': ['185.199.108.153', 18], 'google.com': ['142.250.74.110', 14], 'www.google.com': ['142.250.74.110', 14], 'youtube.com': ['142.250.74.46', 15], 'wikipedia.org': ['185.15.59.224', 31], 'ukr.net': ['212.42.76.252', 9], 'school.local': ['192.168.1.10', 1], localhost: ['127.0.0.1', 0], 'poshuk.edvault': ['185.199.110.20', 16], 'novyny.edvault': ['185.199.110.21', 17], 'shkola.edvault': ['185.199.110.22', 15], 'fayly.edvault': ['185.199.110.23', 18], 'pogoda.edvault': ['185.199.110.24', 16], 'dovidka.edvault': ['185.199.110.25', 17], 'pryz-vygraj.edvault': ['45.11.20.99', 63] };
 // Будь-який правильно записаний сайт «існує»: стала IP-адреса й затримка з назви (щоразу однакові)
 const TLD = ['com', 'net', 'org', 'ua', 'edu', 'gov', 'io', 'info', 'online', 'укр', 'de', 'uk', 'pl', 'eu', 'app', 'dev', 'me', 'tv', 'fm', 'ai', 'site', 'store', 'school', 'local'];
 export function resolveSite(host) {

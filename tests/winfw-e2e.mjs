@@ -1,7 +1,7 @@
 // Браузерна перевірка брандмауера в «Емуляторі Windows» (потрібні Playwright і Chromium).
 //   node tests/winfw-e2e.mjs
 import assert from 'node:assert/strict';
-import { startServer, launch, newPage, step } from './_harness.mjs';
+import { startServer, launch, newPage, step, signIn } from './_harness.mjs';
 
 const server = await startServer();
 const browser = await launch();
@@ -10,7 +10,7 @@ const ctx = await browser.newContext({ viewport: { width: 1366, height: 820 } })
 const p = await newPage(ctx, errors);
 await p.goto(server.url + '/emulators/windows');
 await p.waitForFunction(() => window.WinEmu);
-await p.waitForSelector('#boot', { state: 'hidden' });
+await p.waitForSelector('#boot', { state: 'hidden' }); await signIn(p);
 
 const fw = () => p.evaluate(() => JSON.parse(JSON.stringify(WinEmu.fs.s.fw || null)));
 const rule = name => p.evaluate(n => (WinEmu.fs.s.fw?.rules || []).find(r => r.name.trim() === n) || null, name);

@@ -1,7 +1,7 @@
 // Браузерна перевірка антивіруса («Безпека Windows» → «Захист від вірусів і загроз») в емуляторі Windows.
 //   node tests/winav-e2e.mjs
 import assert from 'node:assert/strict';
-import { startServer, launch, newPage, step } from './_harness.mjs';
+import { startServer, launch, newPage, step, signIn } from './_harness.mjs';
 
 const server = await startServer();
 const browser = await launch();
@@ -10,7 +10,7 @@ const ctx = await browser.newContext({ viewport: { width: 1366, height: 820 } })
 const p = await newPage(ctx, errors);
 await p.goto(server.url + '/emulators/windows');
 await p.waitForFunction(() => window.WinEmu);
-await p.waitForSelector('#boot', { state: 'hidden' });
+await p.waitForSelector('#boot', { state: 'hidden' }); await signIn(p);
 
 const H = 'C:\\Users\\Учень';
 const AV = () => p.evaluate(() => JSON.parse(JSON.stringify(WinEmu.fs.s.av || null, (k, v) => k === 'node' ? undefined : v)));

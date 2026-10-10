@@ -131,10 +131,10 @@ export function dialog(o) {
     const done = v => { el.remove(); document.removeEventListener('keydown', key, true); res(v); };
     const cancel = () => done(btns.find(b => b.cancel)?.v ?? (btns.length === 1 ? btns[0].v : null));
     el.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b) done(o.collect ? o.collect(el, btns[+b.dataset.i].v) : btns[+b.dataset.i].v); else if (e.target.closest('[data-v="__close"]')) cancel(); });
-    const key = e => { if (e.key === 'Escape') { e.stopPropagation(); cancel(); } else if (e.key === 'Enter' && !e.target.closest('textarea')) { e.preventDefault(); e.stopPropagation(); const p = btns.findIndex(b => b.primary); if (p >= 0) el.querySelector(`[data-i="${p}"]`).click(); } };
+    const key = e => { if (el.inert) return; if (e.key === 'Escape') { e.stopPropagation(); cancel(); } else if (e.key === 'Enter' && !e.target.closest('textarea')) { e.preventDefault(); e.stopPropagation(); const p = btns.findIndex(b => b.primary); if (p >= 0) el.querySelector(`[data-i="${p}"]`).click(); } };
     document.addEventListener('keydown', key, true);
     o.onOpen?.(el);
-    setTimeout(() => (el.querySelector('[autofocus]') || el.querySelector('.btn.primary'))?.focus(), 20);
+    setTimeout(() => { if (!el.contains(document.activeElement)) (el.querySelector('[autofocus]') || el.querySelector('.btn.primary'))?.focus(); }, 20);
   });
 }
 export const alertBox = (text, title = 'Windows', icon = 'warn') => dialog({ title, text, icon, buttons: [{ t: 'OK', v: true, primary: true }] });
@@ -187,7 +187,7 @@ export function modal(o) {
     if (tab) { api.$$('[data-tab]').forEach(t => t.classList.toggle('on', t === tab)); api.$$('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== tab.dataset.tab; }); }
   });
   const key = e => {
-    if (!el.isConnected || document.querySelector('.dlg-back:last-of-type') !== el) return;
+    if (!el.isConnected || el.inert || document.querySelector('.dlg-back:last-of-type') !== el) return;
     if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); const c = o.buttons?.findIndex(x => x.cancel); c >= 0 ? press(c) : api.close(null); }
     else if (e.key === 'Enter' && !e.target.closest('textarea, select, button') && o.buttons) { const p = o.buttons.findIndex(x => x.primary); if (p >= 0) { e.preventDefault(); e.stopPropagation(); press(p); } }
   };
