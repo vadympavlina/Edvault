@@ -114,7 +114,7 @@ export class TaskManager {
   perfItems() {
     const T = this.tot;
     return [['cpu', 'ЦП', `${Math.round(T.cpu)}% ${(2.1 + T.cpu / 100 * 1.6).toFixed(2).replace('.', ',')} ГГц`, 'cpu'], ['mem', 'Пам’ять', `${(T.mem / 1024 / 1024).toFixed(1).replace('.', ',')}/8,0 ГБ (${Math.round(T.mem / MEM_TOTAL * 100)}%)`, 'mem'],
-      ['diskC', 'Диск 0 (C:)', `SSD · ${Math.round(T.disk)}%`, 'diskC'], ['diskD', 'Диск 1 (D:)', `HDD · ${Math.round(T.diskD)}%`, 'diskD'], ['net', 'Ethernet', `Надс. ${(T.net * 0.3).toFixed(1).replace('.', ',')} · Отрим. ${(T.net * 0.7).toFixed(1).replace('.', ',')} Мбіт/с`, 'net']];
+      ['diskC', 'Диск 0 (C:)', `SSD · ${Math.round(T.disk)}%`, 'diskC'], ['diskD', 'Диск 1 (D:)', `HDD · ${Math.round(T.diskD)}%`, 'diskD'], ['net', 'Ethernet', `Н: ${(T.net * 0.3).toFixed(1).replace('.', ',')} О: ${(T.net * 0.7).toFixed(1).replace('.', ',')} Мбіт/с`, 'net']];
   }
   spark(k, w, h, big) {
     const d = this.hist[k], pts = d.map((v, i) => `${(i / 59 * w).toFixed(1)},${(h - v / 100 * h).toFixed(1)}`).join(' ');
@@ -161,12 +161,12 @@ export class TaskManager {
     rows.sort((a, b) => { const c = s.col && ['pid', 'name', 'cpu', 'mem', 'user'].includes(s.col) ? s.col : 'name'; const x = v(a, c), y = v(b, c); return (typeof x === 'string' ? x.localeCompare(y, 'uk') : x - y) * (s.col ? (s.asc ? 1 : -1) : 1); });
     const th = (k, t, cls = '') => `<th data-sort="${k}" class="${cls}${s.col === k ? ' sorted' : ''}">${t}</th>`;
     return `<table class="tm-t det"><thead><tr>${th('name', 'Ім’я', 'nm')}${th('pid', 'PID', 'num')}<th>Стан</th>${th('user', 'Ім’я користувача')}${th('cpu', 'ЦП', 'num')}${th('mem', 'Пам’ять', 'num')}<th>Опис</th></tr></thead><tbody>
-      ${rows.map(p => `<tr data-key="${esc(p.key)}" class="${this.sel === p.key ? 'sel' : ''}"><td class="nm">${esc(p.name)}</td><td class="num">${p.pid}</td><td>Виконується</td><td>${esc(p.user || USER)}</td><td class="num">${String(Math.round(this.val(p).cpu)).padStart(2, '0')}</td><td class="num">${fmtNum(Math.round(this.val(p).mem / (p.wins?.length || 1)))} КБ</td><td>${esc(p.desc || p.title)}</td></tr>`).join('')}</tbody></table>`;
+      ${rows.map(p => `<tr data-key="${esc(p.key)}" class="${this.sel === p.key ? 'sel' : ''}"><td class="nm">${esc(p.name)}</td><td class="num">${p.pid}</td><td>Виконується</td><td>${esc(p.user || USER)}</td><td class="num">${String(Math.round(this.val(p).cpu)).padStart(2, '0')}</td><td class="num">${fmtNum(Math.round(this.val(p).mem / (p.wins?.length || 1)))} КБ</td><td class="dsc" title="${esc(p.desc || p.title)}">${esc(p.desc || p.title)}</td></tr>`).join('')}</tbody></table>`;
   }
   p_services() {
     const list = SERVICES.filter(s => this.match(s.name, s.title, s.pid));
-    return `<table class="tm-t"><thead><tr><th class="nm">Ім’я</th><th class="num">PID</th><th>Опис</th><th>Стан</th><th>Група</th></tr></thead><tbody>${list.map(s => { const run = this.P.services[s.name];
-      return `<tr data-svc="${s.name}" class="${this.sel === s.name ? 'sel' : ''}"><td class="nm"><span class="tm-ic">${ui('puzzle', 15)}</span>${s.name}</td><td class="num">${run ? s.pid || 3100 + s.name.length * 7 : ''}</td><td>${esc(s.title)}</td><td class="${run ? 'run' : 'off'}">${run ? 'Виконується' : 'Зупинено'}</td><td>${s.group}</td></tr>`; }).join('')}</tbody></table>`;
+    return `<table class="tm-t compact"><thead><tr><th class="nm">Ім’я</th><th class="num">PID</th><th>Опис</th><th>Стан</th><th>Група</th></tr></thead><tbody>${list.map(s => { const run = this.P.services[s.name];
+      return `<tr data-svc="${s.name}" class="${this.sel === s.name ? 'sel' : ''}"><td class="nm"><span class="tm-ic">${ui('puzzle', 15)}</span>${s.name}</td><td class="num">${run ? s.pid || 3100 + s.name.length * 7 : ''}</td><td class="dsc" title="${esc(s.title)}">${esc(s.title)}</td><td class="${run ? 'run' : 'off'}">${run ? 'Виконується' : 'Зупинено'}</td><td class="grp" title="${s.group}">${s.group}</td></tr>`; }).join('')}</tbody></table>`;
   }
 
   /* ── події ── */

@@ -33,7 +33,7 @@ export function installProps(sys) {
     const ext = extOf(n.name), opens = dir ? null : OPENS[ext] || (ext === 'exe' ? null : 'Не вибрано');
     const acl = aclOf(fs, real || loc, n);
     const row = (k, v) => `<tr><th>${k}</th><td>${v}</td></tr>`;
-    const general = `<div class="pr-head">${nodeIcon(n, binItem ? null : real, 40)}<input class="inp pr-name" data-name value="${esc(n.name)}" ${locked ? 'disabled' : ''} spellcheck="false"></div>
+    const general = `<div class="pr-head">${nodeIcon(n, binItem ? null : real, 40)}<input class="inp pr-name" aria-label="Ім’я" data-name value="${esc(n.name)}" ${locked ? 'disabled' : ''} spellcheck="false"></div>
       <table class="pr-t">${row('Тип:', esc(typeName(n)) + (ext && !dir ? ` (.${ext})` : ''))}${opens ? row('Відкривати за допомогою:', esc(opens)) : ''}
       <tr class="sep"><td colspan="2"></td></tr>${row(binItem ? 'Звідки видалено:' : 'Розташування:', `<span class="pr-path">${esc(loc)}</span>`)}${row('Розмір:', `${fmtSize(size)} (${fmtNum(size)} байт)`)}${row('На диску:', `${fmtSize(onDisk)} (${fmtNum(onDisk)} байт)`)}${dir ? row('Містить:', `Файлів: ${files}, папок: ${dirs}`) : ''}
       <tr class="sep"><td colspan="2"></td></tr>${row('Створено:', dt(n.created))}${dir ? '' : row('Змінено:', dt(n.modified))}${dir ? '' : row('Відкрито:', dt(Math.max(n.modified, n.opened || 0)))}${binItem ? row('Видалено:', dt(binItem.at)) : ''}

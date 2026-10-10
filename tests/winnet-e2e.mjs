@@ -170,6 +170,19 @@ await step('збереження: налаштування мережі пере
   assert.equal((await net()).wifi.on, false);
 });
 
+await step('доступність: у полях форм є назви, діалоги позначені як модальні', async () => {
+  await p.evaluate(() => { WinEmu.open('ncpa'); });
+  await p.dblclick('.nc-it[data-ad="eth"]'); await p.click('.nstat [data-props]'); await p.click('.aprops [data-ipv4]');
+  await p.click('[name=v4ip][value=man]');
+  const r = await p.evaluate(() => {
+    const unnamed = [...document.querySelectorAll('.dlg-back input, .dlg-back select')].filter(i => !(i.getAttribute('aria-label') || i.closest('label') || (i.id && document.querySelector(`label[for="${i.id}"]`))));
+    return { unnamed: unnamed.length, modal: [...document.querySelectorAll('.dlg-back .dlg')].every(d => d.getAttribute('aria-modal') === 'true' && d.getAttribute('aria-label')) };
+  });
+  assert.equal(r.unnamed, 0); assert.ok(r.modal);
+  assert.equal(await p.locator('label[for="v4-ip"]').innerText(), 'IP-адреса:');
+  while (await p.locator('.dlg-back').count()) await p.keyboard.press('Escape');
+});
+
 await step('жодної помилки в консолі сторінки', async () => { assert.deepEqual(errors, []); });
 
 await browser.close();

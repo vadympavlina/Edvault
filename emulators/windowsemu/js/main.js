@@ -536,6 +536,26 @@ $('#taskbar').addEventListener('contextmenu', e => {
 });
 document.addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea, .con')) e.preventDefault(); });
 
+/* ═════════ Доступність: кожне поле має назву ═════════ */
+// у формах підпис часто стоїть поруч (сітка «підпис — поле»), а не обгортає поле; беремо назву з нього
+const FIELDS = 'input:not([type=hidden]), select, textarea';
+const nameField = i => {
+  if (i.getAttribute('aria-label') || i.getAttribute('aria-labelledby') || i.closest('label') || (i.id && document.querySelector(`label[for="${CSS.escape(i.id)}"]`))) return;
+  const txt = e => e?.textContent.replace(/\s+/g, ' ').trim().replace(/:$/, '');
+  const row = i.closest('.rt-row'), prev = i.previousElementSibling, box = i.parentElement;
+  const t = row ? txt(row.querySelector('.rt-l'))
+    : prev?.tagName === 'LABEL' ? txt(prev)
+    : box?.previousElementSibling?.tagName === 'LABEL' ? txt(box.previousElementSibling)
+    : i.closest('button') ? txt(i.closest('button'))
+    : i.closest('td') ? (() => { const td = i.closest('td'), tr = td.parentElement, th = tr.closest('table')?.querySelector(`thead th:nth-child(${td.cellIndex + 1})`); const first = [...tr.cells].find(c => c !== td && txt(c)); return [txt(th), txt(first)].filter(Boolean).join(': '); })()
+    : i.placeholder || i.title || txt(i.closest('fieldset')?.querySelector('legend')) || '';
+  if (t) i.setAttribute('aria-label', t.slice(0, 80));
+};
+const nameAll = root => { if (root.matches?.(FIELDS)) nameField(root); root.querySelectorAll?.(FIELDS).forEach(nameField); };
+const added = new Set();
+const flush = batched(() => { for (const n of added) if (n.isConnected) nameAll(n); added.clear(); });
+new MutationObserver(list => { for (const m of list) for (const n of m.addedNodes) if (n.nodeType === 1) added.add(n); flush(); }).observe(document.body, { childList: true, subtree: true });
+
 /* ═════════ Старт ═════════ */
 installLock(sys);
 sys.lock();

@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { join, extname, resolve } from 'node:path';
 
 export const ROOT = resolve(new URL('..', import.meta.url).pathname);
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
 
 export async function startServer() {
   // як GitHub Pages: /tools/ → tools/index.html, /tools/vote → tools/vote.html, решта — 404.html зі статусом 404

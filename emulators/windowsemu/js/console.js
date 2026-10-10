@@ -19,7 +19,7 @@ export class Console {
     });
     if (cwd && sys.fs.isDir(cwd)) this.cmd.cwd = sys.fs.real(cwd);
     this.hi = -1; this.draft = '';
-    this.win.body.innerHTML = `<div class="con" tabindex="-1"><pre class="con-out"></pre><div class="con-line"><span class="con-pr"></span><input class="con-in" spellcheck="false" autocomplete="off" autocapitalize="off"></div></div>`;
+    this.win.body.innerHTML = `<div class="con" tabindex="-1"><pre class="con-out"></pre><div class="con-line"><span class="con-pr"></span><input class="con-in" aria-label="Команда" spellcheck="false" autocomplete="off" autocapitalize="off"></div></div>`;
     this.$ = s => this.win.body.querySelector(s);
     this.out = this.$('.con-out'); this.inp = this.$('.con-in');
     this.write(this.cmd.banner());

@@ -156,7 +156,7 @@ export class Explorer {
   status() {
     const items = this.cur || [], n = items.length, s = this.sel.size, fs = this.fs;
     const selSize = [...this.sel].map(k => items.find(i => i.key === k)?.node).filter(x => x && x.type === 'file').reduce((a, x) => a + fs.sizeOf(x), 0);
-    this.$('.ex-status').innerHTML = this.path === PC && !this.query ? `${6 + fs.drives().length} елементів` : `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'елемент' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'елементи' : 'елементів'}${s ? ` <span class="sep">|</span> Вибрано: ${s}${selSize ? ` (${fmtSize(selSize)})` : ''}` : ''}`;
+    this.$('.ex-status').innerHTML = this.path === PC && !this.query ? `${6 + fs.drives().length} елементів` : `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'елемент' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'елементи' : 'елементів'}${s ? ` <span class="sep" aria-hidden="true">|</span> Вибрано: ${s}${selSize ? ` (${fmtSize(selSize)})` : ''}` : ''}`;
   }
   // змінилося лише виділення — оновлюємо класи, а не весь вміст (інакше не спрацює подвійне клацання)
   paint() {

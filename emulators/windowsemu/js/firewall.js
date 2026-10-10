@@ -18,7 +18,7 @@ export class SecurityApp {
   constructor(sys, page = 'home') {
     this.sys = sys; this.fs = sys.fs; this.page = page; this.hist = [];
     this.win = WM.open({ app: 'security', exe: 'SecHealthUI.exe', title: 'Безпека Windows', icon: appIcon('security', 16), w: 980, h: 660, minW: 640, minH: 400 });
-    this.win.body.innerHTML = `<div class="sec"><nav class="sec-nav"><button class="sn back" data-back title="Назад">${ui('back', 16)}</button><button class="sn" data-menu>${ui('menu', 16)}</button>${NAV.map(([k, i, t]) => `<button class="sn" data-go="${k}">${ui(i, 18)}<span>${t}</span></button>`).join('')}<span class="grow"></span><button class="sn" data-go="settings">${ui('gear', 18)}<span>Параметри</span></button></nav><main class="sec-main"></main></div>`;
+    this.win.body.innerHTML = `<div class="sec"><nav class="sec-nav"><button class="sn back" data-back title="Назад">${ui('back', 16)}</button><button class="sn" data-menu title="Згорнути або розгорнути меню" aria-label="Меню">${ui('menu', 16)}</button>${NAV.map(([k, i, t]) => `<button class="sn" data-go="${k}">${ui(i, 18)}<span>${t}</span></button>`).join('')}<span class="grow"></span><button class="sn" data-go="settings">${ui('gear', 18)}<span>Параметри</span></button></nav><main class="sec-main"></main></div>`;
     this.$ = s => this.win.body.querySelector(s); this.$$ = s => [...this.win.body.querySelectorAll(s)];
     this.win.body.addEventListener('click', e => this.click(e));
     this.win.body.addEventListener('change', e => { if (e.target.name === 'avopt') this.avOpt = e.target.value; });

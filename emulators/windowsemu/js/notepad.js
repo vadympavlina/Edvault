@@ -10,7 +10,7 @@ export class Notepad {
     this.sys = sys; this.fs = sys.fs; this.path = null; this.saved = ''; this.wrap = sys.settings.wrap ?? true; this.zoom = 100;
     this.win = WM.open({ app: 'notepad', title: 'Блокнот', icon: appIcon('notepad', 16), w: 700, h: 480, minW: 360, minH: 240, onClose: () => this.confirmClose() });
     this.win.body.innerHTML = `<div class="np"><div class="np-menu"><button data-m="file">Файл</button><button data-m="edit">Редагування</button><button data-m="view">Перегляд</button></div>
-      <textarea class="np-text" spellcheck="false"></textarea><footer class="np-status"><span class="np-pos"></span><span class="np-len"></span><span>${'100%'}</span><span>Windows (CRLF)</span><span>UTF-8</span></footer></div>`;
+      <textarea class="np-text" aria-label="Текст документа" spellcheck="false"></textarea><footer class="np-status"><span class="np-pos"></span><span class="np-len"></span><span>${'100%'}</span><span>Windows (CRLF)</span><span>UTF-8</span></footer></div>`;
     this.$ = s => this.win.body.querySelector(s);
     this.ta = this.$('.np-text');
     this.bind();

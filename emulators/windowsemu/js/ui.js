@@ -18,12 +18,12 @@ export const WM = {
     const w = Math.min(o.w || 860, A.width - 40), hh = Math.min(o.h || 540, A.height - 40);
     const x = o.x ?? Math.max(10, Math.round((A.width - w) / 2) - 120 + (n % 6) * 34), y = o.y ?? Math.max(10, Math.round((A.height - hh) / 2) - 70 + (n % 6) * 30);
     const win = { id: 'w' + (++this.seq), pid: (this.pid += 4 + (n % 3) * 4), app: o.app, exe: o.exe || o.app + '.exe', title: o.title, icon: o.icon, min: false, max: false, z: 0, minW: o.minW || 360, minH: o.minH || 240, onClose: o.onClose, onKey: o.onKey };
-    win.el = h(`<section class="win" data-win="${win.id}" data-app="${o.app}" style="left:${x}px;top:${y}px;width:${w}px;height:${hh}px">
+    win.el = h(`<section class="win" role="dialog" data-win="${win.id}" data-app="${o.app}" style="left:${x}px;top:${y}px;width:${w}px;height:${hh}px">
       <header class="win-title"><span class="win-ico">${o.icon}</span><span class="win-name"></span><span class="grow"></span>
         <button class="wb" data-act="min" title="Згорнути">${ui('min', 14)}</button><button class="wb" data-act="max" title="Розгорнути">${ui('max', 13)}</button><button class="wb close" data-act="close" title="Закрити">${ui('close', 15)}</button></header>
       <div class="win-body"></div>${['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map(d => `<i class="rz rz-${d}" data-rz="${d}"></i>`).join('')}</section>`);
     win.body = win.el.querySelector('.win-body');
-    win.setTitle = t => { win.title = t; win.el.querySelector('.win-name').textContent = t; this.emit(); };
+    win.setTitle = t => { win.title = t; win.el.querySelector('.win-name').textContent = t; win.el.setAttribute('aria-label', t); this.emit(); };
     win.focus = () => this.focus(win);
     win.close = force => this.close(win, force);
     // прибирання (підписки, таймери) — виконується за будь-якого закриття: кнопкою, з панелі завдань, taskkill
@@ -124,7 +124,7 @@ export function dialog(o) {
   return new Promise(res => {
     const icon = o.icon ? `<span class="dlg-ico ${o.icon}">${ui(o.icon === 'error' ? 'close' : o.icon === 'question' ? 'question' : o.icon === 'info' ? 'info' : 'warn', 26)}</span>` : '';
     const btns = (o.buttons || [{ t: 'OK', v: true, primary: true }]);
-    const el = h(`<div class="dlg-back"><div class="dlg${o.wide ? ' wide' : ''}" role="dialog"><header class="dlg-title"><span>${esc(o.title || 'Windows')}</span><button class="wb close" data-v="__close" title="Закрити">${ui('close', 15)}</button></header>
+    const el = h(`<div class="dlg-back"><div class="dlg${o.wide ? ' wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(o.title || 'Windows')}"><header class="dlg-title"><span>${esc(o.title || 'Windows')}</span><button class="wb close" data-v="__close" title="Закрити">${ui('close', 15)}</button></header>
       <div class="dlg-body">${icon}<div class="dlg-text">${o.html || `<p>${esc(o.text || '')}</p>`}</div></div>
       <footer class="dlg-foot">${btns.map((b, i) => `<button class="btn${b.primary ? ' primary' : ''}" data-i="${i}">${esc(b.t)}</button>`).join('')}</footer></div></div>`);
     document.body.appendChild(el);
@@ -171,7 +171,7 @@ window.addEventListener('blur', closeMenu);
 /* ═════════ Модальне вікно з вкладками (властивості, майстри) ═════════ */
 // modal({ title, html, cls, buttons: [{ t, v, primary, cancel }], onButton(v, api) → false щоб не закривати, onOpen(api) })
 export function modal(o) {
-  const el = h(`<div class="dlg-back"><div class="dlg mdl ${o.cls || ''}" role="dialog"><header class="dlg-title"><span>${esc(o.title)}</span><button class="wb close" data-close title="Закрити">${ui('close', 15)}</button></header>
+  const el = h(`<div class="dlg-back"><div class="dlg mdl ${o.cls || ''}" role="dialog" aria-modal="true" aria-label="${esc(o.title)}"><header class="dlg-title"><span>${esc(o.title)}</span><button class="wb close" data-close title="Закрити">${ui('close', 15)}</button></header>
     <div class="mdl-body">${o.html}</div>${o.buttons ? `<footer class="dlg-foot">${o.buttons.map((b, i) => `<button class="btn${b.primary ? ' primary' : ''}" data-b="${i}">${esc(b.t)}</button>`).join('')}</footer>` : ''}</div></div>`);
   document.body.appendChild(el);
   const api = {

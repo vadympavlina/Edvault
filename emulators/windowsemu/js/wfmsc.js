@@ -99,7 +99,7 @@ export class Wfmsc {
   }
   renderTree() {
     const vis = NODES.filter(n => { for (let p = n.parent; p; p = node(p).parent) if (!this.open[p]) return false; return true; });
-    this.$('.mmc-tree').innerHTML = vis.map(n => `<div class="tn${n.k === this.node ? ' on' : ''}" data-node="${n.k}" style="--l:${n.lvl}" role="treeitem">${n.kids ? `<button class="tw" data-twist="${n.k}">${ui(this.open[n.k] ? 'down' : 'chevron', 11)}</button>` : '<i class="tw"></i>'}${TI[n.ic]}<span title="${esc(n.k === 'root' ? n.short + ' на локальному комп’ютері' : n.t)}">${esc(n.t)}</span></div>`).join('');
+    this.$('.mmc-tree').innerHTML = vis.map(n => `<div class="tn${n.k === this.node ? ' on' : ''}" data-node="${n.k}" style="--l:${n.lvl}" role="treeitem">${n.kids ? `<button class="tw" data-twist="${n.k}" aria-label="${this.open[n.k] ? 'Згорнути' : 'Розгорнути'}" aria-expanded="${!!this.open[n.k]}">${ui(this.open[n.k] ? 'down' : 'chevron', 11)}</button>` : '<i class="tw"></i>'}${TI[n.ic]}<span title="${esc(n.k === 'root' ? n.short + ' на локальному комп’ютері' : n.t)}">${esc(n.t)}</span></div>`).join('');
   }
   renderCenter() {
     const fw = this.fw, k = this.node, n = node(k);
