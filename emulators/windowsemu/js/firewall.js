@@ -23,7 +23,7 @@ export class SecurityApp {
     this.win.body.addEventListener('click', e => this.click(e));
     this.win.body.addEventListener('change', e => { if (e.target.name === 'avopt') this.avOpt = e.target.value; });
     this.unsub = this.fs.on(w => { if (['fw', 'reset', 'av'].includes(w)) this.render(); else if (w === 'avscan' && this.page.startsWith('virus') && !avScanUpdate(this)) this.render(); });
-    const close = this.win.close; this.win.close = f => { this.unsub(); return close(f); };
+    this.win.cleanup(() => this.unsub());
     this.render();
   }
   go(p) { if (p !== this.page) this.hist.push(this.page); this.page = p; this.render(); this.$('.sec-main').scrollTop = 0; }
@@ -132,7 +132,7 @@ export class FirewallCpl {
     this.win.body.addEventListener('click', e => this.click(e));
     this.win.body.addEventListener('change', e => this.change(e));
     this.unsub = this.fs.on(w => { if (['fw', 'reset'].includes(w) && !this.draft) this.render(); });
-    const close = this.win.close; this.win.close = f => { this.unsub(); return close(f); };
+    this.win.cleanup(() => this.unsub());
     this.render();
   }
   get fw() { return fwOf(this.fs); }
@@ -188,8 +188,8 @@ export class FirewallCpl {
     const row = e.target.closest('[data-ai]'); if (row && !e.target.closest('input')) { this.selApp = +row.dataset.ai; return this.render(); }
     if (e.target.closest('[data-unlock]')) { if (await elevate('Брандмауер Захисника Windows', appIcon('firewall', 32))) { this.unlocked = true; this.draft = { apps: JSON.parse(JSON.stringify(allowedApps(fw))) }; this.render(); } return; }
     if (e.target.closest('[data-details]')) { const ap = (this.draft?.apps || allowedApps(fw))[this.selApp]; if (ap) alertBox(`${ap.name}\n\nПравил: ${ap.rules.length}.\n${ap.rules.map(r => '• ' + r.name.trim()).join('\n')}\n\n${ap.rules[0]?.desc || ''}`, 'Відомості про програму', 'info'); return; }
-    if (e.target.closest('[data-remove]')) { const ap = this.draft.apps[this.selApp]; if (await dialog({ title: 'Видалити програму', icon: 'question', text: `Видалити «${ap.name}» зі списку дозволених програм?`, buttons: [{ t: 'Так', v: true, primary: true }, { t: 'Ні', v: false, cancel: true }] })) { ap.removed = true; this.draft.apps.splice(this.selApp, 1); (this.draft.removed ||= []).push(ap.key); this.selApp = null; this.render(); } return; }
-    if (e.target.closest('[data-addapp]')) return this.addApp();
+    if (e.target.closest('[data-remove]')) { if (!this.draft || !this.unlocked) return; const ap = this.draft.apps[this.selApp]; if (!ap) return; if (await dialog({ title: 'Видалити програму', icon: 'question', text: `Видалити «${ap.name}» зі списку дозволених програм?`, buttons: [{ t: 'Так', v: true, primary: true }, { t: 'Ні', v: false, cancel: true }] })) { ap.removed = true; this.draft.apps.splice(this.selApp, 1); (this.draft.removed ||= []).push(ap.key); this.selApp = null; this.render(); } return; }
+    if (e.target.closest('[data-addapp]')) return this.draft && this.unlocked ? this.addApp() : undefined;
     if (e.target.closest('[data-ok]')) {
       if (this.page === 'allow') {
         if (this.draft) {

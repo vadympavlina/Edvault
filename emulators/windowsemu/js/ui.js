@@ -10,7 +10,7 @@ export const WM = {
   wins: [], z: 20, seq: 0, pid: 1236, subs: new Set(),
   area: () => document.getElementById('desk'),
   emit() { for (const f of this.subs) f(); },
-  on(fn) { this.subs.add(fn); },
+  on(fn) { this.subs.add(fn); return () => this.subs.delete(fn); },
   active() { return this.wins.filter(w => !w.min).sort((a, b) => b.z - a.z)[0] || null; },
   open(o) {
     const area = this.area(), A = area.getBoundingClientRect();
@@ -26,6 +26,8 @@ export const WM = {
     win.setTitle = t => { win.title = t; win.el.querySelector('.win-name').textContent = t; this.emit(); };
     win.focus = () => this.focus(win);
     win.close = force => this.close(win, force);
+    // прибирання (підписки, таймери) — виконується за будь-якого закриття: кнопкою, з панелі завдань, taskkill
+    win.disposers = []; win.cleanup = fn => win.disposers.push(fn);
     win.setTitle(o.title);
     area.appendChild(win.el);
     this.wins.push(win);
@@ -41,8 +43,11 @@ export const WM = {
     this.emit();
   },
   async close(win, force) {
+    if (!this.wins.includes(win)) return;
     if (!force && win.onClose && (await win.onClose()) === false) return;
-    win.el.classList.add('closing');
+    if (!this.wins.includes(win)) return;
+    for (const f of win.disposers.splice(0)) { try { f(); } catch (e) { console.warn(e); } }
+    win.el.classList.add('closing'); win.el.inert = true; if (win.el.contains(document.activeElement)) document.activeElement.blur();
     setTimeout(() => win.el.remove(), 120);
     this.wins = this.wins.filter(w => w !== win);
     const next = this.active(); if (next) this.focus(next); else this.emit();
@@ -91,16 +96,27 @@ export const WM = {
         Object.assign(el.style, { left: l + 'px', top: t + 'px', width: w + 'px', height: hh + 'px' });
       };
       const up = ev => {
-        el.releasePointerCapture(e.pointerId); el.classList.remove('moving');
-        el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up);
+        try { el.releasePointerCapture(e.pointerId); } catch (x) { /* вже відпущено */ }
+        el.classList.remove('moving');
+        el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
         if (!rz && ev.clientY - A.top < 4) this.toggleMax(win); // до верхнього краю — розгорнути
         win.onResize?.();
       };
-      el.addEventListener('pointermove', move); el.addEventListener('pointerup', up);
+      el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
       e.preventDefault();
     });
   },
 };
+
+// вікно браузера стало меншим — повертаємо вікна, що опинилися за краєм екрана
+let fitT = 0;
+addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(() => {
+  const A = WM.area()?.getBoundingClientRect(); if (!A) return;
+  for (const w of WM.wins) { if (w.max) continue; const st = w.el.style, l = parseFloat(st.left) || 0, t = parseFloat(st.top) || 0, wd = w.el.offsetWidth;
+    if (wd > A.width - 10) st.width = Math.max(w.minW, A.width - 20) + 'px';
+    if (w.el.offsetHeight > A.height - 10) st.height = Math.max(w.minH, A.height - 20) + 'px';
+    st.left = Math.min(Math.max(-wd + 120, l), A.width - 120) + 'px'; st.top = Math.min(Math.max(0, t), A.height - 40) + 'px'; w.onResize?.(); }
+}, 120); });
 
 /* ═════════ Діалоги ═════════ */
 // dialog({ title, text, html, icon, buttons: [{ t, v, primary }] }) → Promise зі значенням кнопки

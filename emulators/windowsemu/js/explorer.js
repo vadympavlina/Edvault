@@ -1,5 +1,5 @@
 // Емулятор Windows · Провідник: навігація, кнопки, контекстне меню, перетягування, перейменування, Кошик.
-import { KNOWN, HOME, DRIVE_LABEL, DRIVE_SIZE, parentPath, nameOfPath, isInside, typeName, fmtDate, fmtTime, fmtSize, fmtNum, validName, BAD_NAME_HINT, isProtected, extOf, isText, wildcard, hasWild } from './fs.js';
+import { KNOWN, HOME, DRIVE_LABEL, DRIVE_SIZE, parentPath, nameOfPath, isInside, typeName, fmtDate, fmtTime, fmtSize, fmtNum, validName, BAD_NAME_HINT, isProtected, extOf, isText, wildcard, hasWild, FS_EVENTS, batched } from './fs.js';
 import { nodeIcon, driveIcon, pcIcon, binIcon, folderIcon, appIcon, ui } from './icons.js';
 import { WM, dialog, alertBox, menu, esc, h } from './ui.js';
 
@@ -51,10 +51,10 @@ export class Explorer {
       <footer class="ex-status"></footer></div>`;
     this.$ = s => this.win.body.querySelector(s);
     this.bind();
-    this.unsub = this.fs.on(w => { if (w !== 'fw' && w !== 'fwlog') this.render(); });
-    const close = this.win.onClose; this.win.onClose = () => { this.unsub(); return close?.(); };
+    const later = batched(() => { if (!this.renaming) this.render(); });
+    this.unsub = this.fs.on(w => { if (FS_EVENTS.has(w)) later(); });
     sys.explorers.add(this); this.win.onFocus = () => this.$('.ex-view').focus({ preventScroll: true });
-    const c = this.win.close; this.win.close = f => { sys.explorers.delete(this); return c(f); };
+    this.win.cleanup(() => { this.unsub(); sys.explorers.delete(this); });
     this.go(this.path, true);
   }
   // шлях існує? (папку могли видалити з консолі)

@@ -61,7 +61,7 @@ export class Wfmsc {
     this.$ = s => this.win.body.querySelector(s); this.$$ = s => [...this.win.body.querySelectorAll(s)];
     this.bind();
     this.unsub = this.fs.on(w => { if (['fw', 'reset'].includes(w)) { this.prune(); this.render(); } else if (w === 'fwlog' && this.node === 'mon') this.renderCenter(); });
-    const close = this.win.close; this.win.close = f => { this.unsub(); return close(f); };
+    this.win.cleanup(() => this.unsub());
     this.render();
   }
   get fw() { return fwOf(this.fs); }

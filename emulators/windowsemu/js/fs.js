@@ -120,6 +120,10 @@ const PROTECTED = [HOME, ...Object.keys(KNOWN).map(k => HOME + '\\' + k), 'C:\\U
 export const isProtected = p => PROTECTED.some(x => lc(x) === lc(p));
 
 /* ── файлова система ── */
+// події, після яких змінюється вміст дисків (решта — брандмауер, антивірус, браузер — Провідник не цікавлять)
+export const FS_EVENTS = new Set(['mkdir', 'write', 'remove', 'recycle', 'restore', 'purge', 'rename', 'move', 'copy', 'syswrite', 'attr', 'reset']);
+// виконати fn один раз після серії змін (усі зміни в одному обробнику → одне перемальовування)
+export function batched(fn) { let queued = false; return () => { if (queued) return; queued = true; queueMicrotask(() => { queued = false; fn(); }); }; }
 export class FS {
   constructor(state) { this.s = state || initialState(); this.subs = new Set(); }
   on(fn) { this.subs.add(fn); return () => this.subs.delete(fn); }

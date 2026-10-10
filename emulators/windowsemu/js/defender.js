@@ -1,7 +1,7 @@
 // Емулятор Windows · «Захист від вірусів і загроз» (антивірус Microsoft Defender) у «Безпеці Windows».
 // Навчальний: нічого не лікує по-справжньому, але знаходить «загрози» у файлах за простими ознаками,
 // має швидку / повну / вибіркову / автономну перевірку, захист у реальному часі, карантин, журнал, винятки.
-import { HOME, isText, parentPath, nameOfPath, fmtDate, fmtTime, isInside, KNOWN } from './fs.js';
+import { HOME, isText, parentPath, nameOfPath, fmtDate, fmtTime, isInside, KNOWN, batched } from './fs.js';
 import { ui } from './icons.js';
 import { esc, modal, dialog, alertBox } from './ui.js';
 
@@ -28,6 +28,7 @@ export const THREATS = [
 const LEVEL_CLS = { 'Серйозна': 'sev', 'Висока': 'high', 'Середня': 'mid', 'Низька': 'low' };
 
 export function avOf(fs) {
+  const a = fs.s.av; if (a && a.history.length > 150) a.history.length = 150;
   return fs.s.av ||= { rt: true, cloud: true, samples: true, tamper: true, cfa: false, excl: [], allowed: [], quarantine: [], history: [], pending: [], last: null, sig: '1.419.212.0', sigAt: Date.UTC(2026, 9, 9, 6, 12), seq: 1 };
 }
 const now = () => Date.now();
@@ -104,9 +105,7 @@ export function installRealtime(sys) {
   const files = () => filesIn(fs, fs.drives().map(d => d + ':\\'));
   const baseline = () => { known = new Map(files().map(([p, n]) => [n.id, detect(n, p)?.name || ''])); };
   baseline();
-  fs.on(w => {
-    if (w === 'reset') return baseline();
-    if (!['write', 'copy', 'move', 'restore', 'syswrite', 'rename', 'mkdir'].includes(w)) return;
+  const check = batched(() => {
     const av = avOf(fs), hits = [];
     for (const [p, n] of files()) {
       const t = detect(n, p), prev = known.get(n.id);
@@ -122,6 +121,10 @@ export function installRealtime(sys) {
       fs.emit('av');
       sys.toast(`Безпека Windows: знайдено загрозу ${hits[0].name}. Файл «${nameOfPath(hits[0].path)}»${q > 1 ? ` і ще ${q - 1}` : ''} поміщено в карантин.`);
     }, 350);
+  });
+  fs.on(w => {
+    if (w === 'reset') return baseline();
+    if (['write', 'copy', 'move', 'restore', 'syswrite', 'rename', 'mkdir'].includes(w)) check();
   });
 }
 export function avScanUpdate(app) { const b = app.$('.av-scan'); if (b && SCAN) { b.innerHTML = scanBox(SCAN); return true; } return false; }

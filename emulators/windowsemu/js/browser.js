@@ -45,7 +45,7 @@ export class Browser {
     this.$ = s => this.win.body.querySelector(s);
     this.bind();
     this.unsub = this.fs.on(w => { if (w === 'reset') { this.renderMarks(); } if (w === 'router' && this.active()?.url?.includes('192.168.1.1')) { /* сторінка роутера сама оновлюється */ } });
-    const close = this.win.close; this.win.close = f => { this.unsub(); return close(f); };
+    this.win.cleanup(() => { this.unsub(); this.tabs.forEach(t => t.dispose?.()); });
     this.newTab(input ? (normalize(input)?.href || NEWTAB) : NEWTAB);
     this.renderMarks();
   }
@@ -67,7 +67,7 @@ export class Browser {
   closeTab(id) {
     const i = this.tabs.findIndex(t => t.id === id); if (i < 0) return;
     const [t] = this.tabs.splice(i, 1); t.view.remove(); t.dispose?.();
-    if (!this.tabs.length) return this.win.close();
+    if (!this.tabs.length) { this.closing = true; return this.win.close(); }
     if (this.cur === id) this.select(this.tabs[Math.min(i, this.tabs.length - 1)].id); else this.renderChrome();
   }
 
@@ -287,6 +287,7 @@ export class Browser {
   }
   cmd(c, el) {
     const t = this.active(), S = this.S;
+    if (!t || !this.win.el.isConnected || this.closing) return;
     switch (c) {
       case 'newtab': return this.newTab();
       case 'closetab': return this.closeTab(this.cur);

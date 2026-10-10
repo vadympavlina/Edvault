@@ -28,6 +28,7 @@ export class Console {
     this.win.onFocus = () => setTimeout(() => this.inp.focus({ preventScroll: true }), 0);
     this.win.onFocus();
     this.win.console = this;
+    this.win.cleanup(() => { clearTimeout(this.timer); this.stream = null; });
   }
   write(lines, cls = '') { const f = document.createDocumentFragment(); for (const l of lines) { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = l + '\n'; f.appendChild(s); } this.out.appendChild(f); this.scroll(); }
   scroll() { const c = this.$('.con'); c.scrollTop = c.scrollHeight; }

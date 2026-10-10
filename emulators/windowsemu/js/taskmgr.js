@@ -1,16 +1,11 @@
 // Емулятор Windows · Диспетчер завдань: процеси, продуктивність, автозавантаження, користувачі, подробиці, служби.
-import { SYS_PROCS, STARTUP, SERVICES } from './procs.js';
+import { SYS_PROCS, STARTUP, SERVICES, appInfo } from './procs.js';
+export { appInfo };
 import { appIcon, ui } from './icons.js';
 import { WM, dialog, alertBox, menu, esc, modal } from './ui.js';
 import { fmtNum, USER } from './fs.js';
 
 const PAGES = [['proc', 'apps', 'Процеси'], ['perf', 'chart', 'Продуктивність'], ['startup', 'rocket', 'Автозавантаження'], ['users', 'users', 'Користувачі'], ['details', 'list', 'Подробиці'], ['services', 'puzzle', 'Служби']];
-const APP_INFO = {
-  explorer: ['Провідник', 'explorer.exe', 26000, 0.3], cmd: ['Обробник команд Windows', 'cmd.exe', 4300, 0.1], notepad: ['Блокнот', 'notepad.exe', 14800, 0.1],
-  security: ['Безпека Windows', 'SecHealthUI.exe', 41200, 0.2], firewallcpl: ['Панель керування', 'explorer.exe', 22000, 0.1], wfmsc: ['Консоль керування Microsoft', 'mmc.exe', 38900, 0.3],
-  taskmgr: ['Диспетчер завдань', 'Taskmgr.exe', 31200, 1.1], browser: ['Браузер', 'browser.exe', 186000, 1.6], settings: ['Параметри', 'SystemSettings.exe', 52300, 0.2],
-};
-export const appInfo = a => APP_INFO[a] || [a, a + '.exe', 12000, 0.1];
 const MEM_TOTAL = 8 * 1024 * 1024; // КБ
 const CORES = 4;
 const pct = v => `${v.toFixed(1).replace('.', ',')}%`;
@@ -30,11 +25,11 @@ export class TaskManager {
     this.bind();
     for (let i = 0; i < 60; i++) this.tick(true);
     this.render();
-    this.timer = setInterval(() => { if (!this.win.el.isConnected) return clearInterval(this.timer); this.tick(); if (!this.win.min) this.refresh(); }, 1000);
+    this.timer = setInterval(() => { if (!this.win.el.isConnected) return clearInterval(this.timer); if (document.hidden) return; this.tick(); if (!this.win.min) this.refresh(); }, 1000);
     this.unsub = sys.fs.on(w => { if (w === 'fwlog') this.netBump += 6; if (w === 'reset') this.render(); });
     const onWm = () => { if (this.win.el.isConnected && (this.page === 'proc' || this.page === 'details')) this.refresh(); };
     WM.on(onWm);
-    const close = this.win.close; this.win.close = f => { clearInterval(this.timer); this.unsub(); WM.subs.delete(onWm); return close(f); };
+    this.win.cleanup(() => { clearInterval(this.timer); this.unsub(); WM.subs.delete(onWm); });
   }
   get P() { return this.sys.procs; }
 

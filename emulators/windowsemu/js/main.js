@@ -1,19 +1,14 @@
 // Емулятор Windows · робочий стіл, панель завдань, меню «Пуск», буфер обміну, перетягування, властивості.
-import { FS, HOME, KNOWN, DRIVE_LABEL, DRIVE_SIZE, parentPath, nameOfPath, isInside, typeName, fmtDate, fmtTime, fmtSize, fmtNum, validName, BAD_NAME_HINT, isProtected, extOf, isText } from './fs.js';
+import { FS, HOME, KNOWN, DRIVE_LABEL, DRIVE_SIZE, parentPath, nameOfPath, isInside, typeName, fmtDate, fmtTime, fmtSize, fmtNum, validName, BAD_NAME_HINT, isProtected, extOf, isText, FS_EVENTS, batched } from './fs.js';
 import { nodeIcon, folderIcon, driveIcon, pcIcon, binIcon, appIcon, winLogo, ui } from './icons.js';
 import { WM, dialog, alertBox, menu, closeMenu, esc, h, $ } from './ui.js';
 import { Explorer, PC, BIN, wbr } from './explorer.js';
 import { Console } from './console.js';
 import { Notepad } from './notepad.js';
-import { SecurityApp, FirewallCpl } from './firewall.js';
-import { Wfmsc } from './wfmsc.js';
 import { uac } from './uac.js';
 import { fwOf, record, evaluate, PROFILES, PROGRAMS } from './fw.js';
-import { TaskManager, appInfo } from './taskmgr.js';
-import { SettingsApp } from './settings.js';
-import { Browser } from './browser.js';
 import { installProps } from './props.js';
-import { procState, SYS_PROCS } from './procs.js';
+import { procState, SYS_PROCS, appInfo } from './procs.js';
 import { installRealtime, avStatus } from './defender.js';
 
 const lc = s => s.toLocaleLowerCase('uk');
@@ -22,16 +17,29 @@ const DESK = HOME + '\\Desktop';
 const DEFAULTS = { view: 'icons', sort: 'name', desc: false, ext: true, hidden: false, wrap: true };
 
 /* ═════════ Стан і збереження ═════════ */
-let saved = null;
-try { saved = JSON.parse(localStorage.getItem(KEY)); } catch (e) { /* немає доступу */ }
-const fs = new FS(saved?.fs?.drives ? saved.fs : null);
+let saved = null, broken = false;
+try { saved = JSON.parse(localStorage.getItem(KEY)); } catch (e) { broken = !!e && e.name === 'SyntaxError'; }
+// збережений стан перевіряємо: пошкоджений (або від старої версії) — починаємо з чистого комп’ютера, а не «зависаємо»
+const okNode = n => n && typeof n.name === 'string' && n.attrs && (n.type === 'file' || (n.type === 'dir' && Array.isArray(n.children) && n.children.every(okNode)));
+const okState = st => st && st.drives && okNode(st.drives.C) && okNode(st.drives.D) && Array.isArray(st.bin) && Number.isFinite(st.seq);
+if (saved?.fs && !okState(saved.fs)) { broken = true; saved = null; }
+const fs = new FS(saved?.fs ? saved.fs : null);
 const sys = {
   fs, explorers: new Set(), clip: null, recent: saved?.recent || [], procs: procState(),
   settings: { ...DEFAULTS, ...(saved?.settings || {}) },
 };
 let saveT = 0;
-const persist = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ fs: fs.s, settings: sys.settings, recent: sys.recent })); } catch (e) { /* немає місця */ } }, 250); };
-fs.on(persist);
+let quotaWarned = false;
+const saveNow = () => {
+  clearTimeout(saveT); saveT = 0;
+  try { localStorage.setItem(KEY, JSON.stringify({ fs: fs.s, settings: sys.settings, recent: sys.recent })); quotaWarned = false; }
+  catch (e) { if (e?.name === 'QuotaExceededError' && !quotaWarned) { quotaWarned = true; sys.toast?.('Не вдалося зберегти зміни: на навчальному комп’ютері забагато даних. Видаліть великі файли або очистіть Кошик.'); } }
+};
+const persist = () => { clearTimeout(saveT); saveT = setTimeout(saveNow, 250); };
+// перед закриттям вкладки — зберегти негайно, щоб не втратити останні зміни
+addEventListener('pagehide', () => { if (saveT) saveNow(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && saveT) saveNow(); });
+fs.on(w => { if (w !== 'avscan') persist(); });
 sys.saveSettings = persist;
 sys.refreshAll = () => { for (const x of sys.explorers) x.render(); desktop.render(); };
 sys.addRecent = p => { sys.recent = [p, ...sys.recent.filter(x => lc(x) !== lc(p))].slice(0, 8); persist(); };
@@ -53,17 +61,24 @@ sys.open = (app, path) => {
   if (app === 'notepad') { if (path) sys.addRecent(path); return new Notepad(sys, path); }
   if (app === 'bin') return new Explorer(sys, BIN);
   if (app === 'pc') return new Explorer(sys, PC);
-  if (app === 'taskmgr') { const w = WM.wins.find(x => x.app === 'taskmgr'); if (w) return WM.focus(w); return new TaskManager(sys, path || 'proc'); }
-  if (app === 'settings') { const w = WM.wins.find(x => x.app === 'settings'); if (w) return WM.focus(w); return new SettingsApp(sys); }
-  if (app === 'browser') { const w = WM.active()?.app === 'browser' ? WM.active() : WM.wins.filter(x => x.app === 'browser').sort((a, b) => b.z - a.z)[0]; if (w && path) { WM.focus(w); w.browser.newTab(); w.browser.go(path); return w.browser; } if (w && !path) return WM.focus(w); const b = new Browser(sys, path); b.win.browser = b; return b; }
   if (app === 'cmd-admin') return uac({ app: 'Обробник команд Windows', icon: appIcon('cmd', 32), file: 'C:\\Windows\\System32\\cmd.exe' }).then(ok => ok && new Console(sys, null, { admin: true }));
-  if (app === 'security') { const w = WM.wins.find(x => x.app === 'security'); if (w) { WM.focus(w); w.app_?.go(path || 'firewall'); return; } const a = new SecurityApp(sys, path || 'home'); a.win.app_ = a; return a; }
-  if (app === 'firewallcpl') { const w = WM.wins.find(x => x.app === 'firewallcpl'); if (w) { WM.focus(w); w.app_?.go(path || 'main'); return; } const a = new FirewallCpl(sys, path || 'main'); a.win.app_ = a; return a; }
+  if (LAZY[app]) return openLazy(app, path);
+};
+// великі програми підвантажуються, коли знадобляться (і заздалегідь — у вільний час після старту)
+const LAZY = { taskmgr: () => import('./taskmgr.js'), settings: () => import('./settings.js'), browser: () => import('./browser.js'), security: () => import('./firewall.js'), firewallcpl: () => import('./firewall.js'), wfmsc: () => import('./wfmsc.js') };
+async function openLazy(app, path) {
+  const m = await LAZY[app]();
+  if (app === 'taskmgr') { const w = WM.wins.find(x => x.app === 'taskmgr'); if (w) return WM.focus(w); return new m.TaskManager(sys, path || 'proc'); }
+  if (app === 'settings') { const w = WM.wins.find(x => x.app === 'settings'); if (w) return WM.focus(w); return new m.SettingsApp(sys); }
+  if (app === 'browser') { const w = WM.active()?.app === 'browser' ? WM.active() : WM.wins.filter(x => x.app === 'browser').sort((a, b) => b.z - a.z)[0]; if (w && path) { WM.focus(w); w.browser.newTab(); w.browser.go(path); return w.browser; } if (w && !path) return WM.focus(w); const b = new m.Browser(sys, path); b.win.browser = b; return b; }
+  if (app === 'security') { const w = WM.wins.find(x => x.app === 'security'); if (w) { WM.focus(w); w.app_?.go(path || 'firewall'); return; } const a = new m.SecurityApp(sys, path || 'home'); a.win.app_ = a; return a; }
+  if (app === 'firewallcpl') { const w = WM.wins.find(x => x.app === 'firewallcpl'); if (w) { WM.focus(w); w.app_?.go(path || 'main'); return; } const a = new m.FirewallCpl(sys, path || 'main'); a.win.app_ = a; return a; }
   if (app === 'wfmsc') {
     const w = WM.wins.find(x => x.app === 'wfmsc'); if (w) return WM.focus(w);
-    return uac({ app: 'Брандмауер Захисника Windows у режимі підвищеної безпеки', icon: appIcon('firewall', 32), file: 'C:\\Windows\\System32\\mmc.exe' }).then(ok => ok && new Wfmsc(sys));
+    return uac({ app: 'Брандмауер Захисника Windows у режимі підвищеної безпеки', icon: appIcon('firewall', 32), file: 'C:\\Windows\\System32\\mmc.exe' }).then(ok => ok && new m.Wfmsc(sys));
   }
-};
+}
+sys.preload = () => Promise.all(Object.values(LAZY).map(f => f()));
 // виклики з командного рядка
 sys.launch = async (a, p) => {
   if (a === 'notepad-new') {
@@ -331,7 +346,8 @@ const desktop = {
     el.addEventListener('input', e => { if (e.target.classList.contains('ren-inp') && /[\\/:*?"<>|]/.test(e.target.value)) { e.target.value = e.target.value.replace(/[\\/:*?"<>|]/g, ''); sys.tip(e.target, BAD_NAME_HINT); } });
     el.addEventListener('focusout', e => { if (e.target.classList.contains('ren-inp')) setTimeout(() => this.commit(), 0); });
     sys.dnd(el, () => fs.real(DESK), () => this.paths(), k => { if (!this.sel.has(k)) { this.sel = new Set([k]); this.render(); } });
-    fs.on(w => { if (w !== 'fw' && w !== 'fwlog') this.render(); });
+    const later = batched(() => { if (!this.renaming) this.render(); });
+    fs.on(w => { if (FS_EVENTS.has(w)) later(); });
   },
 };
 
@@ -501,3 +517,16 @@ desktop.render();
 renderTaskbar();
 setTimeout(() => { $('#boot').classList.remove('on'); setTimeout(() => { $('#boot').hidden = true; }, 400); }, 700);
 window.WinEmu = { fs, sys, WM, desktop, open: sys.open, openStart, closeStart };
+(window.requestIdleCallback || setTimeout)(() => sys.preload().catch(() => {}));
+if (broken) setTimeout(() => sys.toast('Збережений стан комп’ютера був пошкоджений, тому його повернуто до початкового.'), 1200);
+// емулятор — одна сторінка: жодна форма чи посилання не повинні переводити зі сторінки (і губити відкриті вікна)
+document.addEventListener('submit', e => e.preventDefault());
+// натискання на вимкнену кнопку (зокрема на її іконку) ніколи не виконує дію
+for (const t of ['click', 'dblclick', 'auxclick']) document.addEventListener(t, e => { if (e.target.closest?.('button:disabled, .ma.off, .cm-it.off')) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+document.addEventListener('click', e => { if (e.target.closest?.('a[href]')) e.preventDefault(); });
+document.addEventListener('auxclick', e => { if (e.target.closest?.('a[href]')) e.preventDefault(); });
+// непередбачена помилка не повинна «вішати» комп’ютер: показуємо підказку, решта працює далі
+let errT = 0;
+const oops = () => { if (Date.now() - errT < 5000) return; errT = Date.now(); sys.toast('Щось пішло не так у цій дії. Комп’ютер працює далі — спробуйте ще раз.'); };
+addEventListener('error', oops);
+addEventListener('unhandledrejection', oops);

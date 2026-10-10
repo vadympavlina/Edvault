@@ -1,5 +1,5 @@
 // Емулятор Windows · Блокнот і вікно «Відкрити / Зберегти як».
-import { HOME, KNOWN, parentPath, nameOfPath, isText, validName, BAD_NAME_HINT, fmtDate, fmtTime, extOf } from './fs.js';
+import { HOME, KNOWN, parentPath, nameOfPath, isText, validName, BAD_NAME_HINT, fmtDate, fmtTime, extOf, FS_EVENTS, batched } from './fs.js';
 import { appIcon, nodeIcon, folderIcon, driveIcon, ui } from './icons.js';
 import { WM, dialog, alertBox, menu, esc, h } from './ui.js';
 
@@ -18,8 +18,9 @@ export class Notepad {
     else if (path) this.load(path);
     else this.title();
     this.applyView();
-    this.unsub = this.fs.on(w => { if (w !== 'fw' && w !== 'fwlog') this.external(); });
-    const close = this.win.close; this.win.close = f => { this.unsub(); return close(f); };
+    const later = batched(() => this.external());
+    this.unsub = this.fs.on(w => { if (FS_EVENTS.has(w)) later(); });
+    this.win.cleanup(() => this.unsub());
     this.win.onFocus = () => setTimeout(() => this.ta.focus({ preventScroll: true }), 0);
     this.win.onFocus();
   }
