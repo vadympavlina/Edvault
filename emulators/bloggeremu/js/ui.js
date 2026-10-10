@@ -1,0 +1,60 @@
+// Симулятор блогера · дрібні помічники інтерфейсу: розмітка, нижні панелі, меню дій, підтвердження.
+import { icon } from './icons.js';
+
+export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export const $ = (s, r = document) => r.querySelector(s);
+export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+export function h(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
+// Текст із хештегами й згадками: #тег і @нік підсвічуються
+export const rich = s => esc(s).replace(/(^|\s)([#@][\p{L}\p{N}_.]+)/gu, '$1<span class="tag">$2</span>').replace(/\n/g, '<br>');
+
+let host = null;
+export const setHost = el => { host = el; };
+
+// Нижня панель («шторка»): { title, html, onOpen(api), cls }
+export function sheet(o) {
+  const el = h(`<div class="sh-back"><section class="sheet ${o.cls || ''}" role="dialog" aria-modal="true" aria-label="${esc(o.title || '')}">
+    <i class="sh-grab" aria-hidden="true"></i>${o.title ? `<header class="sh-head"><b>${esc(o.title)}</b><button class="ib" data-sh-close title="Закрити">${icon('close', 20)}</button></header>` : ''}
+    <div class="sh-body">${o.html}</div></section></div>`);
+  host.appendChild(el);
+  const api = {
+    el, $: s => el.querySelector(s), $$: s => [...el.querySelectorAll(s)],
+    close() { if (!el.isConnected) return; el.classList.add('out'); setTimeout(() => el.remove(), 160); o.onClose?.(); },
+    set(html) { el.querySelector('.sh-body').innerHTML = html; },
+  };
+  el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-sh-close]')) api.close(); });
+  o.onOpen?.(api);
+  return api;
+}
+// Меню дій: [{ t, icon, on, danger }]
+export function actions(list, title = '') {
+  const items = list.filter(Boolean);
+  return sheet({ title, cls: 'acts', html: `<div class="act-list">${items.map((a, i) => `<button class="act${a.danger ? ' danger' : ''}" data-a="${i}">${a.icon ? icon(a.icon, 20) : ''}<span>${esc(a.t)}</span></button>`).join('')}</div>`,
+    onOpen: api => api.el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) { api.close(); items[+b.dataset.a].on(); } }) });
+}
+// Підтвердження: повертає Promise<boolean>
+export function confirm(text, ok = 'Так', danger = false, sub = '') {
+  return new Promise(res => {
+    const el = h(`<div class="cf-back"><div class="cf" role="alertdialog" aria-modal="true"><p class="cf-t">${esc(text)}</p>${sub ? `<p class="cf-s">${esc(sub)}</p>` : ''}<div class="cf-b"><button data-v="1" class="${danger ? 'danger' : 'primary'}">${esc(ok)}</button><button data-v="0">Скасувати</button></div></div></div>`);
+    host.appendChild(el);
+    el.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b || e.target === el) { el.remove(); res(b?.dataset.v === '1'); } });
+    el.querySelector('[data-v="1"]').focus();
+  });
+}
+// Банер сповіщення зверху екрана телефону
+let bannerT = 0;
+export function banner(html, on) {
+  host.querySelector('.banner')?.remove();
+  const el = h(`<button class="banner">${html}</button>`);
+  host.appendChild(el);
+  el.addEventListener('click', () => { el.remove(); on?.(); });
+  clearTimeout(bannerT); bannerT = setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 250); }, 3600);
+}
+// Коротке повідомлення внизу
+let toastT = 0;
+export function toast(text) {
+  let el = host.querySelector('.toast'); if (!el) { el = h('<div class="toast" role="status"></div>'); host.appendChild(el); }
+  el.textContent = text; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2400);
+}
+// Перемикач
+export const sw = (key, on, label = '') => `<button class="sw${on ? ' on' : ''}" role="switch" aria-checked="${on}" data-sw="${key}"${label ? ` aria-label="${esc(label)}"` : ''}><i></i></button>`;
