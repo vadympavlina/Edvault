@@ -77,7 +77,7 @@ export class TaskManager {
   render() {
     if (!this.win.el.isConnected) return;
     this.win.body.querySelectorAll('[data-page]').forEach(b => b.classList.toggle('on', b.dataset.page === this.page));
-    this.$('.tm-search').hidden = !['proc', 'details', 'services', 'startup'].includes(this.page);
+    this.$('.tm-search').style.visibility = ['proc', 'details', 'services', 'startup'].includes(this.page) ? '' : 'hidden';
     this.refresh(true);
   }
   // часте оновлення: лише вміст, без втрати прокрутки й виділення
@@ -119,7 +119,7 @@ export class TaskManager {
   perfItems() {
     const T = this.tot;
     return [['cpu', 'ЦП', `${Math.round(T.cpu)}% ${(2.1 + T.cpu / 100 * 1.6).toFixed(2).replace('.', ',')} ГГц`, 'cpu'], ['mem', 'Пам’ять', `${(T.mem / 1024 / 1024).toFixed(1).replace('.', ',')}/8,0 ГБ (${Math.round(T.mem / MEM_TOTAL * 100)}%)`, 'mem'],
-      ['diskC', 'Диск 0 (C:)', `SSD · ${Math.round(T.disk)}%`, 'diskC'], ['diskD', 'Диск 1 (D:)', `HDD · ${Math.round(T.diskD)}%`, 'diskD'], ['net', 'Ethernet', `Н: ${(T.net * 0.3).toFixed(1).replace('.', ',')} П: ${(T.net * 0.7).toFixed(1).replace('.', ',')} Мбіт/с`, 'net']];
+      ['diskC', 'Диск 0 (C:)', `SSD · ${Math.round(T.disk)}%`, 'diskC'], ['diskD', 'Диск 1 (D:)', `HDD · ${Math.round(T.diskD)}%`, 'diskD'], ['net', 'Ethernet', `Надс. ${(T.net * 0.3).toFixed(1).replace('.', ',')} · Отрим. ${(T.net * 0.7).toFixed(1).replace('.', ',')} Мбіт/с`, 'net']];
   }
   spark(k, w, h, big) {
     const d = this.hist[k], pts = d.map((v, i) => `${(i / 59 * w).toFixed(1)},${(h - v / 100 * h).toFixed(1)}`).join(' ');

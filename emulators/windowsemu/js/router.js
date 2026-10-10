@@ -194,7 +194,7 @@ function wizStep(R, d) {
   if (d.i === 0) body = `<h2>Новий пароль адміністратора</h2><p class="rt-p">Стандартний пароль <b>admin</b> знає кожен, хто купив такий самий роутер. Придумайте свій — ним ви входитимете в ці налаштування.</p>
     ${F.row('Новий пароль', F.pass('p1', d.admin) + '<span class="rt-meter" data-meter="p1"><i></i><b></b></span>', 'Щонайменше 6 символів. Краще — літери, цифри й знаки.')}${F.row('Повторіть пароль', F.pass('p2', d.admin2 || ''))}`;
   else if (d.i === 1) body = `<h2>Часовий пояс</h2><p class="rt-p">Роутеру потрібен правильний час: для журналу подій, розкладу Wi‑Fi і батьківського контролю.</p>${F.row('Часовий пояс', F.sel('tz', d.tz, TZ))}`;
-  else if (d.i === 2) body = `<h2>Тип підключення до Інтернету</h2><p class="rt-p">Його вказано в договорі з провайдером. Не знаєте? Натисніть «Визначити автоматично».</p>
+  else if (d.i === 2) body = `<h2>Тип підключення до інтернету</h2><p class="rt-p">Його вказано в договорі з провайдером. Не знаєте? Натисніть «Визначити автоматично».</p>
     <button type="button" class="rt-btn" data-detect>${ui('search', 15)}Визначити автоматично</button><p class="rt-detected" hidden>${ui('check', 15)} Виявлено: <b>Динамічна IP-адреса</b>.</p>
     <div class="rt-types">${[['dhcp', 'Динамічна IP-адреса', 'Провайдер видає адресу сам. Найпоширеніший тип.'], ['static', 'Статична IP-адреса', 'Провайдер дав постійну адресу, маску, шлюз і DNS.'], ['pppoe', 'PPPoE', 'Потрібні логін і пароль із договору.'], ['l2tp', 'L2TP', 'Логін, пароль і адреса сервера VPN провайдера.'], ['pptp', 'PPTP', 'Схоже на L2TP, застаріле.']].map(([k, t, s]) => `<label class="rt-type"><input type="radio" name="type" value="${k}" ${d.type === k ? 'checked' : ''}><span><b>${t}</b><small>${s}</small></span></label>`).join('')}</div>`;
   else if (d.i === 3) body = `<h2>Параметри підключення</h2>${wanFields(d.type, d.wan)}`;
@@ -255,7 +255,7 @@ function confirmBox(el, text, ok, okText = 'Так') {
 }
 const uptime = R => { const s = Math.max(0, Math.floor((now() - R.boot) / 1000)) + 3 * 86400 + 4 * 3600; return `${Math.floor(s / 86400)} д ${Math.floor(s / 3600) % 24} год ${Math.floor(s / 60) % 60} хв ${s % 60} с`; };
 const wanIp = R => R.wan.type === 'static' ? R.wan.ip || '—' : '100.64.23.15';
-const devIcon = k => ui({ pc: 'monitor', phone: 'chip', laptop: 'browser', tv: 'view', printer: 'file' }[k] || 'globe', 20);
+const devIcon = k => ui({ pc: 'desktop', phone: 'phone', laptop: 'laptop', tv: 'tv', printer: 'printer' }[k] || 'globe', 20);
 const clientsOn = R => CLIENTS.filter(x => !(R.sec.macFilter.on && ((R.sec.macFilter.mode === 'deny') === R.sec.macFilter.list.includes(x.mac))) || x.kind === 'pc');
 const ssidList = R => [R.wifi.b24.on && R.wifi.b24.ssid, R.wifi.b5.on && !R.wifi.smart && R.wifi.b5.ssid, R.wifi.guest.on && R.wifi.guest.ssid].filter(Boolean);
 
@@ -313,7 +313,7 @@ const PAGES = {
   },
   security(R) {
     const s = R.sec, m = s.macFilter;
-    return `<h1 class="rt-h1">Безпека</h1><form class="rt-form" data-save="sec">${F.card('Брандмауер роутера', `${F.row('SPI-брандмауер', F.sw('spi', s.spi, 'Увімкнути'), 'Пропускає з інтернету лише відповіді на запити ваших пристроїв.')}${F.row('Захист від DoS-атак', F.sel('dos', s.dos, [['off', 'Вимкнено'], ['low', 'Низький'], ['medium', 'Середній'], ['high', 'Високий']]), 'Блокує, коли хтось засипає роутер величезною кількістю запитів.')}${F.row('Ping з Інтернету', F.sw('wanPing', s.wanPing, 'Відповідати на ping із зовнішньої мережі'), 'Якщо вимкнено, роутер «невидимий» для сканерів в інтернеті.')}${F.row('Віддалене керування', F.sw('remote', s.remote, 'Дозволити відкривати налаштування з Інтернету'), 'Краще вимкнути: інакше сторінку входу бачить увесь інтернет.')}`)}${F.save()}</form>
+    return `<h1 class="rt-h1">Безпека</h1><form class="rt-form" data-save="sec">${F.card('Брандмауер роутера', `${F.row('SPI-брандмауер', F.sw('spi', s.spi, 'Увімкнути'), 'Пропускає з інтернету лише відповіді на запити ваших пристроїв.')}${F.row('Захист від DoS-атак', F.sel('dos', s.dos, [['off', 'Вимкнено'], ['low', 'Низький'], ['medium', 'Середній'], ['high', 'Високий']]), 'Блокує, коли хтось засипає роутер величезною кількістю запитів.')}${F.row('Ping з інтернету', F.sw('wanPing', s.wanPing, 'Відповідати на ping із зовнішньої мережі'), 'Якщо вимкнено, роутер «невидимий» для сканерів в інтернеті.')}${F.row('Віддалене керування', F.sw('remote', s.remote, 'Дозволити відкривати налаштування з інтернету'), 'Краще вимкнути: інакше сторінку входу бачить увесь інтернет.')}`)}${F.save()}</form>
       <form class="rt-form" data-save="mac">${F.card('Фільтр MAC-адрес', `${F.row('Фільтр', F.sw('on', m.on, 'Увімкнути'))}${F.row('Режим', F.sel('mode', m.mode, [['deny', 'Заборонити вибраним пристроям'], ['allow', 'Дозволити лише вибраним пристроям']]))}
         <div class="rt-row"><label class="rt-l">Пристрої</label><div class="rt-ctl rt-checks">${CLIENTS.filter(x => x.kind !== 'pc').map(x => `<label class="rt-chk"><input type="checkbox" name="m_${x.mac}" ${m.list.includes(x.mac) ? 'checked' : ''}> ${esc(x.name)} <small>${x.mac}</small></label>`).join('')}<small class="rt-hint">Цей комп’ютер у списку не показано, щоб ви випадково не заблокували самі себе.</small><small class="rt-err" hidden></small></div></div>`)}${F.save()}</form>`;
   },
@@ -323,7 +323,7 @@ const PAGES = {
       <button class="rt-btn" data-act="pause" data-i="${i}">${ui(p.paused ? 'play' : 'stop', 14)}${p.paused ? 'Відновити інтернет' : 'Призупинити інтернет'}</button><button class="rt-ib" data-act="profDel" data-i="${i}" title="Видалити профіль">${ui('trash', 15)}</button></div>`).join('')}</div>` : '<p class="rt-none">Профілів ще немає.</p>')}
       <form class="rt-form" data-save="profAdd">${F.card('Новий профіль', `${F.row('Ім’я', F.inp('name', '', 'placeholder="наприклад Оля" maxlength="20"'))}
       <div class="rt-row" data-row="dev"><label class="rt-l">Пристрої</label><div class="rt-ctl rt-checks">${CLIENTS.filter(x => x.kind !== 'pc').map(x => `<label class="rt-chk"><input type="checkbox" name="d_${x.mac}"> ${esc(x.name)}</label>`).join('')}<small class="rt-err" hidden></small></div></div>
-      ${F.row('Ліміт часу на день', F.sel('limit', '0', [['0', 'Без ліміту'], ['60', '1 година'], ['120', '2 години'], ['180', '3 години']]))}${F.row('Час сну', F.sw('bed', true, 'Вимикати інтернет на ніч'))}${F.row('З', F.inp('bedFrom', '22:00', 'type="time"'))}${F.row('До', F.inp('bedTo', '07:00', 'type="time"'))}
+      ${F.row('Ліміт часу на день', F.sel('limit', '0', [['0', 'Без ліміту'], ['60', '1 година'], ['120', '2 години'], ['180', '3 години']]))}${F.row('Час сну', F.sw('bed', true, 'Вимикати інтернет на ніч'))}${F.row('З', F.inp('bedFrom', '22:00', 'placeholder="22:00" maxlength="5"'))}${F.row('До', F.inp('bedTo', '07:00', 'placeholder="07:00" maxlength="5"'))}
       ${F.row('Заблоковані сайти', `<textarea class="rt-in" name="block" rows="3" placeholder="по одному на рядок, наприклад pryz-vygraj.edvault"></textarea>`, 'Можна писати адресу або слово з адреси.')}`)}${F.save('Створити профіль')}</form>`;
   },
   qos(R) {
@@ -413,7 +413,7 @@ const SAVE = {
     const p = { name: val(f, 'name'), devices: CLIENTS.filter(x => val(f, 'd_' + x.mac)).map(x => x.mac), limit: +val(f, 'limit'), bed: val(f, 'bed'), bedFrom: val(f, 'bedFrom'), bedTo: val(f, 'bedTo'), block: val(f, 'block').split(/\n+/).map(s => s.trim()).filter(Boolean), paused: false };
     if (!p.name) er.name = 'Вкажіть ім’я.'; else if (R.parental.profiles.some(x => x.name === p.name)) er.name = 'Профіль із таким ім’ям уже є.';
     if (!p.devices.length) er.dev = 'Виберіть хоча б один пристрій.';
-    if (p.bed && (!p.bedFrom || !p.bedTo)) er.bedFrom = 'Вкажіть час.';
+    const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/; if (p.bed) { if (!hhmm.test(p.bedFrom)) er.bedFrom = 'Час у форматі ГГ:ХХ, наприклад 22:00.'; if (!hhmm.test(p.bedTo)) er.bedTo = 'Час у форматі ГГ:ХХ, наприклад 07:00.'; }
     if (Object.keys(er).length) return false; R.parental.profiles.push(p); return ['Батьківський контроль', `Створено профіль «${p.name}».`];
   },
   qos(R, f, er) { const q = { on: val(f, 'on'), down: +val(f, 'down'), up: +val(f, 'up'), prio: CLIENTS.filter(x => val(f, 'p_' + x.mac)).map(x => x.mac) }; if (!(q.down >= 1 && q.down <= 1000)) er.down = 'Від 1 до 1000.'; if (!(q.up >= 1 && q.up <= 1000)) er.up = 'Від 1 до 1000.'; if (Object.keys(er).length) return false; R.qos = q; return ['QoS', `Пріоритет ${q.on ? 'увімкнено' : 'вимкнено'}.`]; },

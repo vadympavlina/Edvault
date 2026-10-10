@@ -223,7 +223,7 @@ export class FirewallCpl {
     const fw = this.fw;
     const known = [['Підключення до віддаленого робочого стола', PROGRAMS.mstsc], ['Microsoft Edge', PROGRAMS.edge], ['Minecraft Launcher', PROGRAMS.minecraft], ['Командний рядок', 'C:\\Windows\\System32\\cmd.exe'], ['Блокнот', 'C:\\Windows\\System32\\notepad.exe']];
     modal({ title: 'Додати програму', cls: 'addapp', html: `<p>Виберіть програму, яку потрібно додати, або натисніть кнопку «Огляд», щоб знайти програму, якої немає в списку.</p>
-      <div class="pick-list">${known.map(([n, pth], i) => `<label class="pick"><input type="radio" name="kp" value="${i}" ${i ? '' : 'checked'}>${ui('monitor', 18)}<span><b>${esc(n)}</b><small>${esc(pth)}</small></span></label>`).join('')}</div>
+      <div class="pick-list">${known.map(([n, pth], i) => `<label class="pick"><input type="radio" name="kp" value="${i}" ${i ? '' : 'checked'}>${ui('desktop', 18)}<span><b>${esc(n)}</b><small>${esc(pth)}</small></span></label>`).join('')}</div>
       <label class="fld">Шлях: <input class="inp" data-path value="${esc(known[0][1])}" spellcheck="false"></label>
       <label class="fld">Типи мереж: <select class="inp" data-nets><option value="private" selected>Приватна</option><option value="public">Загальнодоступна</option><option value="both">Приватна й загальнодоступна</option></select></label>`,
       buttons: [{ t: 'Додати', v: 'add', primary: true }, { t: 'Скасувати', v: null, cancel: true }],

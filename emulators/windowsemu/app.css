@@ -563,7 +563,7 @@ table.kv td { padding: 3px 0; }
 table.ev { width: 100%; border-collapse: collapse; margin: 4px 0 8px; font-size: 12.5px; }
 table.ev th { text-align: left; font-weight: 400; color: #4d4d4d; padding: 4px 8px 4px 0; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
 table.ev td { padding: 3px 8px 3px 0; border-bottom: 1px solid #f2f2f2; white-space: nowrap; }
-table.ev td.ok, table.ev td.bad { display: flex; align-items: center; gap: 6px; }
+table.ev td.ok svg, table.ev td.bad svg { display: inline-block; vertical-align: -3px; margin-right: 6px; }
 table.ev td.ok { color: #0e700e; }
 .hint code, .muted code { white-space: nowrap; }
 .dlg-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -686,17 +686,19 @@ body.no-shell #icons, body.no-shell #taskbar { visibility: hidden; }
 .tm-t th.num, .tm-t td.num { text-align: right; }
 .tm-t th.st, .tm-t td.st { width: 70px; }
 .tm-t td { padding: 0 10px; height: 30px; white-space: nowrap; border-bottom: 1px solid #f4f4f4; }
-.tm-t td.nm { display: flex; align-items: center; gap: 10px; min-width: 260px; height: 30px; }
+.tm-t td.nm { min-width: 260px; }
+.tm-t td.nm > .tm-ic, .tm-t td.nm > .tm-av { display: inline-flex; vertical-align: middle; vertical-align: middle; margin-right: 10px; }
 .tm-t td.nm.sub { padding-left: 48px; }
 .tm-ic { width: 18px; display: flex; justify-content: center; color: #555; }
 .tm-t tbody tr:hover td { background-color: #f5f9fd; }
 .tm-t tr.sel td { background-color: #cce4f7 !important; }
 .tm-t tr.grp td { font-weight: 600; height: 32px; color: #1b1b1b; background: #fff; }
 .tm-t tr.grp td svg { display: inline-block; vertical-align: -1px; margin-right: 6px; }
+.tm-t td.nm > svg { display: inline-block; vertical-align: -1px; margin-right: 6px; }
 .tm-t td.off { color: #8a8a8a; }
 .tm-t td.run { color: #0e700e; }
 .tm-t.det td.nm { min-width: 180px; }
-.tm-av { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; background: #b8d6f4; color: #0b4a8a; font-size: 11px; font-weight: 700; align-items: center; justify-content: center; margin-right: 8px; }
+.tm-av { display: inline-flex; vertical-align: middle; width: 22px; height: 22px; border-radius: 50%; background: #b8d6f4; color: #0b4a8a; font-size: 11px; font-weight: 700; align-items: center; justify-content: center; margin-right: 8px; }
 .tm-note { font-size: 12.5px; color: #4d4d4d; line-height: 1.5; padding: 10px 14px; background: #f7f9fb; border-bottom: 1px solid #ececec; }
 .tm-empty { padding: 20px; color: #6b6b6b; font-size: 13px; }
 .pf { height: 100%; display: flex; }
@@ -985,7 +987,9 @@ textarea.rt-in { height: auto; padding: 8px 10px; resize: vertical; }
 .rt-t td { padding: 7px 8px; border-bottom: 1px solid #eef2f5; vertical-align: middle; }
 .rt-none { color: #6b7a85; padding: 10px 0; }
 .rt-t td.rt-none { text-align: center; }
-.rt-dev { display: flex; align-items: center; gap: 8px; }
+.rt-dev svg, .rt-dev .rt-tag { vertical-align: middle; }
+.rt-dev svg { display: inline-block; margin-right: 8px; }
+.rt-dev .rt-tag { margin-left: 8px; }
 .rt-dev svg { color: var(--rc); }
 .rt-tag { font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #e1f1f2; color: var(--rc); }
 .rt-checks { gap: 6px; padding-top: 6px; }
@@ -1127,3 +1131,17 @@ textarea.rt-in { height: auto; padding: 8px 10px; resize: vertical; }
 #avoffline h1 { font-size: 22px; font-weight: 600; }
 #avoffline .av-bar { background: #333; height: 6px; }
 .sec-main h3 { display: flex; align-items: center; gap: 8px; }
+
+.mdl.small { width: 540px; }
+
+.rt-main > .rt-form > .rt-actions, .rt-main > .rt-form .rt-card + .rt-actions { margin-bottom: 22px; }
+.rt-wc .rt-actions { margin-top: 16px; }
+.rt-menu { width: 236px; }
+.rt-card [data-fw] { margin-top: 12px; }
+.rt-card dl + .rt-btn, .rt-card .rt-p + .rt-btn { margin-top: 4px; }
+.rt-t td, .rt-t th { white-space: nowrap; }
+.rt-tag { white-space: nowrap; }
+.rt-card:has(> .rt-t), .rt-card:has(.rt-t) { overflow-x: auto; }
+.bw-page { container-type: inline-size; }
+@container (max-width: 1240px) { .rt-help { display: none; } }
+@container (max-width: 900px) { .rt-menu { width: 200px; } .rt-row { grid-template-columns: 170px minmax(0, 1fr); } }
