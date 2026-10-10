@@ -1,5 +1,6 @@
 // Емулятор Windows · командний рядок (cmd) без DOM. Працює з файловою системою FS,
 // а відкриття вікон, список і закриття задач — через host (його дає інтерфейс).
+import { fwOf, evaluate, record, NET, PROGRAMS, PROFILES, PROFILE_NAME, defaults as fwDefaults, validPorts, validAddr, actionText, profilesText, protoText, portsText, addrText, newId } from './fw.js';
 import { FS, ERR, FsError, HOME, USER, DRIVE_LABEL, resolve, parsePath, parentPath, nameOfPath, joinPath, wildcard, hasWild, isInside, fmtDate, fmtTime, fmtNum, isText, validName } from './fs.js';
 
 export const HOST = 'SCHOOL-PC';
@@ -32,6 +33,9 @@ export const HELP = {
   move: ['Переміщає файли й папки або перейменовує їх.', 'MOVE [/Y] джерело призначення', ['move Нотатки.txt Школа', 'move *.jpg ..\\Pictures', 'move Школа Навчання'], 'Якщо призначення — існуюча папка, елемент переїде в неї. Інакше — отримає нову назву.'],
   notepad: ['Відкриває Блокнот.', 'NOTEPAD [файл]', ['notepad', 'notepad Нотатки.txt', 'notepad новий.txt']],
   nslookup: ['Знаходить IP-адресу сайту за його ім’ям (через DNS).', 'NSLOOKUP ім’я_сайту', ['nslookup edvault.online', 'nslookup google.com']],
+  netsh: ['Налаштовує мережу й брандмауер (netsh advfirewall …).', 'NETSH ADVFIREWALL SHOW | SET | RESET | FIREWALL …', ['netsh advfirewall show currentprofile', 'netsh advfirewall set allprofiles state off', 'netsh advfirewall firewall show rule name=all dir=out', 'netsh advfirewall firewall add rule name="Без Google" dir=out action=block remoteip=142.250.74.110', 'netsh advfirewall firewall delete rule name="Без Google"'], 'Змінювати параметри можна лише в командному рядку «від імені адміністратора» (права кнопка на «Командний рядок» у «Пуску» чи на панелі завдань).'],
+  curl: ['Відкриває сайт і показує, що він повернув (HTTP-запит).', 'CURL [-I] адреса', ['curl edvault.online', 'curl -I google.com', 'curl http://example.com:8080'], '-I — лише заголовки відповіді. Брандмауер може заблокувати вихідне підключення curl.exe.'],
+  control: ['Відкриває Панель керування (тут — брандмауер).', 'CONTROL firewall.cpl', ['control firewall.cpl', 'firewall.cpl', 'wf.msc']],
   path: ['Показує шляхи пошуку програм.', 'PATH', ['path']],
   ping: ['Перевіряє зв’язок з іншим комп’ютером або сайтом.', 'PING [-t] [-n кількість] [-l розмір] адреса', ['ping edvault.online', 'ping 192.168.1.1', 'ping -n 10 google.com', 'ping -t 8.8.8.8'], '-t — надсилати без зупинки (зупинити — Ctrl+C), -n — скільки разів, -l — розмір пакета. Можна писати будь-який сайт (google.com, rozetka.com.ua) або IP-адресу. У цій мережі: 192.168.1.1 — роутер, 192.168.1.10 — шкільний сервер, 192.168.1.27 — цей комп’ютер.'],
   popd: ['Повертається в папку, збережену PUSHD.', 'POPD', ['popd']],
@@ -103,7 +107,8 @@ const pad = (s, n) => String(s).padStart(n);
 export class Cmd {
   constructor(fs, host = {}) {
     this.fs = fs; this.host = host;
-    this.cwd = HOME; this.dcwd = { C: HOME, D: 'D:\\' };
+    this.admin = !!host.admin;
+    this.cwd = this.admin ? 'C:\\Windows\\System32' : HOME; this.dcwd = { C: this.cwd, D: 'D:\\' };
     this.history = []; this.stack = []; this.pending = null;
     this.title = 'Командний рядок'; this.color = '07';
     this.env = { USERNAME: USER, USERPROFILE: HOME, COMPUTERNAME: HOST, OS: 'Windows_NT', SYSTEMROOT: 'C:\\Windows', WINDIR: 'C:\\Windows', HOMEDRIVE: 'C:', HOMEPATH: '\\Users\\' + USER, PATH: 'C:\\Windows\\System32;C:\\Windows', PATHEXT: '.COM;.EXE;.BAT;.CMD', PROMPT: '$P$G', TEMP: HOME + '\\AppData\\Local\\Temp' };
@@ -176,7 +181,7 @@ export class Cmd {
     m = /^echo[.:](.*)$/i.exec(text); if (m) { this.print(m[1]); return true; }
     if (/^[a-z]:$/i.test(text)) return this.drive(text[0].toUpperCase());
     const name = /^\S+/.exec(text)[0], rest = text.slice(name.length).replace(/^\s/, '');
-    const key = lc(name).replace(/\.(exe|com)$/, '');
+    const key = { 'wf.msc': 'wfmsc', 'firewall.cpl': 'firewallcpl', 'windowsdefender:': 'defender' }[lc(name)] || lc(name).replace(/\.(exe|com)$/, '');
     const tokens = tokenize(rest);
     if (tokens.includes('/?')) return this.c_help([key]);
     const k = typeof HELP[key] === 'string' ? HELP[key] : key;
@@ -640,14 +645,18 @@ export class Cmd {
       if (host.split('.').some(x => +x > 255)) { this.print(`Перевірка зв’язку не змогла знайти вузол ${host}. Перевірте ім’я та повторіть спробу.`); return false; }
       ip = host; base = IPS[host] ?? (/^(10|192\.168|172\.(1[6-9]|2\d|3[01]))\./.test(host) ? null : 40 + (host.split('.').reduce((a, b) => a + +b, 0) % 60));
     } else {
+      if (!['localhost', lc(HOST)].includes(lc(host)) && !this.dnsOk()) { this.print(`Перевірка зв’язку не змогла знайти вузол ${host}. Перевірте ім’я та повторіть спробу.`); return false; }
       const k = KNOWN[lc(host)] || resolveSite(host);
       if (!k) { this.print(`Перевірка зв’язку не змогла знайти вузол ${host}. Перевірте ім’я та повторіть спробу.`); return false; }
       [ip, base] = k;
     }
     const local = ip === '127.0.0.1' || ip === '192.168.1.27';
+    // брандмауер: вихідний луна-запит ICMPv4 від PING.EXE
+    const blocked = !local && !this.fwCheck({ dir: 'out', protocol: 'ICMPv4', icmpType: 8, remoteIp: ip, program: PROGRAMS.ping }).allow;
     let sent = 0, got = 0; const times = [];
     const reply = () => {
       sent++;
+      if (blocked) return 'PING: помилка передавання. Загальна помилка.';
       if (base == null) return 'Час очікування запиту минув.';
       const ms = base + ((sent * 7) % 5) + Math.floor(o.l / 1500);
       got++; times.push(ms);
@@ -673,6 +682,129 @@ export class Cmd {
     if (!k) { this.print(`*** school-dns.school.local не вдається знайти ${host}: Non-existent domain`); return false; }
     this.print('Не заслуговує довіри відповідь:', `Ім’я:    ${lc(host)}`, `Address:  ${k}`);
     return true;
+  }
+  // брандмауер
+  fwCheck(pkt) { const res = evaluate(fwOf(this.fs), pkt); record(this.fs, pkt, res); return res; }
+  dnsOk() { return this.fwCheck({ dir: 'out', protocol: 'UDP', localPort: 52000 + Math.floor(Math.random() * 999), remotePort: 53, remoteIp: NET.dns, program: PROGRAMS.svchost }).allow; }
+  needAdmin() { if (this.admin) return true; this.print('Запитана операція вимагає підвищення прав (Запустити від імені адміністратора).', ''); return false; }
+  c_wfmsc() { this.host.open?.('wfmsc'); return true; }
+  c_firewallcpl() { this.host.open?.('firewallcpl'); return true; }
+  c_defender() { this.host.open?.('security'); return true; }
+  c_control(t) {
+    const a = lc(t.join(' '));
+    if (!a) { this.print('Панель керування в навчальному комп’ютері — це брандмауер: control firewall.cpl'); return true; }
+    if (a.includes('firewall')) { this.host.open?.('firewallcpl'); return true; }
+    this.print(`Не вдається знайти «${t.join(' ')}».`); return false;
+  }
+  // curl: HTTP-запит до сайту (вихідне TCP-підключення від curl.exe)
+  c_curl(t) {
+    const head = t.some(x => /^-(I|-head)$/.test(x)), url = t.find(x => !x.startsWith('-'));
+    if (!url) { this.print('curl: спробуйте «curl --help» або «curl edvault.online»'); return false; }
+    const m = /^(?:(https?):\/\/)?([^/:\s]+)(?::(\d+))?(\/.*)?$/i.exec(url);
+    if (!m) { this.print(`curl: (3) URL using bad/illegal format or missing URL`); return false; }
+    const proto = (m[1] || 'https').toLowerCase(), host = lc(m[2]), port = +(m[3] || (proto === 'http' ? 80 : 443));
+    const local = ['localhost', '127.0.0.1', lc(HOST)].includes(host);
+    if (!local && !/^\d+\.\d+\.\d+\.\d+$/.test(host) && !this.dnsOk()) { this.print(`curl: (6) Could not resolve host: ${host}`); return false; }
+    const ip = /^\d+\.\d+\.\d+\.\d+$/.test(host) ? host : local ? '127.0.0.1' : (SITES[host] || resolveSite(host))?.[0];
+    if (!ip) { this.print(`curl: (6) Could not resolve host: ${host}`); return false; }
+    if (local) { this.print(`curl: (7) Failed to connect to ${host} port ${port} after 0 ms: Could not connect to server`); return false; }
+    const res = this.fwCheck({ dir: 'out', protocol: 'TCP', localPort: 49152 + Math.floor(Math.random() * 9000), remotePort: port, remoteIp: ip, program: PROGRAMS.curl });
+    if (!res.allow) { this.print(`curl: (28) Failed to connect to ${host} port ${port} after 21046 ms: Timed out`); return false; }
+    if (![80, 443, 8080].includes(port)) { this.print(`curl: (7) Failed to connect to ${host} port ${port} after 31 ms: Could not connect to server`); return false; }
+    if (head) { this.print(`HTTP/1.1 200 OK`, `Server: ${host === 'edvault.online' ? 'GitHub.com' : 'nginx'}`, 'Content-Type: text/html; charset=utf-8', `Date: ${new Date().toUTCString()}`, 'Cache-Control: max-age=600', ''); return true; }
+    this.print('<!DOCTYPE html>', '<html lang="uk">', `<head><meta charset="utf-8"><title>${host}</title></head>`, `<body><h1>Вітаємо на ${host}!</h1></body>`, '</html>');
+    return true;
+  }
+  // netsh advfirewall — брандмауер із командного рядка
+  c_netsh(t) {
+    const L = t.map(x => lc(x)), fw = fwOf(this.fs);
+    const kv = list => { const o = {}; for (const x of list) { const i = x.indexOf('='); if (i > 0) o[lc(x.slice(0, i))] = x.slice(i + 1); } return o; };
+    const ok = () => { this.print('ОК.', ''); return true; };
+    if (!L.length || L[0] === '/?' || L[0] === 'help') { this.print('', 'Використання: netsh advfirewall …', '', '  netsh advfirewall show allprofiles            — стан брандмауера в усіх профілях', '  netsh advfirewall set allprofiles state off   — вимкнути (on — увімкнути)', '  netsh advfirewall firewall show rule name=all  — усі правила', '  netsh advfirewall firewall add rule name="Мій сайт" dir=out action=block remoteip=8.8.8.8', '  netsh advfirewall firewall delete rule name="Мій сайт"', '  netsh advfirewall reset                        — стандартні параметри', '', 'Змінювати параметри можна лише в командному рядку від імені адміністратора.'); return true; }
+    if (L[0] === 'interface' || L[0] === 'int') { this.print('', `Конфігурація для інтерфейсу "${NET.adapter}"`, '    DHCP увімкнено:                         Так', `    IP-адреса:                              ${NET.ip}`, '    Префікс підмережі:                      192.168.1.0/24 (маска 255.255.255.0)', `    Основний шлюз:                          ${NET.gateway}`, `    DNS-сервери:                            ${NET.dns}`, ''); return true; }
+    if (L[0] !== 'advfirewall') { this.print(`Не вдалося знайти таку команду: ${t.join(' ')}`, 'Наберіть «netsh /?», щоб побачити підказку.'); return false; }
+    const which = w => ({ allprofiles: PROFILES, currentprofile: [NET.profile], domainprofile: ['domain'], privateprofile: ['private'], publicprofile: ['public'] }[w]);
+    if (L[1] === 'show') {
+      const ps = which(L[2]); if (!ps) { this.print('Неправильний профіль. Допустимо: allprofiles, currentprofile, domainprofile, privateprofile, publicprofile.'); return false; }
+      for (const p of ps) {
+        const c = fw.profiles[p];
+        this.print('', `Параметри профілю «${PROFILE_NAME[p]}»${p === NET.profile ? ' (поточний)' : ''}:`, '-'.repeat(70), `Стан                                  ${c.on ? 'УВІМКНЕНО' : 'ВИМКНЕНО'}`);
+        if (L[3] === 'state') continue;
+        this.print(`Політика брандмауера                  ${c.inbound === 'allow' ? 'AllowInbound' : c.inbound === 'blockall' ? 'BlockInboundAlways' : 'BlockInbound'},${c.outbound === 'allow' ? 'AllowOutbound' : 'BlockOutbound'}`, `Сповіщення про вхідні підключення     ${c.notify ? 'Увімкнути' : 'Вимкнути'}`, `Одноадресна відповідь на розсилку     ${c.unicast ? 'Увімкнути' : 'Вимкнути'}`, '', 'Ведення журналу:', `Записувати дозволені підключення      ${c.log.success ? 'Увімкнути' : 'Вимкнути'}`, `Записувати пропущені підключення      ${c.log.dropped ? 'Увімкнути' : 'Вимкнути'}`, `Ім’я файлу                            ${c.log.path}`, `Макс. розмір файлу                    ${c.log.size}`);
+      }
+      return ok();
+    }
+    if (L[1] === 'set') {
+      const ps = which(L[2]); if (!ps) { this.print('Неправильний профіль. Допустимо: allprofiles, currentprofile, domainprofile, privateprofile, publicprofile.'); return false; }
+      if (!this.needAdmin()) return false;
+      if (L[3] === 'state' && ['on', 'off'].includes(L[4])) ps.forEach(p => { fw.profiles[p].on = L[4] === 'on'; });
+      else if (L[3] === 'firewallpolicy' && L[4]) {
+        const [i, o] = L[4].split(',');
+        const iv = { blockinbound: 'block', blockinboundalways: 'blockall', allowinbound: 'allow' }[i], ov = { allowoutbound: 'allow', blockoutbound: 'block' }[o];
+        if (!iv || !ov) { this.print('Неправильне значення. Приклад: firewallpolicy blockinbound,allowoutbound'); return false; }
+        ps.forEach(p => { fw.profiles[p].inbound = iv; fw.profiles[p].outbound = ov; });
+      } else if (L[3] === 'logging' && ['droppedconnections', 'allowedconnections'].includes(L[4]) && ['enable', 'disable'].includes(L[5])) ps.forEach(p => { fw.profiles[p].log[L[4] === 'droppedconnections' ? 'dropped' : 'success'] = L[5] === 'enable'; });
+      else if (L[3] === 'logging' && L[4] === 'maxfilesize' && +L[5] >= 1 && +L[5] <= 32767) ps.forEach(p => { fw.profiles[p].log.size = +L[5]; });
+      else { this.print('Неправильний параметр. Приклади:', '  netsh advfirewall set allprofiles state on', '  netsh advfirewall set publicprofile firewallpolicy blockinbound,allowoutbound', '  netsh advfirewall set currentprofile logging droppedconnections enable'); return false; }
+      this.fs.emit('fw'); return ok();
+    }
+    if (L[1] === 'reset') { if (!this.needAdmin()) return false; this.fs.s.fw = fwDefaults(); this.fs.emit('fw'); return ok(); }
+    if (L[1] !== 'firewall') { this.print(`Не вдалося знайти таку команду: ${t.join(' ')}`); return false; }
+    const o = kv(t.slice(3));
+    const pick = () => fw.rules.filter(r => (lc(o.name) === 'all' || lc(r.name.trim()) === lc((o.name || '').trim())) && (!o.dir || r.dir === lc(o.dir)));
+    if (L[2] === 'show' && L[3]?.startsWith('rule')) {
+      if (!o.name) { this.print('Не вказано name=. Приклад: netsh advfirewall firewall show rule name=all'); return false; }
+      const list = pick().filter(r => !o.profile || lc(o.profile) === 'any' || r.profiles === 'any' || r.profiles.includes(lc(o.profile)));
+      if (!list.length) { this.print('Не знайдено правил, що відповідають указаним умовам.'); return false; }
+      for (const r of list) this.print('', `Ім’я правила:                         ${r.name.trim()}`, '-'.repeat(70), `Увімкнено:                            ${r.enabled ? 'Так' : 'Ні'}`, `Напрямок:                             ${r.dir === 'in' ? 'Вхідні' : 'Вихідні'}`, `Профілі:                              ${profilesText(r)}`, `Групування:                           ${r.group}`, `Локальна IP-адреса:                   ${addrText(r.localAddr)}`, `Віддалена IP-адреса:                  ${addrText(r.remoteAddr)}`, `Протокол:                             ${protoText(r.protocol)}`, ...(r.protocol === 'TCP' || r.protocol === 'UDP' ? [`Локальний порт:                       ${portsText(r.localPorts)}`, `Віддалений порт:                      ${portsText(r.remotePorts)}`] : []), `Обхід через межу:                     ${r.edge === 'allow' ? 'Так' : 'Ні'}`, ...(o.verbose != null || L.includes('verbose') ? [`Програма:                             ${r.program === 'any' ? 'Будь-яка' : r.program}`, `Опис:                                 ${r.desc}`] : []), `Дія:                                  ${actionText(r.action)}`);
+      return ok();
+    }
+    if (!['add', 'delete', 'set'].includes(L[2]) || !L[3]?.startsWith('rule')) { this.print(`Не вдалося знайти таку команду: ${t.join(' ')}`, 'Підказка: netsh advfirewall /?'); return false; }
+    if (!this.needAdmin()) return false;
+    if (L[2] === 'delete') {
+      if (!o.name) { this.print('Не введено один або кілька обов’язкових параметрів (name=).'); return false; }
+      const list = pick(); if (!list.length) { this.print('Не знайдено правил, що відповідають указаним умовам.'); return false; }
+      fw.rules = fw.rules.filter(r => !list.includes(r)); this.fs.emit('fw');
+      this.print('', `Видалено правил: ${list.length}.`); return ok();
+    }
+    // спільна перевірка параметрів правила
+    const build = (r, src) => {
+      if (src.dir) { if (!['in', 'out'].includes(lc(src.dir))) return 'dir= має бути in або out.'; r.dir = lc(src.dir); }
+      if (src.action) { const a = { allow: 'allow', block: 'block', bypass: 'secure' }[lc(src.action)]; if (!a) return 'action= має бути allow, block або bypass.'; r.action = a; }
+      if (src.protocol) { const pr = { any: 'any', tcp: 'TCP', udp: 'UDP', icmpv4: 'ICMPv4', icmpv6: 'ICMPv6', '6': 'TCP', '17': 'UDP', '1': 'ICMPv4' }[lc(src.protocol)]; if (!pr) return 'protocol= має бути any, tcp, udp, icmpv4 або icmpv6.'; r.protocol = pr; }
+      for (const [k, f] of [['localport', 'localPorts'], ['remoteport', 'remotePorts']]) if (src[k] != null) {
+        if (lc(src[k]) === 'any') { r[f] = 'any'; continue; }
+        if (r.protocol !== 'TCP' && r.protocol !== 'UDP') return 'Порти можна вказувати лише для протоколів TCP і UDP (protocol=tcp або protocol=udp).';
+        if (!validPorts(src[k])) return `Неправильний номер порту: ${src[k]}. Порт — число від 1 до 65535.`;
+        r[f] = src[k].replace(/\s/g, '');
+      }
+      for (const [k, f] of [['remoteip', 'remoteAddr'], ['localip', 'localAddr']]) if (src[k] != null) {
+        if (lc(src[k]) === 'any') { r[f] = 'any'; continue; }
+        const list = src[k].split(',').map(x => x.trim()); const bad = list.find(x => !validAddr(x)); if (bad) return `Неправильна IP-адреса: ${bad}`; r[f] = list;
+      }
+      if (src.program) r.program = lc(src.program) === 'any' ? 'any' : src.program;
+      if (src.enable) { if (!['yes', 'no'].includes(lc(src.enable))) return 'enable= має бути yes або no.'; r.enabled = lc(src.enable) === 'yes'; }
+      if (src.profile) { const ps = lc(src.profile).split(',').map(x => x.trim()); if (ps.includes('any')) r.profiles = 'any'; else { if (ps.some(x => !PROFILES.includes(x))) return 'profile= має бути any, domain, private або public.'; r.profiles = PROFILES.filter(x => ps.includes(x)); } }
+      if (src.description != null) r.desc = src.description;
+      if (src.edge) r.edge = lc(src.edge) === 'yes' ? 'allow' : 'block';
+      return null;
+    };
+    if (L[2] === 'add') {
+      if (!o.name || !o.dir || !o.action) { this.print('Не введено один або кілька обов’язкових параметрів: name=, dir= і action=.', 'Приклад: netsh advfirewall firewall add rule name="Блок Google" dir=out action=block remoteip=142.250.74.110'); return false; }
+      const r = { id: newId(fw), name: o.name, desc: '', group: '', dir: 'in', enabled: true, action: 'allow', profiles: 'any', program: 'any', service: 'any', protocol: 'any', localPorts: 'any', remotePorts: 'any', icmp: 'any', localAddr: 'any', remoteAddr: 'any', edge: 'block', iface: 'all', predefined: false };
+      if (o.protocol) { const e = build(r, { protocol: o.protocol }); if (e) { this.print(e); return false; } }
+      const e = build(r, o); if (e) { this.print(e); return false; }
+      fw.rules.push(r); this.fs.emit('fw');
+      return ok();
+    }
+    // set rule name=… new …
+    const ni = L.indexOf('new'); if (ni < 0 || !o.name) { this.print('Синтаксис: netsh advfirewall firewall set rule name="…" new enable=yes'); return false; }
+    const sel = kv(t.slice(3, ni)), upd = kv(t.slice(ni + 1));
+    const list = fw.rules.filter(r => lc(r.name.trim()) === lc((sel.name || '').trim()) && (!sel.dir || r.dir === lc(sel.dir)));
+    if (!list.length) { this.print('Не знайдено правил, що відповідають указаним умовам.'); return false; }
+    for (const r of list) { const e = build(r, upd); if (e) { this.print(e); return false; } }
+    this.fs.emit('fw');
+    this.print('', `Оновлено правил: ${list.length}.`); return ok();
   }
   c_set(t, rest) {
     const s = rest.trim();

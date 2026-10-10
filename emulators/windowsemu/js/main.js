@@ -5,6 +5,10 @@ import { WM, dialog, alertBox, menu, closeMenu, esc, h, $ } from './ui.js';
 import { Explorer, PC, BIN, wbr } from './explorer.js';
 import { Console } from './console.js';
 import { Notepad } from './notepad.js';
+import { SecurityApp, FirewallCpl } from './firewall.js';
+import { Wfmsc } from './wfmsc.js';
+import { uac } from './uac.js';
+import { fwOf, record, evaluate, PROFILES, PROGRAMS } from './fw.js';
 
 const lc = s => s.toLocaleLowerCase('uk');
 const KEY = 'edvault-windows';
@@ -43,6 +47,13 @@ sys.open = (app, path) => {
   if (app === 'notepad') { if (path) sys.addRecent(path); return new Notepad(sys, path); }
   if (app === 'bin') return new Explorer(sys, BIN);
   if (app === 'pc') return new Explorer(sys, PC);
+  if (app === 'cmd-admin') return uac({ app: 'Обробник команд Windows', icon: appIcon('cmd', 32), file: 'C:\\Windows\\System32\\cmd.exe' }).then(ok => ok && new Console(sys, null, { admin: true }));
+  if (app === 'security') { const w = WM.wins.find(x => x.app === 'security'); if (w) { WM.focus(w); w.app_?.go(path || 'firewall'); return; } const a = new SecurityApp(sys, path || 'home'); a.win.app_ = a; return a; }
+  if (app === 'firewallcpl') { const w = WM.wins.find(x => x.app === 'firewallcpl'); if (w) { WM.focus(w); w.app_?.go(path || 'main'); return; } const a = new FirewallCpl(sys, path || 'main'); a.win.app_ = a; return a; }
+  if (app === 'wfmsc') {
+    const w = WM.wins.find(x => x.app === 'wfmsc'); if (w) return WM.focus(w);
+    return uac({ app: 'Брандмауер Захисника Windows у режимі підвищеної безпеки', icon: appIcon('firewall', 32), file: 'C:\\Windows\\System32\\mmc.exe' }).then(ok => ok && new Wfmsc(sys));
+  }
 };
 // виклики з командного рядка
 sys.launch = async (a, p) => {
@@ -281,17 +292,20 @@ const desktop = {
     el.addEventListener('input', e => { if (e.target.classList.contains('ren-inp') && /[\\/:*?"<>|]/.test(e.target.value)) { e.target.value = e.target.value.replace(/[\\/:*?"<>|]/g, ''); sys.tip(e.target, BAD_NAME_HINT); } });
     el.addEventListener('focusout', e => { if (e.target.classList.contains('ren-inp')) setTimeout(() => this.commit(), 0); });
     sys.dnd(el, () => fs.real(DESK), () => this.paths(), k => { if (!this.sel.has(k)) { this.sel = new Set([k]); this.render(); } });
-    fs.on(() => this.render());
+    fs.on(w => { if (w !== 'fw' && w !== 'fwlog') this.render(); });
   },
 };
 
 /* ═════════ Панель завдань ═════════ */
 const PINNED = [['explorer', 'Провідник'], ['cmd', 'Командний рядок'], ['notepad', 'Блокнот']];
+const APP_NAME = { security: 'Безпека Windows', firewallcpl: 'Брандмауер Захисника Windows', wfmsc: 'Брандмауер Захисника Windows у режимі підвищеної безпеки' };
+const tbIcon = a => appIcon({ wfmsc: 'firewall', firewallcpl: 'firewall' }[a] || a, 24);
 function renderTaskbar() {
   const act = WM.active();
-  $('#tbApps').innerHTML = PINNED.map(([a, t]) => {
+  const extra = [...new Set(WM.wins.map(w => w.app))].filter(a => !PINNED.some(p => p[0] === a)).map(a => [a, APP_NAME[a] || a]);
+  $('#tbApps').innerHTML = [...PINNED, ...extra].map(([a, t]) => {
     const ws = WM.wins.filter(w => w.app === a);
-    return `<button class="tb-app${ws.length ? ' run' : ''}${act && act.app === a ? ' act' : ''}" data-app="${a}" title="${esc(ws.length === 1 ? ws[0].title : t)}">${appIcon(a, 24)}${ws.length > 1 ? `<i class="cnt">${ws.length}</i>` : ''}</button>`;
+    return `<button class="tb-app${ws.length ? ' run' : ''}${act && act.app === a ? ' act' : ''}" data-app="${a}" title="${esc(ws.length === 1 ? ws[0].title : t)}">${tbIcon(a)}${ws.length > 1 ? `<i class="cnt">${ws.length}</i>` : ''}</button>`;
   }).join('');
 }
 WM.on(renderTaskbar);
@@ -308,7 +322,7 @@ $('#tbApps').addEventListener('contextmenu', e => {
   e.preventDefault();
   const b = e.target.closest('[data-app]'); if (!b) return;
   const a = b.dataset.app, ws = WM.wins.filter(w => w.app === a);
-  menu(e.clientX, e.clientY, [...ws.map(w => ({ t: w.title, icon: appIcon(a, 16), on: () => WM.focus(w) })), ws.length && '-', { t: 'Нове вікно', icon: 'plus', on: () => sys.open(a) }, ws.length && { t: ws.length > 1 ? 'Закрити всі вікна' : 'Закрити вікно', icon: 'close', on: () => ws.forEach(w => w.close()) }]);
+  menu(e.clientX, e.clientY, [...ws.map(w => ({ t: w.title, icon: tbIcon(a).replace(/width="24" height="24"/, 'width="16" height="16"'), on: () => WM.focus(w) })), ws.length && '-', { t: 'Нове вікно', icon: 'plus', on: () => sys.open(a) }, a === 'cmd' && { t: 'Запустити від імені адміністратора', icon: 'shield', on: () => sys.open('cmd-admin') }, ws.length && { t: ws.length > 1 ? 'Закрити всі вікна' : 'Закрити вікно', icon: 'close', on: () => ws.forEach(w => w.close()) }]);
   const m = document.querySelector('.cm-root'); if (m) { const r = m.getBoundingClientRect(); m.style.top = (innerHeight - 52 - r.height) + 'px'; }
 });
 function clock() {
@@ -318,11 +332,39 @@ function clock() {
 clock(); setInterval(clock, 10000);
 $('#clock').title = new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+/* ═════════ Брандмауер: значок у треї та «чужі» спроби підключитися ═════════ */
+function renderShield() {
+  const off = PROFILES.filter(p => !fwOf(fs).profiles[p].on);
+  const b = $('#fwTray');
+  b.classList.toggle('bad', off.length > 0);
+  b.title = off.length ? 'Безпека Windows: брандмауер вимкнено — потрібні дії' : 'Безпека Windows: дії не потрібні';
+  b.innerHTML = `${ui('shield', 16)}${off.length ? '<i class="dot"></i>' : ''}`;
+}
+$('#fwTray').addEventListener('click', () => sys.open('security', 'firewall'));
+fs.on(w => { if (w === 'fw' || w === 'reset') renderShield(); });
+renderShield();
+// Інші комп’ютери шкільної мережі час від часу «стукають» до цього ПК — події видно в «Спостереженні»
+const KNOCKS = [
+  { protocol: 'ICMPv4', icmpType: 8, remoteIp: '192.168.1.15', program: PROGRAMS.system },
+  { protocol: 'TCP', localPort: 445, remotePort: 51234, remoteIp: '192.168.1.22', program: PROGRAMS.system },
+  { protocol: 'TCP', localPort: 3389, remotePort: 50112, remoteIp: '192.168.1.40', program: PROGRAMS.svchost },
+  { protocol: 'UDP', localPort: 137, remotePort: 137, remoteIp: '192.168.1.15', program: PROGRAMS.system },
+  { protocol: 'TCP', localPort: 25565, remotePort: 49870, remoteIp: '192.168.1.31', program: PROGRAMS.minecraft },
+];
+let knock = 0;
+setInterval(() => {
+  if (document.hidden) return;
+  const pkt = { dir: 'in', ...KNOCKS[knock++ % KNOCKS.length] };
+  record(fs, pkt, evaluate(fwOf(fs), pkt));
+}, 17000);
+
 /* ═════════ Меню «Пуск» ═════════ */
 const START_PINS = [
   { t: 'Провідник', icon: () => appIcon('explorer', 32), on: () => sys.open('explorer', PC) },
   { t: 'Командний рядок', icon: () => appIcon('cmd', 32), on: () => sys.open('cmd') },
   { t: 'Блокнот', icon: () => appIcon('notepad', 32), on: () => sys.open('notepad') },
+  { t: 'Безпека Windows', icon: () => appIcon('security', 32), on: () => sys.open('security') },
+  { t: 'Брандмауер', icon: () => appIcon('firewall', 32), on: () => sys.open('firewallcpl') },
   { t: 'Кошик', icon: () => binIcon(fs.s.bin.length > 0, 32), on: () => sys.open('bin') },
   { t: 'Документи', icon: () => folderIcon(32, 'Documents'), on: () => sys.open('explorer', HOME + '\\Documents') },
   { t: 'Завантаження', icon: () => folderIcon(32, 'Downloads'), on: () => sys.open('explorer', HOME + '\\Downloads') },
@@ -339,8 +381,8 @@ function closeStart() { if (!startOpen) return; startOpen = false; $('#start').h
 sys.closeStart = closeStart;
 function searchAll(q) {
   const out = [], lq = lc(q);
-  const apps = [['Провідник', 'explorer', ['explorer', 'провідник', 'файли']], ['Командний рядок', 'cmd', ['cmd', 'командний', 'консоль', 'термінал']], ['Блокнот', 'notepad', ['notepad', 'блокнот', 'текст']], ['Кошик', 'bin', ['кошик', 'recycle']]];
-  for (const [t, a, keys] of apps) if (keys.some(k => k.startsWith(lq) || lc(t).includes(lq))) out.push({ t, sub: 'Застосунок', icon: appIcon(a === 'bin' ? 'bin' : a, 24), on: () => sys.open(a) });
+  const apps = [['Провідник', 'explorer', ['explorer', 'провідник', 'файли']], ['Командний рядок', 'cmd', ['cmd', 'командний', 'консоль', 'термінал']], ['Блокнот', 'notepad', ['notepad', 'блокнот', 'текст']], ['Кошик', 'bin', ['кошик', 'recycle']], ['Безпека Windows', 'security', ['безпека', 'захисник', 'defender', 'security', 'антивірус']], ['Брандмауер Захисника Windows', 'firewallcpl', ['брандмауер', 'firewall', 'фаєрвол', 'файрвол', 'мережевий екран']], ['Брандмауер у режимі підвищеної безпеки', 'wfmsc', ['wf.msc', 'wf', 'брандмауер', 'firewall', 'правила', 'додаткові']], ['Командний рядок (адміністратор)', 'cmd-admin', ['cmd', 'адміністратор', 'admin']]];
+  for (const [t, a, keys] of apps) if (keys.some(k => k.startsWith(lq) || lc(t).includes(lq))) out.push({ t, sub: 'Застосунок', icon: appIcon({ bin: 'bin', wfmsc: 'firewall', firewallcpl: 'firewall', 'cmd-admin': 'cmd' }[a] || a, 24), on: () => sys.open(a) });
   const walk = (p, depth) => { if (depth > 8 || out.length > 14) return; for (const c of fs.list(p)) { const cp = p.replace(/\\$/, '') + '\\' + c.name; if (lc(c.name).includes(lq)) out.push({ t: c.name, sub: parentPath(cp), icon: nodeIcon(c, cp, 24), on: () => sys.openFile(cp) }); if (c.type === 'dir' && !c.attrs.s) walk(cp, depth + 1); } };
   walk(HOME, 0); walk('D:\\', 0);
   return out.slice(0, 9);
@@ -393,7 +435,8 @@ function showHelp() {
     <ul class="help-l"><li><b>Провідник</b> — подвійне клацання відкриває, права кнопка — меню, F2 — перейменувати, Delete — у Кошик, Ctrl+C / Ctrl+X / Ctrl+V — копіювати, вирізати, вставити. Файли можна перетягувати мишкою.</li>
     <li><b>Командний рядок</b> — напишіть <code>help</code>, щоб побачити всі команди, або <code>dir /?</code> — довідку про команду. Стрілки ↑ ↓ — попередні команди, Tab — доповнити назву.</li>
     <li>Команди <code>del</code> і <code>rd</code> видаляють <b>назавжди</b>, а Провідник — у <b>Кошик</b>.</li>
-    <li>Усе, що ви робите в консолі, одразу видно в Провіднику, і навпаки.</li></ul>`, buttons: [{ t: 'Зрозуміло', v: true, primary: true }] });
+    <li>Усе, що ви робите в консолі, одразу видно в Провіднику, і навпаки.</li>
+    <li><b>Брандмауер</b> — «Пуск» → «Безпека Windows» або «Брандмауер». Зміни налаштувань просять права адміністратора: ім’я <code>admin</code>, пароль <code>admin</code>. Правила справді діють на <code>ping</code> і <code>curl</code> у консолі.</li></ul>`, buttons: [{ t: 'Зрозуміло', v: true, primary: true }] });
 }
 
 /* ═════════ Клавіатура ═════════ */

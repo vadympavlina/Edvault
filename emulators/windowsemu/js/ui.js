@@ -151,3 +151,33 @@ export function menu(x, y, items, { anchor } = {}) {
 document.addEventListener('pointerdown', e => { if (openMenu && !e.target.closest('.cm-root')) closeMenu(); }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && openMenu) { closeMenu(); e.stopPropagation(); } }, true);
 window.addEventListener('blur', closeMenu);
+
+/* ═════════ Модальне вікно з вкладками (властивості, майстри) ═════════ */
+// modal({ title, html, cls, buttons: [{ t, v, primary, cancel }], onButton(v, api) → false щоб не закривати, onOpen(api) })
+export function modal(o) {
+  const el = h(`<div class="dlg-back"><div class="dlg mdl ${o.cls || ''}" role="dialog"><header class="dlg-title"><span>${esc(o.title)}</span><button class="wb close" data-close title="Закрити">${ui('close', 15)}</button></header>
+    <div class="mdl-body">${o.html}</div>${o.buttons ? `<footer class="dlg-foot">${o.buttons.map((b, i) => `<button class="btn${b.primary ? ' primary' : ''}" data-b="${i}">${esc(b.t)}</button>`).join('')}</footer>` : ''}</div></div>`);
+  document.body.appendChild(el);
+  const api = {
+    el, $: s => el.querySelector(s), $$: s => [...el.querySelectorAll(s)],
+    close: v => { el.remove(); document.removeEventListener('keydown', key, true); o.onClose?.(v); },
+    button: i => el.querySelector(`[data-b="${i}"]`),
+  };
+  const press = async i => { const b = o.buttons[i]; if (api.button(i)?.disabled) return; const r = await o.onButton?.(b.v, api); if (r !== false) api.close(b.v); };
+  el.addEventListener('click', e => {
+    const b = e.target.closest('[data-b]'); if (b) return press(+b.dataset.b);
+    if (e.target.closest('[data-close]')) { const c = o.buttons?.findIndex(x => x.cancel); return c >= 0 ? press(c) : api.close(null); }
+    const tab = e.target.closest('[data-tab]');
+    if (tab) { api.$$('[data-tab]').forEach(t => t.classList.toggle('on', t === tab)); api.$$('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== tab.dataset.tab; }); }
+  });
+  const key = e => {
+    if (!el.isConnected || document.querySelector('.dlg-back:last-of-type') !== el) return;
+    if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); const c = o.buttons?.findIndex(x => x.cancel); c >= 0 ? press(c) : api.close(null); }
+    else if (e.key === 'Enter' && !e.target.closest('textarea, select, button') && o.buttons) { const p = o.buttons.findIndex(x => x.primary); if (p >= 0) { e.preventDefault(); e.stopPropagation(); press(p); } }
+  };
+  document.addEventListener('keydown', key, true);
+  o.onOpen?.(api);
+  return api;
+}
+// вкладки: tabs([['general', 'Загальні', html], …])
+export const tabs = list => `<div class="tabs">${list.map(([k, t], i) => `<button class="tab${i ? '' : ' on'}" data-tab="${k}">${esc(t)}</button>`).join('')}</div><div class="tab-panes">${list.map(([k, , html], i) => `<div class="pane" data-pane="${k}" ${i ? 'hidden' : ''}>${html}</div>`).join('')}</div>`;

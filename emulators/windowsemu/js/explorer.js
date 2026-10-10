@@ -43,7 +43,7 @@ export class Explorer {
       <footer class="ex-status"></footer></div>`;
     this.$ = s => this.win.body.querySelector(s);
     this.bind();
-    this.unsub = this.fs.on(() => this.render());
+    this.unsub = this.fs.on(w => { if (w !== 'fw' && w !== 'fwlog') this.render(); });
     const close = this.win.onClose; this.win.onClose = () => { this.unsub(); return close?.(); };
     sys.explorers.add(this); this.win.onFocus = () => this.$('.ex-view').focus({ preventScroll: true });
     const c = this.win.close; this.win.close = f => { sys.explorers.delete(this); return c(f); };

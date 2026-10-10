@@ -6,12 +6,13 @@ import { WM, esc } from './ui.js';
 const PALETTE = ['#0c0c0c', '#0037da', '#13a10e', '#3a96dd', '#c50f1f', '#881798', '#c19c00', '#cccccc', '#767676', '#3b78ff', '#16c60c', '#61d6d6', '#e74856', '#b4009e', '#f9f1a5', '#f2f2f2'];
 
 export class Console {
-  constructor(sys, cwd) {
+  constructor(sys, cwd, { admin = false } = {}) {
     this.sys = sys;
-    this.win = WM.open({ app: 'cmd', exe: 'cmd.exe', title: 'Командний рядок', icon: appIcon('cmd', 16), w: 780, h: 460, minW: 420, minH: 220 });
+    this.win = WM.open({ app: 'cmd', exe: 'cmd.exe', title: admin ? 'Адміністратор: Командний рядок' : 'Командний рядок', icon: appIcon('cmd', 16), w: 780, h: 460, minW: 420, minH: 220 });
     this.cmd = new Cmd(sys.fs, {
       open: (a, p) => sys.launch(a, p),
       tasks: () => WM.wins.map(w => ({ name: w.exe, pid: w.pid, title: w.title })),
+      admin,
       kill: by => { const list = WM.wins.filter(w => by.pid ? w.pid === by.pid : w.exe === by.im); list.forEach(w => setTimeout(() => w.close(true), 30)); return list.map(w => ({ name: w.exe, pid: w.pid })); },
     });
     if (cwd && sys.fs.isDir(cwd)) this.cmd.cwd = sys.fs.real(cwd);

@@ -311,6 +311,20 @@ export class FS {
     const b = baseOf(name), e = name.slice(b.length);
     return this.freeName(parent, `${b} — копія${e}`);
   }
+  // запис від імені системи (журнал брандмауера): створює папки й обходить захист
+  sysWrite(path, text, append = false) {
+    const x = parsePath(path); let n = this.s.drives[x.drive];
+    for (const part of x.parts.slice(0, -1)) {
+      let c = n.children.find(k => lc(k.name) === lc(part));
+      if (!c) { c = { id: this.newId(), name: part, type: 'dir', children: [], created: this.now(), modified: this.now(), attrs: { h: false, r: false, s: true } }; n.children.push(c); }
+      n = c;
+    }
+    const name = x.parts.at(-1);
+    let f = n.children.find(k => lc(k.name) === lc(name));
+    if (!f) { f = { id: this.newId(), name, type: 'file', content: '', size: 0, created: this.now(), modified: this.now(), attrs: { h: false, r: false, s: false } }; n.children.push(f); }
+    f.content = append ? f.content + text : text; f.modified = this.now();
+    this.emit('syswrite');
+  }
   setAttr(path, attr, on) {
     const n = this.node(path); if (!n) throw ERR.file();
     if (n.attrs.s && attr !== 'h') throw ERR.access();

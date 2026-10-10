@@ -18,7 +18,7 @@ export class Notepad {
     else if (path) this.load(path);
     else this.title();
     this.applyView();
-    this.unsub = this.fs.on(() => this.external());
+    this.unsub = this.fs.on(w => { if (w !== 'fw' && w !== 'fwlog') this.external(); });
     const close = this.win.close; this.win.close = f => { this.unsub(); return close(f); };
     this.win.onFocus = () => setTimeout(() => this.ta.focus({ preventScroll: true }), 0);
     this.win.onFocus();
