@@ -1077,3 +1077,53 @@ textarea.rt-in { height: auto; padding: 8px 10px; resize: vertical; }
 .tm-t.det td:last-child { min-width: 140px; }
 .tm-t.det { width: 100%; }
 .tm-t.det th, .tm-t.det td { padding-left: 8px; padding-right: 8px; }
+
+/* ═════════ Антивірус ═════════ */
+.av-ok { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; background: #fff; border: 1px solid #e6e6e6; border-radius: 6px; max-width: 640px; }
+.av-ok > svg { color: #13a10e; margin-top: 2px; }
+.av-ok div { display: flex; flex-direction: column; gap: 4px; }
+.av-ok small { color: #4d4d4d; font-size: 12.5px; line-height: 1.55; }
+.av-acts { display: flex; align-items: center; gap: 12px; margin: 12px 0 4px; flex-wrap: wrap; }
+.av-scan { padding: 14px 16px; background: #fff; border: 1px solid #e6e6e6; border-radius: 6px; max-width: 640px; }
+.av-bar { height: 4px; border-radius: 2px; background: #e3e9f0; overflow: hidden; margin: 10px 0; }
+.av-bar i { display: block; height: 100%; background: var(--accent); transition: width .15s; }
+.av-cur { font-size: 12px; color: #5d5d5d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 6px 0 10px; font-family: var(--mono); }
+.av-bad { display: flex; align-items: center; gap: 8px; color: #a4262c; font-size: 13.5px; margin: 4px 0 8px; }
+.av-threats { max-width: 720px; }
+.av-list { display: flex; flex-direction: column; gap: 8px; max-width: 720px; margin-top: 8px; }
+.av-th { padding: 12px 14px; background: #fff; border: 1px solid #f1bbbc; border-left: 4px solid #c42b1c; border-radius: 6px; }
+.av-thh { display: flex; align-items: center; gap: 12px; }
+.av-thh > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.av-thh b { overflow-wrap: anywhere; }
+.av-thh small { color: #5d5d5d; font-size: 12px; }
+.av-thh select { width: 210px; flex: none; }
+.av-what { font-size: 13px; line-height: 1.5; margin: 8px 0 6px; color: #333; }
+.av-path { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.av-lv { flex: none; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.av-lv.sev { background: #fde7e9; color: #a4262c; } .av-lv.high { background: #fff1e5; color: #9a4a00; } .av-lv.mid { background: #fff8db; color: #7a5b00; } .av-lv.low { background: #eef2f6; color: #44546a; }
+.av-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #fff; border: 1px solid #e6e6e6; border-radius: 6px; }
+.av-row > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.av-row small { color: #5d5d5d; font-size: 12px; overflow-wrap: anywhere; }
+.av-row .btn { min-width: 0; }
+.av-opts { display: flex; flex-direction: column; gap: 6px; max-width: 680px; margin: 10px 0 16px; }
+.av-opt { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; background: #fff; border: 1px solid #e6e6e6; border-radius: 6px; }
+.av-opt:has(input:checked) { border-color: var(--accent); background: #f3f8fd; }
+.av-opt input { margin-top: 3px; accent-color: var(--accent); }
+.av-opt span { display: flex; flex-direction: column; gap: 2px; }
+.av-opt small { color: #4d4d4d; font-size: 12.5px; line-height: 1.45; }
+.av-hist { display: flex; flex-direction: column; gap: 6px; max-width: 720px; margin-top: 12px; }
+.av-hc { background: #fff; border: 1px solid #e6e6e6; border-radius: 6px; }
+.av-hh { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 14px; text-align: left; }
+.av-hh > div { flex: 1; display: flex; flex-direction: column; }
+.av-hh small { color: #5d5d5d; font-size: 12px; }
+.av-hh:hover { background: #fafafa; }
+.av-hb { padding: 4px 16px 14px 44px; font-size: 13px; line-height: 1.5; border-top: 1px solid #f0f0f0; }
+.av-hb p { margin-top: 6px; }
+.av-sw { max-width: 640px; margin: 18px 0 6px; }
+.av-sw > b { font-size: 14px; font-weight: 600; }
+.av-sw .muted { margin: 2px 0 2px; }
+#avoffline { position: fixed; inset: 0; z-index: 10002; background: #0c0c0c; color: #e6e6e6; display: flex; align-items: center; justify-content: center; }
+#avoffline > div { width: min(560px, 90vw); display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
+#avoffline h1 { font-size: 22px; font-weight: 600; }
+#avoffline .av-bar { background: #333; height: 6px; }
+.sec-main h3 { display: flex; align-items: center; gap: 8px; }

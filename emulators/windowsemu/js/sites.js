@@ -73,6 +73,7 @@ const FILES = [
   { name: 'Пісня_для_уроку_музики.mp3', size: 4404019, desc: 'Аудіо, 3 хв 41 с' },
   { name: 'Конспект_мережі.txt', size: 0, desc: 'Короткий конспект про мережі', content: 'Конспект: мережі\r\n\r\nIP-адреса — номер пристрою в мережі.\r\nОсновний шлюз — адреса роутера (192.168.1.1).\r\nDNS — перетворює назви сайтів на IP-адреси.\r\nDHCP — автоматично видає IP-адреси.\r\n\r\nКоманди: ipconfig, ping, nslookup, tracert.' },
   { name: 'Проєкт_презентація.zip', size: 3250585, desc: 'Архів із шаблоном презентації' },
+  { name: 'eicar_test.txt', size: 0, desc: 'Тестовий «вірус» EICAR — перевір, чи помітить його антивірус (він безпечний)', content: 'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' },
   { name: 'super_game_FREE_setup.exe', size: 18874368, desc: 'Безкоштовна гра!!! (від невідомого автора)', danger: true },
 ];
 const CITIES = { kyiv: 'Київ', lviv: 'Львів', odesa: 'Одеса', kharkiv: 'Харків', dnipro: 'Дніпро' };

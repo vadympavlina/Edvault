@@ -146,7 +146,7 @@ await step('браузер: завантаження файлу в «Заван�
   await page().locator('[data-dl="3"]').click();
   await p.waitForFunction(h => WinEmu.fs.node(h + '\\Downloads\\Конспект_мережі.txt'), H, { timeout: 5000 });
   assert.match(await p.locator('.bw-fly').innerText(), /Конспект_мережі\.txt[\s\S]*Готово/);
-  await page().locator('[data-dl="5"]').click();
+  await page().locator('[data-dl="6"]').click();
   assert.match(await p.locator('.dlg-text').innerText(), /може зашкодити/);
   await p.click('.dlg .btn.primary');
   assert.equal(await node(H + '\\Downloads\\super_game_FREE_setup.exe'), null);

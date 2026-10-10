@@ -3,6 +3,7 @@ import { fwOf, PROFILES, PROFILE_NET, PROFILE_NAME, NET, defaults as fwDefaults,
 import { appIcon, ui } from './icons.js';
 import { WM, dialog, alertBox, esc, h, modal } from './ui.js';
 import { uac } from './uac.js';
+import { avRender, avClick, avStatus, avScanUpdate } from './defender.js';
 
 const NET_ICON = { domain: 'building', private: 'house', public: 'coffee' };
 const elevate = (app, icon) => uac({ app, icon, file: app.includes('розширеною') ? 'C:\\Windows\\System32\\mmc.exe' : 'C:\\Windows\\System32\\SecHealthUI.exe' });
@@ -18,9 +19,10 @@ export class SecurityApp {
     this.sys = sys; this.fs = sys.fs; this.page = page; this.hist = [];
     this.win = WM.open({ app: 'security', exe: 'SecHealthUI.exe', title: 'Безпека Windows', icon: appIcon('security', 16), w: 980, h: 660, minW: 640, minH: 400 });
     this.win.body.innerHTML = `<div class="sec"><nav class="sec-nav"><button class="sn back" data-back title="Назад">${ui('back', 16)}</button><button class="sn" data-menu>${ui('menu', 16)}</button>${NAV.map(([k, i, t]) => `<button class="sn" data-go="${k}">${ui(i, 18)}<span>${t}</span></button>`).join('')}<span class="grow"></span><button class="sn" data-go="settings">${ui('gear', 18)}<span>Параметри</span></button></nav><main class="sec-main"></main></div>`;
-    this.$ = s => this.win.body.querySelector(s);
+    this.$ = s => this.win.body.querySelector(s); this.$$ = s => [...this.win.body.querySelectorAll(s)];
     this.win.body.addEventListener('click', e => this.click(e));
-    this.unsub = this.fs.on(w => { if (['fw', 'reset'].includes(w)) this.render(); });
+    this.win.body.addEventListener('change', e => { if (e.target.name === 'avopt') this.avOpt = e.target.value; });
+    this.unsub = this.fs.on(w => { if (['fw', 'reset', 'av'].includes(w)) this.render(); else if (w === 'avscan' && this.page.startsWith('virus') && !avScanUpdate(this)) this.render(); });
     const close = this.win.close; this.win.close = f => { this.unsub(); return close(f); };
     this.render();
   }
@@ -30,13 +32,13 @@ export class SecurityApp {
     if (!this.win.el.isConnected) return;
     const fw = this.fw, p = this.page;
     this.$('[data-back]').disabled = !this.hist.length;
-    this.win.body.querySelectorAll('[data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === p || (b.dataset.go === 'firewall' && PROFILES.includes(p)) || (b.dataset.go === 'firewall' && ['fwnotify', 'trouble'].includes(p))));
+    this.win.body.querySelectorAll('[data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === p || (b.dataset.go === 'firewall' && PROFILES.includes(p)) || (b.dataset.go === 'firewall' && ['fwnotify', 'trouble'].includes(p)) || (b.dataset.go === 'virus' && p.startsWith('virus'))));
     const off = PROFILES.filter(x => !fw.profiles[x].on);
     const okTile = (k, ic, t, s) => `<button class="tile-s" data-go="${k}"><span class="ts-ic">${ui(ic, 30)}<i class="ok">${ui('check', 11)}</i></span><b>${t}</b><small>${s}</small></button>`;
     let html;
     if (p === 'home') {
       html = `<h1>Безпека з першого погляду</h1><p class="lead">Перегляньте, що відбувається з безпекою й станом вашого пристрою, і вживіть потрібні заходи.</p>
-        <div class="tiles-s">${okTile('virus', 'virus', 'Захист від вірусів і загроз', 'Дії не потрібні.')}${okTile('account', 'person', 'Захист облікових записів', 'Дії не потрібні.')}
+        <div class="tiles-s">${(() => { const a = avStatus(this.fs); return a.bad ? `<button class="tile-s bad" data-go="virus"><span class="ts-ic">${ui('virus', 30)}<i class="x">${ui('close', 11)}</i></span><b>Захист від вірусів і загроз</b><small>${a.pending ? `Знайдено загроз: ${a.pending}. Почніть рекомендовані дії.` : 'Захист у реальному часі вимкнено. Пристрій може бути вразливим.'}</small><span class="btn primary">${a.pending ? 'Переглянути' : 'Увімкнути'}</span></button>` : okTile('virus', 'virus', 'Захист від вірусів і загроз', 'Дії не потрібні.'); })()}${okTile('account', 'person', 'Захист облікових записів', 'Дії не потрібні.')}
         <button class="tile-s${off.length ? ' bad' : ''}" data-go="firewall"><span class="ts-ic">${ui('wifi2', 30)}<i class="${off.length ? 'x' : 'ok'}">${ui(off.length ? 'close' : 'check', 11)}</i></span><b>Брандмауер і захист мережі</b><small>${off.length ? `Брандмауер вимкнено: ${off.map(x => PROFILE_NAME[x].toLowerCase()).join(', ')}. Ваш пристрій може бути вразливим.` : 'Дії не потрібні.'}</small>${off.length ? '<span class="btn primary" data-fixall>Увімкнути</span>' : ''}</button>
         ${okTile('apps', 'browser', 'Керування програмами й браузером', 'Дії не потрібні.')}${okTile('device', 'chip', 'Безпека пристрою', 'Переглянути стан і керувати функціями безпеки обладнання')}${okTile('health', 'heart', 'Продуктивність і справність пристрою', 'Немає дій.')}${okTile('family', 'family', 'Сімейні параметри', 'Керуйте способом використання пристроїв вашою родиною.')}</div>`;
     } else if (p === 'firewall') {
@@ -58,8 +60,10 @@ export class SecurityApp {
     } else if (p === 'trouble') {
       html = `<button class="sec-backlink" data-go="firewall">${ui('back', 14)}Брандмауер і захист мережі</button><h1>Усунення неполадок мережі й Інтернету</h1><p class="lead">Засіб перевіряє підключення та брандмауер і підказує, що виправити.</p>
         <button class="btn primary" data-trouble>Запустити перевірку</button><div class="trouble"></div>`;
+    } else if (p.startsWith('virus')) {
+      html = avRender(this, p);
     } else if (p === 'settings') {
-      html = `<h1>Параметри</h1><h3>Про програму</h3><p class="muted">Безпека Windows · навчальна версія Edvault. Тут працює розділ «Брандмауер і захист мережі»; інші розділи показують стан для ознайомлення.</p><h3>Сповіщення</h3><button class="link" data-go="fwnotify">Параметри сповіщень брандмауера</button>`;
+      html = `<h1>Параметри</h1><h3>Про програму</h3><p class="muted">Безпека Windows · навчальна версія Edvault. Працюють розділи «Захист від вірусів і загроз» і «Брандмауер і захист мережі»; інші показують стан для ознайомлення.</p><h3>Сповіщення</h3><button class="link" data-go="fwnotify">Параметри сповіщень брандмауера</button>`;
     } else {
       const [, ic, t] = NAV.find(n => n[0] === p);
       html = `<div class="sec-h">${ui(ic, 34)}<div><h1>${t}</h1><p class="lead">У навчальному комп’ютері цей розділ лише для перегляду.</p></div></div><div class="all-ok">${ui('check', 22)}<span><b>Дії не потрібні.</b><small>Остання перевірка: сьогодні, ${new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}</small></span></div>`;
@@ -70,6 +74,7 @@ export class SecurityApp {
     const fw = this.fw, sys = this.sys;
     if (e.target.closest('[data-back]')) { if (this.hist.length) { this.page = this.hist.pop(); this.render(); } return; }
     if (e.target.closest('[data-menu]')) { this.$('.sec').classList.toggle('slim'); return; }
+    if (this.page.startsWith('virus') && !e.target.closest('[data-go]') && await avClick(this, e, () => elevate('Безпека Windows', appIcon('security', 32)))) return;
     const t = e.target.closest('[data-turnon], [data-fixall]');
     if (t) {
       e.stopPropagation();

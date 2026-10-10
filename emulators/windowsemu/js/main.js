@@ -14,6 +14,7 @@ import { SettingsApp } from './settings.js';
 import { Browser } from './browser.js';
 import { installProps } from './props.js';
 import { procState, SYS_PROCS } from './procs.js';
+import { installRealtime, avStatus } from './defender.js';
 
 const lc = s => s.toLocaleLowerCase('uk');
 const KEY = 'edvault-windows';
@@ -372,14 +373,16 @@ $('#clock').title = new Date().toLocaleDateString('uk-UA', { weekday: 'long', da
 
 /* ═════════ Брандмауер: значок у треї та «чужі» спроби підключитися ═════════ */
 function renderShield() {
-  const off = PROFILES.filter(p => !fwOf(fs).profiles[p].on);
+  const off = PROFILES.filter(p => !fwOf(fs).profiles[p].on), av = avStatus(fs), bad = off.length > 0 || av.bad;
   const b = $('#fwTray');
-  b.classList.toggle('bad', off.length > 0);
-  b.title = off.length ? 'Безпека Windows: брандмауер вимкнено — потрібні дії' : 'Безпека Windows: дії не потрібні';
-  b.innerHTML = `${ui('shield', 16)}${off.length ? '<i class="dot"></i>' : ''}`;
+  b.classList.toggle('bad', bad);
+  b.title = av.pending ? `Безпека Windows: знайдено загроз — ${av.pending}` : !av.rt ? 'Безпека Windows: захист у реальному часі вимкнено' : off.length ? 'Безпека Windows: брандмауер вимкнено — потрібні дії' : 'Безпека Windows: дії не потрібні';
+  b.innerHTML = `${ui('shield', 16)}${bad ? '<i class="dot"></i>' : ''}`;
 }
-$('#fwTray').addEventListener('click', () => sys.open('security', 'firewall'));
-fs.on(w => { if (w === 'fw' || w === 'reset') renderShield(); });
+$('#fwTray').addEventListener('click', () => { const av = avStatus(fs); sys.open('security', av.bad ? 'virus' : PROFILES.some(p => !fwOf(fs).profiles[p].on) ? 'firewall' : 'home'); });
+fs.on(w => { if (w === 'fw' || w === 'reset' || w === 'av') renderShield(); });
+installRealtime(sys);
+sys.closeAll = () => WM.wins.slice().forEach(w => w.close(true));
 renderShield();
 // Інші комп’ютери шкільної мережі час від часу «стукають» до цього ПК — події видно в «Спостереженні»
 const KNOCKS = [

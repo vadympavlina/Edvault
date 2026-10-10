@@ -108,7 +108,8 @@ export function initialState() {
   ]);
   const D = dir('D:', [
     dir('Інформатика', [txt('Урок 1.txt', 'Тема: файли й папки.\r\nФайл — це іменований шматок даних. Папка зберігає файли й інші папки.'), txt('Урок 2.txt', 'Тема: командний рядок.\r\ndir — вміст папки, cd — перейти в папку, md — створити папку.'), dir('Практика', [])]),
-    dir('Фото', [bin('Осінь.jpg', 1835008), bin('Клас.jpg', 2097152)]),
+    dir('Фото', [bin('Осінь.jpg', 1835008), bin('Клас.jpg', 2097152), bin('Екскурсія.jpg.exe', 1245184)]),
+    txt('autorun.inf', '[autorun]\r\nopen=Фото\\Екскурсія.jpg.exe\r\nicon=Фото\\Екскурсія.jpg.exe', { attrs: { h: true, r: false, s: false } }),
   ]);
   for (const d of [C, D]) d.attrs = { h: false, r: false, s: true };
   return { drives: { C, D }, bin: [], seq: seqInit };
