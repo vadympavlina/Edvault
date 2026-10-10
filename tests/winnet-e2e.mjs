@@ -23,11 +23,16 @@ await step('після запуску — екран блокування; не�
   assert.equal(await p.evaluate(() => document.querySelector('#desk').inert), true);
   await p.keyboard.press('Space');
   await p.fill('.lk-user', 'admin'); await p.fill('.lk-pass', '1234'); await p.press('.lk-pass', 'Enter');
-  assert.match(await p.locator('.lk-err').innerText(), /Неправильний пароль/);
+  assert.match(await p.locator('.lk-err').innerText(), /Неправильне ім’я користувача або пароль/);
+  await p.keyboard.press('Enter');
+  assert.equal(await p.inputValue('.lk-pass'), '');
   await p.fill('.lk-user', 'teacher'); await p.fill('.lk-pass', 'admin'); await p.press('.lk-pass', 'Enter');
-  assert.match(await p.locator('.lk-err').innerText(), /Такого користувача немає/);
-  await p.click('.lk-forgot');
+  assert.match(await p.locator('.lk-err').innerText(), /Неправильне ім’я/);
+  await p.click('.lk-ok');
   assert.match(await p.locator('.lk-help').innerText(), /admin/);
+  await p.keyboard.press('Escape');
+  assert.ok(await p.locator('.lk-face').isVisible());
+  await p.keyboard.press('Space');
   await p.fill('.lk-user', 'Admin'); await p.fill('.lk-pass', 'admin'); await p.press('.lk-pass', 'Enter');
   await p.waitForSelector('#lock', { state: 'hidden' });
   assert.equal(await p.evaluate(() => document.querySelector('#desk').inert), false);
@@ -48,6 +53,20 @@ await step('блокування зберігає відкриті вікна; �
   await p.click('#startBtn'); await p.click('.st-user'); await p.click('.cm-it:has-text("Вийти")');
   await p.locator('#lock .lk-face').waitFor();
   assert.equal(await p.locator('.win').count(), 0);
+  await signIn(p);
+});
+
+await step('живлення на екрані блокування: сон, завершення роботи, увімкнення', async () => {
+  await p.evaluate(() => { WinEmu.open('notepad'); WinEmu.lock(); });
+  await p.click('.lk-power'); await p.click('.cm-it:has-text("Режим сну")');
+  assert.ok(await p.locator('.lk-black').isVisible());
+  await p.keyboard.press('a');
+  assert.ok(await p.locator('.lk-face').isVisible());
+  await p.click('.lk-power'); await p.click('.cm-it:has-text("Завершити роботу")');
+  await p.locator('.lk-on').waitFor();
+  assert.equal(await p.locator('.win').count(), 0);
+  await p.click('.lk-on');
+  await p.waitForSelector('#boot', { state: 'hidden' });
   await signIn(p);
 });
 

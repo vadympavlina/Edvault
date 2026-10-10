@@ -1266,37 +1266,72 @@ button.nf-tile.on:hover { background: #1975c5; }
 button.st-user { height: 40px; padding: 0 12px; margin-left: -12px; border-radius: 5px; }
 button.st-user:hover { background: rgba(0,0,0,.05); }
 
-/* ═════════ Екран блокування та вхід ═════════ */
-.lk { position: fixed; inset: 0; z-index: 9995; color: #fff; overflow: hidden; user-select: none;
-  background: radial-gradient(60% 75% at 72% 58%, #9ad0ff 0%, #3a8ee6 28%, #1b5fc4 50%, transparent 72%), radial-gradient(45% 55% at 64% 66%, rgba(255,255,255,.55), transparent 60%), linear-gradient(160deg, #0b3a8c 0%, #0f4fb3 45%, #0a2e6e 100%); }
-.lk::before { content: ''; position: absolute; inset: 0; background: rgba(8,24,60,0); backdrop-filter: blur(0); transition: background .25s, backdrop-filter .25s; }
-.lk.blur::before { background: rgba(8,24,60,.35); backdrop-filter: blur(22px); }
-.lk-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; padding-top: 12vh; text-shadow: 0 2px 12px rgba(0,0,0,.25); animation: lkIn .3s ease-out; }
-.lk-time { font-size: 104px; font-weight: 600; line-height: 1.05; letter-spacing: -1px; }
-.lk-date { font-size: 22px; margin-top: 6px; }
+/* ═════════ Екран блокування та вхід (Windows 11) ═════════ */
+.lk { position: fixed; inset: 0; z-index: 9995; color: #fff; overflow: hidden; user-select: none; background: #0b4bb8 url(bloom.svg) center / cover no-repeat; font-family: 'Segoe UI Variable Display', 'Segoe UI', 'Inter', system-ui, sans-serif; }
+/* акриловий шар під формою входу */
+.lk::before { content: ''; position: absolute; inset: -40px; background: inherit; filter: blur(0); opacity: 0; transition: opacity .3s; }
+.lk::after { content: ''; position: absolute; inset: 0; background: rgba(0,10,40,0); transition: background .3s; pointer-events: none; }
+.lk.up::before { filter: blur(36px) saturate(1.2); opacity: 1; }
+.lk.up::after { background: rgba(0,12,45,.28); }
+.lk > * { position: absolute; z-index: 1; }
+.lk-face { inset: 0; z-index: 2; background: inherit; transition: transform .35s cubic-bezier(.2,.8,.25,1), opacity .35s; }
+.lk.up .lk-face { transform: translateY(-100%); opacity: 0; }
+.lk-clock { position: absolute; left: 0; right: 0; top: 9.5vh; display: flex; flex-direction: column; align-items: center; text-shadow: 0 1px 16px rgba(0,0,0,.18); animation: lkIn .4s ease-out; }
+.lk-time { font-size: 128px; font-weight: 600; line-height: 1; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; }
+.lk-date { font-size: 22px; font-weight: 500; margin-top: 10px; }
 .lk-date::first-letter { text-transform: uppercase; }
-.lk-hint { position: absolute; bottom: 64px; font-size: 14px; opacity: .85; }
-.lk-in, .lk-wait { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; animation: lkIn .2s ease-out; }
-.lk-in[hidden], .lk-wait[hidden], .lk-face[hidden] { display: none; }
-.lk-in.shake .lk-pw { animation: shake .35s; }
-.lk-av { width: 156px; height: 156px; border-radius: 50%; background: #b8d6f4; color: #0b4a8a; font-size: 64px; font-weight: 600; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 22px rgba(0,0,0,.25); }
-.lk-name { font-size: 26px; font-weight: 600; margin-bottom: 8px; }
-.lk-user, .lk-pass { width: 296px; height: 36px; padding: 0 12px; border-radius: 5px; border: 1px solid rgba(255,255,255,.4); border-bottom: 2px solid rgba(255,255,255,.75); background: rgba(255,255,255,.14); color: #fff; font-size: 14px; outline: none; user-select: text; }
-.lk-user::placeholder, .lk-pass::placeholder { color: rgba(255,255,255,.75); }
-.lk-user:focus, .lk-pass:focus { background: #fff; color: #1b1b1b; border-bottom-color: var(--accent); }
-.lk-user:focus::placeholder, .lk-pass:focus::placeholder { color: #6b6b6b; }
-.lk-pw { position: relative; display: flex; }
-.lk-pass { padding-right: 44px; }
-.lk-go { position: absolute; right: 3px; top: 3px; width: 34px; height: 30px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #fff; background: var(--accent); }
-.lk-go:hover { background: #1975c5; }
-.lk-caps, .lk-err { max-width: 320px; text-align: center; font-size: 13px; line-height: 1.45; display: flex; align-items: center; gap: 6px; }
-.lk-err { background: rgba(196,43,28,.85); padding: 6px 10px; border-radius: 4px; }
-.lk-caps[hidden], .lk-err[hidden], .lk-help[hidden] { display: none; }
-.lk-forgot { color: #fff; font-size: 13px; padding: 4px 8px; border-radius: 4px; opacity: .9; }
-.lk-forgot:hover { background: rgba(255,255,255,.14); opacity: 1; }
-.lk-help { max-width: 330px; text-align: center; font-size: 13px; line-height: 1.5; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,.25); }
-.lk-wait { flex-direction: row; font-size: 22px; gap: 18px; }
-.lk-corner { position: absolute; right: 24px; bottom: 22px; display: flex; gap: 6px; }
+.lk-sign { inset: 0; }
+.lk-in, .lk-wait { position: absolute; inset: 0 0 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: lkIn .3s ease-out .08s both; }
+.lk-in[hidden], .lk-wait[hidden], .lk-face[hidden], .lk-users[hidden], .lk-fields[hidden], .lk-msg[hidden] { display: none; }
+.lk-avsvg { flex: none; display: block; border-radius: 50%; }
+.lk-in > .lk-avsvg, .lk-wait > .lk-avsvg { filter: drop-shadow(0 6px 24px rgba(0,0,0,.18)); }
+.lk-name { font-size: 28px; font-weight: 600; margin: 18px 0 20px; text-shadow: 0 1px 8px rgba(0,0,0,.15); }
+.lk-fields, .lk-msg { width: 296px; display: flex; flex-direction: column; align-items: center; }
+.lk-box { position: relative; width: 100%; height: 34px; margin-bottom: 10px; display: flex; border-radius: 4px; background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.35); border-bottom: 1px solid rgba(0,0,0,.45); transition: background .1s; }
+.lk-box:hover { background: rgba(255,255,255,.8); }
+.lk-box:focus-within { background: #fff; border-color: #fff; border-bottom: 2px solid var(--accent); }
+.lk-box input { flex: 1; min-width: 0; height: 100%; padding: 0 11px; border: 0; background: transparent; color: #1b1b1b; font: 14px var(--font); outline: none; user-select: text; }
+.lk-box input::placeholder { color: #5f5f5f; }
+.lk-box.pw input { padding-right: 4px; }
+.lk-eye, .lk-go { flex: none; width: 30px; height: 26px; margin: 3px 3px 0 0; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: #404040; }
+.lk-eye:hover, .lk-go:hover { background: rgba(0,0,0,.06); }
+.lk-go { background: rgba(0,0,0,.05); }
+.lk-eye[hidden] { display: none; }
+.lk-caps { width: 100%; margin: -4px 0 8px; padding: 6px 10px; font-size: 12.5px; color: #1b1b1b; background: rgba(255,255,255,.88); border-radius: 4px; }
+.lk-caps[hidden], .lk-help[hidden] { display: none; }
+.lk-to { font-size: 13px; opacity: .9; margin: 4px 0 14px; }
+.lk-forgot { color: #fff; font-size: 14px; padding: 4px 8px; border-radius: 4px; }
+.lk-forgot:hover { text-decoration: underline; }
+.lk-help { margin-top: 12px; text-align: center; font-size: 13px; line-height: 1.5; padding: 10px 14px; border-radius: 6px; background: rgba(0,0,0,.28); }
+.lk-msg { gap: 22px; }
+.lk-err { font-size: 15px; line-height: 1.45; text-align: center; }
+.lk-ok { min-width: 132px; height: 34px; padding: 0 20px; border-radius: 4px; background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.3); color: #fff; font-size: 14px; }
+.lk-ok:hover { background: rgba(255,255,255,.28); }
+.lk-ok:focus-visible, .lk-forgot:focus-visible, .lk-u:focus-visible, .lk-ic:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.lk-wait .lk-name { margin-bottom: 26px; }
+.lk-wtext { font-size: 20px; margin-top: 18px; }
+/* кільце з точок */
+.lk-dots { position: relative; width: 36px; height: 36px; }
+.lk-dots i { position: absolute; inset: 0; animation: lkOrbit 2.6s infinite; }
+.lk-dots i::before { content: ''; position: absolute; left: 50%; top: 0; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: #fff; }
+.lk-dots i:nth-child(2) { animation-delay: .12s; } .lk-dots i:nth-child(3) { animation-delay: .24s; } .lk-dots i:nth-child(4) { animation-delay: .36s; } .lk-dots i:nth-child(5) { animation-delay: .48s; }
+@keyframes lkOrbit { 0% { transform: rotate(180deg); opacity: 0; } 8% { opacity: 1; } 30% { transform: rotate(320deg); } 60% { transform: rotate(460deg); } 85% { transform: rotate(620deg); opacity: 1; } 100% { transform: rotate(720deg); opacity: 0; } }
+.lk-users { position: absolute; left: 24px; bottom: 24px; display: flex; flex-direction: column; gap: 4px; animation: lkIn .3s ease-out both; }
+.lk-u { display: flex; align-items: center; gap: 12px; height: 48px; min-width: 210px; padding: 0 14px 0 8px; border-radius: 5px; color: #fff; font-size: 14px; text-align: left; }
+.lk-u:hover { background: rgba(255,255,255,.1); }
+.lk-u.on { background: rgba(255,255,255,.17); }
+.lk-corner { right: 22px; bottom: 22px; z-index: 3; display: flex; gap: 4px; }
 .lk-ic { width: 40px; height: 40px; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #fff; }
-button.lk-ic:hover { background: rgba(255,255,255,.14); }
-@keyframes lkIn { from { opacity: 0; transform: translateY(8px); } }
+.lk-ic:hover { background: rgba(255,255,255,.14); }
+.lk-black { inset: 0; z-index: 5; background: #000; display: flex; align-items: center; justify-content: center; }
+.lk-black[hidden], .lk-on[hidden] { display: none; }
+.lk-on { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 26px; border-radius: 10px; color: #9a9a9a; font-size: 14px; }
+.lk-on svg { width: 44px; height: 44px; }
+.lk-on:hover { color: #fff; background: rgba(255,255,255,.06); }
+.cm-root.lk-menu .cm { background: rgba(32,32,32,.94); color: #fff; border-color: rgba(255,255,255,.12); }
+.cm-root.lk-menu .cm-it:hover { background: rgba(255,255,255,.1); }
+.cm-root.lk-menu .cm-it.off { color: rgba(255,255,255,.45); }
+.lk.big .lk-name { font-size: 34px; } .lk.big .lk-box input, .lk.big .lk-forgot, .lk.big .lk-to, .lk.big .lk-err { font-size: 17px; } .lk.big .lk-box { height: 40px; }
+.lk.hc { background: #000; } .lk.hc::before, .lk.hc .lk-face { background: #000; } .lk.hc .lk-box { background: #000; border: 2px solid #fff; } .lk.hc .lk-box input { color: #fff; } .lk.hc .lk-box input::placeholder { color: #ffff00; } .lk.hc .lk-eye, .lk.hc .lk-go { color: #fff; }
+@keyframes lkIn { from { opacity: 0; transform: translateY(10px); } }
+.cm-root.lk-menu .cm-ic { color: #fff; }

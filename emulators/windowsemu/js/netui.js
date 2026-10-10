@@ -228,7 +228,7 @@ export class NetConnections {
       menu(e.clientX, e.clientY, [a.status === 'disabled' ? { t: 'Увімкнути', icon: 'power', on: () => this.act('on') } : { t: 'Вимкнути', icon: 'ban', on: () => this.act('off') },
         a.id === 'wifi' && a.status !== 'disabled' && { t: a.ssid ? 'Відключитися від мережі' : 'Підключитися…', icon: 'wifi', on: () => a.ssid ? (wifiDisconnect(sys.fs), changed(sys)) : toggleNetFlyout(sys, $('#netTray')) },
         a.id === 'eth' && { t: S.eth.cable ? 'Від’єднати мережевий кабель' : 'Під’єднати мережевий кабель', icon: 'link', on: () => { S.eth.cable = !S.eth.cable; S.dnsCache = {}; changed(sys); sys.toast(S.eth.cable ? 'Кабель під’єднано' : 'Кабель від’єднано'); } },
-        '-', { t: 'Стан', icon: 'info', on: () => this.act('status'), off: a.status === 'disabled' }, { t: 'Діагностика', icon: 'tool', on: () => this.act('diag') }, '-', { t: 'Властивості', icon: 'props', on: () => this.act('props') }]);
+        '-', { t: 'Стан', icon: 'info', on: () => this.act('status'), disabled: a.status === 'disabled' }, { t: 'Діагностика', icon: 'tool', on: () => this.act('diag') }, '-', { t: 'Властивості', icon: 'props', on: () => this.act('props') }]);
     });
     this.win.el.addEventListener('keydown', e => { if (e.key === 'Enter' && this.sel) this.act(this.cur().status === 'disabled' ? 'on' : 'status'); if (e.key === 'F5') { e.preventDefault(); this.render(); } });
     const later = batched(() => this.win.el.isConnected && this.render());
