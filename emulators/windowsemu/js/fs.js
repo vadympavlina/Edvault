@@ -82,7 +82,7 @@ const sys = { attrs: { h: false, r: true, s: true } };
 export function initialState() {
   seqInit = 0;
   const C = dir('C:', [
-    dir('Program Files', [dir('Edvault', [txt('readme.txt', 'Навчальний комп’ютер Edvault.\r\nТут можна сміливо пробувати — нічого не зламаєш.', sys)], sys), dir('Windows NT', [dir('Accessories', [bin('wordpad.exe', 4505600, sys)], sys)], sys)], sys),
+    dir('Program Files', [dir('Browser', [bin('browser.exe', 3145728, sys)], sys), dir('Edvault', [txt('readme.txt', 'Навчальний комп’ютер Edvault.\r\nТут можна сміливо пробувати — нічого не зламаєш.', sys)], sys), dir('Windows NT', [dir('Accessories', [bin('wordpad.exe', 4505600, sys)], sys)], sys)], sys),
     dir('Users', [
       dir(USER, [
         dir('Desktop', [

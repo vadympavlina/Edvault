@@ -49,7 +49,10 @@ export const HELP = {
   start: ['Відкриває файл, папку або програму у вікні.', 'START [шлях | програма]', ['start .', 'start Нотатки.txt', 'start notepad', 'start explorer']],
   systeminfo: ['Коротко про комп’ютер.', 'SYSTEMINFO', ['systeminfo']],
   taskkill: ['Закриває програму.', 'TASKKILL /IM назва | /PID номер', ['taskkill /im notepad.exe', 'taskkill /pid 1240']],
-  tasklist: ['Показує відкриті програми.', 'TASKLIST', ['tasklist']],
+  tasklist: ['Показує запущені процеси.', 'TASKLIST', ['tasklist', 'tasklist | find "svchost"']],
+  taskmgr: ['Відкриває Диспетчер завдань.', 'TASKMGR', ['taskmgr']],
+  msedge: 'browser', chrome: 'browser',
+  browser: ['Відкриває браузер (можна одразу з адресою).', 'BROWSER [адреса]', ['browser', 'browser 192.168.1.1', 'start https://poshuk.edvault']],
   time: ['Показує час.', 'TIME /T', ['time /t']],
   title: ['Змінює заголовок вікна консолі.', 'TITLE текст', ['title Моя консоль']],
   tree: ['Малює дерево папок.', 'TREE [шлях] [/F]', ['tree', 'tree /f', 'tree D:\\ /f'], '/F — показувати й файли.'],
@@ -181,7 +184,7 @@ export class Cmd {
     m = /^echo[.:](.*)$/i.exec(text); if (m) { this.print(m[1]); return true; }
     if (/^[a-z]:$/i.test(text)) return this.drive(text[0].toUpperCase());
     const name = /^\S+/.exec(text)[0], rest = text.slice(name.length).replace(/^\s/, '');
-    const key = { 'wf.msc': 'wfmsc', 'firewall.cpl': 'firewallcpl', 'windowsdefender:': 'defender' }[lc(name)] || lc(name).replace(/\.(exe|com)$/, '');
+    const key = { 'wf.msc': 'wfmsc', 'firewall.cpl': 'firewallcpl', 'windowsdefender:': 'defender', 'ms-settings:': 'settings', msedge: 'browser', chrome: 'browser', iexplore: 'browser' }[lc(name)] || lc(name).replace(/\.(exe|com)$/, '');
     const tokens = tokenize(rest);
     if (tokens.includes('/?')) return this.c_help([key]);
     const k = typeof HELP[key] === 'string' ? HELP[key] : key;
@@ -552,7 +555,9 @@ export class Cmd {
     if (!a) { this.host.open?.('cmd', this.cwd); return true; }
     const app = lc(a).replace(/\.exe$/, '');
     if (['notepad', 'explorer', 'cmd'].includes(app)) { this.host.open?.(app, this.cwd); return true; }
-    if (/^https?:\/\//i.test(a)) { this.print('У навчальному комп’ютері немає браузера.'); return false; }
+    if (['taskmgr', 'browser', 'msedge', 'chrome'].includes(app)) { this.host.open?.(app === 'taskmgr' ? 'taskmgr' : 'browser'); return true; }
+    if (app === 'ms-settings:') { this.host.open?.('settings'); return true; }
+    if (/^https?:\/\//i.test(a) || /^www\./i.test(a)) { this.host.open?.('browser', a); return true; }
     const p = this.path(a);
     const n = this.fs.node(p);
     if (!n) { this.print(`Windows не вдається знайти «${a}». Переконайтеся, що ім’я введено правильно, а тоді повторіть спробу.`); return false; }
@@ -575,9 +580,12 @@ export class Cmd {
   }
   c_explorer(t) { const a = opts(t).args.join(' '); const p = a ? this.path(a) : null; if (p && !this.fs.isDir(p)) { this.host.open?.('explorer', parentPath(this.fs.real(p))); return true; } this.host.open?.('explorer', p ? this.fs.real(p) : null); return true; }
   c_cmd() { this.host.open?.('cmd', this.cwd); return true; }
+  c_taskmgr() { this.host.open?.('taskmgr'); return true; }
+  c_browser(t, rest) { this.host.open?.('browser', rest.trim() || null); return true; }
+  c_settings() { this.host.open?.('settings'); return true; }
   c_tasklist() {
     const tasks = this.host.tasks?.() || [];
-    const rows = [{ name: 'System', pid: 4, mem: 144 }, { name: 'explorer.exe', pid: 1024, mem: 98304 }, ...tasks.map(x => ({ ...x, mem: x.mem || 20480 }))];
+    const rows = this.host.procs ? this.host.procs() : [{ name: 'System', pid: 4, mem: 144 }, { name: 'explorer.exe', pid: 1024, mem: 98304 }, ...tasks.map(x => ({ ...x, mem: x.mem || 20480 }))];
     this.print('', 'Ім’я образу                    PID   Пам’ять', '========================= ======== ============');
     for (const r of rows) this.print(`${r.name.padEnd(25)} ${String(r.pid).padStart(8)} ${(fmtNum(r.mem).replace(/\u00a0/g, ' ') + ' КБ').padStart(12)}`);
     return true;
@@ -586,7 +594,7 @@ export class Cmd {
     const { flags } = opts(t, ['im', 'pid']);
     const by = flags.im ? { im: lc(String(flags.im)) } : flags.pid ? { pid: +flags.pid } : null;
     if (!by) { this.print('ПОМИЛКА: неправильний синтаксис. Наберіть «TASKKILL /?».'); return false; }
-    if (by.im === 'explorer.exe' || by.pid === 1024 || by.pid === 4) { this.print('ПОМИЛКА: не вдалося завершити процес — він потрібен системі.'); return false; }
+    if (by.im === 'explorer.exe' || by.pid === 1024 || by.pid === 4 || this.host.critical?.(by)) { this.print('ПОМИЛКА: не вдалося завершити процес — він потрібен системі.'); return false; }
     const killed = this.host.kill?.(by) || [];
     if (!killed.length) { this.print(`ПОМИЛКА: процес «${flags.im || flags.pid}» не знайдено.`); return false; }
     for (const k of killed) this.print(`УСПІХ: надіслано сигнал завершення процесу «${k.name}» з PID ${k.pid}.`);

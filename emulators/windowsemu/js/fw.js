@@ -8,7 +8,7 @@ export const PROFILE_NET = { domain: 'Мережа домену', private: 'Пр
 // Поточна мережа навчального комп’ютера
 export const NET = { name: 'SCHOOL-NET', profile: 'private', adapter: 'Ethernet', ip: '192.168.1.27', subnet: '192.168.1.0/24', gateway: '192.168.1.1', dns: '192.168.1.10' };
 export const SYS = 'C:\\Windows\\System32\\';
-export const PROGRAMS = { ping: SYS + 'PING.EXE', curl: SYS + 'curl.exe', svchost: SYS + 'svchost.exe', system: 'System', edge: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', teams: 'C:\\Program Files\\Microsoft Teams\\ms-teams.exe', minecraft: 'C:\\Program Files\\Minecraft Launcher\\MinecraftLauncher.exe', mstsc: SYS + 'mstsc.exe' };
+export const PROGRAMS = { ping: SYS + 'PING.EXE', curl: SYS + 'curl.exe', svchost: SYS + 'svchost.exe', system: 'System', edge: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', teams: 'C:\\Program Files\\Microsoft Teams\\ms-teams.exe', minecraft: 'C:\\Program Files\\Minecraft Launcher\\MinecraftLauncher.exe', mstsc: SYS + 'mstsc.exe', browser: 'C:\\Program Files\\Browser\\browser.exe' };
 export const PROTOCOLS = ['any', 'TCP', 'UDP', 'ICMPv4', 'ICMPv6', 'IGMP', 'GRE'];
 export const PROTO_NUM = { any: '', TCP: 6, UDP: 17, ICMPv4: 1, ICMPv6: 58, IGMP: 2, GRE: 47 };
 export const ICMP_TYPES = [[0, 'Луна-відповідь'], [3, 'Пункт призначення недосяжний'], [5, 'Перенаправлення'], [8, 'Луна-запит'], [11, 'Перевищено час'], [13, 'Запит позначки часу']];

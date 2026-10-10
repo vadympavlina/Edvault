@@ -13,7 +13,9 @@ export class Console {
       open: (a, p) => sys.launch(a, p),
       tasks: () => WM.wins.map(w => ({ name: w.exe, pid: w.pid, title: w.title })),
       admin,
-      kill: by => { const list = WM.wins.filter(w => by.pid ? w.pid === by.pid : w.exe === by.im); list.forEach(w => setTimeout(() => w.close(true), 30)); return list.map(w => ({ name: w.exe, pid: w.pid })); },
+      procs: () => sys.procList(),
+      critical: by => sys.isCritical(by),
+      kill: by => sys.killProc(by),
     });
     if (cwd && sys.fs.isDir(cwd)) this.cmd.cwd = sys.fs.real(cwd);
     this.hi = -1; this.draft = '';

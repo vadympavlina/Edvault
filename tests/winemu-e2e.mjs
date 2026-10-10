@@ -25,7 +25,7 @@ await step('робочий стіл: Цей ПК, Кошик, файли з па
   const icons = await p.locator('#icons .dk span').allInnerTexts();
   assert.deepEqual(icons.slice(0, 2), ['Цей ПК', 'Кошик']);
   assert.ok(icons.includes('Привіт.txt') && icons.includes('Домашнє завдання'));
-  assert.equal(await p.locator('#tbApps .tb-app').count(), 3);
+  assert.equal(await p.locator('#tbApps .tb-app').count(), 4);
   assert.match(await p.textContent('#clock'), /\d\d:\d\d/);
 });
 

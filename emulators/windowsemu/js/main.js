@@ -9,6 +9,11 @@ import { SecurityApp, FirewallCpl } from './firewall.js';
 import { Wfmsc } from './wfmsc.js';
 import { uac } from './uac.js';
 import { fwOf, record, evaluate, PROFILES, PROGRAMS } from './fw.js';
+import { TaskManager, appInfo } from './taskmgr.js';
+import { SettingsApp } from './settings.js';
+import { Browser } from './browser.js';
+import { installProps } from './props.js';
+import { procState, SYS_PROCS } from './procs.js';
 
 const lc = s => s.toLocaleLowerCase('uk');
 const KEY = 'edvault-windows';
@@ -20,7 +25,7 @@ let saved = null;
 try { saved = JSON.parse(localStorage.getItem(KEY)); } catch (e) { /* немає доступу */ }
 const fs = new FS(saved?.fs?.drives ? saved.fs : null);
 const sys = {
-  fs, explorers: new Set(), clip: null, recent: saved?.recent || [],
+  fs, explorers: new Set(), clip: null, recent: saved?.recent || [], procs: procState(),
   settings: { ...DEFAULTS, ...(saved?.settings || {}) },
 };
 let saveT = 0;
@@ -47,6 +52,9 @@ sys.open = (app, path) => {
   if (app === 'notepad') { if (path) sys.addRecent(path); return new Notepad(sys, path); }
   if (app === 'bin') return new Explorer(sys, BIN);
   if (app === 'pc') return new Explorer(sys, PC);
+  if (app === 'taskmgr') { const w = WM.wins.find(x => x.app === 'taskmgr'); if (w) return WM.focus(w); return new TaskManager(sys, path || 'proc'); }
+  if (app === 'settings') { const w = WM.wins.find(x => x.app === 'settings'); if (w) return WM.focus(w); return new SettingsApp(sys); }
+  if (app === 'browser') { const w = WM.active()?.app === 'browser' ? WM.active() : WM.wins.filter(x => x.app === 'browser').sort((a, b) => b.z - a.z)[0]; if (w && path) { WM.focus(w); w.browser.newTab(); w.browser.go(path); return w.browser; } if (w && !path) return WM.focus(w); const b = new Browser(sys, path); b.win.browser = b; return b; }
   if (app === 'cmd-admin') return uac({ app: 'Обробник команд Windows', icon: appIcon('cmd', 32), file: 'C:\\Windows\\System32\\cmd.exe' }).then(ok => ok && new Console(sys, null, { admin: true }));
   if (app === 'security') { const w = WM.wins.find(x => x.app === 'security'); if (w) { WM.focus(w); w.app_?.go(path || 'firewall'); return; } const a = new SecurityApp(sys, path || 'home'); a.win.app_ = a; return a; }
   if (app === 'firewallcpl') { const w = WM.wins.find(x => x.app === 'firewallcpl'); if (w) { WM.focus(w); w.app_?.go(path || 'main'); return; } const a = new FirewallCpl(sys, path || 'main'); a.win.app_ = a; return a; }
@@ -74,6 +82,51 @@ sys.openFile = async p => {
   if (e === 'exe') return alertBox('Встановлювати й запускати програми на навчальному комп’ютері не можна. Тут працюють Провідник, Командний рядок і Блокнот.', nameOfPath(p), 'info');
   const v = await dialog({ title: 'Як ви хочете відкрити цей файл?', icon: 'question', html: `<p><b>${esc(n.name)}</b> — ${esc(typeName(n))}.</p><p>На навчальному комп’ютері немає програми для таких файлів. Можна відкрити його в Блокноті — але замість змісту будуть незрозумілі символи, бо це не текст.</p>`, buttons: [{ t: 'Відкрити в Блокноті', v: true }, { t: 'Скасувати', v: false, primary: true, cancel: true }] });
   if (v) sys.open('notepad', p);
+};
+
+// «Виконати…» з Диспетчера завдань
+sys.run = (t, admin) => {
+  const a = t.trim().replace(/^"|"$/g, ''), k = lc(a).replace(/\.exe$/, '');
+  const map = { cmd: admin ? 'cmd-admin' : 'cmd', notepad: 'notepad', explorer: 'explorer', taskmgr: 'taskmgr', browser: 'browser', msedge: 'browser', chrome: 'browser', 'wf.msc': 'wfmsc', wfmsc: 'wfmsc', 'firewall.cpl': 'firewallcpl', 'ms-settings:': 'settings', control: 'firewallcpl', calc: null };
+  if (k in map && map[k]) { sys.open(map[k]); return true; }
+  if (/^(https?:\/\/|www\.)/i.test(a) || /^\d+\.\d+\.\d+\.\d+$/.test(a)) { sys.open('browser', a); return true; }
+  if (/^[a-z]:/i.test(a) && fs.node(a)) { sys.openFile(fs.real(a)); return true; }
+  return false;
+};
+sys.showInFolder = p => { if (!fs.node(p)) return alertBox('Файл уже видалено або переміщено.', 'Провідник', 'warn'); const e = sys.open('explorer', parentPath(p)); if (e?.sel) { e.sel = new Set([fs.real(p)]); e.anchor = fs.real(p); e.render(); } };
+// процеси для tasklist / taskkill і Диспетчера завдань
+sys.procList = () => [...SYS_PROCS.filter(p => !sys.procs.killed.has(p.pid)).map(p => ({ name: p.name, pid: p.pid, mem: p.mem })), ...WM.wins.map(w => ({ name: w.exe, pid: w.pid, mem: appInfo(w.app)[2] }))];
+sys.isCritical = by => SYS_PROCS.some(p => p.critical && (by.pid ? p.pid === by.pid : lc(p.name) === by.im));
+sys.killProc = by => {
+  const wins = WM.wins.filter(w => by.pid ? w.pid === by.pid : lc(w.exe) === by.im);
+  wins.forEach(w => setTimeout(() => w.close(true), 30));
+  const bg = SYS_PROCS.filter(p => !p.critical && !p.restart && !sys.procs.killed.has(p.pid) && (by.pid ? p.pid === by.pid : lc(p.name) === by.im));
+  bg.forEach(p => { sys.procs.killed.add(p.pid); if (p.name === 'SecurityHealthSystray.exe') sys.trayShield(false); });
+  return [...wins.map(w => ({ name: w.exe, pid: w.pid })), ...bg.map(p => ({ name: p.name, pid: p.pid }))];
+};
+sys.trayShield = on => { $('#fwTray').hidden = !on; };
+// перезапуск Провідника: робочий стіл і панель завдань зникають на мить
+sys.restartExplorer = () => {
+  WM.wins.filter(w => w.app === 'explorer').forEach(w => w.close(true));
+  document.body.classList.add('no-shell');
+  setTimeout(() => { document.body.classList.remove('no-shell'); desktop.render(); renderTaskbar(); sys.toast('Провідник Windows перезапущено'); }, 1300);
+};
+// «синій екран», якщо завершити критичний процес
+sys.crash = code => {
+  const el = h(`<div id="bsod"><div><p class="sad">:(</p><p>На вашому ПК виникла проблема, і його потрібно перезапустити. Ми збираємо відомості про помилку, а потім комп’ютер перезапуститься.</p><p class="pc"><b>0</b>% виконано</p><p class="code">Код зупинки: ${code}</p><p class="why">Ви завершили процес, без якого Windows не може працювати. Нічого страшного — після перезавантаження все запрацює знову, файли залишаться.</p></div></div>`);
+  document.body.appendChild(el);
+  WM.wins.slice().forEach(w => w.close(true));
+  let p = 0; const tm = setInterval(() => { p = Math.min(100, p + 7 + Math.round(Math.random() * 10)); el.querySelector('.pc b').textContent = p; if (p >= 100) { clearInterval(tm); setTimeout(() => { el.remove(); sys.procs = procState(); sys.trayShield(true); reboot(); }, 600); } }, 380);
+};
+sys.factoryReset = () => {
+  closeStart();
+  for (const w of [...WM.wins]) w.close(true);
+  sys.clip = null; sys.recent = []; Object.assign(sys.settings, DEFAULTS);
+  sys.routerSession = null; sys.routerLock = null; sys.routerBusy = 0;
+  fs.reset(); persist(); sys.refreshAll(); renderTaskbar();
+  const el = h('<div id="resetting"><div class="spin"></div><p>Скидання цього ПК</p><p class="pc"><b>0</b>%</p></div>');
+  document.body.appendChild(el);
+  let p = 0; const tm = setInterval(() => { p = Math.min(100, p + 9); el.querySelector('b').textContent = p; if (p >= 100) { clearInterval(tm); el.remove(); sys.procs = procState(); sys.trayShield(true); reboot(); } }, 160);
 };
 
 /* ═════════ Буфер обміну, вставлення, видалення ═════════ */
@@ -170,22 +223,7 @@ sys.dnd = (el, dest, getPaths, onStart) => {
 };
 
 /* ═════════ Властивості ═════════ */
-sys.props = async (path, binItem) => {
-  const n = binItem ? binItem.node : fs.node(path); if (!n) return;
-  const loc = binItem ? binItem.from : parentPath(fs.real(path)) || '';
-  const isDrive = !binItem && /^[a-z]:\\?$/i.test(path);
-  if (isDrive) return sys.driveProps(path[0].toUpperCase());
-  let files = 0, dirs = 0; const count = x => { for (const c of x.children || []) { if (c.type === 'dir') { dirs++; count(c); } else files++; } }; count(n);
-  const size = fs.sizeOf(n);
-  const row = (k, v) => `<tr><th>${k}</th><td>${v}</td></tr>`;
-  const v = await dialog({ title: `Властивості: ${n.name}`, wide: true, html: `<div class="props"><div class="pr-head">${nodeIcon(n, binItem ? null : path, 40)}<b>${esc(n.name)}</b></div><table>
-      ${row('Тип:', esc(typeName(n)))}${row(binItem ? 'Звідки видалено:' : 'Розташування:', esc(loc))}${row('Розмір:', `${fmtSize(size)} (${fmtNum(size)} байт)`)}${n.type === 'dir' ? row('Містить:', `Файлів: ${files}, папок: ${dirs}`) : ''}
-      <tr class="sep"><td colspan="2"></td></tr>${row('Створено:', `${fmtDate(n.created)}, ${fmtTime(n.created)}`)}${row('Змінено:', `${fmtDate(n.modified)}, ${fmtTime(n.modified)}`)}${binItem ? row('Видалено:', `${fmtDate(binItem.at)}, ${fmtTime(binItem.at)}`) : ''}
-      <tr class="sep"><td colspan="2"></td></tr><tr><th>Атрибути:</th><td><label><input type="checkbox" data-a="r" ${n.attrs.r ? 'checked' : ''} ${n.attrs.s || binItem ? 'disabled' : ''}> Лише читання</label><label><input type="checkbox" data-a="h" ${n.attrs.h ? 'checked' : ''} ${binItem ? 'disabled' : ''}> Прихований</label></td></tr></table></div>`,
-    buttons: [{ t: 'OK', v: 'ok', primary: true }, { t: 'Скасувати', v: null, cancel: true }],
-    collect: (el, v) => v === 'ok' ? { r: el.querySelector('[data-a="r"]').checked, h: el.querySelector('[data-a="h"]').checked } : null });
-  if (v && !binItem) { try { if (v.r !== n.attrs.r) fs.setAttr(path, 'r', v.r); if (v.h !== n.attrs.h) fs.setAttr(path, 'h', v.h); } catch (e) { alertBox(e.message, 'Властивості', 'warn'); } }
-};
+installProps(sys);
 sys.driveProps = d => {
   const total = DRIVE_SIZE[d], free = fs.free(d), used = total - free, deg = used / total * 360;
   dialog({ title: `Властивості: ${DRIVE_LABEL[d]} (${d}:)`, wide: true, html: `<div class="props"><div class="pr-head">${driveIcon(d, 40)}<b>${DRIVE_LABEL[d]} (${d}:)</b></div><table><tr><th>Тип:</th><td>Локальний диск</td></tr><tr><th>Файлова система:</th><td>NTFS</td></tr>
@@ -297,8 +335,8 @@ const desktop = {
 };
 
 /* ═════════ Панель завдань ═════════ */
-const PINNED = [['explorer', 'Провідник'], ['cmd', 'Командний рядок'], ['notepad', 'Блокнот']];
-const APP_NAME = { security: 'Безпека Windows', firewallcpl: 'Брандмауер Захисника Windows', wfmsc: 'Брандмауер Захисника Windows у режимі підвищеної безпеки' };
+const PINNED = [['explorer', 'Провідник'], ['browser', 'Браузер'], ['cmd', 'Командний рядок'], ['notepad', 'Блокнот']];
+const APP_NAME = { security: 'Безпека Windows', firewallcpl: 'Брандмауер Захисника Windows', wfmsc: 'Брандмауер Захисника Windows у режимі підвищеної безпеки', taskmgr: 'Диспетчер завдань', settings: 'Параметри', browser: 'Браузер' };
 const tbIcon = a => appIcon({ wfmsc: 'firewall', firewallcpl: 'firewall' }[a] || a, 24);
 function renderTaskbar() {
   const act = WM.active();
@@ -363,6 +401,9 @@ const START_PINS = [
   { t: 'Провідник', icon: () => appIcon('explorer', 32), on: () => sys.open('explorer', PC) },
   { t: 'Командний рядок', icon: () => appIcon('cmd', 32), on: () => sys.open('cmd') },
   { t: 'Блокнот', icon: () => appIcon('notepad', 32), on: () => sys.open('notepad') },
+  { t: 'Браузер', icon: () => appIcon('browser', 32), on: () => sys.open('browser') },
+  { t: 'Параметри', icon: () => appIcon('settings', 32), on: () => sys.open('settings') },
+  { t: 'Диспетчер завдань', icon: () => appIcon('taskmgr', 32), on: () => sys.open('taskmgr') },
   { t: 'Безпека Windows', icon: () => appIcon('security', 32), on: () => sys.open('security') },
   { t: 'Брандмауер', icon: () => appIcon('firewall', 32), on: () => sys.open('firewallcpl') },
   { t: 'Кошик', icon: () => binIcon(fs.s.bin.length > 0, 32), on: () => sys.open('bin') },
@@ -381,7 +422,7 @@ function closeStart() { if (!startOpen) return; startOpen = false; $('#start').h
 sys.closeStart = closeStart;
 function searchAll(q) {
   const out = [], lq = lc(q);
-  const apps = [['Провідник', 'explorer', ['explorer', 'провідник', 'файли']], ['Командний рядок', 'cmd', ['cmd', 'командний', 'консоль', 'термінал']], ['Блокнот', 'notepad', ['notepad', 'блокнот', 'текст']], ['Кошик', 'bin', ['кошик', 'recycle']], ['Безпека Windows', 'security', ['безпека', 'захисник', 'defender', 'security', 'антивірус']], ['Брандмауер Захисника Windows', 'firewallcpl', ['брандмауер', 'firewall', 'фаєрвол', 'файрвол', 'мережевий екран']], ['Брандмауер у режимі підвищеної безпеки', 'wfmsc', ['wf.msc', 'wf', 'брандмауер', 'firewall', 'правила', 'додаткові']], ['Командний рядок (адміністратор)', 'cmd-admin', ['cmd', 'адміністратор', 'admin']]];
+  const apps = [['Провідник', 'explorer', ['explorer', 'провідник', 'файли']], ['Командний рядок', 'cmd', ['cmd', 'командний', 'консоль', 'термінал']], ['Блокнот', 'notepad', ['notepad', 'блокнот', 'текст']], ['Кошик', 'bin', ['кошик', 'recycle']], ['Безпека Windows', 'security', ['безпека', 'захисник', 'defender', 'security', 'антивірус']], ['Брандмауер Захисника Windows', 'firewallcpl', ['брандмауер', 'firewall', 'фаєрвол', 'файрвол', 'мережевий екран']], ['Брандмауер у режимі підвищеної безпеки', 'wfmsc', ['wf.msc', 'wf', 'брандмауер', 'firewall', 'правила', 'додаткові']], ['Командний рядок (адміністратор)', 'cmd-admin', ['cmd', 'адміністратор', 'admin']], ['Браузер', 'browser', ['браузер', 'browser', 'інтернет', 'edge', 'chrome', 'сайт', 'роутер']], ['Диспетчер завдань', 'taskmgr', ['диспетчер', 'taskmgr', 'task manager', 'процеси', 'служби']], ['Параметри', 'settings', ['параметри', 'налаштування', 'settings', 'скинути', 'відновлення']]];
   for (const [t, a, keys] of apps) if (keys.some(k => k.startsWith(lq) || lc(t).includes(lq))) out.push({ t, sub: 'Застосунок', icon: appIcon({ bin: 'bin', wfmsc: 'firewall', firewallcpl: 'firewall', 'cmd-admin': 'cmd' }[a] || a, 24), on: () => sys.open(a) });
   const walk = (p, depth) => { if (depth > 8 || out.length > 14) return; for (const c of fs.list(p)) { const cp = p.replace(/\\$/, '') + '\\' + c.name; if (lc(c.name).includes(lq)) out.push({ t: c.name, sub: parentPath(cp), icon: nodeIcon(c, cp, 24), on: () => sys.openFile(cp) }); if (c.type === 'dir' && !c.attrs.s) walk(cp, depth + 1); } };
   walk(HOME, 0); walk('D:\\', 0);
@@ -418,18 +459,16 @@ async function reboot() {
   closeStart();
   for (const w of [...WM.wins]) await w.close();
   if (WM.wins.length) return;
+  sys.procs = procState(); sys.trayShield(true); sys.routerSession = null;
   $('#boot').hidden = false; $('#boot').classList.add('on');
   setTimeout(() => { $('#boot').classList.remove('on'); setTimeout(() => { $('#boot').hidden = true; }, 400); }, 1400);
 }
 async function resetAll() {
   closeStart();
-  const ok = await dialog({ title: 'Скинути комп’ютер', icon: 'warn', html: '<p>Усі ваші файли й папки буде видалено, а комп’ютер повернеться до початкового стану.</p><p>Продовжити?</p>', buttons: [{ t: 'Скинути', v: true, primary: true }, { t: 'Скасувати', v: false, cancel: true }] });
-  if (!ok) return;
-  for (const w of [...WM.wins]) w.close(true);
-  sys.clip = null; sys.recent = []; Object.assign(sys.settings, DEFAULTS);
-  fs.reset(); persist(); sys.refreshAll();
-  reboot();
+  const ok = await dialog({ title: 'Скинути комп’ютер', icon: 'warn', html: '<p>Усі ваші файли й налаштування (брандмауер, роутер, браузер) буде видалено, а комп’ютер повернеться до початкового стану.</p><p>Продовжити?</p>', buttons: [{ t: 'Скинути', v: true, primary: true }, { t: 'Скасувати', v: false, cancel: true }] });
+  if (ok) sys.factoryReset();
 }
+sys.reboot = reboot;
 function showHelp() {
   dialog({ title: 'Довідка', icon: 'info', wide: true, html: `<p><b>Це навчальний комп’ютер.</b> Тут можна сміливо пробувати — нічого не зламаєш, а все можна повернути через «Пуск» → кнопку живлення → «Скинути комп’ютер».</p>
     <ul class="help-l"><li><b>Провідник</b> — подвійне клацання відкриває, права кнопка — меню, F2 — перейменувати, Delete — у Кошик, Ctrl+C / Ctrl+X / Ctrl+V — копіювати, вирізати, вставити. Файли можна перетягувати мишкою.</li>
@@ -442,7 +481,14 @@ function showHelp() {
 /* ═════════ Клавіатура ═════════ */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && startOpen) { closeStart(); return; }
+  if (e.ctrlKey && e.shiftKey && e.key === 'Escape') { e.preventDefault(); sys.open('taskmgr'); return; }
   if (e.ctrlKey && e.key === 'Escape') { e.preventDefault(); startOpen ? closeStart() : openStart(); }
+});
+$('#taskbar').addEventListener('contextmenu', e => {
+  if (e.target.closest('#tbApps [data-app], #startBtn, .tray, #fwTray, #clock')) return;
+  e.preventDefault();
+  menu(e.clientX, e.clientY, [{ t: 'Диспетчер завдань', icon: appIcon('taskmgr', 16), on: () => sys.open('taskmgr') }, { t: 'Параметри', icon: appIcon('settings', 16), on: () => sys.open('settings') }]);
+  const m = document.querySelector('.cm-root'); if (m) { const r = m.getBoundingClientRect(); m.style.top = (innerHeight - 52 - r.height) + 'px'; }
 });
 document.addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea, .con')) e.preventDefault(); });
 

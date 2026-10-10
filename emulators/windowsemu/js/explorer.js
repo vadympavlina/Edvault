@@ -1,5 +1,5 @@
 // Емулятор Windows · Провідник: навігація, кнопки, контекстне меню, перетягування, перейменування, Кошик.
-import { KNOWN, HOME, DRIVE_LABEL, DRIVE_SIZE, parentPath, nameOfPath, isInside, typeName, fmtDate, fmtTime, fmtSize, fmtNum, validName, BAD_NAME_HINT, isProtected, extOf, isText } from './fs.js';
+import { KNOWN, HOME, DRIVE_LABEL, DRIVE_SIZE, parentPath, nameOfPath, isInside, typeName, fmtDate, fmtTime, fmtSize, fmtNum, validName, BAD_NAME_HINT, isProtected, extOf, isText, wildcard, hasWild } from './fs.js';
 import { nodeIcon, driveIcon, pcIcon, binIcon, folderIcon, appIcon, ui } from './icons.js';
 import { WM, dialog, alertBox, menu, esc, h } from './ui.js';
 
@@ -26,12 +26,19 @@ function crumbs(sys, p) {
   return out;
 }
 const QUICK = ['Desktop', 'Downloads', 'Documents', 'Pictures', 'Music', 'Videos'];
+// фільтри пошуку
+const KINDS = { all: 'Усі', dir: 'Папки', doc: 'Документи', img: 'Зображення', music: 'Музика', video: 'Відео', app: 'Програми', zip: 'Архіви' };
+const KIND_EXT = { doc: ['txt', 'md', 'docx', 'doc', 'xlsx', 'pptx', 'pdf', 'csv', 'ini', 'log', 'rtf'], img: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'], music: ['mp3', 'wav', 'ogg', 'flac'], video: ['mp4', 'avi', 'mkv', 'mov'], app: ['exe', 'bat', 'cmd', 'msi'], zip: ['zip', 'rar', '7z'] };
+const DATES = { any: 'Будь-коли', today: 'Сьогодні', week: 'Цього тижня', month: 'Цього місяця', year: 'Цього року', older: 'Минулого року й раніше' };
+const SIZES = { any: 'Будь-який', empty: 'Порожній (0 КБ)', tiny: 'Крихітний (до 16 КБ)', small: 'Малий (16 КБ – 1 МБ)', medium: 'Середній (1 – 128 МБ)', large: 'Великий (128 МБ – 1 ГБ)', huge: 'Величезний (понад 1 ГБ)' };
+const SF0 = { kind: 'all', date: 'any', size: 'any', content: false };
+const hl = (name, q) => { if (!q || hasWild(q)) return esc(name); const i = lc(name).indexOf(lc(q)); return i < 0 ? esc(name) : esc(name.slice(0, i)) + '<mark>' + esc(name.slice(i, i + q.length)) + '</mark>' + esc(name.slice(i + q.length)); };
 
 export class Explorer {
   constructor(sys, path) {
     this.sys = sys; this.fs = sys.fs;
     this.path = path || PC; this.back = []; this.fwd = [];
-    this.sel = new Set(); this.anchor = null; this.renaming = null; this.query = '';
+    this.sel = new Set(); this.anchor = null; this.renaming = null; this.query = ''; this.sf = { ...SF0 };
     this.win = WM.open({ app: 'explorer', title: '', icon: appIcon('explorer', 16), w: 920, h: 560, minW: 520, minH: 320, onKey: e => this.key(e) });
     this.win.app = 'explorer';
     this.win.body.innerHTML = `<div class="ex">
@@ -39,6 +46,7 @@ export class Explorer {
       <div class="ex-nav"><button class="nb" data-nav="back" title="Назад (Alt+←)">${ui('back')}</button><button class="nb" data-nav="fwd" title="Вперед (Alt+→)">${ui('forward')}</button><button class="nb" data-nav="up" title="На рівень вище (Alt+↑)">${ui('up')}</button><button class="nb" data-nav="refresh" title="Оновити (F5)">${ui('refresh')}</button>
         <div class="ex-addr"><div class="crumbs"></div><input class="addr-inp" spellcheck="false" hidden></div>
         <label class="ex-search">${ui('search', 15)}<input placeholder="Пошук" spellcheck="false"></label></div>
+      <div class="ex-sbar" hidden></div>
       <div class="ex-main"><nav class="ex-side"></nav><div class="ex-view" tabindex="0"></div></div>
       <footer class="ex-status"></footer></div>`;
     this.$ = s => this.win.body.querySelector(s);
@@ -54,24 +62,54 @@ export class Explorer {
   go(p, initial) {
     if (p !== PC && p !== BIN) { if (!this.fs.isDir(p)) { alertBox(`Windows не вдається знайти «${p}». Перевірте написання й повторіть спробу.`, 'Провідник', 'error'); return; } p = this.fs.real(p); }
     if (!initial && p !== this.path) { this.back.push(this.path); this.fwd = []; }
-    this.path = p; this.sel.clear(); this.anchor = null; this.renaming = null; this.query = ''; this.$('.ex-search input').value = '';
+    this.path = p; this.sel.clear(); this.anchor = null; this.renaming = null; this.query = ''; this.sf = { ...SF0 }; this.$('.ex-search input').value = '';
     this.render();
   }
   items() {
     const fs = this.fs, set = this.sys.settings;
-    if (this.path === PC) return [];
     if (this.path === BIN) return fs.s.bin.map(b => ({ key: b.id, node: b.node, bin: b, path: null }));
-    if (!this.valid(this.path)) { this.path = PC; return []; }
+    if (this.path === PC && !this.query) return [];
+    if (this.path !== PC && !this.valid(this.path)) { this.path = PC; return []; }
     let list;
-    if (this.query) {
-      const q = lc(this.query), out = [];
-      const walk = d => { for (const c of fs.dirNode(d).children) { if (c.attrs.h && !set.hidden) continue; const p = d.replace(/\\$/, '') + '\\' + c.name; if (lc(c.name).includes(q)) out.push({ key: p, node: c, path: p }); if (c.type === 'dir') walk(p); } };
-      walk(this.path); list = out;
-    } else list = fs.list(this.path, { hidden: set.hidden }).map(c => ({ key: this.path.replace(/\\$/, '') + '\\' + c.name, node: c, path: this.path.replace(/\\$/, '') + '\\' + c.name }));
+    if (this.query) list = this.search();
+    else list = fs.list(this.path, { hidden: set.hidden }).map(c => ({ key: this.path.replace(/\\$/, '') + '\\' + c.name, node: c, path: this.path.replace(/\\$/, '') + '\\' + c.name }));
     const k = set.sort, dir = set.desc ? -1 : 1;
     return list.sort((a, b) => (a.node.type !== b.node.type ? (a.node.type === 'dir' ? -1 : 1) : 0) || dir * (
       k === 'date' ? a.node.modified - b.node.modified : k === 'size' ? fs.sizeOf(a.node) - fs.sizeOf(b.node) : k === 'type' ? typeName(a.node).localeCompare(typeName(b.node), 'uk') || a.node.name.localeCompare(b.node.name, 'uk') : a.node.name.localeCompare(b.node.name, 'uk', { numeric: true })));
   }
+  // пошук: назва (або шаблон *.txt), вміст текстових файлів, тип, дата, розмір
+  search() {
+    const fs = this.fs, set = this.sys.settings, q = this.query, f = this.sf, out = [];
+    const re = hasWild(q) ? wildcard(q) : null, lq = lc(q);
+    const now = new Date(), day = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const since = { today: day, week: day - ((now.getDay() + 6) % 7) * 864e5, month: new Date(now.getFullYear(), now.getMonth(), 1).getTime(), year: new Date(now.getFullYear(), 0, 1).getTime() };
+    const ok = (c, p) => {
+      const nameHit = re ? re.test(c.name) : lc(c.name).includes(lq);
+      const textHit = f.content && c.type === 'file' && isText(c) && !re && lc(c.content).includes(lq);
+      if (!nameHit && !textHit) return false;
+      if (f.kind === 'dir' && c.type !== 'dir') return false;
+      if (f.kind !== 'all' && f.kind !== 'dir' && (c.type === 'dir' || !KIND_EXT[f.kind].includes(extOf(c.name)))) return false;
+      if (f.date !== 'any') { const t = c.modified; if (f.date === 'older' ? t >= since.year : t < since[f.date]) return false; }
+      if (f.size !== 'any') { if (c.type === 'dir') return false; const z = fs.sizeOf(c), K = 1024, M = K * K; if (!({ empty: z === 0, tiny: z > 0 && z < 16 * K, small: z >= 16 * K && z < M, medium: z >= M && z < 128 * M, large: z >= 128 * M && z < 1024 * M, huge: z >= 1024 * M })[f.size]) return false; }
+      return true;
+    };
+    const walk = d => { for (const c of fs.dirNode(d).children) { if (c.attrs.h && !set.hidden) continue; const p = d.replace(/\\$/, '') + '\\' + c.name; if (ok(c, p)) out.push({ key: p, node: c, path: p, text: f.content && !(re ? re.test(c.name) : lc(c.name).includes(lq)) }); if (c.type === 'dir') walk(p); } };
+    if (this.path === PC) fs.drives().forEach(d => walk(d + ':\\')); else walk(this.path);
+    return out;
+  }
+  renderSbar() {
+    const bar = this.$('.ex-sbar'), f = this.sf;
+    bar.hidden = !this.query;
+    if (!this.query) return;
+    const chip = (k, label, val, def) => `<button class="sf${val !== def ? ' on' : ''}" data-sf="${k}">${label}: <b>${val}</b>${ui('down', 12)}</button>`;
+    bar.innerHTML = `${ui('search', 15)}<span class="sf-t">Пошук «${esc(this.query)}»${this.path === PC ? ' на всьому комп’ютері' : ''}</span>${chip('kind', 'Тип', KINDS[f.kind], KINDS.all)}${chip('date', 'Змінено', DATES[f.date], DATES.any)}${chip('size', 'Розмір', SIZES[f.size].replace(/ \(.*\)/, ''), SIZES.any)}
+      <label class="sf${f.content ? ' on' : ''}"><input type="checkbox" data-sfc ${f.content ? 'checked' : ''}> Шукати в тексті файлів</label><span class="grow"></span><button class="sf" data-sfclose>${ui('close', 13)} Закрити</button>`;
+  }
+  sfMenu(k, btn) {
+    const opts = { kind: KINDS, date: DATES, size: SIZES }[k];
+    menu(0, 0, Object.entries(opts).map(([v, t]) => ({ t, check: this.sf[k] === v, on: () => { this.sf[k] = v; this.sel.clear(); this.render(); } })), { anchor: btn });
+  }
+  closeSearch() { this.query = ''; this.sf = { ...SF0 }; this.$('.ex-search input').value = ''; this.render(); this.$('.ex-view').focus(); }
   label(n) { return this.sys.settings.ext || n.type === 'dir' || !extOf(n.name) ? n.name : n.name.slice(0, n.name.lastIndexOf('.')); }
 
   /* ═════ малювання ═════ */
@@ -89,25 +127,27 @@ export class Explorer {
     this.$('[data-nav="up"]').disabled = this.path === PC || this.path === BIN;
     // адреса
     this.$('.crumbs').innerHTML = `<span class="cr-ico">${this.path === BIN ? binIcon(fs.s.bin.length > 0, 16) : this.path === PC ? pcIcon(16) : folderIcon(16)}</span>` + crumbs(this.sys, this.path).map(c => `<button class="cr" data-go="${esc(c.p)}">${esc(c.t)}</button>`).join(`<span class="cr-sep">${ui('chevron', 12)}</span>`);
-    this.$('.ex-search input').placeholder = `Пошук: ${prettyName(this.sys, this.path)}`;
+    this.$('.ex-search input').placeholder = this.path === PC ? 'Пошук на цьому ПК' : `Пошук: ${prettyName(this.sys, this.path)}`;
     this.renderCmd();
     this.renderSide();
+    this.renderSbar();
     // вміст
     const v = this.$('.ex-view'), cut = this.sys.clip?.mode === 'cut' ? new Set(this.sys.clip.paths.map(lc)) : new Set();
-    v.className = 'ex-view ' + (this.path === PC ? 'pc' : set.view);
-    if (this.path === PC) {
+    v.className = 'ex-view ' + (this.path === PC && !this.query ? 'pc' : set.view);
+    if (this.path === PC && !this.query) {
       v.innerHTML = `<h4 class="grp">Папки</h4><div class="tiles">${QUICK.map(k => `<div class="tile" data-open="${HOME}\\${k}" tabindex="-1">${folderIcon(40, k)}<span><b>${KNOWN[k]}</b><small>${(() => { const c = fs.list(HOME + '\\' + k).length; return c ? `${c} ${c % 10 === 1 && c % 100 !== 11 ? 'елемент' : c % 10 >= 2 && c % 10 <= 4 && (c % 100 < 12 || c % 100 > 14) ? 'елементи' : 'елементів'}` : 'Порожня'; })()}</small></span></div>`).join('')}</div>
         <h4 class="grp">Пристрої й диски</h4><div class="tiles">${fs.drives().map(d => { const used = DRIVE_SIZE[d] - fs.free(d), pc = used / DRIVE_SIZE[d] * 100; return `<div class="tile drive" data-open="${d}:\\" data-drive="${d}">${driveIcon(d, 44)}<span><b>${DRIVE_LABEL[d]} (${d}:)</b><i class="bar"><i style="width:${pc.toFixed(1)}%"></i></i><small>Вільно ${fmtSize(fs.free(d))} з ${fmtSize(DRIVE_SIZE[d])}</small></span></div>`; }).join('')}</div>`;
     } else if (!items.length) {
       v.innerHTML = `<p class="empty">${this.query ? 'Немає елементів, що відповідають вашому пошуку.' : this.path === BIN ? 'Кошик порожній.' : 'Ця папка пуста.'}</p>`;
     } else if (set.view === 'details') {
       const bin = this.path === BIN;
-      v.innerHTML = `<table class="det"><thead><tr><th data-sort="name">Ім’я</th>${bin ? '<th>Початкове розташування</th><th>Дата видалення</th>' : `<th data-sort="date">Дата змінення</th><th data-sort="type">Тип</th>`}<th data-sort="size" class="num">Розмір</th></tr></thead><tbody>${items.map(it => {
+      const sq = !!this.query;
+      v.innerHTML = `<table class="det"><thead><tr><th data-sort="name">Ім’я</th>${sq ? '<th>Папка</th>' : ''}${bin ? '<th>Початкове розташування</th><th>Дата видалення</th>' : `<th data-sort="date">Дата змінення</th><th data-sort="type">Тип</th>`}<th data-sort="size" class="num">Розмір</th></tr></thead><tbody>${items.map(it => {
         const n = it.node;
-        return `<tr class="it${this.sel.has(it.key) ? ' sel' : ''}${it.path && cut.has(lc(it.path)) ? ' cut' : ''}${n.attrs.h ? ' hid' : ''}" data-key="${esc(it.key)}" draggable="${!bin}"><td class="nm">${nodeIcon(n, it.path, 18)}${this.renaming === it.key ? this.renameBox(n) : `<span>${esc(this.label(n))}</span>`}</td>${bin ? `<td>${esc(it.bin.from)}</td><td>${fmtDate(it.bin.at)} ${fmtTime(it.bin.at)}</td>` : `<td>${fmtDate(n.modified)} ${fmtTime(n.modified)}</td><td>${esc(typeName(n))}</td>`}<td class="num">${n.type === 'dir' ? '' : fmtSize(fs.sizeOf(n)).replace(' байт', ' Б')}</td></tr>`;
+        return `<tr class="it${this.sel.has(it.key) ? ' sel' : ''}${it.path && cut.has(lc(it.path)) ? ' cut' : ''}${n.attrs.h ? ' hid' : ''}" data-key="${esc(it.key)}" draggable="${!bin}"><td class="nm">${nodeIcon(n, it.path, 18)}${this.renaming === it.key ? this.renameBox(n) : `<span>${sq ? hl(this.label(n), this.query) : esc(this.label(n))}${it.text ? ' <small class="in-text">(збіг у тексті)</small>' : ''}</span>`}</td>${sq ? `<td class="fold" title="${esc(parentPath(it.path))}">${esc(parentPath(it.path))}</td>` : ''}${bin ? `<td>${esc(it.bin.from)}</td><td>${fmtDate(it.bin.at)} ${fmtTime(it.bin.at)}</td>` : `<td>${fmtDate(n.modified)} ${fmtTime(n.modified)}</td><td>${esc(typeName(n))}</td>`}<td class="num">${n.type === 'dir' ? '' : fmtSize(fs.sizeOf(n)).replace(' байт', ' Б')}</td></tr>`;
       }).join('')}</tbody></table>`;
     } else {
-      v.innerHTML = `<div class="grid">${items.map(it => { const n = it.node; return `<div class="it${this.sel.has(it.key) ? ' sel' : ''}${it.path && cut.has(lc(it.path)) ? ' cut' : ''}${n.attrs.h ? ' hid' : ''}" data-key="${esc(it.key)}" draggable="${this.path !== BIN}" title="${esc(n.name)}${this.query ? '\n' + esc(parentPath(it.path)) : ''}">${nodeIcon(n, it.path, 48)}${this.renaming === it.key ? this.renameBox(n) : `<span class="lb">${wbr(this.label(n))}</span>`}</div>`; }).join('')}</div>`;
+      v.innerHTML = `<div class="grid">${items.map(it => { const n = it.node; return `<div class="it${this.sel.has(it.key) ? ' sel' : ''}${it.path && cut.has(lc(it.path)) ? ' cut' : ''}${n.attrs.h ? ' hid' : ''}" data-key="${esc(it.key)}" draggable="${this.path !== BIN}" title="${esc(n.name)}${this.query ? '\n' + esc(parentPath(it.path)) : ''}">${nodeIcon(n, it.path, 48)}${this.renaming === it.key ? this.renameBox(n) : `<span class="lb">${wbr(this.label(n))}</span>`}${this.query ? `<small class="lb-path">${esc(prettyName(this.sys, parentPath(it.path)))}</small>` : ''}</div>`; }).join('')}</div>`;
     }
     this.status();
     const inp = this.$('.ren-inp');
@@ -116,7 +156,7 @@ export class Explorer {
   status() {
     const items = this.cur || [], n = items.length, s = this.sel.size, fs = this.fs;
     const selSize = [...this.sel].map(k => items.find(i => i.key === k)?.node).filter(x => x && x.type === 'file').reduce((a, x) => a + fs.sizeOf(x), 0);
-    this.$('.ex-status').innerHTML = this.path === PC ? `${6 + fs.drives().length} елементів` : `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'елемент' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'елементи' : 'елементів'}${s ? ` <span class="sep">|</span> Вибрано: ${s}${selSize ? ` (${fmtSize(selSize)})` : ''}` : ''}`;
+    this.$('.ex-status').innerHTML = this.path === PC && !this.query ? `${6 + fs.drives().length} елементів` : `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'елемент' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'елементи' : 'елементів'}${s ? ` <span class="sep">|</span> Вибрано: ${s}${selSize ? ` (${fmtSize(selSize)})` : ''}` : ''}`;
   }
   // змінилося лише виділення — оновлюємо класи, а не весь вміст (інакше не спрацює подвійне клацання)
   paint() {
@@ -167,8 +207,11 @@ export class Explorer {
       this.go(/^[a-z]:$/i.test(p) ? p + '\\' : p);
     });
     const search = this.$('.ex-search input');
-    search.addEventListener('input', () => { if (this.path === PC || this.path === BIN) return; this.query = search.value.trim(); this.sel.clear(); this.render(); });
-    search.addEventListener('keydown', e => { if (e.key === 'Escape') { search.value = ''; this.query = ''; this.render(); view.focus(); } });
+    search.addEventListener('input', () => { if (this.path === BIN) return; clearTimeout(this.st); this.st = setTimeout(() => { this.query = search.value.trim(); this.sel.clear(); this.render(); }, 120); });
+    search.addEventListener('keydown', e => { if (e.key === 'Escape') this.closeSearch(); if (e.key === 'Enter') { clearTimeout(this.st); this.query = search.value.trim(); this.render(); } });
+    const sbar = this.$('.ex-sbar');
+    sbar.addEventListener('click', e => { const b = e.target.closest('[data-sf]'); if (b) return this.sfMenu(b.dataset.sf, b); if (e.target.closest('[data-sfclose]')) this.closeSearch(); });
+    sbar.addEventListener('change', e => { if (e.target.matches('[data-sfc]')) { this.sf.content = e.target.checked; this.render(); } });
     // вибір і відкриття
     view.addEventListener('pointerdown', e => {
       if (e.target.closest('.ren-inp')) return;
@@ -222,8 +265,8 @@ export class Explorer {
     this.sys.dnd(this.$('.ex-side'), null, null);
   }
   nav(a) {
-    if (a === 'back' && this.back.length) { this.fwd.push(this.path); this.path = this.back.pop(); this.sel.clear(); this.query = ''; this.render(); }
-    if (a === 'fwd' && this.fwd.length) { this.back.push(this.path); this.path = this.fwd.pop(); this.sel.clear(); this.query = ''; this.render(); }
+    if (a === 'back' && this.back.length) { this.fwd.push(this.path); this.path = this.back.pop(); this.sel.clear(); this.query = ''; this.sf = { ...SF0 }; this.$('.ex-search input').value = ''; this.render(); }
+    if (a === 'fwd' && this.fwd.length) { this.back.push(this.path); this.path = this.fwd.pop(); this.sel.clear(); this.query = ''; this.sf = { ...SF0 }; this.$('.ex-search input').value = ''; this.render(); }
     if (a === 'up' && this.path !== PC && this.path !== BIN) this.go(parentPath(this.path) || PC);
     if (a === 'refresh') this.render();
   }
@@ -292,6 +335,7 @@ export class Explorer {
     const txt = one && one.node.type === 'file' && (isText(one.node) || ['txt', 'md', 'ini', 'log', 'bat', 'csv'].includes(extOf(one.node.name)));
     return [
       one && { t: 'Відкрити', icon: 'open', kbd: 'Enter', on: () => this.openItem(one) },
+      one && this.query && { t: 'Відкрити розташування файлу', icon: 'folderPlus', on: () => { const k = one.path; this.go(parentPath(k)); this.sel = new Set([k]); this.anchor = k; this.paint(); } },
       one?.node.type === 'dir' && { t: 'Відкрити в новому вікні', icon: 'open', on: () => this.sys.open('explorer', one.path) },
       one?.node.type === 'dir' && { t: 'Відкрити в терміналі', icon: 'terminal', on: () => this.sys.open('cmd', one.path) },
       txt && { t: 'Редагувати в Блокноті', icon: appIcon('notepad', 16), on: () => this.sys.open('notepad', one.path) },
