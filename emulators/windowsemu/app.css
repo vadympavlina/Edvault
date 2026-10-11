@@ -1341,3 +1341,14 @@ button.st-user:hover { background: rgba(0,0,0,.05); }
 .lk.hc { background: #000; } .lk.hc::before, .lk.hc .lk-face { background: #000; } .lk.hc .lk-box { background: #000; border: 2px solid #fff; } .lk.hc .lk-box input { color: #fff; } .lk.hc .lk-box input::placeholder { color: #ffff00; } .lk.hc .lk-eye, .lk.hc .lk-go { color: #fff; }
 @keyframes lkIn { from { opacity: 0; transform: translateY(10px); } }
 .cm-root.lk-menu .cm-ic { color: #fff; }
+/* текст попереджень роутера — одним абзацом, значок окремо */
+.rt-warn, .rt-note { display: block; position: relative; padding-left: 36px; }
+.rt-warn > svg:first-child, .rt-note > svg:first-child { position: absolute; left: 12px; top: 11px; margin: 0; }
+/* вузькі екрани: панель завдань не налазить сама на себе */
+@media (max-width: 760px) {
+  #taskbar { justify-content: flex-start; padding-left: 6px; }
+  .tray, .tb-lang { display: none; }
+  .tb-mid, #tbApps { gap: 2px; }
+  .tb-btn, .tb-app { width: 36px; }
+}
+@media (max-width: 640px) { #start { left: 8px; right: 8px; width: auto; margin-left: 0; } .st-pins { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

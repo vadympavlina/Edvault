@@ -16,7 +16,7 @@ export const WM = {
     const area = this.area(), A = area.getBoundingClientRect();
     const n = this.wins.length;
     const w = Math.min(o.w || 860, A.width - 40), hh = Math.min(o.h || 540, A.height - 40);
-    const x = o.x ?? Math.max(10, Math.round((A.width - w) / 2) - 120 + (n % 6) * 34), y = o.y ?? Math.max(10, Math.round((A.height - hh) / 2) - 70 + (n % 6) * 30);
+    const x = o.x ?? Math.max(10, Math.min(A.width - w - 10, Math.round((A.width - w) / 2) - 120 + (n % 6) * 34)), y = o.y ?? Math.max(10, Math.min(A.height - hh - 10, Math.round((A.height - hh) / 2) - 70 + (n % 6) * 30));
     const win = { id: 'w' + (++this.seq), pid: (this.pid += 4 + (n % 3) * 4), app: o.app, exe: o.exe || o.app + '.exe', title: o.title, icon: o.icon, min: false, max: false, z: 0, minW: o.minW || 360, minH: o.minH || 240, onClose: o.onClose, onKey: o.onKey };
     win.el = h(`<section class="win" role="dialog" data-win="${win.id}" data-app="${o.app}" style="left:${x}px;top:${y}px;width:${w}px;height:${hh}px">
       <header class="win-title"><span class="win-ico">${o.icon}</span><span class="win-name"></span><span class="grow"></span>
