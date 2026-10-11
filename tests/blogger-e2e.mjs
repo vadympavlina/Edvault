@@ -1,4 +1,4 @@
-// Браузерна перевірка симулятора блогера: телефон, «Лайкер», створення дописів, реакції, безпека, збереження.
+// Браузерна перевірка симулятора блогера: телефон, Instagram, створення дописів, реакції, безпека, збереження.
 //   node tests/blogger-e2e.mjs
 import assert from 'node:assert/strict';
 import { startServer, launch, newPage, step } from './_harness.mjs';
@@ -18,7 +18,7 @@ const home = () => p.click('.homebar');
 const atHour = h => p.evaluate(h => { while (Math.floor(Blogger.sim.s.t / 60) % 24 !== h) Blogger.sim.advance(5); }, h);
 
 await step('головний екран і реєстрація з перевіркою імені й пароля', async () => {
-  assert.match(await p.locator('.home').innerText(), /Лайкер[\s\S]*Камера[\s\S]*Галерея/);
+  assert.match(await p.locator('.home').innerText(), /Instagram[\s\S]*Камера[\s\S]*Галерея/);
   await p.click('[data-app="likeer"]');
   await p.click('[data-act="lk.signup"]');
   await p.fill('[data-in="reg.nick"]', 'ab');
@@ -176,7 +176,7 @@ await step('фішинг у Директі → злам → відновленн
   await p.click('[data-act="lk.go"][data-v="dms"]');
   await p.click('.dm >> nth=0');
   await p.click('[data-act="lk.dmOpt"][data-k="open"]');
-  assert.match(await p.locator('.url').innerText(), /likeer-help\.com/);
+  assert.match(await p.locator('.url').innerText(), /instagram-help-center\.com/);
   await p.fill('[data-keep="ph-pass"]', 'Murchyk-2026!'); await p.click('[data-act="ph.phishGo"]');
   await adv(30);
   await p.waitForSelector('.welcome:has-text("Ви вийшли з профілю")');
@@ -265,7 +265,7 @@ await step('власне відео: додавання під час створ
   await p.waitForFunction(() => { const x = document.querySelector('.pm-media video'); return x && !x.paused; });
 });
 
-await step('«Хвиля»: канал, оформлення, відео з обкладинкою, аналітика й коментарі', async () => {
+await step('YouTube: канал, оформлення, відео з обкладинкою, аналітика й коментарі', async () => {
   await home(); await p.click('[data-app="tube"]'); await p.click('[data-act="tb.start"]');
   await p.fill('[data-in="tb.cname"]', 'Мурчик і я'); await p.fill('[data-in="tb.chandle"]', 'Murchyk TV');
   assert.ok(await p.locator('[data-act="tb.createCh"]').isDisabled(), 'неправильна адреса каналу');
@@ -338,7 +338,7 @@ await step('реклама: налаштування таргету, ціна, �
   assert.equal(rej.status, 'rejected'); assert.match(rej.reasons[0], /Особисті дані/); const ads = (await S()).ads; assert.ok(rej.refund > 0 && Math.abs(rej.refund - rej.paid) < 0.01, 'гроші повертаються повністю'); assert.equal(Math.round(ads.balance * 100), Math.round((bal + rej.refund) * 100), JSON.stringify({ bal, list: ads.list.map(a => [a.status, a.paid, a.refund, Math.round(a.stats.spent * 100) / 100]) }));
 });
 
-await step('лайки й коментарі скрізь: свій допис, допис блогера, відео у «Хвилі»', async () => {
+await step('лайки й коментарі скрізь: свій допис, допис блогера, відео на YouTube', async () => {
   await home(); await p.click('[data-app="likeer"]');
   await p.evaluate(() => { const lk = Blogger.phone.apps.likeer; lk.tab('profile'); lk.go('post', { id: Blogger.sim.s.posts.find(x => x.t).id }); });
   const l0 = (await S()).posts.find(x => x.t).stats.likes;
@@ -422,7 +422,7 @@ await step('Директ: людина друкує, відповідає по-�
   await p.evaluate(() => { Blogger.sim.s.settings.dms = 'followers'; });
 });
 
-await step('реклама у «Хвилі»: просування відео з оплатою за перегляд', async () => {
+await step('реклама на YouTube: просування відео з оплатою за перегляд', async () => {
   await home(); await p.click('[data-app="tube"]');
   await p.evaluate(() => { const t = Blogger.phone.apps.tube; t.tab('channel'); t.go('video', { id: Blogger.sim.s.tube.videos.find(v => v.t && v.vis === 'public' && !v.kids).id }); });
   await p.click('.promo-btn.red');
@@ -435,7 +435,7 @@ await step('реклама у «Хвилі»: просування відео з
   assert.match(await p.locator('.tiles').innerText(), /перегляд/i);
 });
 
-await step('«Лелека»: акаунт уже є, створення каналу, допис, запрошення, статистика', async () => {
+await step('Telegram: акаунт уже є, створення каналу, допис, запрошення, статистика', async () => {
   await home(); await p.click('[data-app="tg"]');
   assert.match(await p.locator('.tg-app').innerText(), /Мама[\s\S]*7-А клас/);
   await p.click('[data-act="tg.open"][data-id="mom"]'); await p.fill('[data-keep="tgm-mom"]', 'Привіт!'); await p.click('[data-act="tg.send"]');
@@ -462,12 +462,12 @@ await step('«Лелека»: акаунт уже є, створення кан�
   await p.click('[data-act="tg.go"][data-v="privacy"]'); await p.click('[data-sw="tg.pass2"]'); assert.ok((await S()).tg.set.pass2);
 });
 
-await step('реклама від бренду в каналі й посилання на канал у профілі Лайкера', async () => {
-  // посилання на канал у профілі Лайкера
+await step('реклама від бренду в каналі й посилання на канал у профілі Instagram', async () => {
+  // посилання на канал у профілі Instagram
   await home(); await p.click('[data-app="likeer"]');
   await p.evaluate(() => { const lk = Blogger.phone.apps.likeer; lk.tab('profile'); lk.go('editProfile'); });
-  await p.click('[data-act="lk.epTg"]'); assert.equal(await p.locator('[data-keep="ep.link"]').inputValue(), 'leleka.me/murchyk_pryhody');
-  await p.click('[data-act="lk.saveProfile"]'); assert.match(await p.locator('.pr-link').innerText(), /leleka\.me\/murchyk_pryhody/);
+  await p.click('[data-act="lk.epTg"]'); assert.equal(await p.locator('[data-keep="ep.link"]').inputValue(), 't.me/murchyk_pryhody');
+  await p.click('[data-act="lk.saveProfile"]'); assert.match(await p.locator('.pr-link').innerText(), /t\.me\/murchyk_pryhody/);
   await p.click('.pr-link'); assert.ok(await p.locator('.tg-app').count(), 'посилання відкриває канал');
   // бренд пропонує рекламу
   await p.evaluate(async () => { const m = await import('/emulators/bloggeremu/js/tgsim.js'), sim = Blogger.sim; m.brandOffer(sim, sim.s.tg.ch, false); const c = sim.s.tg.chats.find(x => x.id === sim.s.tg.flags.brandChat); while (c.pending?.length) m.tgDeliver(sim, c); Blogger.phone.apps.tg.stack = [{ v: 'chats' }, { v: 'chat', id: c.id }]; Blogger.phone.render(true); });

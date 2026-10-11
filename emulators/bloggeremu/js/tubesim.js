@@ -1,4 +1,4 @@
-// Симулятор блогера · рушій відеоплатформи «Хвиля»: покази, клікабельність обкладинки (CTR), утримання глядачів,
+// Симулятор блогера · рушій відеоплатформи YouTube: покази, клікабельність обкладинки (CTR), утримання глядачів,
 // рекомендації, підписники й коментарі. Без DOM — працює і в браузері, і в тестах.
 import { CLIPS, TAGS, CLICKBAIT, COMMENTS, CREATORS, nicheOf } from './data.js';
 import { judge, vertical } from './quality.js';
@@ -226,7 +226,7 @@ export function tubePublishNow(sim, v) {
 export function tubeDelete(sim, id) { const ch = sim.s.tube; ch.videos = ch.videos.filter(v => v.id !== id); sim.emit('tube'); }
 export function tubeEdit(sim, id, patch) { const v = sim.s.tube.videos.find(x => x.id === id); if (v) { Object.assign(v, patch); sim.emit('tube'); } }
 
-// Відповідь на коментар: тон як у Лайкері (довіра — спільна)
+// Відповідь на коментар: тон як в Instagram (довіра — спільна)
 export function tubeReply(sim, vid, cid, text, tone) {
   const s = sim.s, v = s.tube.videos.find(x => x.id === vid), c = v?.comments.find(x => x.id === cid); if (!c) return;
   text = String(text).trim().slice(0, 300); if (!text) return;

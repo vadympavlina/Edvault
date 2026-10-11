@@ -1,4 +1,4 @@
-// Симулятор блогера: месенджер «Лелека» і власний канал — без браузера
+// Симулятор блогера: месенджер Telegram і власний канал — без браузера
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Sim, newState, hourOf, DAY } from '../emulators/bloggeremu/js/sim.js';
@@ -87,7 +87,7 @@ test('накрутка: цифра росте, ERR падає, потім бот
 test('«підтримка» просить код: без хмарного пароля — злам, із ним — вхід заблоковано', () => {
   const run = pass2 => {
     const s = fresh(6); const c = tgCreateChannel(s, { title: 'К', pub: true, link: 'kanal_k', topic: 'pets' }); s.s.tg.set.pass2 = pass2;
-    const x = { id: 'phish', kind: 'user', title: 'Lelekа Support', msgs: [], unread: 0, script: 'phish', opts: [['send', 'Надіслати код']] }; s.s.tg.chats.push(x);
+    const x = { id: 'phish', kind: 'user', title: 'Telegrаm Support', msgs: [], unread: 0, script: 'phish', opts: [['send', 'Надіслати код']] }; s.s.tg.chats.push(x);
     tgOpt(s, 'phish', 'send'); return [s, c];
   };
   const [a, ca] = run(false);
@@ -156,14 +156,14 @@ test('строк минув — домовленість скасовано', ()
   assert.ok(c.adTask); s.advance(2 * DAY + 70); assert.equal(c.adTask, null); assert.match(x.msgs.at(-1).text, /Строк минув/);
 });
 
-test('зв’язок платформ: посилання в профілі Лайкера приводить читачів, згадка @ніку — підписників у Лайкері', () => {
-  const run = linked => { const [s, c] = live(14, 20); if (linked) s.s.me.link = 'leleka.me/murchyk_cat'; for (let i = 0; i < 4; i++) { at(s, 19); s.publish({ kind: 'photo', photo: { gid: s.s.gallery[0].id }, caption: 'Мурчик спить #котики' }); s.advance(600); } return [s, c]; };
+test('зв’язок платформ: посилання в профілі Instagram приводить читачів, згадка @ніку — підписників в Instagram', () => {
+  const run = linked => { const [s, c] = live(14, 20); if (linked) s.s.me.link = 't.me/murchyk_cat'; for (let i = 0; i < 4; i++) { at(s, 19); s.publish({ kind: 'photo', photo: { gid: s.s.gallery[0].id }, caption: 'Мурчик спить #котики' }); s.advance(600); } return [s, c]; };
   const [, a] = run(true), [, b] = run(false);
-  assert.ok((a.src.likeer || 0) > 0 && !(b.src.likeer), `з Лайкера: ${a.src.likeer}`);
-  assert.ok(chLinkIn({ pub: true, link: 'murchyk_cat', invite: '+x' }, 'мій канал leleka.me/murchyk_cat') && !chLinkIn({ pub: true, link: 'murchyk_cat', invite: '+x' }, 'leleka.me/murchyk_cats'));
-  const [s] = live(15, 60); const f0 = s.s.followers; at(s, 19); const p = tgPost(s, { text: GOOD + ' Більше фото — у моєму Лайкері @kotyk.art' }); s.advance(DAY);
+  assert.ok((a.src.likeer || 0) > 0 && !(b.src.likeer), `з Instagram: ${a.src.likeer}`);
+  assert.ok(chLinkIn({ pub: true, link: 'murchyk_cat', invite: '+x' }, 'мій канал t.me/murchyk_cat') && !chLinkIn({ pub: true, link: 'murchyk_cat', invite: '+x' }, 't.me/murchyk_cats'));
+  const [s] = live(15, 60); const f0 = s.s.followers; at(s, 19); const p = tgPost(s, { text: GOOD + ' Більше фото — у моємв Instagram @kotyk.art' }); s.advance(DAY);
   assert.ok(p.plan.lk > 0 && s.s.followers > f0, `${s.s.followers} > ${f0}`);
   // приватний канал у відкритому профілі
   const t = fresh(16); t.register({ nick: 'kotyk.art', niche: 'pets', bio: 'x', pass: 'Murchyk-2026!' }); const pc = tgCreateChannel(t, { title: 'Свої', pub: false, topic: 'pets' });
-  t.s.me.link = 'leleka.me/' + pc.invite; t.advance(60); assert.ok(t.s.tg.flags.privLeak && chat(t, 'mych').msgs.some(m => /будь-хто/.test(m.text)));
+  t.s.me.link = 't.me/' + pc.invite; t.advance(60); assert.ok(t.s.tg.flags.privLeak && chat(t, 'mych').msgs.some(m => /будь-хто/.test(m.text)));
 });

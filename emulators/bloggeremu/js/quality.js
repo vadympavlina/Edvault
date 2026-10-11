@@ -1,6 +1,6 @@
 // Симулятор блогера · оцінка власних фото й відео за виміряними показниками кадру (без DOM — працює і в тестах).
 // an: lum — яскравість 0..1, con — контраст, sharp — різкість, col — насиченість, intro — секунди без руху на початку, motion — рух.
-export const LK_MAX = 90; // Лайкер приймає відео до 90 с
+export const LK_MAX = 90; // Instagram приймає відео до 90 с
 
 const DARK = 0.22, WASHED = 0.78, BLUR = 15, SHARP = 120, VIVID = 55;
 export const vertical = g => g.h > g.w * 1.15;

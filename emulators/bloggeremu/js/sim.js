@@ -97,7 +97,7 @@ export class Sim {
     // накручені «мертві» підписники видаляються перевіркою платформи
     if (s.bots && s.flags.botsAt && s.t - s.flags.botsAt > 2 * DAY) {
       s.followers = Math.max(0, s.followers - s.bots); const n = s.bots; s.bots = 0; s.trust = Math.max(0, s.trust - 8);
-      this.mail('platform', 'Ми видалили неживих підписників', `Перевірка знайшла у вашому профілі ${n} фальшивих облікових записів (ботів), і ми їх видалили. Купівля підписників порушує правила Лайкера. Наступного разу профіль можуть обмежити.`, 'bots');
+      this.mail('platform', 'Ми видалили неживих підписників', `Перевірка знайшла у вашому профілі ${n} фальшивих облікових записів (ботів), і ми їх видалили. Купівля підписників порушує правила Instagram. Наступного разу профіль можуть обмежити.`, 'bots');
     }
   }
 
@@ -113,7 +113,7 @@ export class Sim {
     const s = this.s;
     s.me = { nick: me.nick, name: me.name || '', bio: me.bio || '', niche: me.niche, avatar: me.avatar || { color: '#c62828', sym: 'letter' }, created: s.t, pass: me.pass || '', email: (me.nick || 'user') + '@poshta.ua' };
     s.settings.priv = !!me.priv; s.settings.twoFA = !!me.twoFA;
-    this.mail('platform', 'Ласкаво просимо до Лайкера!', `Вітаємо, @${me.nick}! Ваш профіль створено.\n\nКілька порад для початку:\n• Додайте фото профілю й опис — так людям легше вас знайти.\n• Публікуйте те, що вам справді цікаво.\n• Не показуйте в дописах адресу, школу й документи.\n• Увімкніть двофакторний вхід у налаштуваннях безпеки.`, 'welcome');
+    this.mail('platform', 'Ласкаво просимо до Instagram!', `Вітаємо, @${me.nick}! Ваш профіль створено.\n\nКілька порад для початку:\n• Додайте фото профілю й опис — так людям легше вас знайти.\n• Публікуйте те, що вам справді цікаво.\n• Не показуйте в дописах адресу, школу й документи.\n• Увімкніть двофакторний вхід у налаштуваннях безпеки.`, 'welcome');
     if (!me.twoFA) this.later(90, 'notify', 'shield', 'Захистіть профіль: увімкніть двофакторний вхід у Налаштуваннях → Безпека');
     this.emit('me');
   }
@@ -380,7 +380,7 @@ export class Sim {
     p.comments.push({ id: this.id('c'), pid: u.id, to: cid, text: voice(fill(this.r.pick(DEFEND), { fem: isFem(u), troll: t?.nick || '' }), isFem(u)), kind: 'topic', t: s.t, likes: 2 + this.r.int(6), liked: false, reply: null, hidden: false, pinned: false, loyal: true });
     p.stats.comments++; this.notify('comment', `@${u.nick} заступи${isFem(u) ? 'лася' : 'вся'} за вас перед @${t?.nick}`, p.id); this.emit('comments');
   }
-  // те саме у «Хвилі»
+  // те саме на YouTube
   tubeFollow(vid, cid) {
     const s = this.s, v = s.tube?.videos.find(x => x.id === vid), c = v?.comments.find(x => x.id === cid), u = s.people[c?.pid]; if (!c || !u || u.blocked) return;
     const last = (c.thread || []).filter(x => x.me).at(-1) || c.reply; if (!last) return;
@@ -483,7 +483,7 @@ export class Sim {
     const s = this.s, day = dayOf(s.t);
     s.screen[day] = (s.screen[day] || 0) + min;
     for (const k of Object.keys(s.screen)) if (+k < day - 13) delete s.screen[k];
-    if (s.breakAt && s.screen[day] >= s.breakAt && s.flags.breakDay !== day) { s.flags.breakDay = day; this.notify('clock', `Сьогодні ви вже ${s.breakAt} хв у Лайкері. Час зробити перерву: прогулянка, вода, розминка для очей`, null); }
+    if (s.breakAt && s.screen[day] >= s.breakAt && s.flags.breakDay !== day) { s.flags.breakDay = day; this.notify('clock', `Сьогодні ви вже ${s.breakAt} хв в Instagram. Час зробити перерву: прогулянка, вода, розминка для очей`, null); }
   }
 
   /* ── галерея й камера ── */
@@ -596,8 +596,8 @@ export class Sim {
     const s = this.s, u = s.people[d.pid], ints = intents(text), node = SCRIPTS[d.script]?.nodes[d.node];
     if (u) u.lastTalk = s.t;
     // поради платформи з безпеки — на будь-яку розмову
-    if (ints.has('personal') && u?.kind !== 'stranger' && !d.mem.tipP) { d.mem.tipP = true; this.sysMsg(d, 'Підказка Лайкера: не пишіть у переписці школу, клас, адресу, вік чи телефон — навіть тим, хто здається другом.'); }
-    if (ints.has('password') && !/пароль/.test(node?.on ? Object.keys(node.on).join() : '') && d.script !== 'classmate') this.sysMsg(d, 'Підказка Лайкера: пароль і коди з SMS не повідомляють нікому — ні друзям, ні «підтримці».');
+    if (ints.has('personal') && u?.kind !== 'stranger' && !d.mem.tipP) { d.mem.tipP = true; this.sysMsg(d, 'Підказка Instagram: не пишіть у переписці школу, клас, адресу, вік чи телефон — навіть тим, хто здається другом.'); }
+    if (ints.has('password') && !/пароль/.test(node?.on ? Object.keys(node.on).join() : '') && d.script !== 'classmate') this.sysMsg(d, 'Підказка Instagram: пароль і коди з SMS не повідомляють нікому — ні друзям, ні «підтримці».');
     const kind = ints.has('kind') || ints.has('thanks');
     if (!node || d.done) {
       // розмова завершилася — коротка жива реакція
@@ -716,8 +716,8 @@ export class Sim {
     this.dmText(u.id, 'Привіт. Навіщо викладати моє фото без дозволу? Мені не подобається, як я там вийшов(-ла). Видали, будь ласка', [['del', 'Вибач, зараз видалю'], ['no', 'Та нічого страшного']], 'friend').post = p.id;
   }
   phish() {
-    const s = this.s, u = this.person('scam'); u.nick = 'lajker.pidtrymka'; u.name = 'Лайкер Підтримка'; u.fake = true;
-    this.dmText(u.id, 'УВАГА! Ваш профіль порушує правила авторського права й буде ВИДАЛЕНИЙ через 24 години. Щоб скасувати видалення, підтвердіть свій пароль: likeer-help.com/verify', [['open', 'Відкрити посилання'], ['check', 'Перевірити, хто пише'], ['no', 'Ігнорувати']], 'phish');
+    const s = this.s, u = this.person('scam'); u.nick = 'instagram.pidtrymka'; u.name = 'Instagram Підтримка'; u.fake = true;
+    this.dmText(u.id, 'УВАГА! Ваш профіль порушує правила авторського права й буде ВИДАЛЕНИЙ через 24 години. Щоб скасувати видалення, підтвердіть свій пароль: instagram-help-center.com/verify', [['open', 'Відкрити посилання'], ['check', 'Перевірити, хто пише'], ['no', 'Ігнорувати']], 'phish');
   }
   copyrightClaim(postId) {
     const p = this.s.posts.find(x => x.id === postId);
@@ -774,7 +774,7 @@ export class Sim {
       if (key === 'pay') { this.s.flags.payPage = d.pid; this.emit('open-pay'); }
     },
     phish(d, key) {
-      if (key === 'check') { this.later(2, 'dmText', d.pid, '(Профіль @lajker.pidtrymka: створено 2 дні тому, без позначки перевірки. Справжня підтримка Лайкера ніколи не пише в Директ і не просить пароль. Адреса likeer-help.com — не сайт Лайкера.)', [['block', 'Заблокувати й поскаржитися'], ['no', 'Ігнорувати']], 'phish'); return; }
+      if (key === 'check') { this.later(2, 'dmText', d.pid, '(Профіль @instagram.pidtrymka: створено 2 дні тому, без позначки перевірки. Справжня підтримка Instagram ніколи не пише в Директ і не просить пароль. Адреса instagram-help-center.com — не сайт Instagram.)', [['block', 'Заблокувати й поскаржитися'], ['no', 'Ігнорувати']], 'phish'); return; }
       if (key === 'block') { this.report(d.pid); return; }
       if (key === 'open') { this.s.flags.phishPage = true; this.emit('open-phish'); }
     },
@@ -799,7 +799,7 @@ export class Sim {
       s.settings.sessions.push({ id: 's' + s.seq++, dev: 'Android', city: 'Харків', now: false, bad: true });
       const p = this.publish({ kind: 'text', text: 'Заробляй від 5000 грн на день без зусиль! Пиши мені в Директ, розповім секрет', caption: '#заробіток #рекомендації' });
       p.spam = true; s.trust = Math.max(0, s.trust - 10);
-      this.mail('platform', 'Новий вхід у ваш профіль', 'Хтось увійшов у ваш профіль з пристрою Android (Харків) і змінив пароль. Якщо це були не ви — натисніть «Відновити доступ» на сторінці входу в Лайкер.', 'security');
+      this.mail('platform', 'Новий вхід у ваш профіль', 'Хтось увійшов у ваш профіль з пристрою Android (Харків) і змінив пароль. Якщо це були не ви — натисніть «Відновити доступ» на сторінці входу в Instagram.', 'security');
       this.emit('hack');
     }
   }

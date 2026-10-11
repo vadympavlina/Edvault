@@ -1,4 +1,4 @@
-// Симулятор блогера: власні фото й відео, карусель, відеоплатформа «Хвиля» — без браузера
+// Симулятор блогера: власні фото й відео, карусель, відеоплатформа YouTube — без браузера
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Sim, newState, hourOf, DAY } from '../emulators/bloggeremu/js/sim.js';
@@ -28,7 +28,7 @@ test('оцінка власного фото: темне, розмите й га
 test('оцінка відео: нудний початок, обрізка й формат під платформу', () => {
   const slow = judge(SLOW, { start: 0, end: 18 }), cut = judge(SLOW, { start: 6, end: 18 });
   assert.ok(slow.flags.intro && !cut.flags.intro && cut.q > slow.q, 'обрізаний початок виправляє оцінку');
-  assert.ok(judge(VERT).q > judge({ ...VERT, w: 1280, h: 720 }).q, 'у стрічці Лайкера вертикальне краще');
+  assert.ok(judge(VERT).q > judge({ ...VERT, w: 1280, h: 720 }).q, 'у стрічці Instagram вертикальне краще');
   assert.ok(judge(WIDE, { app: 'tube', end: 300 }).why.some(w => /Горизонтальне/.test(w[1])));
 });
 
@@ -66,7 +66,7 @@ test('власні файли: тема змінюється, файл вваж�
   assert.ok(s.s.gallery.length <= 81 && s.s.gallery.some(x => x.id === own.id));
 });
 
-test('«Хвиля»: оформлення каналу, обкладинка й заголовок впливають на CTR, крива утримання', () => {
+test('YouTube: оформлення каналу, обкладинка й заголовок впливають на CTR, крива утримання', () => {
   const mk = (seed, o) => { const s = fresh(seed); createChannel(s, { name: 'Мурчик і я', handle: 'murchyk.tv', topic: 'pets' }); if (o.brand) updateChannel(s, { desc: 'Щосуботи — нові трюки мого кота Мурчика й поради для власників', avatar: { color: '#c62828', sym: 'paw', img: '' }, banner: { color: '#333', img: 'mb' } }); s.addOwn(WIDE, 'pets'); return s; };
   const up = (s, o) => tubeUpload(s, { src: { own: true, gid: s.s.gallery[0].id, g: WIDE }, dur: 300, title: o.title, desc: o.desc || '', thumb: o.thumb, topic: 'pets', kids: false, vis: 'public' });
   const a = mk(21, { brand: true }), b = mk(21, {});
@@ -86,7 +86,7 @@ test('«Хвиля»: оформлення каналу, обкладинка й
   assert.ok(curve(0.5, true, false, false)[1] < curve(0.5, false, false, false)[1], 'нудний початок — різкий спад');
 });
 
-test('«Хвиля»: короткі відео, «для дітей» без коментарів, клікбейт і відповіді', () => {
+test('YouTube: короткі відео, «для дітей» без коментарів, клікбейт і відповіді', () => {
   const s = fresh(31); createChannel(s, { name: 'К', handle: 'kkk', topic: 'pets' }); s.addOwn(VERT, 'pets');
   const sh = tubeUpload(s, { src: { own: true, gid: s.s.gallery[0].id, g: VERT }, dur: 18, title: 'Кіт стрибає на диван', desc: '', thumb: { kind: 'frame' }, topic: 'pets', kids: true });
   assert.equal(sh.shorts, true);
@@ -102,7 +102,7 @@ test('«Хвиля»: короткі відео, «для дітей» без к
   const later = tubeUpload(s, { src: { clip: 'waves' }, dur: 18, title: 'Хвилі на морі ввечері', desc: '', thumb: { kind: 'frame' }, topic: 'travel', kids: false, sched: s.s.t + 120 });
   assert.equal(later.t, 0); s.advance(130); assert.ok(later.t > 0);
   assert.ok(tubeFeed(s).length > 8 && tubeFeed(s, 'food').every(v => v.topic === 'food'));
-  // старі збереження без «Хвилі» відкриваються
+  // старі збереження без YouTube відкриваються
   const old = newState(2); delete old.tube; delete old.phone;
   const o = new Sim(old); assert.equal(o.s.tube, null); assert.equal(o.s.phone.wall, 'dawn');
 });

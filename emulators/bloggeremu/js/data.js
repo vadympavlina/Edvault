@@ -53,14 +53,14 @@ export const CLIPS = {
   waves: { t: 'Хвилі на морі', topic: 'travel', dur: 18, intro: 3, q: 0.66, scene: 'sea' },
 };
 
-// Музика для відео. free — з бібліотеки Лайкера (можна), hit — своя музика з плеєра (чужий твір → скарга правовласника)
+// Музика для відео. free — з бібліотеки Instagram (можна), hit — своя музика з плеєра (чужий твір → скарга правовласника)
 export const MUSIC = [
   { id: 'none', t: 'Без музики', mood: null },
   { id: 'orig', t: 'Оригінальний звук', by: 'Звук із вашого відео', mood: null, own: true },
-  { id: 'guitar', t: 'Весела гітара', by: 'Бібліотека Лайкера', mood: 'fun', free: true },
-  { id: 'lofi', t: 'Спокійний біт', by: 'Бібліотека Лайкера', mood: 'calm', free: true },
-  { id: 'epic', t: 'Епічний оркестр', by: 'Бібліотека Лайкера', mood: 'epic', free: true },
-  { id: 'synth', t: 'Пікселі', by: 'Бібліотека Лайкера', mood: 'game', free: true },
+  { id: 'guitar', t: 'Весела гітара', by: 'Бібліотека Instagram', mood: 'fun', free: true },
+  { id: 'lofi', t: 'Спокійний біт', by: 'Бібліотека Instagram', mood: 'calm', free: true },
+  { id: 'epic', t: 'Епічний оркестр', by: 'Бібліотека Instagram', mood: 'epic', free: true },
+  { id: 'synth', t: 'Пікселі', by: 'Бібліотека Instagram', mood: 'game', free: true },
   { id: 'hit', t: 'Хіт тижня (з плеєра)', by: 'Гурт «Нічні вогні»', mood: 'fun', hit: true },
 ];
 // яка музика пасує до теми

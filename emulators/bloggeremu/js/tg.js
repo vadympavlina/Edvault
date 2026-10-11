@@ -1,4 +1,4 @@
-// Симулятор блогера · месенджер «Лелека»: чати, контакти, налаштування й власний канал —
+// Симулятор блогера · месенджер Telegram: чати, контакти, налаштування й власний канал —
 // створення (назва, фото, тип, посилання), дописи з фото й опитуваннями, реакції, коментарі, статистика.
 import { icon } from './icons.js';
 import { photo, avatar } from './art.js';
@@ -9,10 +9,10 @@ import { fileBtn } from './gal.js';
 import { voice } from './talk.js';
 import { TG_HOST, REACTS, linkErr, tgSend, tgRead, tgOpt, tgBlock, tgCreateChannel, tgEditChannel, tgDeleteChannel, tgPost, tgEditPost, tgDeletePost, tgPin, tgVote, tgInvite, tgStats, tgEndSession, postCheck, realSubs, tgOnline, tgAdPost, adCheck, tgMarkAd, chLinkIn } from './tgsim.js';
 
-export const tgLogo = (s = 28) => `<svg class="logo" width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><rect x="2" y="2" width="44" height="44" rx="13" fill="#0e7c6b"/><path d="M12 33.5V16a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v11a4 4 0 0 1-4 4H18.5z" fill="#fff"/><path d="M17.5 24.5c3-4.5 7.5-6 13-5.5-2.5 1.2-4.2 3-5 5.5-2.6-.9-5.2-.9-8 0z" fill="#0e7c6b"/><circle cx="29" cy="17.6" r="1.1" fill="#0e7c6b"/></svg>`;
+export const tgLogo = (s = 28, sq = false) => `<svg class="logo" width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="tgl${s}${sq ? 'q' : ''}" x1=".5" y1="0" x2=".5" y2="1"><stop offset="0" stop-color="#3bb4ea"/><stop offset="1" stop-color="#1d93d2"/></linearGradient></defs>${sq ? `<rect x="2" y="2" width="44" height="44" rx="13" fill="url(#tgl${s}q)"/>` : `<circle cx="24" cy="24" r="22" fill="url(#tgl${s})"/>`}<path d="M11.2 23.4 33 15c1-.4 1.9.2 1.6 1.7l-3.7 17.5c-.3 1.3-1 1.6-2.1 1l-5.8-4.3-2.8 2.7c-.3.3-.6.6-1.2.6l.4-5.9 10.7-9.7c.5-.4-.1-.6-.7-.2L16.6 26.7l-5.6-1.8c-1.2-.4-1.3-1.2.2-1.5z" fill="#fff"/></svg>`;
 const SIDE = ['Настя', 'Тарас', 'Віка', 'Денис', 'Злата', 'Петро'];
 const NAME_C = { Настя: '#ad1457', Тарас: '#283593', Віка: '#6a1b9a', Денис: '#00695c', Злата: '#b23c17', Петро: '#455a64' };
-const SRC = [['invite', 'Посилання-запрошення'], ['search', 'Пошук у Лелеці'], ['fwd', 'Пересилання дописів'], ['promo', 'Взаємопіар'], ['add', 'Додані вами'], ['likeer', 'З профілю в Лайкері'], ['tube', 'З опису каналу у Хвилі'], ['bots', 'Куплені боти']];
+const SRC = [['invite', 'Посилання-запрошення'], ['search', 'Пошук в Telegram'], ['fwd', 'Пересилання дописів'], ['promo', 'Взаємопіар'], ['add', 'Додані вами'], ['likeer', 'З профілю в Instagram'], ['tube', 'З опису каналу на YouTube'], ['bots', 'Куплені боти']];
 const wd = t => WEEKDAYS[((dayOf(t) % 7) + 7) % 7];
 const dayLabel = (now, t) => { const d = dayOf(now) - dayOf(t); return d <= 0 ? 'Сьогодні' : d === 1 ? 'Учора' : d < 7 ? wd(t) : `${d} ${plural(d, 'день', 'дні', 'днів')} тому`; };
 const listTime = (now, t) => { const d = dayOf(now) - dayOf(t); return d <= 0 ? clock(t) : d === 1 ? 'Учора' : d < 7 ? ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'][((dayOf(t) % 7) + 7) % 7] : `${d} дн.`; };
@@ -32,10 +32,10 @@ export class Tg {
   back() { if (this.stack.length > 1) this.stack.pop(); else this.ph.home(); this.ph.render(true); }
   get live() { return ['chats', 'chat', 'info', 'stats', 'post', 'subs', 'contacts', 'settings', 'sessions'].includes(this.top.v); }
   chat(id) { return this.tg.chats.find(c => c.id === id); }
-  meAv(size) { const m = this.s.me; return avatar(m ? { name: m.name || m.nick, ...m.avatar } : { name: 'Я', color: '#0e7c6b' }, size); }
+  meAv(size) { const m = this.s.me; return avatar(m ? { name: m.name || m.nick, ...m.avatar } : { name: 'Я', color: '#1f7ac4' }, size); }
   chAv(size, c = this.ch) { return avatar({ name: c.title, ...c.avatar }, size); }
   av(c, size) {
-    if (c.kind === 'mine') return this.ch ? this.chAv(size) : avatar({ name: c.title, color: '#0e7c6b' }, size);
+    if (c.kind === 'mine') return this.ch ? this.chAv(size) : avatar({ name: c.title, color: '#1f7ac4' }, size);
     if (c.kind === 'saved') return `<span class="av tg-saved" style="width:${size}px;height:${size}px">${icon('bookmark', Math.round(size * 0.46))}</span>`;
     if (c.kind === 'service') return `<span class="av" style="width:${size}px;height:${size}px">${tgLogo(size)}</span>`;
     return avatar({ name: c.title, color: c.color, sym: c.sym }, size);
@@ -89,8 +89,8 @@ export class Tg {
       const d = dayOf(m.t), sep = d !== lastDay ? `<p class="tg-day"><span>${dayLabel(s.t, m.t)}</span></p>` : ''; lastDay = d;
       if (m.from === 'sys') return `${sep}<p class="tg-sys"><span>${icon('shield', 13)}${esc(m.text)}</span></p>`;
       if (c.kind === 'feed') return sep + this.feedPost(c, m);
-      const me = m.from === 'me', name = c.kind === 'group' && !me ? `<b class="tg-who" style="color:${NAME_C[m.from] || '#0e7c6b'}">${esc(m.from)}</b>` : '';
-      const link = m.card ? `<span class="tg-card">${tgLogo(30)}<span><b>${esc(this.ch?.title || 'Канал')}</b><small>Канал у Лелеці · ${esc(TG_HOST + (this.ch?.pub ? this.ch.link : this.ch?.invite || ''))}</small></span></span>` : '';
+      const me = m.from === 'me', name = c.kind === 'group' && !me ? `<b class="tg-who" style="color:${NAME_C[m.from] || '#1f7ac4'}">${esc(m.from)}</b>` : '';
+      const link = m.card ? `<span class="tg-card">${tgLogo(30)}<span><b>${esc(this.ch?.title || 'Канал')}</b><small>Канал в Telegram · ${esc(TG_HOST + (this.ch?.pub ? this.ch.link : this.ch?.invite || ''))}</small></span></span>` : '';
       return `${sep}<div class="tg-m${me ? ' me' : ''}">${c.kind === 'group' && !me ? avatar({ name: m.from, color: NAME_C[m.from] || '#455a64' }, 30) : ''}<p>${name}${esc(m.text)}${link}<span class="tg-mt">${clock(m.t)}${me && c.kind !== 'saved' ? `<span class="tg-tick${m.seen ? ' seen' : ''}">${icon('check', 13)}${m.seen ? icon('check', 13) : ''}</span>` : ''}</span></p></div>`;
     }).join('');
     const opts = !c.blocked && c.opts && !c.pending?.length ? `<div class="chips tg-opts">${c.opts.map(([k, t]) => `<button class="chip-btn" data-act="tg.opt" data-k="${k}">${esc(t)}</button>`).join('')}</div>` : '';
@@ -117,14 +117,14 @@ export class Tg {
 
   /* ═════════ Створення каналу ═════════ */
   v_new(a) {
-    const d = a.d ||= { step: 1, title: '', desc: '', color: '#0e7c6b', sym: 'letter', img: '', topic: this.s.me?.niche || 'pets', pub: true, link: (this.s.me?.nick || '').replace(/\./g, '_'), add: [] };
+    const d = a.d ||= { step: 1, title: '', desc: '', color: '#1f7ac4', sym: 'letter', img: '', topic: this.s.me?.niche || 'pets', pub: true, link: (this.s.me?.nick || '').replace(/\./g, '_'), add: [] };
     const steps = `<div class="ad-steps" aria-hidden="true">${[1, 2, 3].map(i => `<i class="${i <= d.step ? 'on' : ''}"></i>`).join('')}</div>`;
     if (d.step === 1) {
       const own = this.s.gallery.filter(g => g.own && g.type === 'photo').slice(0, 8);
       return `${this.head('Новий канал', 'Крок 1 з 3 · Назва й фото')}<div class="scroll pad">${steps}
         <div class="tg-newav">${avatar({ name: d.title || 'К', color: d.color, sym: d.sym, img: d.img }, 84)}</div>
         <div class="av-pick center">${own.map(g => `<button class="avp${d.img === g.mid ? ' on' : ''}" data-act="tg.nImg" data-mid="${g.mid}" aria-label="Ваше фото">${avatar({ img: g.mid }, 46)}</button>`).join('')}${fileBtn('tgavatar', 'Фото', 'avp add', 'image/*')}${d.img ? `<button class="avp" data-act="tg.nImg" data-mid="" aria-label="Без фото">${icon('close', 20)}</button>` : ''}</div>
-        ${d.img ? '' : `<div class="sw-row center">${AV_COLORS.slice(0, 8).map(c => `<button class="cdot${d.color === c ? ' on' : ''}" style="background:${c}" data-act="tg.nColor" data-c="${c}" aria-label="Колір"></button>`).join('')}<button class="cdot${d.color === '#0e7c6b' ? ' on' : ''}" style="background:#0e7c6b" data-act="tg.nColor" data-c="#0e7c6b" aria-label="Колір"></button></div><div class="sw-row center">${AV_SYMBOLS.slice(0, 7).map(k => `<button class="sym${d.sym === k ? ' on' : ''}" data-act="tg.nSym" data-k="${k}" aria-label="Значок">${k === 'letter' ? `<b>${esc((d.title[0] || 'К').toUpperCase())}</b>` : icon(k, 20)}</button>`).join('')}</div>`}
+        ${d.img ? '' : `<div class="sw-row center">${AV_COLORS.slice(0, 8).map(c => `<button class="cdot${d.color === c ? ' on' : ''}" style="background:${c}" data-act="tg.nColor" data-c="${c}" aria-label="Колір"></button>`).join('')}<button class="cdot${d.color === '#1f7ac4' ? ' on' : ''}" style="background:#1f7ac4" data-act="tg.nColor" data-c="#1f7ac4" aria-label="Колір"></button></div><div class="sw-row center">${AV_SYMBOLS.slice(0, 7).map(k => `<button class="sym${d.sym === k ? ' on' : ''}" data-act="tg.nSym" data-k="${k}" aria-label="Значок">${k === 'letter' ? `<b>${esc((d.title[0] || 'К').toUpperCase())}</b>` : icon(k, 20)}</button>`).join('')}</div>`}
         <label class="fl"><span>Назва каналу</span><input class="in" data-in="tg.nTitle" data-keep="tg.nTitle" value="${esc(d.title)}" maxlength="60" placeholder="Наприклад: «Мурчик і його пригоди»"></label>
         <label class="fl"><span>Опис (необов’язково)</span><textarea class="in" data-in="tg.nDesc" data-keep="tg.nDesc" rows="3" maxlength="255" placeholder="Про що канал і як часто виходять дописи">${esc(d.desc)}</textarea></label>
         <p class="lbl">Тема каналу</p><div class="niches sm">${Object.entries(NICHES).map(([k, n]) => `<button class="niche${d.topic === k ? ' on' : ''}" data-act="tg.nTopic" data-k="${k}">${icon(n.icon, 20)}<span>${n.t}</span></button>`).join('')}</div></div>
@@ -176,7 +176,7 @@ export class Tg {
   }
   myPost(p) {
     const c = this.ch, s = this.s, g = p.gid && s.gallery.find(x => x.id === p.gid);
-    if (p.hidden) return `<div class="tg-post hid"><div class="tg-pb"><p>${icon('eyeOff', 15)}Допис приховано за порушення правил Лелеки</p></div></div>`;
+    if (p.hidden) return `<div class="tg-post hid"><div class="tg-pb"><p>${icon('eyeOff', 15)}Допис приховано за порушення правил Telegram</p></div></div>`;
     const by = p.by === 'evil' ? 'Невідомий адміністратор' : p.by === 'marko' ? 'Марко' : c.set.sign ? (s.me?.name || 'Автор') : '';
     const poll = p.poll ? `<div class="tg-poll"><b>${esc(p.poll.q)}</b><small>Анонімне опитування</small>${p.poll.my === null ? p.poll.opts.map(([t], i) => `<button class="tg-po" data-act="tg.vote" data-id="${p.id}" data-i="${i}">${esc(t)}</button>`).join('') : this.pollRows(p.poll.opts, p.poll.my)}</div>` : '';
     const rc = c.set.reacts ? REACTS.filter(([k]) => p.react[k]).map(([k, col]) => `<span class="tg-rc" style="--rc:${col}">${icon(k, 14, true)}${num(p.react[k])}</span>`).join('') : '';
@@ -199,7 +199,7 @@ export class Tg {
     return `${this.head('Інформація', '', `<button class="lnk strong" data-act="tg.go" data-v="edit">Змінити</button>`)}<div class="scroll"><div class="tg-ihead">${this.chAv(96)}<h2>${esc(c.title)}</h2><p class="muted">${c.pub ? 'публічний' : 'приватний'} канал · ${num(c.subs)} ${plural(c.subs, 'підписник', 'підписники', 'підписників')}</p>
       <div class="tg-ibtns"><button data-act="tg.invite">${icon('users', 22)}<small>Запросити</small></button><button data-act="tg.go" data-v="stats">${icon('chart', 22)}<small>Статистика</small></button><button data-act="tg.copy">${icon('link', 22)}<small>Посилання</small></button></div></div>
       <div class="pad">${c.desc ? `<div class="tg-ibox"><small>опис</small><p>${esc(c.desc)}</p></div>` : ''}<div class="tg-ibox"><small>${c.pub ? 'посилання' : 'посилання-запрошення'}</small><p class="tg-lnk">${esc(link)}</p></div>
-      ${opt('link', 'Посилання в Лайкері', s.me ? (chLinkIn(c, s.me.link) ? 'Є в профілі · приводить читачів' : 'Додайте в профіль — підписники Лайкера знайдуть канал') : 'Спершу створіть профіль у Лайкері', 'tg.shareLk')}
+      ${opt('link', 'Посилання в Instagram', s.me ? (chLinkIn(c, s.me.link) ? 'Є в профілі · приводить читачів' : 'Додайте в профіль — підписники Instagram знайдуть канал') : 'Спершу створіть профіль в Instagram', 'tg.shareLk')}
       ${opt('users', 'Підписники', `${num(c.subs)}${c.bots ? ` · з них ${num(c.bots)} ботів` : ''}`, 'tg.go', ' data-v="subs"')}${opt('shield', 'Адміністратори', `${1 + (c.admins?.length || 0)}`, 'tg.go', ' data-v="admins"')}
       <h3 class="sec">Налаштування</h3>${row('reacts', 'Реакції', 'Читачі можуть ставити реакції на дописи', c.set.reacts)}${row('comments', 'Коментарі', 'Обговорення під кожним дописом', c.set.comments)}${row('sign', 'Підпис автора', 'Під дописом видно, хто з адміністраторів його написав', c.set.sign)}
       <button class="btn danger big" data-act="tg.delCh" style="margin-top:18px">${icon('trash', 18)}Видалити канал</button></div></div>`;
@@ -220,7 +220,7 @@ export class Tg {
     return `${this.head('Підписники', `${num(c.subs)}`)}<div class="scroll">
       ${mem.map(x => `<div class="tg-row slim">${avatar({ name: x.title, color: x.color }, 44)}<div class="tg-rb"><b>${esc(x.title)}</b><small>з ваших контактів</small></div></div>`).join('')}
       ${rest ? `<div class="tg-row slim"><span class="av tg-saved" style="width:44px;height:44px">${icon('users', 20)}</span><div class="tg-rb"><b>Ще ${num(rest)} ${plural(rest, 'читач', 'читачі', 'читачів')}</b><small>Справжні люди, які знайшли канал</small></div></div>` : ''}
-      ${c.bots ? `${Array.from({ length: 4 }, (_, i) => `<div class="tg-row slim bot"><span class="av" style="width:44px;height:44px;background:#9aa0a6">${icon('user', 20)}</span><div class="tg-rb"><b>Видалений акаунт</b><small>давно не в мережі · не читає дописи</small></div></div>`).join('')}<p class="hint" style="margin:12px 16px">${icon('alert', 16)}<span>${num(c.bots)} куплених «підписників» — порожні акаунти. Вони не читають дописи, тож перегляди не ростуть, а Лелека їх видалить.</span></p>` : ''}
+      ${c.bots ? `${Array.from({ length: 4 }, (_, i) => `<div class="tg-row slim bot"><span class="av" style="width:44px;height:44px;background:#9aa0a6">${icon('user', 20)}</span><div class="tg-rb"><b>Видалений акаунт</b><small>давно не в мережі · не читає дописи</small></div></div>`).join('')}<p class="hint" style="margin:12px 16px">${icon('alert', 16)}<span>${num(c.bots)} куплених «підписників» — порожні акаунти. Вони не читають дописи, тож перегляди не ростуть, а Telegram їх видалить.</span></p>` : ''}
       ${!c.subs ? `<div class="empty">${icon('users', 40)}<b>Підписників ще немає</b><p>Надішліть посилання друзям — так з’являться перші читачі.</p><button class="btn tg-btn" data-act="tg.invite">Запросити</button></div>` : ''}</div>`;
   }
   v_admins() {
@@ -234,7 +234,7 @@ export class Tg {
   v_stats() {
     const st = tgStats(this.sim), c = this.ch, tile = (ic, v, k, sub = '') => `<div class="tile">${icon(ic, 18)}<b>${v}</b><small>${k}</small>${sub ? `<small class="muted">${sub}</small>` : ''}</div>`;
     const days = st.days.length ? st.days : [{ day: dayOf(this.s.t), subs: c.subs, joined: 0, left: 0 }], max = Math.max(1, ...days.map(d => d.subs + d.joined - d.left)), w = 300, h = 100, bw = w / Math.max(7, days.length);
-    const chart = `<svg class="chart" viewBox="0 0 ${w} ${h + 18}" role="img" aria-label="Підписники за днями">${days.map((d, i) => { const v = Math.max(0, d.subs + d.joined - d.left), bh = Math.max(2, v / max * h); return `<rect x="${i * bw + 3}" y="${h - bh}" width="${bw - 6}" height="${bh}" rx="3" fill="#0e7c6b"/><text x="${i * bw + bw / 2}" y="${h + 14}" font-size="10" text-anchor="middle" fill="#5f6368">Д${d.day + 1}</text>`; }).join('')}</svg>`;
+    const chart = `<svg class="chart" viewBox="0 0 ${w} ${h + 18}" role="img" aria-label="Підписники за днями">${days.map((d, i) => { const v = Math.max(0, d.subs + d.joined - d.left), bh = Math.max(2, v / max * h); return `<rect x="${i * bw + 3}" y="${h - bh}" width="${bw - 6}" height="${bh}" rx="3" fill="#1f7ac4"/><text x="${i * bw + bw / 2}" y="${h + 14}" font-size="10" text-anchor="middle" fill="#5f6368">Д${d.day + 1}</text>`; }).join('')}</svg>`;
     const srcTot = Math.max(1, SRC.reduce((a, [k]) => a + (st.src[k] || 0), 0));
     const hours = `<div class="tg-hours" aria-label="Коли читачі онлайн">${ACTIVITY.map((v, i) => `<i style="height:${Math.round(v / 20 * 100)}%"${i === st.best ? ' class="on"' : ''} title="${i}:00"></i>`).join('')}</div><div class="tg-hl"><small>0:00</small><small>12:00</small><small>23:00</small></div>`;
     return `${this.head('Статистика', esc(c.title))}<div class="scroll pad">
@@ -244,7 +244,7 @@ export class Tg {
       <div class="tg-earn"><div><small>Зароблено на рекламі</small><b>${num(st.earned)} грн</b></div><div><small>Ціна допису зараз</small><b>≈ ${num(st.price)} грн</b></div></div>
       <p class="muted sm">Бренди платять за справжні перегляди, а не за цифру підписників. Рекламних дописів: ${st.adsN} з ${st.posts}${st.adsN && st.adsN / Math.max(1, st.posts) > 0.3 ? ' — забагато, читачі втомлюються' : ' — краще не більше одного з п’яти'}.</p>
       <h3 class="sec">Підписники за днями</h3>${chart}
-      <h3 class="sec">Звідки приходять читачі</h3><div class="tg-src">${SRC.filter(([k]) => st.src[k]).map(([k, t]) => { const p = Math.round((st.src[k] || 0) / srcTot * 100); return `<div><span>${t}</span><b>${num(st.src[k])}</b><i><b style="width:${p}%;background:${k === 'bots' ? '#c62828' : '#0e7c6b'}"></b></i></div>`; }).join('') || '<p class="muted sm">Ще немає даних. Запросіть перших читачів.</p>'}</div>
+      <h3 class="sec">Звідки приходять читачі</h3><div class="tg-src">${SRC.filter(([k]) => st.src[k]).map(([k, t]) => { const p = Math.round((st.src[k] || 0) / srcTot * 100); return `<div><span>${t}</span><b>${num(st.src[k])}</b><i><b style="width:${p}%;background:${k === 'bots' ? '#c62828' : '#1f7ac4'}"></b></i></div>`; }).join('') || '<p class="muted sm">Ще немає даних. Запросіть перших читачів.</p>'}</div>
       <h3 class="sec">Коли читачі онлайн</h3>${hours}<p class="hint">${icon('clock', 16)}<span>Найбільше людей у мережі близько ${st.best}:00. Ввечері дописи бачать більше читачів, а вночі краще надсилати без звуку.</span></p>
       ${st.top.length ? `<h3 class="sec">Найпопулярніші дописи</h3>${st.top.map(p => `<button class="opt link" data-act="tg.toPost" data-id="${p.id}"><div><b>${esc(short(p.text || (p.poll ? 'Опитування: ' + p.poll.q : 'Фото'), 50))}</b><small>${icon('eye', 12)} ${num(p.stats.views)} · ${icon('repost', 12)} ${num(p.stats.fwd)} · ${dayLabel(this.s.t, p.t)}</small></div></button>`).join('')}` : ''}</div>`;
   }
@@ -253,7 +253,7 @@ export class Tg {
   v_settings() {
     const s = this.s, me = s.me, set = this.tg.set, opt = (ic, col, t, sub, act, extra = '') => `<button class="opt link tg-set" data-act="${act}"${extra}><span class="tg-si" style="background:${col}">${icon(ic, 18)}</span><div><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</div>${icon('chevron', 18)}</button>`;
     return `<header class="ah main"><b class="ah-t tg-title">Налаштування</b></header><div class="scroll"><div class="tg-ihead">${this.meAv(84)}<h2>${esc(me?.name || 'Ви')}</h2><p class="muted">+380 •• ••• •• 47 · @${esc((me?.nick || 'my_name').replace(/\./g, '_'))}</p></div>
-      <div class="pad">${opt('megaphone', '#0e7c6b', this.ch ? esc(this.ch.title) : 'Створити канал', this.ch ? 'Мій канал' : 'Ведіть свій блог у Лелеці', this.ch ? 'tg.open' : 'tg.newCh', this.ch ? ' data-id="mych"' : '')}
+      <div class="pad">${opt('megaphone', '#1f7ac4', this.ch ? esc(this.ch.title) : 'Створити канал', this.ch ? 'Мій канал' : 'Ведіть свій блог в Telegram', this.ch ? 'tg.open' : 'tg.newCh', this.ch ? ' data-id="mych"' : '')}
       ${opt('lock', '#5e35b1', 'Конфіденційність', `Номер бачать: ${{ all: 'усі', contacts: 'контакти', none: 'ніхто' }[set.phone]} · хмарний пароль ${set.pass2 ? 'увімкнено' : 'вимкнено'}`, 'tg.go', ' data-v="privacy"')}
       ${opt('phone', '#e65100', 'Активні сеанси', `${set.sessions.length} ${plural(set.sessions.length, 'пристрій', 'пристрої', 'пристроїв')}${set.sessions.some(x => x.evil) ? ' · є чужий!' : ''}`, 'tg.go', ' data-v="sessions"')}
       ${opt('bookmark', '#1565c0', 'Збережене', 'Нотатки для себе', 'tg.open', ' data-id="saved"')}</div></div>`;
@@ -263,7 +263,7 @@ export class Tg {
     return `${this.head('Конфіденційність')}<div class="scroll pad"><p class="lbl">Хто бачить мій номер телефону</p><div class="seg">${[['all', 'Усі'], ['contacts', 'Контакти'], ['none', 'Ніхто']].map(([k, t]) => `<button class="${set.phone === k ? 'on' : ''}" data-act="tg.phone" data-v="${k}">${t}</button>`).join('')}</div>
       <p class="muted sm" style="margin-top:8px">${set.phone === 'all' ? 'Зараз ваш номер може побачити будь-хто, з ким ви в одній групі чи хто напише вам. Краще вибрати «Контакти» або «Ніхто».' : 'Добре: незнайомі люди не побачать ваш номер.'}</p>
       <div class="opt" style="margin-top:12px"><div><b>Хмарний пароль</b><small>Додатковий пароль для входу на новому пристрої. Навіть якщо шахраї вивідають код із SMS, без нього не увійдуть.</small></div>${sw('tg.pass2', set.pass2, 'Хмарний пароль')}</div>
-      <p class="hint">${icon('shield', 16)}<span>Код для входу приходить лише в службовий чат «Лелека» з синьою позначкою. Нікому його не надсилайте — ні друзям, ні «підтримці».</span></p></div>`;
+      <p class="hint">${icon('shield', 16)}<span>Код для входу приходить лише в службовий чат Telegram з синьою позначкою. Нікому його не надсилайте — ні друзям, ні «підтримці».</span></p></div>`;
   }
   v_sessions() {
     const set = this.tg.set;
@@ -336,10 +336,10 @@ export class Tg {
       invite: () => this.inviteSheet(),
       adWrite: () => this.adSheet(),
       shareLk: () => {
-        if (!s.me) { toast('Спершу створіть профіль у Лайкері'); return; }
+        if (!s.me) { toast('Спершу створіть профіль в Instagram'); return; }
         const link = TG_HOST + (c.pub ? c.link : c.invite);
-        if (chLinkIn(c, s.me.link)) { toast('Посилання вже є в профілі Лайкера'); return; }
-        s.me.link = link; ph.render(); toast(c.pub ? 'Посилання додано в профіль Лайкера' : 'Додано. Увага: тепер приватний канал може знайти будь-хто');
+        if (chLinkIn(c, s.me.link)) { toast('Посилання вже є в профілі Instagram'); return; }
+        s.me.link = link; ph.render(); toast(c.pub ? 'Посилання додано в профіль Instagram' : 'Додано. Увага: тепер приватний канал може знайти будь-хто');
       },
       copy: () => { navigator.clipboard?.writeText('https://' + TG_HOST + (c.pub ? c.link : c.invite)).catch(() => {}); toast('Посилання скопійовано'); },
       delCh: async () => { if (await confirm('Видалити канал?', 'Видалити', true, 'Усі дописи й підписники зникнуть назавжди.')) { tgDeleteChannel(sim); this.stack = [{ v: 'chats' }]; ph.render(true); toast('Канал видалено'); } },

@@ -1,4 +1,4 @@
-// Симулятор блогера: живе спілкування (Директ і коментарі) та реклама у «Хвилі» — без браузера
+// Симулятор блогера: живе спілкування (Директ і коментарі) та реклама на YouTube — без браузера
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Sim, newState, hourOf, DAY } from '../emulators/bloggeremu/js/sim.js';
@@ -130,7 +130,7 @@ test('Коментарі: проігноровані питання глядач
   assert.ok(p.fired.ignored && s.s.trust < tr && /відпов|читає/.test(p.comments.at(-1).text));
 });
 
-test('Реклама у «Хвилі»: оплата за перегляд, повільний початок дорожчає, відео для дітей не просувається', () => {
+test('Реклама на YouTube: оплата за перегляд, повільний початок дорожчає, відео для дітей не просувається', () => {
   const s = fresh(12); createChannel(s, { name: 'К', handle: 'kkk', topic: 'pets' });
   const v = tubeUpload(s, { src: { clip: 'laser' }, dur: 24, title: 'Кіт ловить лазерну указку', desc: '', thumb: { kind: 'frame' }, topic: 'pets', kids: false });
   const a = { platform: 'tube', auto: true, goal: 'views', place: 'auto', places: ['instream'], daily: 100, days: 5, age: [18, 34], interests: [], city: 'ua', gender: 'all' };
@@ -142,6 +142,6 @@ test('Реклама у «Хвилі»: оплата за перегляд, по
   const r = launchAd(s, { ...a, vid: v.id }, 0.7, reviewVideo(v));
   s.advance(2 * DAY);
   assert.equal(r.ad.status, 'active'); assert.ok(r.ad.stats.views > 0 && v.stats.views > v0 && s.s.tube.subs >= s0);
-  assert.ok(s.s.tube.notifs.some(n => n.ad === r.ad.id), 'сповіщення у «Хвилі»');
+  assert.ok(s.s.tube.notifs.some(n => n.ad === r.ad.id), 'сповіщення на YouTube');
   assert.ok(reviewVideo({ kids: true, vis: 'public' }).length && reviewVideo({ cb: true, vis: 'public' }).length);
 });

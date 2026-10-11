@@ -13,7 +13,7 @@ import { adViews, adAct, adInput, adRange, adSelect } from './ads.js';
 import { Tg, tgLogo } from './tg.js';
 import { newTg, tgUnread, tgDeliver } from './tgsim.js';
 
-Object.assign(Likeer.prototype, adViews); // «Реклама» — і в Лайкері, і у «Хвилі»
+Object.assign(Likeer.prototype, adViews); // «Реклама» — і в Instagram, і на YouTube
 Object.assign(Tube.prototype, adViews); Tube.prototype.platform = 'tube';
 import { renderCreate, createAct, createInput, createRange, createToggle, createSelect, openCreate, createImported } from './create.js';
 
@@ -57,7 +57,7 @@ class Phone {
       else this.apps.tube?.imported?.(ctx, items);
       if (ctx === 'avatar' || ctx === 'wall') this.imported(ctx, items[0]);
     };
-    // Лайкер має власні в’ю «створення»
+    // Instagram має власні в’ю «створення»
     const lk = this.apps.likeer;
     lk.v_create = top => renderCreate(lk, top);
     this.bind();
@@ -112,7 +112,7 @@ class Phone {
     clearTimeout(this.chatT); this.chatKey = key;
     this.chatT = setTimeout(() => { this.chatKey = null; sim.deliverNow(open); this.save(); }, Math.min(3200, 900 + next.text.length * 28));
   }
-  // «Лелека»: відкритий чат — співрозмовник друкує в реальному часі
+  // Telegram: відкритий чат — співрозмовник друкує в реальному часі
   syncTg() {
     const tg = this.apps.tg, open = this.app === 'tg' && tg.top.v === 'chat' ? tg.top.id : null;
     sim.tgWatch = open;
@@ -143,7 +143,7 @@ class Phone {
     document.querySelector('.pn-time small').textContent = `${dayName(s.t)}, день ${dayOf(s.t) + 1}`;
     const live = Math.max(0, s.followers - s.bots);
     const tch = s.tg?.ch;
-    document.querySelector('.pn-stats').innerHTML = s.me || s.tube || tch ? `<div><b>${num(s.followers)}</b><small>у Лайкері${s.bots ? `, з них ${num(s.bots)} ботів` : ''}</small></div><div><b>${s.tube ? num(s.tube.subs) : '—'}</b><small>на каналі «Хвиля»</small></div><div><b>${tch ? num(tch.subs) : '—'}</b><small>у каналі «Лелека»</small></div><div><b>${Math.round(s.trust)}</b><small>довіра</small></div>` : '<p>Створіть профіль у «Лайкері», канал у «Хвилі» або в «Лелеці».</p>';
+    document.querySelector('.pn-stats').innerHTML = s.me || s.tube || tch ? `<div><b>${num(s.followers)}</b><small>в Instagram${s.bots ? `, з них ${num(s.bots)} ботів` : ''}</small></div><div><b>${s.tube ? num(s.tube.subs) : '—'}</b><small>на каналі YouTube</small></div><div><b>${tch ? num(tch.subs) : '—'}</b><small>у каналі Telegram</small></div><div><b>${Math.round(s.trust)}</b><small>довіра</small></div>` : '<p>Створіть профіль в Instagram, канал на YouTube або в Telegram.</p>';
   }
 
   /* ═════════ Головний екран ═════════ */
@@ -153,9 +153,9 @@ class Phone {
     const app = (k, t, ic, badge = 0) => `<button class="app-ic" data-act="ph.open" data-app="${k}" aria-label="${t}${badge ? `, нових: ${badge}` : ''}"><span class="ai ${k}">${ic}</span>${badge ? `<i class="dot">${badge > 99 ? '99+' : badge}</i>` : ''}<small>${t}</small></button>`;
     const tsum = ch ? ch.videos.reduce((a, v) => a + v.stats.views, 0) : 0;
     return `<div class="home" style="background:${wallCss(s.phone.wall)}"><div class="hm-clock"><b>${clock(s.t)}</b><span>${dayName(s.t)}</span></div>
-      <div class="widgets"><button class="widget" data-act="ph.open" data-app="likeer"><div class="wg-h">${logo(18)}<b>Лайкер</b></div>${s.me ? `<div class="wg-n"><b>${num(s.followers)}</b><small>${plural(s.followers, 'підписник', 'підписники', 'підписників')}</small></div><p class="wg-t">${icon('eye', 13)}${num(today.reduce((a, p) => a + p.stats.views, 0))} сьогодні</p>` : '<p class="wg-t">Фото й дописи. Створіть профіль</p>'}</button>
-        <button class="widget" data-act="ph.open" data-app="tube"><div class="wg-h">${tubeLogo(18)}<b>Хвиля</b></div>${ch ? `<div class="wg-n"><b>${num(ch.subs)}</b><small>${plural(ch.subs, 'підписник', 'підписники', 'підписників')}</small></div><p class="wg-t">${icon('play', 13)}${num(tsum)} переглядів</p>` : '<p class="wg-t">Відео й короткі ролики. Створіть канал</p>'}</button></div>
-      <div class="apps">${app('likeer', 'Лайкер', logo(54), lkN)}${app('tube', 'Хвиля', tubeLogo(54), ch?.unread || 0)}${app('tg', 'Лелека', tgLogo(54), tgUnread(s))}${app('camera', 'Камера', icon('camera', 28))}${app('gallery', 'Галерея', icon('image', 28))}${app('ideas', 'Ідеї', icon('idea', 28), 0)}${app('mail', 'Пошта', icon('mail', 28), mail)}${app('settings', 'Налаштування', icon('gear', 28))}${app('help', 'Довідка', icon('info', 28))}</div></div>`;
+      <div class="widgets"><button class="widget" data-act="ph.open" data-app="likeer"><div class="wg-h">${logo(18)}<b>Instagram</b></div>${s.me ? `<div class="wg-n"><b>${num(s.followers)}</b><small>${plural(s.followers, 'підписник', 'підписники', 'підписників')}</small></div><p class="wg-t">${icon('eye', 13)}${num(today.reduce((a, p) => a + p.stats.views, 0))} сьогодні</p>` : '<p class="wg-t">Фото й дописи. Створіть профіль</p>'}</button>
+        <button class="widget" data-act="ph.open" data-app="tube"><div class="wg-h">${tubeLogo(18)}<b>YouTube</b></div>${ch ? `<div class="wg-n"><b>${num(ch.subs)}</b><small>${plural(ch.subs, 'підписник', 'підписники', 'підписників')}</small></div><p class="wg-t">${icon('play', 13)}${num(tsum)} переглядів</p>` : '<p class="wg-t">Відео й короткі ролики. Створіть канал</p>'}</button></div>
+      <div class="apps">${app('likeer', 'Instagram', logo(54), lkN)}${app('tube', 'YouTube', tubeLogo(42), ch?.unread || 0)}${app('tg', 'Telegram', tgLogo(54, true), tgUnread(s))}${app('camera', 'Камера', icon('camera', 28))}${app('gallery', 'Галерея', icon('image', 28))}${app('ideas', 'Ідеї', icon('idea', 28), 0)}${app('mail', 'Пошта', icon('mail', 28), mail)}${app('settings', 'Налаштування', icon('gear', 28))}${app('help', 'Довідка', icon('info', 28))}</div></div>`;
   }
 
   /* ═════════ Налаштування телефону ═════════ */
@@ -220,25 +220,25 @@ class Phone {
       const m = s.mail.find(x => x.id === a.id); if (!m) { a.id = null; return this.a_mail(a); }
       m.read = true;
       return `<div class="mail"><header class="ah"><button class="ib" data-act="ph.mailBack" aria-label="Назад">${icon('back', 24)}</button><b class="ah-t">Лист</b></header><div class="scroll pad"><h2 class="ml-s">${esc(m.subject)}</h2>
-        <div class="ml-from">${m.from === 'platform' ? logo(36) : avatar({ name: m.from, color: '#455a64' }, 36)}<div><b>${m.from === 'platform' ? 'Лайкер' : esc(m.from)}</b><small>${m.from === 'platform' ? 'noreply@lajker.ua' : 'info@bank-hryvnia.ua'} · ${ago(s.t, m.t)}</small></div></div><div class="ml-body">${esc(m.body).replace(/\n/g, '<br>')}</div></div></div>`;
+        <div class="ml-from">${m.from === 'platform' ? logo(36) : avatar({ name: m.from, color: '#455a64' }, 36)}<div><b>${m.from === 'platform' ? 'Instagram' : esc(m.from)}</b><small>${m.from === 'platform' ? 'no-reply@mail.instagram.com' : 'info@bank-hryvnia.ua'} · ${ago(s.t, m.t)}</small></div></div><div class="ml-body">${esc(m.body).replace(/\n/g, '<br>')}</div></div></div>`;
     }
     return `<div class="mail"><header class="ah"><button class="ib" data-act="ph.home" aria-label="Додому">${icon('back', 24)}</button><b class="ah-t">Пошта</b><span class="grow"></span><small class="muted">${s.me ? esc(s.me.email) : ''}</small></header>
-      <div class="scroll" data-scroll="mail">${s.mail.length ? s.mail.map(m => `<button class="ml${m.read ? '' : ' un'}" data-act="ph.mailOpen" data-id="${m.id}">${m.from === 'platform' ? logo(40) : avatar({ name: m.from, color: '#455a64' }, 40)}<div><b>${m.from === 'platform' ? 'Лайкер' : esc(m.from)}</b><span>${esc(m.subject)}</span><small>${esc(m.body.split('\n')[0].slice(0, 60))}</small></div><time>${ago(s.t, m.t)}</time></button>`).join('') : `<div class="empty">${icon('mail', 40)}<b>Листів немає</b></div>`}</div></div>`;
+      <div class="scroll" data-scroll="mail">${s.mail.length ? s.mail.map(m => `<button class="ml${m.read ? '' : ' un'}" data-act="ph.mailOpen" data-id="${m.id}">${m.from === 'platform' ? logo(40) : avatar({ name: m.from, color: '#455a64' }, 40)}<div><b>${m.from === 'platform' ? 'Instagram' : esc(m.from)}</b><span>${esc(m.subject)}</span><small>${esc(m.body.split('\n')[0].slice(0, 60))}</small></div><time>${ago(s.t, m.t)}</time></button>`).join('') : `<div class="empty">${icon('mail', 40)}<b>Листів немає</b></div>`}</div></div>`;
   }
 
   /* ═════════ Довідка ═════════ */
   a_help() {
     const q = (t, b) => `<details class="faq"><summary>${t}</summary><p>${b}</p></details>`;
     return `<div class="notes"><header class="ah"><button class="ib" data-act="ph.home" aria-label="Додому">${icon('back', 24)}</button><b class="ah-t">Довідка</b></header><div class="scroll pad">
-      <p>Це навчальний телефон із соцмережею <b>Лайкер</b>, відеоплатформою <b>Хвиля</b> і месенджером <b>Лелека</b>. Усі люди, коментарі й повідомлення вигадані — сміливо пробуйте.</p>
+      <p>Це навчальний телефон із соцмережею <b>Instagram</b>, відеоплатформою <b>YouTube</b> і месенджером <b>Telegram</b> — це навчальна імітація: справжні застосунки тут не використовуються, а ваші дані нікуди не надсилаються. Усі люди, коментарі й повідомлення вигадані — сміливо пробуйте.</p>
       ${q('Як додати свої фото й відео?', 'Галерея → «Додати» (або «З телефону» під час створення допису). Файли зберігаються лише в цьому браузері й нікуди не надсилаються. Симулятор вимірює світло, чіткість, кольори, а у відео — чи щось відбувається з перших секунд, і на основі цього «глядачі» реагують на ваш допис.')}
       ${q('Як зробити карусель?', 'Під час створення фото натисніть «Кілька» й вибирайте фото по черзі (до 10). Перше фото побачать у стрічці, тож ставте найкраще першим. Карусель довше розглядають і частіше зберігають.')}
       ${q('Як запустити рекламу (таргет)?', 'Відкрийте свій допис → «Просувати допис» або Профіль → значок гучномовця. Майстер проведе через усі кроки: мета, аудиторія (місто, вік, інтереси), розміщення, бюджет із прогнозом ціни, перевірка правил і демо-оплата. Гроші умовні; у справжніх соцмережах рекламу запускають лише дорослі.')}
-      ${q('Як вести канал у «Лелеці»?', 'Лелека → значок олівця або «Створіть свій канал». Придумайте назву, фото й опис, виберіть публічний (його знайдуть у пошуку) чи приватний (лише за посиланням) канал і запросіть друзів посиланням. Пишіть регулярно, але не частіше кількох дописів на день; уночі надсилайте без звуку; фото й опитування підвищують залученість. У «Статистиці» видно ERR — яку частку підписників бачить допис.')}
-      ${q('Як заробити на рекламі в каналі?', 'Коли в каналі з’являться живі читачі, бренди самі напишуть у Лелеку. Ціна залежить від справжніх переглядів, а не від цифри підписників. Домовленість погоджують батьки. Пишіть рекламу своїми словами, без «гарантовано» й «100%», обов’язково позначайте її як рекламу і не робіть рекламним більше ніж кожен п’ятий допис. Сумнівні товари — відмовляйтеся.')}
-      ${q('Як привести читачів з інших соцмереж?', 'Додайте посилання на канал у профіль Лайкера (Редагувати профіль → Посилання) або в опис каналу у Хвилі — частина ваших глядачів перейде в канал. А якщо згадати в дописі каналу свій нік у Лайкері (@нік), читачі каналу підпишуться й там. Посилання на приватний канал у відкритому профілі робить його фактично відкритим.')}
-      ${q('Чому не можна купувати підписників і надсилати коди?', 'Куплені «підписники» — порожні акаунти: вони не читають, тож ERR падає, а платформа їх видаляє й знижує охоплення. Код зі SMS дає повний доступ до акаунта: справжня підтримка ніколи його не просить. Увімкніть хмарний пароль у налаштуваннях Лелеки.')}
-      ${q('Що таке CTR і утримання у «Хвилі»?', 'CTR (клікабельність) — яка частка людей, що побачили обкладинку, натиснула на відео. Його піднімають яскрава обкладинка з коротким написом і зрозумілий заголовок. Утримання — скільки відео в середньому дивляться. Його псує довгий нудний початок.')}
+      ${q('Як вести канал в Telegram?', 'Telegram → значок олівця або «Створіть свій канал». Придумайте назву, фото й опис, виберіть публічний (його знайдуть у пошуку) чи приватний (лише за посиланням) канал і запросіть друзів посиланням. Пишіть регулярно, але не частіше кількох дописів на день; уночі надсилайте без звуку; фото й опитування підвищують залученість. У «Статистиці» видно ERR — яку частку підписників бачить допис.')}
+      ${q('Як заробити на рекламі в каналі?', 'Коли в каналі з’являться живі читачі, бренди самі напишуть в Telegram. Ціна залежить від справжніх переглядів, а не від цифри підписників. Домовленість погоджують батьки. Пишіть рекламу своїми словами, без «гарантовано» й «100%», обов’язково позначайте її як рекламу і не робіть рекламним більше ніж кожен п’ятий допис. Сумнівні товари — відмовляйтеся.')}
+      ${q('Як привести читачів з інших соцмереж?', 'Додайте посилання на канал у профіль Instagram (Редагувати профіль → Посилання) або в опис каналу на YouTube — частина ваших глядачів перейде в канал. А якщо згадати в дописі каналу свій нік в Instagram (@нік), читачі каналу підпишуться й там. Посилання на приватний канал у відкритому профілі робить його фактично відкритим.')}
+      ${q('Чому не можна купувати підписників і надсилати коди?', 'Куплені «підписники» — порожні акаунти: вони не читають, тож ERR падає, а платформа їх видаляє й знижує охоплення. Код зі SMS дає повний доступ до акаунта: справжня підтримка ніколи його не просить. Увімкніть хмарний пароль у налаштуваннях Telegram.')}
+      ${q('Що таке CTR і утримання на YouTube?', 'CTR (клікабельність) — яка частка людей, що побачили обкладинку, натиснула на відео. Його піднімають яскрава обкладинка з коротким написом і зрозумілий заголовок. Утримання — скільки відео в середньому дивляться. Його псує довгий нудний початок.')}
       ${q('Як працює час?', 'Час на телефоні йде швидше, ніж насправді. Швидкість змінюється на панелі праворуч. Вподобання й коментарі набираються поступово — особливо в перші години після публікації.')}
       ${q('Від чого залежать перегляди?', 'Від якості фото чи відео, опису, хештегів, часу публікації, теми каналу й довіри до вас. Після публікації відкрийте «Статистика допису» → «Що вплинуло на результат».')}
       ${q('Що показує батарея вгорі?', 'Заряд батареї — це ваша енергія блогера. Кожен допис забирає сили, а відпочинок (особливо вночі) їх повертає. Коли енергії мало, дописи виходять гіршими.')}
@@ -251,11 +251,11 @@ class Phone {
 
   /* ═════════ «Браузер» для посилань із повідомлень ═════════ */
   a_web(a) {
-    if (a.page === 'phish') return `<div class="web"><div class="web-bar"><button class="ib" data-act="ph.webClose" aria-label="Закрити">${icon('close', 22)}</button><span class="url">${icon('lock', 13)}likeer-help.com/verify</span></div>
-      <div class="scroll pad web-body"><div class="center">${logo(64)}<h2>Lajker</h2><p class="muted">Підтвердження облікового запису</p></div>
+    if (a.page === 'phish') return `<div class="web"><div class="web-bar"><button class="ib" data-act="ph.webClose" aria-label="Закрити">${icon('close', 22)}</button><span class="url">${icon('lock', 13)}instagram-help-center.com/verify</span></div>
+      <div class="scroll pad web-body"><div class="center">${logo(64)}<h2>Instagram</h2><p class="muted">Підтвердження облікового запису</p></div>
       <p class="warnbox plain">Ваш профіль буде видалено через <b>23:59:41</b>. Підтвердіть пароль, щоб скасувати видалення.</p>
       <label class="fl"><span>Ім’я користувача</span><input class="in" value="${esc(sim.s.me?.nick || '')}" disabled></label><label class="fl"><span>Пароль</span><input class="in" type="password" data-keep="ph-pass" autocomplete="off"></label>
-      <button class="btn primary big" data-act="ph.phishGo">Підтвердити</button><p class="muted sm center">© 2024 Lajker Inc.</p></div></div>`;
+      <button class="btn primary big" data-act="ph.phishGo">Підтвердити</button><p class="muted sm center">© 2024 Instagram from Meta</p></div></div>`;
     return `<div class="web"><div class="web-bar"><button class="ib" data-act="ph.webClose" aria-label="Закрити">${icon('close', 22)}</button><span class="url">${icon('lock', 13)}murko-pryz.online/oplata</span></div>
       <div class="scroll pad web-body"><h2>Вітаємо з перемогою!</h2><div class="prize">${icon('phone', 54)}<b>Смартфон «Галактика»</b><small>Залишилось 2 призи</small></div><p>Оплатіть лише доставку — <b>99 грн</b>.</p>
       <label class="fl"><span>Номер картки</span><input class="in" data-keep="card" inputmode="numeric" maxlength="19" placeholder="0000 0000 0000 0000"></label><div class="row2"><label class="fl"><span>Термін</span><input class="in" placeholder="ММ/РР" maxlength="5"></label><label class="fl"><span>CVV</span><input class="in" type="password" maxlength="3" placeholder="•••"></label></div>
@@ -436,14 +436,14 @@ sim.on(w => {
     const loud = ['dm', 'star', 'trophy', 'alert', 'shield', 'comment', 'moon', 'battery'].includes(n.icon);
     if (loud && now - lastBanner > 3500 && !(phone.app === 'likeer' && phone.apps.likeer.top.v === 'activity')) {
       lastBanner = now;
-      banner(`${logo(22)}<span><b>Лайкер</b>${esc(n.text.slice(0, 90))}</span>`, () => { phone.open('likeer'); phone.apps.likeer.act('notif', { dataset: { id: n.id } }); });
+      banner(`${logo(22)}<span><b>Instagram</b>${esc(n.text.slice(0, 90))}</span>`, () => { phone.open('likeer'); phone.apps.likeer.act('notif', { dataset: { id: n.id } }); });
     }
   }
   if (w === 'tnotif') {
     const n = sim.s.tube.notifs[0], now = performance.now();
     if (n && ['comment', 'star', 'trophy'].includes(n.icon) && now - lastBanner > 3500 && phone.app !== 'tube') {
       lastBanner = now;
-      banner(`${tubeLogo(22)}<span><b>Хвиля</b>${esc(n.text.slice(0, 90))}</span>`, () => { phone.open('tube'); phone.apps.tube.act('notif', { dataset: { id: n.id } }); });
+      banner(`${tubeLogo(22)}<span><b>YouTube</b>${esc(n.text.slice(0, 90))}</span>`, () => { phone.open('tube'); phone.apps.tube.act('notif', { dataset: { id: n.id } }); });
     }
   }
   if (w.startsWith('tgmsg:')) {

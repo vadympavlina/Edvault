@@ -1,4 +1,4 @@
-// Симулятор блогера · соцмережа «Лайкер»: реєстрація, стрічка, тренди, профіль, допис, коментарі, Директ, аналітика, налаштування.
+// Симулятор блогера · соцмережа Instagram: реєстрація, стрічка, тренди, профіль, допис, коментарі, Директ, аналітика, налаштування.
 import { icon } from './icons.js';
 import { photo, video, avatar } from './art.js';
 import { esc, rich, sheet, actions, confirm, toast, sw } from './ui.js';
@@ -78,7 +78,7 @@ export class Likeer {
 
   /* ═════════ Реєстрація ═════════ */
   v_welcome() {
-    return `<div class="welcome"><div class="wl-logo">${logo(64)}</div><h1>Лайкер</h1><p>Діліться фото й відео, знаходьте своїх людей і розвивайте свій канал.</p>
+    return `<div class="welcome"><div class="wl-logo">${logo(64)}</div><h1 class="lk-word">Instagram</h1><p>Діліться фото й відео, знаходьте своїх людей і розвивайте свій канал.</p>
       <button class="btn primary big" data-act="lk.signup">Створити профіль</button><p class="wl-note">Це навчальна соцмережа: усі підписники, коментарі й повідомлення вигадані. Справжні люди вас не побачать.</p></div>`;
   }
   v_signup() {
@@ -98,7 +98,7 @@ export class Likeer {
       <p class="lbl">Значок</p><div class="sw-row">${AV_SYMBOLS.map(k => `<button class="sym${r.sym === k ? ' on' : ''}" data-act="lk.regSym" data-k="${k}" aria-label="${k === 'letter' ? 'Літера' : 'Значок'}">${k === 'letter' ? `<b>${esc((r.nick || 'Я')[0].toUpperCase())}</b>` : icon(k, 22)}</button>`).join('')}</div>`}`;
     else body = `<h2>Пароль і безпека</h2><p class="muted">Надійний пароль довгий і не схожий на ім’я користувача. Нікому його не повідомляйте.</p>
       <label class="fl"><span>Пароль</span><input class="in" type="password" data-keep="pass" data-in="reg.pass" value="${esc(r.pass)}" maxlength="40" autocomplete="new-password"></label><div data-pm>${passMeter(r.pass, r.nick)}</div>
-      <div class="opt"><div><b>Двофакторний вхід</b><small>Під час входу з нового пристрою Лайкер попросить ще й код із пошти. Навіть якщо хтось дізнається пароль, увійти не зможе.</small></div>${sw('reg.twoFA', r.twoFA, 'Двофакторний вхід')}</div>
+      <div class="opt"><div><b>Двофакторний вхід</b><small>Під час входу з нового пристрою Instagram попросить ще й код із пошти. Навіть якщо хтось дізнається пароль, увійти не зможе.</small></div>${sw('reg.twoFA', r.twoFA, 'Двофакторний вхід')}</div>
       <div class="opt"><div><b>Закритий профіль</b><small>Дописи бачать лише ті, кого ви підтвердили. Безпечніше, але нові люди рідше знаходять вас.</small></div>${sw('reg.priv', r.priv, 'Закритий профіль')}</div>`;
     const ok = st === 0 ? !nickErr(r.nick) : st === 1 ? !!r.niche : st === 3 ? passScore(r.pass, r.nick) >= 2 : true;
     return `${this.head('Новий профіль', '', true)}<div class="scroll pad" data-scroll="su">${bar}${body}</div>
@@ -134,7 +134,7 @@ export class Likeer {
         <p class="pl"><b>${num(f.likes)}</b> ${plural(f.likes, 'вподобання', 'вподобання', 'вподобань')}</p><p class="pc"><b>${c ? esc(c.nick) : 'olivets.official'}</b> ${rich(f.caption)}</p>${f.ad ? '' : `<p class="pmore">Переглянути всі коментарі (${f.comments})</p>`}</article>`;
     };
     const own = mine.map(p => `<article class="post own" data-act="lk.post" data-id="${p.id}"><header class="ph">${avatar(this.meAv(), 34)}<div><b>${esc(s.me.nick)}</b><small>${ago(s.t, p.t)} · ваш допис</small></div></header><div class="pm-media">${media(this.sim, p, { carousel: true })}</div><div class="pa"><button class="ib${p.liked ? ' liked' : ''}" data-act="lk.likePost" data-id="${p.id}" aria-label="Вподобати" aria-pressed="${!!p.liked}">${icon('heart', 23, p.liked)}</button><b>${num(p.stats.likes)}</b><button class="ib" data-act="lk.go" data-v="comments" data-id="${p.id}" aria-label="Коментарі">${icon('comment', 22)}</button><b>${num(p.stats.comments)}</b><span class="grow"></span><span class="muted sm">${num(p.stats.views)} переглядів</span></div></article>`).join('');
-    return `<header class="ah main">${logo(28)}<b class="brand">Лайкер</b><span class="grow"></span><button class="ib" data-act="lk.go" data-v="dms" aria-label="Повідомлення">${icon('send', 24)}${dmN ? `<i class="dot">${dmN}</i>` : ''}</button></header>
+    return `<header class="ah main">${logo(28)}<b class="brand lk-word">Instagram</b><span class="grow"></span><button class="ib" data-act="lk.go" data-v="dms" aria-label="Повідомлення">${icon('send', 24)}${dmN ? `<i class="dot">${dmN}</i>` : ''}</button></header>
       <div class="scroll" data-scroll="feed">${stories}${own}${s.feed.map(card).join('')}<p class="end">${icon('check', 18)}Ви переглянули всі нові дописи</p></div>`;
   }
 
@@ -204,7 +204,7 @@ export class Likeer {
       <label class="fl"><span>Ім’я</span><input class="in" data-keep="ep.name" data-in="ep.name" value="${esc(d.name)}" maxlength="30"></label>
       <label class="fl"><span>Опис профілю</span><textarea class="in" data-keep="ep.bio" data-in="ep.bio" maxlength="150" rows="3" placeholder="Про що ваш канал? Наприклад: «Малюю щодня й ділюся порадами»">${esc(d.bio)}</textarea></label>
       <p class="hint">${icon('info', 16)}<span>Не пишіть в описі школу, клас, адресу чи номер телефону.</span></p>
-      <label class="fl"><span>Посилання</span><input class="in" data-keep="ep.link" data-in="ep.link" value="${esc(d.link)}" maxlength="60" placeholder="Наприклад, на ваш канал у Лелеці" autocapitalize="off" spellcheck="false"></label>
+      <label class="fl"><span>Посилання</span><input class="in" data-keep="ep.link" data-in="ep.link" value="${esc(d.link)}" maxlength="60" placeholder="Наприклад, на ваш канал в Telegram" autocapitalize="off" spellcheck="false"></label>
       ${this.chLink() && !chLinkIn(this.s.tg.ch, d.link) ? `<button class="ep-share" data-act="lk.epTg">${icon('megaphone', 16)}Вставити посилання на канал «${esc(this.s.tg.ch.title)}»</button>` : ''}
       ${!this.s.tg?.ch?.pub && this.s.tg?.ch && chLinkIn(this.s.tg.ch, d.link) ? `<p class="warnbox">${icon('alert', 16)}<span>Це запрошення в приватний канал. У відкритому профілі його побачить будь-хто — і зможе підписатися.</span></p>` : ''}
       <p class="lbl">Тема каналу</p><div class="niches sm">${Object.entries(NICHES).map(([k, n]) => `<button class="niche${d.niche === k ? ' on' : ''}" data-act="lk.epNiche" data-k="${k}">${icon(n.icon, 20)}<span>${n.t}</span></button>`).join('')}</div></div>`;
@@ -334,7 +334,7 @@ export class Likeer {
       <h3>${icon('shield', 18)}Безпека</h3>${row('set.twoFA', 'Двофакторний вхід', 'Під час входу з нового пристрою потрібен ще й код', st.twoFA)}
       <button class="opt link" data-act="lk.go" data-v="password"><div><b>Пароль</b><small>Змінити пароль профілю</small></div>${icon('chevron', 18)}</button>
       <button class="opt link" data-act="lk.go" data-v="sessions"><div><b>Де ви ввійшли</b><small>${st.sessions.length} ${plural(st.sessions.length, 'пристрій', 'пристрої', 'пристроїв')}${st.sessions.some(x => x.bad) ? ' · є незнайомий!' : ''}</small></div>${icon('chevron', 18)}</button>
-      <h3>${icon('clock', 18)}Час у Лайкері</h3>${this.screenTime()}
+      <h3>${icon('clock', 18)}Час в Instagram</h3>${this.screenTime()}
       <label class="opt"><div><b>Нагадувати про перерву</b><small>Сповіщення, коли за день набереться стільки часу</small></div><select class="in sel" data-sel="breakAt" aria-label="Нагадувати про перерву">${[[0, 'Ніколи'], [30, 'Через 30 хв'], [60, 'Через 1 год'], [90, 'Через 1,5 год'], [120, 'Через 2 год']].map(([v, l]) => `<option value="${v}"${this.s.breakAt === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
       <h3>${icon('camera', 18)}Камера</h3>${row('set.geotag', 'Зберігати місце у фото', 'Телефон записує у фото, де його зроблено. Хто отримає фото, зможе дізнатися місце', st.geotag)}
       <h3>${icon('user', 18)}Профіль</h3><button class="opt link" data-act="lk.go" data-v="editProfile"><div><b>Редагувати профіль</b><small>Ім’я, опис, фото, тема каналу</small></div>${icon('chevron', 18)}</button>
@@ -584,4 +584,4 @@ export class Likeer {
 
 const adName = id => ({ olivets: 'Канцелярія «Олівець»', murchyk: 'Корм «Мурчик»', kolos: 'Пекарня «Колосок»', start: 'Спортшкола «Старт»', klik: 'Ігровий клуб «Клік»', fortuna: 'Ставки «Фортуна»', chai: 'Чай «Стрункість»' })[id] || id;
 const meter = (t, v, ic, tip) => { v = Math.round(v); const c = v >= 60 ? 'ok' : v >= 30 ? 'mid' : 'low'; return `<div class="meter ${c}" title="${esc(tip)}">${icon(ic, 16)}<span>${t}</span><i><b style="width:${v}%"></b></i><small>${v}</small></div>`; };
-export const logo = (s = 28) => `<svg class="logo" width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="lg${s}" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ff7a45"/><stop offset=".5" stop-color="#e1306c"/><stop offset="1" stop-color="#8a3ffc"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="13" fill="url(#lg${s})"/><path d="M24 35s-10-6.2-13-12.6A7 7 0 0 1 24 15.5a7 7 0 0 1 13 6.9C34 28.8 24 35 24 35z" fill="#fff"/></svg>`;
+export const logo = (s = 28) => `<svg class="logo" width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><defs><radialGradient id="ig${s}" cx=".3" cy="1.07" r="1.2"><stop offset="0" stop-color="#fdd96f"/><stop offset=".12" stop-color="#fdc75e"/><stop offset=".4" stop-color="#f6602c"/><stop offset=".62" stop-color="#d82b7d"/><stop offset=".85" stop-color="#9433b8"/><stop offset="1" stop-color="#5c4bd6"/></radialGradient></defs><rect x="2" y="2" width="44" height="44" rx="13" fill="url(#ig${s})"/><rect x="12.5" y="12.5" width="23" height="23" rx="7" fill="none" stroke="#fff" stroke-width="3"/><circle cx="24" cy="24" r="5.6" fill="none" stroke="#fff" stroke-width="3"/><circle cx="30.6" cy="17.4" r="1.8" fill="#fff"/></svg>`;

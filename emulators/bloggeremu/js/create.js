@@ -108,7 +108,7 @@ export function renderCreate(lk, top) {
       <div class="film">${frames}</div>
       <label class="rng"><span>Початок: ${sec(d.start)}</span><input type="range" min="0" max="${Math.max(0, c.dur - 3)}" step="${step}" value="${d.start}" data-rng="start" aria-label="Початок відео"></label>
       <label class="rng"><span>Кінець: ${sec(end)}</span><input type="range" min="3" max="${c.dur}" step="${step}" value="${end}" data-rng="end" aria-label="Кінець відео"></label>
-      ${over ? `<p class="warnbox plain">${icon('alert', 16)}Лайкер приймає відео до ${LK_MAX} с. Пересуньте початок або кінець.</p>` : ''}
+      ${over ? `<p class="warnbox plain">${icon('alert', 16)}Instagram приймає відео до ${LK_MAX} с. Пересуньте початок або кінець.</p>` : ''}
       ${d.own && c.intro >= 1 ? `<p class="hint">${icon('info', 16)}<span>Перші ≈${Math.round(c.intro)} с у цьому відео майже нічого не рухається (позначено на стрічці штрихуванням).</span></p>` : ''}
       <p class="muted sm">Підказка: перегляньте відео й подумайте, з якої секунди починається найцікавіше. Перші 3 секунди вирішують, чи гортатиме глядач далі.</p>
       <label class="fl"><span>Заголовок на відео</span><input class="in" data-keep="cr.vtitle" data-in="cr.vtitle" value="${esc(d.title)}" maxlength="24" placeholder="Наприклад: «Кіт проти лазера»"></label>

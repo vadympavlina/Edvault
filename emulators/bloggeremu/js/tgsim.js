@@ -1,12 +1,12 @@
-// Симулятор блогера · месенджер «Лелека»: готовий акаунт із чатами, власний канал (публічний або приватний),
+// Симулятор блогера · месенджер Telegram: готовий акаунт із чатами, власний канал (публічний або приватний),
 // охоплення дописів, реакції й пересилання, статистика та навчальні ситуації (взаємопіар, накрутка, «підтримка»-шахраї).
 import { CREATORS, nicheOf, AV_COLORS, BRANDS } from './data.js';
 import { intents, voice } from './talk.js';
 import { ACTIVITY, DAY, hourOf, dayOf, clock, lc } from './sim.js';
 
-export const TG_HOST = 'leleka.me/';
+export const TG_HOST = 't.me/';
 export const REACTS = [['heart', '#e53935'], ['fire', '#f4511e'], ['thumbUp', '#1e88e5'], ['smile', '#f9a825']];
-const TAKEN = ['news', 'kyiv_news', 'memes', 'cats', 'kotyky', 'music', 'games', 'leleka', 'support', 'admin', 'official', 'ukraine'];
+const TAKEN = ['news', 'kyiv_news', 'memes', 'cats', 'kotyky', 'music', 'games', 'telegram', 'support', 'admin', 'official', 'ukraine'];
 const ONLINE = { mom: [7, 22], dad: [7, 23], olia: [8, 23], marko: [9, 24], babusia: [8, 21] };
 
 // Перевірка посилання публічного каналу: латиниця, цифри, «_», 5–32 символи
@@ -28,12 +28,12 @@ export function newTg(sim) {
     { id: 'saved', kind: 'saved', title: 'Збережене', msgs: [m('me', 'Ідеї: показати, як Мурчик ловить сонячного зайчика', 3000)], unread: 0, pin: true },
     { id: 'mom', kind: 'user', title: 'Мама', color: '#ad1457', fem: true, msgs: [m('mom', 'Не забудь пообідати, суп у холодильнику', 260), m('me', 'Добре :)', 250, { seen: true }), m('mom', 'Буду о сьомій', 120)], unread: 1, pin: true },
     { id: 'class', kind: 'group', title: '7-А клас', color: '#00838f', sym: 'users', members: 28, msgs: [m('Настя', 'Хто знає, що задали з математики?', 300), m('Тарас', '№ 214 і 215', 290), m('Віка', 'Дякую!', 288), m('Денис', 'Завтра контрольна з історії, не забудьте', 95)], unread: 3 },
-    { id: 'olia', kind: 'user', title: 'Оля', color: '#6a1b9a', fem: true, msgs: [m('olia', 'Бачила твій допис у Лайкері, класний кіт!', 1500), m('me', 'Дякую! Це Мурчик', 1490, { seen: true })], unread: 0 },
+    { id: 'olia', kind: 'user', title: 'Оля', color: '#6a1b9a', fem: true, msgs: [m('olia', 'Бачила твій допис в Instagram, класний кіт!', 1500), m('me', 'Дякую! Це Мурчик', 1490, { seen: true })], unread: 0 },
     { id: 'chan_c1', kind: 'feed', title: murko.name, color: murko.color, sym: 'paw', subs: 3240, msgs: [
       m('chan', 'Доброго ранку! Сьогодні розповім, чому коти так люблять коробки. Коротко: у коробці тепло й безпечно, а ще звідти зручно стежити за всіма', 1100, { views: 2310, react: { heart: 182, fire: 40, smile: 25 } }),
       m('chan', 'Опитування: що показати в наступному відео?', 400, { views: 1870, poll: { q: 'Що показати в наступному відео?', opts: [['Як ми купаємо кота', 412], ['Нові іграшки', 268], ['Кіт і пилосос', 590]] } }),
     ], unread: 2, muted: true },
-    { id: 'leleka', kind: 'service', title: 'Лелека', verified: true, msgs: [m('svc', 'Код для входу в Лелеку: 51 847. Нікому не повідомляйте цей код, навіть якщо хтось пише від імені Лелеки.', 4000)], unread: 0 },
+    { id: 'leleka', kind: 'service', title: 'Telegram', verified: true, msgs: [m('svc', 'Код для входу в Telegram: 51 847. Нікому не повідомляйте цей код, навіть якщо хтось пише від імені Telegram.', 4000)], unread: 0 },
     { id: 'dad', kind: 'user', title: 'Тато', color: '#283593', fem: false, msgs: [m('dad', 'Ввечері заберу тебе з гуртка', 2900)], unread: 0 },
     { id: 'babusia', kind: 'user', title: 'Бабуся', color: '#5d4037', fem: true, msgs: [m('babusia', 'Онучко, як ти? Приїжджай у неділю, спечу пиріжки', 5200)], unread: 0 },
     { id: 'marko', kind: 'user', title: 'Марко', color: '#2e7d32', fem: false, msgs: [m('marko', 'Го ввечері в гру?', 2000)], unread: 0 },
@@ -109,7 +109,7 @@ export function tgRead(sim, cid) { const c = chatOf(sim.s, cid); if (c) c.unread
 export function tgCreateChannel(sim, o) {
   const s = sim.s, t = s.t;
   const c = {
-    id: 'mych', title: o.title.trim().slice(0, 60), desc: (o.desc || '').trim().slice(0, 255), avatar: { color: o.color || '#0e7c6b', sym: o.sym || 'letter', img: o.img || '' }, topic: o.topic || 'pets',
+    id: 'mych', title: o.title.trim().slice(0, 60), desc: (o.desc || '').trim().slice(0, 255), avatar: { color: o.color || '#1f7ac4', sym: o.sym || 'letter', img: o.img || '' }, topic: o.topic || 'pets',
     pub: !!o.pub, link: o.pub ? o.link : '', invite: '+' + Math.abs((s.rs * 7919 + t) % 0xffffff).toString(36).padStart(5, 'k') + 'Qx', created: t,
     subs: 0, bots: 0, members: [], posts: [], daily: [], src: { invite: 0, search: 0, fwd: 0, promo: 0, add: 0, bots: 0 }, set: { sign: false, reacts: true, comments: true }, penalty: 0, fired: {},
   };
@@ -243,8 +243,8 @@ const SCRIPTS = {
     on: { ask: { say: ['Це акаунти, які просто є в списку :) Головне — гарна цифра'], opts: [['yes', 'Все одно хочу'], ['no', 'Тоді не треба']] }, yes: { say: ['Готово! Насолоджуйся популярністю'], fx: 'bots', end: true }, no: { say: ['Ок. Якщо передумаєш — пиши'], fx: 'botsNo', end: true } } },
   admin: { start: ['Слухай, зроби мене адміном у своєму каналі?', 'Я буду постити меми й фотки з класу, буде весело'], opts: [['full', 'Добре, даю всі права'], ['part', 'Краще скинь ідею мені, а опублікую я'], ['no', 'Ні, поки веду канал без помічників']],
     on: { full: { say: ['Йес! Дякую'], fx: 'adminFull', end: true }, part: { say: ['Ок, домовились. Скину ідею, як придумаю'], fx: 'adminPart', end: true }, no: { say: ['Ну ок, як хочеш'], end: true } } },
-  phish: { start: ['Служба безпеки Лелеки. На ваш канал надійшли скарги.', 'Щоб уникнути блокування, протягом 24 годин підтвердіть, що ви власник: надішліть сюди код, який зараз прийде в SMS.'], opts: [['send', 'Надіслати код'], ['ask', 'Справжня підтримка так пише?'], ['report', 'Поскаржитися й заблокувати']],
-    on: { ask: { say: ['Так, це офіційне звернення. Надішліть код, інакше канал буде видалено'], sys: 'Справжня підтримка Лелеки ніколи не просить код зі SMS і не погрожує видаленням. У справжнього службового чату є синя позначка.', opts: [['send', 'Надіслати код'], ['report', 'Поскаржитися й заблокувати']] }, send: { fx: 'codeLeak', end: true }, report: { fx: 'phishReport', end: true } } },
+  phish: { start: ['Служба безпеки Telegram. На ваш канал надійшли скарги.', 'Щоб уникнути блокування, протягом 24 годин підтвердіть, що ви власник: надішліть сюди код, який зараз прийде в SMS.'], opts: [['send', 'Надіслати код'], ['ask', 'Справжня підтримка так пише?'], ['report', 'Поскаржитися й заблокувати']],
+    on: { ask: { say: ['Так, це офіційне звернення. Надішліть код, інакше канал буде видалено'], sys: 'Справжня підтримка Telegram ніколи не просить код зі SMS і не погрожує видаленням. У справжнього службового чату є синя позначка.', opts: [['send', 'Надіслати код'], ['report', 'Поскаржитися й заблокувати']] }, send: { fx: 'codeLeak', end: true }, report: { fx: 'phishReport', end: true } } },
   brand: { start: ['Добрий день! Ми — {brand}. Бачимо, у вас живий канал про {topic}.', 'Пропонуємо рекламний допис про {item}. Оплата — {pay} грн. Цікаво?'], opts: [['terms', 'Які умови?'], ['yes', 'Так, цікаво'], ['money', 'А можна більше?'], ['no', 'Ні, дякую']],
     on: { terms: { say: ['Один допис у вашому каналі, текст пишете самі, своїми словами. Допис має бути позначений як реклама й провисіти щонайменше добу. Оплата — після публікації.'], opts: [['yes', 'Добре, беру'], ['money', 'А можна більше?'], ['no', 'Ні, дякую']] },
       money: { say: ['Можемо {pay2} грн — це наша найкраща ціна для каналу такого розміру'], fx: 'brandHaggle', opts: [['yes', 'Домовились'], ['no', 'Ні, дякую']] },
@@ -287,7 +287,7 @@ function codeLeak(sim, cid) {
   s.tg.flags.hacked = s.t; s.trust = Math.max(0, s.trust - 6);
   s.tg.set.sessions.push({ id: 'evil', dev: 'Windows · браузер', city: 'Невідоме місто', now: false, evil: true });
   tgPush(sim, 'leleka', 'svc', 'Новий вхід у ваш акаунт: Windows, браузер, невідоме місто. Якщо це не ви — відкрийте Налаштування → Активні сеанси й завершіть чужий сеанс.');
-  if (c) { tgPost(sim, { text: 'РОЗІГРАШ! Перші 100 отримають телефон. Переходь за посиланням і вводь дані картки: priz-leleka.online', by: 'evil', spam: true }); tgPost(sim, { text: 'Встигни забрати приз! priz-leleka.online', by: 'evil', spam: true }); }
+  if (c) { tgPost(sim, { text: 'РОЗІГРАШ! Перші 100 отримають телефон. Переходь за посиланням і вводь дані картки: priz-telegram.online', by: 'evil', spam: true }); tgPost(sim, { text: 'Встигни забрати приз! priz-telegram.online', by: 'evil', spam: true }); }
   sysTip(sim, cid, 'Ви надіслали код для входу шахраям. Вони увійшли у ваш акаунт і вже публікують спам у каналі. Терміново завершіть чужий сеанс у Налаштуваннях і ввімкніть хмарний пароль.');
   sim.emit('tg');
 }
@@ -388,7 +388,7 @@ function grow(sim, c, p) {
   const rt = want('react'), have = Object.values(p.react).reduce((a, x) => a + x, 0);
   for (let i = have; i < rt; i++) { const k = sim.r.next() < 0.45 ? 'heart' : sim.r.next() < 0.5 ? 'fire' : sim.r.next() < 0.6 ? 'thumbUp' : 'smile'; p.react[k] = (p.react[k] || 0) + 1; }
   if (p.poll) { const v = want('votes'), cur = p.poll.opts.reduce((a, o) => a + o[1], 0) - (p.poll.my !== null ? 1 : 0); for (let i = cur; i < v; i++) { const w = p.poll.opts.map((_, j) => 1 + ((j * 7 + p.id.length) % 3)); let k = sim.r.next() * w.reduce((a, x) => a + x, 0), j = 0; while ((k -= w[j]) > 0 && j < w.length - 1) j++; p.poll.opts[j][1]++; } }
-  if (P.lk) { const k = want('lk') - (st.lk || 0); if (k > 0) { st.lk = (st.lk || 0) + k; sim.s.followers += k; if (!sim.s.tg.flags.toLk) { sim.s.tg.flags.toLk = true; sim.notify('users', `Читачі каналу «${c.title}» підписуються на вас у Лайкері`); } } }
+  if (P.lk) { const k = want('lk') - (st.lk || 0); if (k > 0) { st.lk = (st.lk || 0) + k; sim.s.followers += k; if (!sim.s.tg.flags.toLk) { sim.s.tg.flags.toLk = true; sim.notify('users', `Читачі каналу «${c.title}» підписуються на вас в Instagram`); } } }
   const j = want('joined') - st.joined; if (j > 0) { st.joined += j; c.subs += j; c.src[c.pub && sim.r.chance(0.3) ? 'search' : 'fwd'] += j; rec.joined += j; }
   const l = want('left') - st.left; if (l > 0) { const n = Math.min(l, realSubs(c)); st.left += n; c.subs -= n; rec.left += n; }
   if (want('comments') > p.comments.length + (p.fired.cm || 0) || (P.night && !p.fired.night && st.views > 2) || ((p.ad === 'casino' || p.ad === 'bad' || (p.ad === 'brand' && (!p.adMark || p.plan.tooMany)) || p.spam || p.by === 'marko') && !p.comments.length && st.views > 3)) maybeComment(sim, p);
@@ -419,8 +419,8 @@ function hourly(sim, c) {
   ev('ev_boost', posts.length >= 2 && days > 0.6 && r.chance(0.3), () => { const x = openChat(sim, 'boost', { title: 'Накрутка PRO', color: '#37474f', sym: 'fire' }); x.script = 'boost'; runNode(sim, x, 'start'); }) ||
   ev('ev_casino', posts.length >= 3 && days > 1 && r.chance(0.3), () => { const x = openChat(sim, 'casino', { title: 'Олег | Швидкі гроші', color: '#b23c17', sym: 'money' }); x.script = 'casino'; runNode(sim, x, 'start'); }) ||
   ev('ev_phish', posts.length >= 3 && days > 1.5 && r.chance(0.3), () => {
-    const x = openChat(sim, 'phish', { title: 'Lelekа Support', color: '#1565c0', sym: 'shield' }); x.script = 'phish'; runNode(sim, x, 'start');
-    tgPush(sim, 'leleka', 'svc', 'Код для входу в Лелеку: 73 914. Нікому не повідомляйте цей код, навіть якщо хтось пише від імені Лелеки.');
+    const x = openChat(sim, 'phish', { title: 'Telegrаm Support', color: '#1565c0', sym: 'shield' }); x.script = 'phish'; runNode(sim, x, 'start');
+    tgPush(sim, 'leleka', 'svc', 'Код для входу в Telegram: 73 914. Нікому не повідомляйте цей код, навіть якщо хтось пише від імені Telegram.');
   }) ||
   ev('ev_brand', posts.length >= 3 && realSubs(c) >= 10 && days > 1.2 && r.chance(0.35), () => brandOffer(sim, c, false)) ||
   ev('ev_brand2', f.brandGood && s.t - f.brandGood > 2 * DAY && r.chance(0.3), () => brandOffer(sim, c, false, 1.3)) ||
@@ -459,10 +459,10 @@ function cross(sim, c) {
     for (let i = 0; i < n; i++) TG_LATER.join(sim, src);
     if (n > 0) { changed = true; if (!f['first_' + src]) { f['first_' + src] = true; tgPush(sim, 'mych', 'sys', `Перші читачі прийшли ${label} — за посиланням на канал`); } }
   };
-  step('lkSeen', lkViews, s.me && chLinkIn(c, `${s.me.link || ''} ${s.me.bio || ''}`), 0.012 * (s.me?.niche === c.topic ? 1 : 0.6), 'likeer', 'з Лайкера');
-  step('tbSeen', tbViews, s.tube && chLinkIn(c, s.tube.desc), 0.01, 'tube', 'з Хвилі');
+  step('lkSeen', lkViews, s.me && chLinkIn(c, `${s.me.link || ''} ${s.me.bio || ''}`), 0.012 * (s.me?.niche === c.topic ? 1 : 0.6), 'likeer', 'з Instagram');
+  step('tbSeen', tbViews, s.tube && chLinkIn(c, s.tube.desc), 0.01, 'tube', 'з YouTube');
   // посилання на приватний канал у відкритому профілі
-  if (!c.pub && !f.privLeak && s.me && String(`${s.me.link} ${s.me.bio}`).includes(TG_HOST + c.invite) && !s.settings.priv) { f.privLeak = true; tgPush(sim, 'mych', 'sys', 'Посилання-запрошення приватного каналу тепер у відкритому профілі Лайкера — підписатися може будь-хто. Якщо канал для своїх, приберіть посилання або зробіть канал публічним.'); changed = true; }
+  if (!c.pub && !f.privLeak && s.me && String(`${s.me.link} ${s.me.bio}`).includes(TG_HOST + c.invite) && !s.settings.priv) { f.privLeak = true; tgPush(sim, 'mych', 'sys', 'Посилання-запрошення приватного каналу тепер у відкритому профілі Instagram — підписатися може будь-хто. Якщо канал для своїх, приберіть посилання або зробіть канал публічним.'); changed = true; }
   return changed;
 }
 // клас живе своїм життям

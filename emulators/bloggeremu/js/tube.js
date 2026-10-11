@@ -1,4 +1,4 @@
-// Симулятор блогера · відеоплатформа «Хвиля»: канал і його оформлення, завантаження відео з обкладинкою,
+// Симулятор блогера · відеоплатформа YouTube: канал і його оформлення, завантаження відео з обкладинкою,
 // головна з відео інших авторів, Творча студія з аналітикою (покази, CTR, утримання глядачів).
 import { icon } from './icons.js';
 import { photo, video, avatar } from './art.js';
@@ -12,7 +12,7 @@ import { brandScore, createChannel, updateChannel, tubeUpload, tubeDelete, tubeE
 import { nickErr } from './likeer.js';
 import { snap } from './create.js';
 
-export const tubeLogo = (s = 28) => `<svg class="logo" width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><rect x="2" y="6" width="44" height="36" rx="11" fill="#e62117"/><path d="M19 15.5v17l14-8.5z" fill="#fff"/><path d="M6 37c5-3 9-3 14 0s9 3 14 0 8-3 10-2" stroke="#ffb3ad" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`;
+export const tubeLogo = (s = 28) => `<svg class="logo" width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><rect x="2" y="9" width="44" height="30" rx="9" fill="#ff0000"/><path d="M19.5 16.5v15l13-7.5z" fill="#fff"/></svg>`;
 const FOLLOW = [['Дякую, що дивишся!', 'kind'], ['Нема за що :)', 'kind'], ['Ок', 'neutral']];
 const BANNERS = ['#3949ab', '#00897b', '#d81b60', '#5e35b1', '#ef6c00', '#37474f'];
 const VIS = [['public', 'Відкритий', 'Бачать усі'], ['unlisted', 'За посиланням', 'Лише ті, кому ви надіслали посилання'], ['private', 'Приватний', 'Лише ви']];
@@ -44,7 +44,7 @@ export class Tube {
 
   /* ═════════ Початок ═════════ */
   v_welcome() {
-    return `<div class="welcome tb-wel"><div class="wl-logo">${tubeLogo(72)}</div><h1>Хвиля</h1><p>Відеоплатформа для довгих відео й коротких роликів. Створіть канал, оформіть його й завантажте своє відео — і подивіться, як на нього відреагують глядачі.</p>
+    return `<div class="welcome tb-wel"><div class="wl-logo">${tubeLogo(72)}</div><h1>YouTube</h1><p>Відеоплатформа для довгих відео й коротких роликів. Створіть канал, оформіть його й завантажте своє відео — і подивіться, як на нього відреагують глядачі.</p>
       <button class="btn red big" data-act="tb.start">Створити канал</button><p class="wl-note">Навчальна платформа: глядачі й коментарі вигадані. Ваші файли зберігаються лише в цьому браузері.</p></div>`;
   }
   v_create(a) {
@@ -65,12 +65,12 @@ export class Tube {
     const mine = ch.videos.filter(v => v.t && v.vis === 'public' && s.t - v.t < 2 * DAY && (f === 'all' || v.topic === f)).slice(0, 2);
     const shorts = feed.filter(x => x.short).slice(0, 6), long = feed.filter(x => !x.short);
     const card = x => { const c = CREATORS.find(y => y.id === x.cid); return `<button class="tv-card" data-act="tb.watch" data-id="${x.id}"><span class="tv-th">${photo({ scene: CLIPS[x.clip].scene, v: (x.views % 97) / 1000 })}<i class="tv-dur">${fmtDur(x.dur)}</i></span><span class="tv-meta">${avatar({ name: c.name, color: c.color, sym: nicheOf(c.niche).icon }, 34)}<span><b>${esc(x.title)}</b><small>${esc(c.name)} · ${num(x.views)} ${plural(x.views, 'перегляд', 'перегляди', 'переглядів')} · ${x.ago} ${plural(x.ago, 'день', 'дні', 'днів')} тому</small></span></span></button>`; };
-    return `<header class="ah main">${tubeLogo(30)}<b class="brand tb-brand">Хвиля</b><span class="grow"></span><button class="ib" data-act="tb.tab" data-v="notifs" aria-label="Сповіщення">${icon('bell', 23)}${ch.unread ? `<i class="dot">${ch.unread > 99 ? '99+' : ch.unread}</i>` : ''}</button></header>
+    return `<header class="ah main">${tubeLogo(30)}<b class="brand tb-brand">YouTube</b><span class="grow"></span><button class="ib" data-act="tb.tab" data-v="notifs" aria-label="Сповіщення">${icon('bell', 23)}${ch.unread ? `<i class="dot">${ch.unread > 99 ? '99+' : ch.unread}</i>` : ''}</button></header>
       <div class="chips-row" role="tablist" aria-label="Теми">${[['all', 'Усе'], ...Object.entries(NICHES).map(([k, n]) => [k, n.t])].map(([k, t]) => `<button role="tab" class="chip-t${f === k ? ' on' : ''}" aria-selected="${f === k}" data-act="tb.feedF" data-f="${k}">${t}</button>`).join('')}</div>
       <div class="scroll" data-scroll="tbhome">
       ${mine.map(v => `<button class="tv-card mine" data-act="tb.video" data-id="${v.id}"><span class="tv-th${v.shorts ? ' sh' : ''}">${this.thumbHtml(v)}</span><span class="tv-meta">${this.chAv(34)}<span><b>${esc(v.title)}</b><small>Ваше відео · ${num(v.stats.views)} ${plural(v.stats.views, 'перегляд', 'перегляди', 'переглядів')} · ${ago(s.t, v.t)}</small></span></span></button>`).join('')}
       ${long.slice(0, 2).map(card).join('')}
-      ${shorts.length ? `<h3 class="tv-shelf">${icon('spark', 18)}Короткі відео</h3><div class="shorts">${shorts.map(x => `<button class="sh-card" data-act="tb.watch" data-id="${x.id}"><span class="sh-th">${photo({ scene: CLIPS[x.clip].scene, v: (x.views % 89) / 1000 })}</span><b>${esc(x.title)}</b><small>${num(x.views)} переглядів</small></button>`).join('')}</div>` : ''}
+      ${shorts.length ? `<h3 class="tv-shelf">${icon('spark', 18)}Shorts</h3><div class="shorts">${shorts.map(x => `<button class="sh-card" data-act="tb.watch" data-id="${x.id}"><span class="sh-th">${photo({ scene: CLIPS[x.clip].scene, v: (x.views % 89) / 1000 })}</span><b>${esc(x.title)}</b><small>${num(x.views)} переглядів</small></button>`).join('')}</div>` : ''}
       ${long.slice(2, 10).map(card).join('')}<p class="end">${icon('check', 18)}Це всі відео на сьогодні</p></div>`;
   }
   // Відео іншого автора
@@ -98,7 +98,7 @@ export class Tube {
       <div class="scroll" data-scroll="tbch">${this.bannerHtml()}<section class="ch-head">${this.chAv(72)}<div><h2>${esc(ch.name)}</h2><p class="muted sm">@${esc(ch.handle)} · ${num(ch.subs)} ${plural(ch.subs, 'підписник', 'підписники', 'підписників')} · ${vids.length} ${plural(vids.length, 'відео', 'відео', 'відео')}</p></div></section>
       ${ch.desc ? `<p class="ch-desc">${rich(ch.desc.length > 120 ? ch.desc.slice(0, 118) + '…' : ch.desc)}</p>` : `<p class="ch-desc muted">Додайте опис каналу — розкажіть, про що він.</p>`}
       <div class="pr-btns pad-x"><button class="btn" data-act="tb.go" data-v="custom">${icon('palette', 16)}Оформлення</button><button class="btn" data-act="tb.tab" data-v="studio">${icon('bars', 16)}Студія</button></div>
-      <div class="ptabs" role="tablist">${[['videos', 'Відео'], ['shorts', 'Короткі'], ['about', 'Про канал']].map(([k, t]) => `<button role="tab" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}" data-act="tb.chTab" data-t="${k}">${t}</button>`).join('')}</div>
+      <div class="ptabs" role="tablist">${[['videos', 'Відео'], ['shorts', 'Shorts'], ['about', 'Про канал']].map(([k, t]) => `<button role="tab" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}" data-act="tb.chTab" data-t="${k}">${t}</button>`).join('')}</div>
       ${tab === 'about' ? `<div class="pad"><p>${ch.desc ? rich(ch.desc) : '<span class="muted">Опису ще немає.</span>'}</p><div class="check" style="margin-top:12px"><p>${icon(nicheOf(ch.topic).icon, 18)}<span>Тема: ${esc(nicheOf(ch.topic).t)}</span></p><p>${icon('clock', 18)}<span>Канал створено: день ${dayOf(ch.created) + 1}</span></p><p>${icon('eye', 18)}<span>${num(tubeSummary(this.sim).total)} переглядів усього</span></p></div></div>`
         : list.length ? `<div class="tv-list">${list.map(row).join('')}</div>` : `<div class="empty">${icon(tab === 'shorts' ? 'spark' : 'video', 40)}<b>${tab === 'shorts' ? 'Коротких відео ще немає' : 'Відео ще немає'}</b><p>${tab === 'shorts' ? `Вертикальне відео до ${SHORTS_MAX} секунд стане коротким.` : 'Натисніть «+» унизу, щоб завантажити перше.'}</p><button class="btn red" data-act="tb.upload">${icon('upload', 16)}Завантажити відео</button></div>`}</div>`;
   }
