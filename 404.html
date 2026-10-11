@@ -30,10 +30,11 @@
   .code { font-size: 64px; font-weight: 800; letter-spacing: -.04em; line-height: 1; color: var(--accent); }
   h1 { font-size: 20px; margin: 14px 0 8px; }
   p { margin: 0 0 22px; color: var(--text2); line-height: 1.55; font-size: 14.5px; }
-  .links { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-  a { display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--border); color: var(--text); text-decoration: none; font-weight: 600; font-size: 14px; }
-  a:hover { border-color: var(--accent); color: var(--accent); }
-  a.main { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .back { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 22px; border-radius: 12px; border: 0; background: var(--accent); color: #fff; font: 600 15px 'Inter', system-ui, sans-serif; text-decoration: none; cursor: pointer; transition: filter .15s, transform .15s; }
+  :root[data-theme="dark"] .back { color: #0f1117; }
+  .back:hover { filter: brightness(1.08); }
+  .back:active { transform: translateY(1px); }
+  .back:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 </style>
 </head>
 <body>
@@ -41,7 +42,15 @@
     <div class="code">404</div>
     <h1>Такої сторінки немає</h1>
     <p>Можливо, посилання застаріло або в адресі помилка.</p>
-    <div class="links"><a class="main" href="/">На головну</a><a href="/tools/">Інструменти</a><a href="/trainers/">Тренажери</a></div>
+    <a class="back" href="/" id="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Повернутися назад</a>
   </div>
+  <script>
+    // назад — на попередню сторінку цього сайту; якщо прийшли ззовні чи відкрили напряму — на головну
+    document.getElementById('back').addEventListener('click', function (e) {
+      var ref = document.referrer, own = false;
+      try { own = !!ref && new URL(ref).origin === location.origin; } catch (err) {}
+      if (own && history.length > 1) { e.preventDefault(); history.back(); }
+    });
+  </script>
 </body>
 </html>

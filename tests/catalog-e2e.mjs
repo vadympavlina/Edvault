@@ -97,11 +97,17 @@ await step('старі адреси перенаправляються', async (
   await p.goto(server.url + '/tools-admin.html'); await p.waitForURL(/\/tools\/$/);
 });
 
-await step('невідома адреса — сторінка 404 з посиланнями', async () => {
-  const r = await p.goto(server.url + '/немає-такої');
+await step('невідома адреса — сторінка 404 лише з кнопкою «Повернутися назад»', async () => {
+  await p.goto(server.url + '/trainers/');
+  // перехід за зламаним посиланням з іншої сторінки сайту
+  const [r] = await Promise.all([p.waitForNavigation(), p.evaluate(() => { const a = document.createElement('a'); a.href = '/немає-такої'; document.body.append(a); a.click(); })]);
   assert.equal(r.status(), 404);
   assert.match(await p.textContent('h1'), /немає/);
-  assert.equal(await p.locator('a[href="/trainers/"]').count(), 1);
+  assert.equal(await p.locator('a').count(), 1);
+  assert.equal(await p.locator('a[href="/trainers/"], a[href="/tools/"]').count(), 0);
+  await p.click('#back'); await p.waitForURL(/\/trainers\/$/);
+  // відкрили напряму — кнопка веде на головну
+  const q = await ctx.newPage(); await q.goto(server.url + '/немає-такої'); await q.click('#back'); await q.waitForURL(server.url + '/'); await q.close();
 });
 
 await step('жодної помилки в консолі сторінки', async () => assert.deepEqual(errors, []));
