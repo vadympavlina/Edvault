@@ -9,6 +9,9 @@ import { checks, fmtDur } from './quality.js';
 import { fileBtn, galTitle, thumb, topicOptions } from './gal.js';
 import { Likeer, logo, carIdx } from './likeer.js';
 import { Tube, tubeLogo } from './tube.js';
+import { adViews, adAct, adInput, adRange, adSelect } from './ads.js';
+
+Object.assign(Likeer.prototype, adViews); // «Реклама» — частина Лайкера
 import { renderCreate, createAct, createInput, createRange, createToggle, createSelect, openCreate, createImported } from './create.js';
 
 const KEY = 'edvault-blogger';
@@ -199,6 +202,7 @@ class Phone {
       <p>Це навчальний телефон із соцмережею <b>Лайкер</b> і відеоплатформою <b>Хвиля</b>. Усі люди, коментарі й повідомлення вигадані — сміливо пробуйте.</p>
       ${q('Як додати свої фото й відео?', 'Галерея → «Додати» (або «З телефону» під час створення допису). Файли зберігаються лише в цьому браузері й нікуди не надсилаються. Симулятор вимірює світло, чіткість, кольори, а у відео — чи щось відбувається з перших секунд, і на основі цього «глядачі» реагують на ваш допис.')}
       ${q('Як зробити карусель?', 'Під час створення фото натисніть «Кілька» й вибирайте фото по черзі (до 10). Перше фото побачать у стрічці, тож ставте найкраще першим. Карусель довше розглядають і частіше зберігають.')}
+      ${q('Як запустити рекламу (таргет)?', 'Відкрийте свій допис → «Просувати допис» або Профіль → значок гучномовця. Майстер проведе через усі кроки: мета, аудиторія (місто, вік, інтереси), розміщення, бюджет із прогнозом ціни, перевірка правил і демо-оплата. Гроші умовні; у справжніх соцмережах рекламу запускають лише дорослі.')}
       ${q('Що таке CTR і утримання у «Хвилі»?', 'CTR (клікабельність) — яка частка людей, що побачили обкладинку, натиснула на відео. Його піднімають яскрава обкладинка з коротким написом і зрозумілий заголовок. Утримання — скільки відео в середньому дивляться. Його псує довгий нудний початок.')}
       ${q('Як працює час?', 'Час на телефоні йде швидше, ніж насправді. Швидкість змінюється на панелі праворуч. Вподобання й коментарі набираються поступово — особливо в перші години після публікації.')}
       ${q('Від чого залежать перегляди?', 'Від якості фото чи відео, опису, хештегів, часу публікації, теми каналу й довіри до вас. Після публікації відкрийте «Статистика допису» → «Що вплинуло на результат».')}
@@ -233,18 +237,21 @@ class Phone {
       else if (ns === 'cr') createAct(this.apps.likeer, name, el);
       else if (ns === 'ph') this.act(name, el);
       else if (ns === 'tb') this.apps.tube.act(name, el);
+      else if (ns === 'ad') adAct(this.apps.likeer, name, el);
       this.save();
     });
     root.addEventListener('click', e => { const t = e.target.closest('[data-sw]'); if (!t) return; const k = t.dataset.sw; if (k.startsWith('cr.')) createToggle(this.apps.likeer, k); else this.apps.likeer.toggle(k); });
     root.addEventListener('input', e => {
       const el = e.target, k = el.dataset.in;
-      if (k) { if (k.startsWith('cr.')) createInput(this.apps.likeer, k, el); else if (k.startsWith('tb.')) this.apps.tube.input(k, el); else this.apps.likeer.input(k, el); }
+      if (el.dataset.adrng) { adRange(this.apps.likeer, el.dataset.adrng, el); return; }
+      if (k) { if (k.startsWith('ad.')) adInput(this.apps.likeer, k, el); else if (k.startsWith('cr.')) createInput(this.apps.likeer, k, el); else if (k.startsWith('tb.')) this.apps.tube.input(k, el); else this.apps.likeer.input(k, el); }
     });
     root.addEventListener('change', e => {
       const el = e.target;
       if (el.dataset.rng) createRange(this.apps.likeer, el.dataset.rng, el);
       if (el.dataset.sel) this.apps.likeer.select(el.dataset.sel, el.value);
       if (el.dataset.crsel) createSelect(this.apps.likeer, el.dataset.crsel, el.value);
+      if (el.dataset.adsel) adSelect(this.apps.likeer, el.dataset.adsel, el.value);
       if (el.dataset.tbsel) this.apps.tube.select(el.dataset.tbsel, el.value);
       if (el.dataset.phsel === 'topic') { sim.setTopic(el.dataset.id, el.value); this.render(); this.save(); }
       if (el.dataset.file) { const files = [...el.files]; el.value = ''; this.importFiles(files, el.dataset.file); }

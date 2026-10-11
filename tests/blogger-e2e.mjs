@@ -297,6 +297,47 @@ await step('«Хвиля»: канал, оформлення, відео з об
   assert.equal((await S()).tube.follows.length, 1);
 });
 
+await step('реклама: налаштування таргету, ціна, модерація, результати й повернення залишку', async () => {
+  await home(); await p.click('[data-app="likeer"]');
+  await p.evaluate(() => { const lk = Blogger.phone.apps.likeer, pp = Blogger.sim.s.posts.find(x => x.carousel); lk.tab('profile'); lk.go('post', { id: pp.id }); });
+  await p.click('[data-act="ad.promote"]');
+  assert.match(await p.locator('.ad-step-t').innerText(), /Крок 2 з 6/);
+  await p.click('[data-act="ad.goal"][data-k="profile"]'); await p.click('[data-act="ad.next"]');
+  await p.click('[data-act="ad.auto"][data-v="false"]');
+  await p.selectOption('[data-adsel="city"]', 'lviv'); await p.click('[data-act="ad.int"][data-k="pets"]');
+  const before = await p.locator('.aud-top b').innerText();
+  await p.locator('[data-adrng="age0"]').fill('13');
+  assert.match(await p.locator('.warnbox').innerText(), /підлітків/);
+  assert.ok(await p.locator('[data-act="ad.int"][data-k="pets"]').isDisabled(), 'для підлітків інтереси вимкнено');
+  await p.locator('[data-adrng="age0"]').fill('18');
+  assert.equal(await p.locator('.aud-top b').innerText(), before);
+  await p.click('[data-act="ad.next"]'); await p.click('[data-act="ad.next"]');
+  await p.locator('[data-adrng="daily"]').fill('200'); await p.locator('[data-adrng="days"]').fill('3');
+  assert.match(await p.locator('.est-sum').innerText(), /720/, '200 × 3 + ПДВ 20%');
+  await p.click('[data-act="ad.next"]');
+  assert.match(await p.locator('.ad-prev').innerText(), /Реклама/);
+  await p.click('[data-act="ad.launch"]');
+  assert.match(await p.locator('.ad-st').innerText(), /перевірці/);
+  await adv(2 * 1440);
+  let ad = (await S()).ads.list[0];
+  assert.equal(ad.status, 'active'); assert.ok(ad.stats.spent > 0 && ad.stats.imps > 0);
+  assert.match(await p.locator('.tiles').innerText(), /CPM/);
+  await p.click('[data-act="ad.stop"]'); await p.click('.cf [data-v="1"]');
+  ad = (await S()).ads.list[0]; assert.equal(ad.status, 'done'); assert.ok(ad.refund > 0);
+  // фото з адресою будинку модерація не пропускає, гроші повертаються
+  await p.click('[data-act="lk.back"]'); await p.click('[data-act="ad.new"]');
+  await p.click('[data-act="ad.src"][data-k="photo"]');
+  const hid = await p.evaluate(() => Blogger.sim.s.gallery.find(g => g.scene === 'house').id);
+  await p.click(`[data-act="ad.pickPhoto"][data-id="${hid}"]`); await p.fill('[data-in="ad.caption"]', 'Підписуйтесь!');
+  for (let i = 0; i < 5; i++) await p.click('[data-act="ad.next"]');
+  assert.ok(await p.locator('[data-act="ad.launch"]').isDisabled(), 'на балансі замало грошей');
+  await p.click('.pay [data-act="ad.topup"]');
+  const bal = (await S()).ads.balance;
+  await p.click('[data-act="ad.launch"]'); await adv(120);
+  const rej = (await S()).ads.list[0];
+  assert.equal(rej.status, 'rejected'); assert.match(rej.reasons[0], /Особисті дані/); assert.equal((await S()).ads.balance, bal);
+});
+
 await step('шпалери з власного фото на головному екрані', async () => {
   await home(); await p.click('[data-app="settings"]');
   await p.click('.wall[data-k^="m"] >> nth=0');

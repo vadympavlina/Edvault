@@ -47,7 +47,7 @@ export class Likeer {
   tab(v) { this.stack = [{ v }]; if (v === 'activity') this.s.unread.notifs = 0; this.ph.render(true); }
   back() { if (this.stack.length > 1) this.stack.pop(); else this.ph.home(); this.ph.render(true); }
   // чи перемальовувати екран щосекунди (живі лічильники)
-  get live() { return ['feed', 'profile', 'post', 'stats', 'insights', 'activity', 'dms', 'thread', 'comments', 'hacked'].includes(this.top.v); }
+  get live() { return ['feed', 'profile', 'post', 'stats', 'insights', 'activity', 'dms', 'thread', 'comments', 'hacked', 'ads', 'adView'].includes(this.top.v); }
 
   render() {
     const s = this.s;
@@ -168,7 +168,7 @@ export class Likeer {
     const tab = this.top.tab || 'posts';
     const grid = list => list.length ? `<div class="grid">${list.map(p => `<button class="gi" data-act="lk.post" data-id="${p.id}" aria-label="Допис">${media(this.sim, p, { thumb: true })}${p.kind === 'video' ? `<i class="gi-ic">${icon('play', 16, true)}</i>` : ''}${p.t ? '' : `<i class="gi-time">${icon('clock', 14)}${clock(p.sched)}</i>`}</button>`).join('')}</div>` : `<div class="empty">${icon('camera', 40)}<b>${tab === 'posts' ? 'Ще немає дописів' : 'Немає запланованих дописів'}</b><p>${tab === 'posts' ? 'Натисніть «+» унизу, щоб створити перший.' : 'Під час створення допису виберіть «Запланувати».'}</p></div>`;
     const stories = s.stories.filter(x => s.t - x.t < DAY);
-    return `<header class="ah main">${s.settings.priv ? icon('lock', 16) : ''}<b class="ah-t">${esc(me.nick)}</b><span class="grow"></span><button class="ib" data-act="lk.go" data-v="insights" aria-label="Аналітика">${icon('chart', 24)}</button><button class="ib" data-act="lk.go" data-v="settings" aria-label="Налаштування">${icon('gear', 24)}</button></header>
+    return `<header class="ah main">${s.settings.priv ? icon('lock', 16) : ''}<b class="ah-t">${esc(me.nick)}</b><span class="grow"></span><button class="ib" data-act="ad.cabinet" aria-label="Реклама">${icon('megaphone', 24)}</button><button class="ib" data-act="lk.go" data-v="insights" aria-label="Аналітика">${icon('chart', 24)}</button><button class="ib" data-act="lk.go" data-v="settings" aria-label="Налаштування">${icon('gear', 24)}</button></header>
       <div class="scroll" data-scroll="prof"><section class="prof"><div class="pr-top"><button class="pr-av${stories.length ? ' ring' : ''}" data-act="lk.viewStory" aria-label="Ваші історії">${avatar(this.meAv(), 82)}</button>
         <div class="pr-n"><b>${num(posts.length)}</b><small>${plural(posts.length, 'допис', 'дописи', 'дописів')}</small></div><div class="pr-n"><b>${num(s.followers)}</b><small>${plural(s.followers, 'підписник', 'підписники', 'підписників')}</small></div><div class="pr-n"><b>${s.following.length}</b><small>стежите</small></div></div>
         <p class="pr-name">${esc(me.name || me.nick)}<span class="chip">${icon(nicheOf(me.niche).icon, 13)}${esc(nicheOf(me.niche).t)}</span></p>${me.bio ? `<p class="pr-bio">${rich(me.bio)}</p>` : '<p class="pr-bio muted">Додайте опис профілю — так людям легше зрозуміти, про що ваш канал.</p>'}
@@ -209,6 +209,7 @@ export class Likeer {
       <div class="pm-media" ${p.kind === 'video' ? 'data-act="lk.play"' : ''}>${media(this.sim, p, { play: a.play, carousel: true, sound: this.sound })}</div>
       ${sched ? '' : `<div class="pa"><span class="ib static">${icon('heart', 25)}</span><b>${num(st.likes)}</b><button class="ib" data-act="lk.go" data-v="comments" data-id="${p.id}" aria-label="Коментарі">${icon('comment', 24)}</button><b>${num(st.comments)}</b><span class="ib static">${icon('send', 23)}</span><b>${num(st.shares)}</b><span class="grow"></span><span class="ib static">${icon('bookmark', 23)}</span><b>${num(st.saves)}</b></div>`}
       ${p.caption ? `<p class="pc"><b>${esc(s.me.nick)}</b> ${rich(p.caption)}</p>` : ''}
+      ${sched || p.kind === 'text' ? '' : `<button class="promo-btn" data-act="ad.promote" data-id="${p.id}">${icon('megaphone', 17)}Просувати допис</button>`}
       ${sched ? '' : `<button class="stats-btn" data-act="lk.go" data-v="stats" data-id="${p.id}">${icon('chart', 18)}<span><b>${num(st.views)}</b> ${plural(st.views, 'перегляд', 'перегляди', 'переглядів')} · Статистика допису</span>${icon('chevron', 18)}</button>
       ${p.commentsOff ? '<p class="muted pad">Коментарі вимкнено.</p>' : p.comments.length ? `<button class="pmore" data-act="lk.go" data-v="comments" data-id="${p.id}">Переглянути всі коментарі (${st.comments})</button>${p.comments.filter(c => !c.hidden).slice(-2).map(c => `<p class="pc sm"><b>${esc(s.people[c.pid]?.nick || '')}</b> ${esc(c.text)}</p>`).join('')}` : '<p class="muted pad">Коментарів поки немає.</p>'}`}
       </article></div>`;

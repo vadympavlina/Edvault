@@ -3,6 +3,7 @@
 import { NICHES, SCENES, CLIPS, MUSIC, MOOD_FIT, FILTERS, TAGS, TRENDS, CLICKBAIT, RUDE, COMMENTS, REPLIES, BRANDS, CREATORS, makePerson, nicheOf } from './data.js';
 import { judge, vertical } from './quality.js';
 import { tubeStep } from './tubesim.js';
+import { adStep, START_BALANCE } from './adsim.js';
 
 export const DAY = 1440;
 export const START = 16 * 60; // понеділок, 16:00 — після уроків
@@ -32,7 +33,7 @@ export function newState(seed = Date.now() % 100000) {
     me: null, followers: 0, following: [], trust: 60, energy: 100, money: 0, strikes: 0, bots: 0,
     posts: [], stories: [], people: {}, fans: [], dms: [], mail: [], notifs: [], ideas: [], gallery: [], feed: [], days: [],
     settings: { geotag: true, priv: false, comments: 'all', dms: 'all', filter: false, limitNew: false, twoFA: false, sessions: [{ id: 's0', dev: 'Цей телефон', city: 'Київ', now: true }] },
-    flags: {}, heat: 0, hack: null, pendingAd: null, collab: null, unread: { notifs: 0 }, drafts: [], screen: {}, breakAt: 60, tube: null, phone: { wall: 'dawn' },
+    flags: {}, heat: 0, hack: null, pendingAd: null, collab: null, unread: { notifs: 0 }, drafts: [], screen: {}, breakAt: 60, tube: null, phone: { wall: 'dawn' }, ads: { balance: START_BALANCE, list: [] },
   };
 }
 
@@ -45,7 +46,7 @@ export class Sim {
     this.r = rng(this.s);
     this.subs = new Set();
     // старі збереження: нові поля
-    this.s.drafts ||= []; this.s.screen ||= {}; this.s.breakAt ??= 60; this.s.tube ??= null; this.s.phone ||= { wall: 'dawn' };
+    this.s.drafts ||= []; this.s.screen ||= {}; this.s.breakAt ??= 60; this.s.tube ??= null; this.s.phone ||= { wall: 'dawn' }; this.s.ads ||= { balance: START_BALANCE, list: [] };
     if (!this.s.feed.length) this.refreshFeed();
     if (!this.s.gallery.length) this.seedGallery();
   }
@@ -73,6 +74,7 @@ export class Sim {
     for (const st of s.stories) if (t - st.t < DAY) { const f = 1 - Math.exp(-(t - st.t) / 180); st.views = Math.round(st.plan * f); }
     if (Math.floor(t / 60) !== Math.floor((t - d) / 60)) ch = this.hourly() || ch;
     if (s.tube) ch = tubeStep(this, d) || ch;
+    if (s.ads?.list.length) ch = adStep(this, d, ACTIVITY[hourOf(t)] / ACT_MAX) || ch;
     if (s.queue?.length) { const n = s.queue.length; this.runQueue(); ch = ch || n !== s.queue.length; }
     return ch;
   }
