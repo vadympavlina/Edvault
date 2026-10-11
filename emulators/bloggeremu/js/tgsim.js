@@ -399,7 +399,7 @@ function grow(sim, c, p) {
 function hourly(sim, c) {
   const s = sim.s, f = s.tg.flags, r = sim.r, posts = c.posts.filter(p => p.t), age = s.t - c.created, h = hourOf(s.t);
   let changed = classChat(sim);
-  if (f.leaveAfter && age > 120) { const id = f.leaveAfter; f.leaveAfter = null; if (c.members.includes(id)) { c.members = c.members.filter(x => x !== id); c.subs--; dayRec(sim).left++; tgPush(sim, 'mych', 'sys', `${chatOf(s, id)?.title || 'Хтось'} вийшов(-ла) з каналу`); } }
+  if (f.leaveAfter && age > 120) { const id = f.leaveAfter; f.leaveAfter = null; if (c.members.includes(id)) { c.members = c.members.filter(x => x !== id); c.subs--; dayRec(sim).left++; { const who = chatOf(s, id); tgPush(sim, 'mych', 'sys', `${who?.title || 'Хтось'} ${who?.fem ? 'вийшла' : 'вийшов'} з каналу`); } } }
   // природний приплив: публічні канали знаходять у пошуку
   const fresh = posts.filter(p => s.t - p.t < 3 * DAY && !p.hidden && !p.spam).length;
   if (c.pub && fresh && r.chance(Math.min(0.4, 0.03 + 0.025 * fresh + realSubs(c) / 600) * (c.penalty > s.t ? 0.3 : 1))) { TG_LATER.join(sim, 'search'); changed = true; }
@@ -468,8 +468,9 @@ function cross(sim, c) {
 // клас живе своїм життям
 function classChat(sim) {
   const s = sim.s, r = sim.r, h = hourOf(s.t); if (h < 15 || h > 21 || !r.chance(0.07)) return false;
-  const lines = [['Настя', 'Хтось зробив англійську?'], ['Денис', 'Завтра перший урок у спортзалі'], ['Злата', 'Скиньте розклад на завтра, будь ласка'], ['Тарас', 'Хто йде на гурток з робототехніки?'], ['Віка', 'Не забудьте форму на фізкультуру']];
-  const [who, text] = r.pick(lines); tgPush(sim, 'class', who, text); return true;
+  const lines = [['Настя', 'Хтось зробив англійську?'], ['Денис', 'Завтра перший урок у спортзалі'], ['Злата', 'Скиньте розклад на завтра, будь ласка'], ['Тарас', 'Хто йде на гурток з робототехніки?'], ['Віка', 'Не забудьте форму на фізкультуру'], ['Петро', 'А що задали з української?'], ['Злата', 'Вправа 112, письмово'], ['Настя', 'Хто знає, о котрій завтра екскурсія?'], ['Денис', 'Збір о 9:00 біля школи'], ['Тарас', 'Дякую!'], ['Віка', 'Хто хоче разом готуватися до контрольної?'], ['Петро', 'Я, давай у бібліотеці після уроків']];
+  const said = new Set(chatOf(s, 'class')?.msgs.slice(-12).map(m => m.text)), fresh = lines.filter(x => !said.has(x[1])); if (!fresh.length) return false;
+  const [who, text] = r.pick(fresh); tgPush(sim, 'class', who, text); return true;
 }
 
 /* ═════════ статистика ═════════ */
@@ -478,7 +479,7 @@ export function tgStats(sim) {
   const posts = c.posts.filter(p => p.t && !p.hidden), last = posts.slice(-10), real = realSubs(c);
   const avg = last.length ? Math.round(last.reduce((a, p) => a + p.stats.views, 0) / last.length) : 0;
   const reacts = last.reduce((a, p) => a + Object.values(p.react).reduce((x, y) => x + y, 0) + p.stats.fwd, 0);
-  const err = c.subs ? avg / c.subs * 100 : 0, er = last.length && avg ? reacts / last.length / avg * 100 : 0;
+  const err = c.subs ? Math.min(100, avg / c.subs * 100) : 0, er = last.length && avg ? reacts / last.length / avg * 100 : 0;
   const byHour = Array(24).fill(0); for (let h = 0; h < 24; h++) byHour[h] = ACTIVITY[h];
   const best = byHour.indexOf(Math.max(...byHour));
   const days = c.daily.slice(-14);

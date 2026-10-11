@@ -563,7 +563,7 @@ button.pg:hover { filter: brightness(.93); }
 .pg-n { position: absolute; right: 5px; top: 5px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,.25); color: #fff; font: 700 12px/18px var(--font); font-style: normal; text-align: center; z-index: 1; }
 .pg-n.on { background: var(--accent); }
 .pg:has(.pg-n) .pg-own { right: auto; left: 4px; top: auto; bottom: 4px; }
-.pick-tip { display: flex; gap: 8px; align-items: flex-start; margin: 0 12px 8px; padding: 8px 10px; border-radius: 10px; background: #eef5ff; color: #7a1035; font-size: 12.5px; line-height: 1.4; }
+.pick-tip { display: flex; gap: 8px; align-items: flex-start; margin: 0 12px 8px; padding: 8px 10px; border-radius: 10px; background: #eef5ff; color: #0a4ea8; font-size: 12.5px; line-height: 1.4; }
 .pick-tip .ic { margin-top: 1px; }
 .slides { flex: none; display: flex; gap: 6px; padding: 8px 12px 0; overflow-x: auto; scrollbar-width: none; }
 .sl { position: relative; flex: none; width: 44px; height: 44px; border-radius: 8px; overflow: hidden; opacity: .6; transition: opacity .12s; }
@@ -884,7 +884,7 @@ button.pill:hover { background: #e8e9ec; } .pill.on { background: var(--ink); co
 
 /* ═════════ Telegram: месенджер і канал ═════════ */
 .ai.tg { background: none; box-shadow: none; padding: 0; border-radius: 16px; } .ai.tg .logo { filter: drop-shadow(0 4px 10px rgba(0,0,0,.2)); }
-.tg-app { --tg: #1f7ac4; --tg-d: #17619d; --tg-soft: #e5f1fb; --tg-me: #e2f7d4; --tg-meta: #4b5e57; }
+:root { --tg: #1f7ac4; --tg-d: #17619d; --tg-soft: #e5f1fb; --tg-me: #e2f7d4; --tg-meta: #4b5e57; }
 .tg-app .tg-title { font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
 .tg-main { gap: 4px; }
 .tg-search { position: relative; flex: none; margin: 0 14px 8px; }
@@ -1009,7 +1009,7 @@ button.pill:hover { background: #e8e9ec; } .pill.on { background: var(--ink); co
 .tg-link span { flex: none; padding: 0 2px 0 12px; color: var(--ink2); font-size: 15px; }
 .tg-link .in { border: 0; background: none; padding-left: 0; min-width: 0; }
 .tg-link:focus-within { border-color: #8a8d96; background: #fff; }
-[data-ok] { display: flex; align-items: center; gap: 4px; color: var(--ok) !important; min-height: 18px; }
+p[data-ok] { display: flex; align-items: center; gap: 4px; color: var(--ok) !important; min-height: 18px; }
 .tg-inv { padding: 12px 14px; border-radius: 12px; background: var(--soft); margin: 12px 0; } .tg-inv small { display: block; font-size: 12.5px; color: var(--ink2); } .tg-inv b { font-size: 15px; color: var(--tg-d); }
 
 /* інформація, статистика, налаштування */
@@ -1055,3 +1055,25 @@ button.pill:hover { background: #e8e9ec; } .pill.on { background: var(--ink); co
 .ah .brand.lk-word { font-size: 30px; line-height: 1; margin-top: 4px; }
 .welcome h1.lk-word { font-size: 50px; }
 .tb-brand { letter-spacing: -1.2px !important; font-weight: 700 !important; }
+
+/* ═════════ огляд: дрібні виправлення ═════════ */
+.det-m { position: relative; }
+.det-m .gi-ic { top: 6px; right: 6px; }
+.rd.on { border-color: var(--accent); background: #eef5ff; } .rd.on > i { border-color: var(--accent); } .rd.on > i::after { background: var(--accent); }
+.tb-app .rd.on { border-color: #d61a10; background: #fff6f5; } .tb-app .rd.on > i { border-color: #d61a10; } .tb-app .rd.on > i::after { background: #d61a10; }
+.chart-fl .val { font: 700 11px var(--font); fill: var(--ink); }
+.tg-r1 b .ver .ic { color: #fff; }
+.tg-r1 .ver { width: 15px; height: 15px; }
+.opt small .ic { display: inline-block; vertical-align: -2px; }
+.tg-yt-hint { margin: 10px 16px 0; }
+.widgets .widget.wide { grid-column: 1 / -1; min-height: 0; flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; }
+.widget.wide .wg-row { display: flex; align-items: baseline; gap: 6px; min-width: 0; text-align: right; }
+.widget.wide .wg-row b { font-size: 20px; } .widget.wide .wg-row small { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home { overflow-y: auto; scrollbar-width: none; }
+.home::-webkit-scrollbar { display: none; }
+@media (max-height: 820px) {
+  .home { gap: 14px; padding-top: 12px; }
+  .hm-clock { margin-top: 4px; } .hm-clock b { font-size: 56px; }
+  .widgets .widget { min-height: 92px; } .widgets .widget.wide { min-height: 0; }
+  .apps { gap: 12px 8px; padding-bottom: 8px; }
+}

@@ -210,6 +210,7 @@ export class Tg {
     return `${this.head('Змінити канал', '', `<button class="lnk strong" data-act="tg.saveEdit" ${d.title.trim() && !err ? '' : 'disabled'}>Готово</button>`)}<div class="scroll pad">
       <div class="tg-newav">${avatar({ name: d.title, color: d.color, sym: d.sym, img: d.img }, 84)}</div>
       <div class="av-pick center">${own.map(g => `<button class="avp${d.img === g.mid ? ' on' : ''}" data-act="tg.nImg" data-mid="${g.mid}" aria-label="Ваше фото">${avatar({ img: g.mid }, 46)}</button>`).join('')}${fileBtn('tgavatar', 'Фото', 'avp add', 'image/*')}${d.img ? `<button class="avp" data-act="tg.nImg" data-mid="" aria-label="Без фото">${icon('close', 20)}</button>` : ''}</div>
+      ${d.img ? '' : `<div class="sw-row center">${['#1f7ac4', ...AV_COLORS.slice(0, 8)].map(c => `<button class="cdot${d.color === c ? ' on' : ''}" style="background:${c}" data-act="tg.nColor" data-c="${c}" aria-label="Колір"></button>`).join('')}</div>`}
       <label class="fl"><span>Назва</span><input class="in" data-in="tg.eTitle" data-keep="tg.eTitle" value="${esc(d.title)}" maxlength="60"></label>
       <label class="fl"><span>Опис</span><textarea class="in" data-in="tg.eDesc" data-keep="tg.eDesc" rows="3" maxlength="255">${esc(d.desc)}</textarea></label>
       <div class="seg">${[[true, 'Публічний'], [false, 'Приватний']].map(([v, t]) => `<button class="${d.pub === v ? 'on' : ''}" data-act="tg.eType" data-v="${v}">${t}</button>`).join('')}</div>
@@ -246,13 +247,13 @@ export class Tg {
       <h3 class="sec">Підписники за днями</h3>${chart}
       <h3 class="sec">Звідки приходять читачі</h3><div class="tg-src">${SRC.filter(([k]) => st.src[k]).map(([k, t]) => { const p = Math.round((st.src[k] || 0) / srcTot * 100); return `<div><span>${t}</span><b>${num(st.src[k])}</b><i><b style="width:${p}%;background:${k === 'bots' ? '#c62828' : '#1f7ac4'}"></b></i></div>`; }).join('') || '<p class="muted sm">Ще немає даних. Запросіть перших читачів.</p>'}</div>
       <h3 class="sec">Коли читачі онлайн</h3>${hours}<p class="hint">${icon('clock', 16)}<span>Найбільше людей у мережі близько ${st.best}:00. Ввечері дописи бачать більше читачів, а вночі краще надсилати без звуку.</span></p>
-      ${st.top.length ? `<h3 class="sec">Найпопулярніші дописи</h3>${st.top.map(p => `<button class="opt link" data-act="tg.toPost" data-id="${p.id}"><div><b>${esc(short(p.text || (p.poll ? 'Опитування: ' + p.poll.q : 'Фото'), 50))}</b><small>${icon('eye', 12)} ${num(p.stats.views)} · ${icon('repost', 12)} ${num(p.stats.fwd)} · ${dayLabel(this.s.t, p.t)}</small></div></button>`).join('')}` : ''}</div>`;
+      ${st.top.length ? `<h3 class="sec">Найпопулярніші дописи</h3>${st.top.map(p => `<button class="opt link" data-act="tg.toPost" data-id="${p.id}"><div><b>${esc(short(p.text || (p.poll ? 'Опитування: ' + p.poll.q : 'Фото'), 50))}</b><small>${icon('eye', 12)} ${num(p.stats.views)} переглядів · ${icon('repost', 12)} ${num(p.stats.fwd)} · ${dayLabel(this.s.t, p.t)}</small></div></button>`).join('')}` : ''}</div>`;
   }
 
   /* ═════════ Налаштування ═════════ */
   v_settings() {
     const s = this.s, me = s.me, set = this.tg.set, opt = (ic, col, t, sub, act, extra = '') => `<button class="opt link tg-set" data-act="${act}"${extra}><span class="tg-si" style="background:${col}">${icon(ic, 18)}</span><div><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</div>${icon('chevron', 18)}</button>`;
-    return `<header class="ah main"><b class="ah-t tg-title">Налаштування</b></header><div class="scroll"><div class="tg-ihead">${this.meAv(84)}<h2>${esc(me?.name || 'Ви')}</h2><p class="muted">+380 •• ••• •• 47 · @${esc((me?.nick || 'my_name').replace(/\./g, '_'))}</p></div>
+    return `<header class="ah main"><b class="ah-t tg-title">Налаштування</b></header><div class="scroll"><div class="tg-ihead">${this.meAv(84)}<h2>${esc(me?.name || me?.nick || 'Ви')}</h2><p class="muted">+380 •• ••• •• 47 · @${esc((me?.nick || 'my_name').replace(/\./g, '_'))}</p></div>
       <div class="pad">${opt('megaphone', '#1f7ac4', this.ch ? esc(this.ch.title) : 'Створити канал', this.ch ? 'Мій канал' : 'Ведіть свій блог в Telegram', this.ch ? 'tg.open' : 'tg.newCh', this.ch ? ' data-id="mych"' : '')}
       ${opt('lock', '#5e35b1', 'Конфіденційність', `Номер бачать: ${{ all: 'усі', contacts: 'контакти', none: 'ніхто' }[set.phone]} · хмарний пароль ${set.pass2 ? 'увімкнено' : 'вимкнено'}`, 'tg.go', ' data-v="privacy"')}
       ${opt('phone', '#e65100', 'Активні сеанси', `${set.sessions.length} ${plural(set.sessions.length, 'пристрій', 'пристрої', 'пристроїв')}${set.sessions.some(x => x.evil) ? ' · є чужий!' : ''}`, 'tg.go', ' data-v="sessions"')}
