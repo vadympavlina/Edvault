@@ -2,7 +2,7 @@
 import { icon } from './icons.js';
 import { photo, video, avatar } from './art.js';
 import { esc, rich, sheet, actions, confirm, toast, sw } from './ui.js';
-import { NICHES, nicheOf, TAGS, CREATORS, AV_COLORS, AV_SYMBOLS, SCENES, FILTERS } from './data.js';
+import { NICHES, nicheOf, TAGS, CREATORS, AV_COLORS, AV_SYMBOLS, SCENES, FILTERS, COMMENTS } from './data.js';
 import { ago, num, plural, clock, dayName, dayOf, hourOf, DAY, repliesFor, toneOf, lc } from './sim.js';
 import { openCreate } from './create.js';
 
@@ -27,7 +27,7 @@ export class Likeer {
     this.reg = { step: 0, nick: '', name: '', niche: '', color: AV_COLORS[0], sym: 'letter', pass: '', priv: false, twoFA: false };
   }
   get s() { return this.sim.s; }
-  get top() { return this.stack[this.stack.length - 1]; }
+  get top() { if (!this.stack.length) this.stack.push({ v: this.sim.s.me ? 'feed' : 'welcome' }); return this.stack[this.stack.length - 1]; }
   go(v, a = {}) { this.stack.push({ v, ...a }); this.ph.render(true); }
   tab(v) { this.stack = [{ v }]; if (v === 'activity') this.s.unread.notifs = 0; this.ph.render(true); }
   back() { if (this.stack.length > 1) this.stack.pop(); else this.ph.home(); this.ph.render(true); }
@@ -38,6 +38,7 @@ export class Likeer {
     const s = this.s;
     if (s.hack && !['recover'].includes(this.top.v)) this.stack = [{ v: 'hacked' }];
     if (!s.me && !['welcome', 'signup'].includes(this.top.v)) this.stack = [{ v: 'welcome' }];
+    if (s.me && ['welcome', 'signup'].includes(this.top.v)) this.stack = [{ v: 'feed' }];
     const v = this.top.v, fn = this['v_' + v] || this.v_feed;
     const bars = ['feed', 'search', 'activity', 'profile'].includes(v);
     return `<div class="lk-app${bars ? ' with-tabs' : ''}">${fn.call(this, this.top)}${bars ? this.tabs(v) : ''}</div>`;
@@ -299,7 +300,7 @@ export class Likeer {
     const g = st.gid && s.gallery.find(x => x.id === st.gid);
     return `<div class="story-view"><div class="sv-bars">${list.map((_, j) => `<i class="${j <= i ? 'on' : ''}"></i>`).join('')}</div><header class="sv-h">${avatar(this.meAv(), 32)}<b>${esc(s.me.nick)}</b><small>${ago(s.t, st.t)}</small><span class="grow"></span><button class="ib light" data-act="lk.back" aria-label="Закрити">${icon('close', 24)}</button></header>
       <div class="sv-media">${st.fake ? `<div class="txtcard alarm"><p>ТЕРМІНОВО! Завтра скасовують уроки в усіх школах країни. Поширте!!!</p></div>` : g ? photo(g) : `<div class="txtcard" style="background:#7e57c2"><p>${esc(st.text)}</p></div>`}
-      ${st.poll ? `<div class="poll"><b>${esc(st.poll.q)}</b>${st.poll.a.map((t, j) => `<div class="poll-a"><i style="width:${Math.round(st.votes[j] / Math.max(1, st.votes[0] + st.votes[1]) * 100)}%"></i><span>${esc(t)}</span><b>${Math.round(st.votes[j] / Math.max(1, st.votes[0] + st.votes[1]) * 100)}%</b></div>`).join('')}</div>` : ''}
+      ${st.poll ? (() => { const tot = st.votes[0] + st.votes[1]; return `<div class="poll"><b>${esc(st.poll.q)}</b>${st.poll.a.map((t, j) => { const pc = tot ? Math.round(st.votes[j] / tot * 100) : 0; return `<div class="poll-a"><i style="width:${tot >= 3 ? pc : 0}%"></i><span>${esc(t)}</span><b>${tot >= 3 ? pc + '%' : ''}</b></div>`; }).join('')}<small class="poll-n">${tot >= 3 ? `${tot} ${plural(tot, 'голос', 'голоси', 'голосів')}` : 'Голоси ще збираються…'}</small></div>`; })() : ''}
       ${list.length > 1 ? `<button class="sv-prev" data-act="lk.storyNav" data-d="-1" aria-label="Попередня"></button><button class="sv-next" data-act="lk.storyNav" data-d="1" aria-label="Наступна"></button>` : ''}</div>
       <footer class="sv-f">${icon('eye', 18)}<span>${num(st.views)} ${plural(st.views, 'перегляд', 'перегляди', 'переглядів')}</span></footer></div>`;
   }
@@ -335,7 +336,7 @@ export class Likeer {
       creator: () => this.go('creator', { id: el.dataset.id }),
       follow: () => { sim.follow(el.dataset.id); },
       likeFeed: () => { if (el.dataset.dbl && e.detail < 2) return; sim.likeFeed(el.dataset.id); },
-      feedComments: () => toast('Коментарі до чужих дописів у навчальній версії лише для перегляду'),
+      feedComments: () => this.feedComments(el.dataset.id),
       checkFake: () => sheet({ title: 'Перевірка допису', html: `<div class="check"><p>${icon('user', 18)}<span><b>Автор:</b> @novyny_shkola_24_7 — профіль створено вчора, без позначки перевірки, 2 дописи.</span></p><p>${icon('globe', 18)}<span><b>Джерело:</b> посилання на офіційний сайт немає.</span></p><p>${icon('search', 18)}<span><b>Інші новини:</b> на сайтах міністерства освіти й школи про скасування уроків нічого не сказано.</span></p><p>${icon('alert', 18)}<span><b>Ознаки фейку:</b> великі літери, «ТЕРМІНОВО», «поширте всім» — так пишуть, щоб ви не встигли подумати.</span></p></div><p class="hint">${icon('info', 16)}<span>Висновок: найімовірніше, це фейк. Краще не поширювати.</span></p>` }),
       shareFake: async () => { if (await confirm('Поширити цю новину у свою історію?', 'Поширити', false, 'Її побачать ваші підписники.')) { sim.story({ fake: true }); toast('Новину поширено в історію'); } },
       saveIdea: () => { sim.addIdea(el.dataset.t); toast('Ідею збережено в «Ідеї»'); },
@@ -388,6 +389,13 @@ export class Likeer {
   }
   select(key, v) { this.sim.setSetting(key, v); this.ph.save(); toast('Збережено'); }
 
+  feedComments(fid) {
+    const s = this.s, f = s.feed.find(x => x.id === fid); if (!f) return;
+    const c = CREATORS.find(x => x.id === f.cid), seed = [...fid].reduce((a, ch) => a + ch.charCodeAt(0), 0);
+    const pool = [...(COMMENTS.topic[c?.niche] || []), ...COMMENTS.praise], names = ['sonia_art', 'max.play', 'olesia.go', 'dima_fox', 'nastia.sun', 'taras_kyiv', 'vika.moon'];
+    const list = Array.from({ length: 5 }, (_, i) => [names[(seed + i) % names.length], pool[(seed + i * 3) % pool.length], AV_COLORS[(seed + i) % AV_COLORS.length]]);
+    sheet({ title: 'Коментарі', html: `${list.map(([n, t, col]) => `<div class="cm">${avatar({ name: n, color: col }, 32)}<div class="cm-b"><p><b>${n}</b> ${esc(t)}</p><small>${1 + (seed + n.length) % 9} год</small></div></div>`).join('')}<p class="hint">${icon('info', 16)}<span>Тут ви лише читаєте. Писати коментарі можна під своїми дописами — відповідаючи підписникам.</span></p>` });
+  }
   postMenu(id) {
     const s = this.s, sim = this.sim, p = s.posts.find(x => x.id === id); if (!p) return;
     actions([

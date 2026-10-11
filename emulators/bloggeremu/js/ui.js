@@ -48,7 +48,9 @@ export function banner(html, on) {
   const el = h(`<button class="banner">${html}</button>`);
   host.appendChild(el);
   el.addEventListener('click', () => { el.remove(); on?.(); });
-  clearTimeout(bannerT); bannerT = setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 250); }, 3600);
+  const away = e => { if (!el.contains(e.target)) { el.remove(); host.removeEventListener('pointerdown', away, true); } };
+  host.addEventListener('pointerdown', away, true);
+  clearTimeout(bannerT); bannerT = setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 250); host.removeEventListener('pointerdown', away, true); }, 3200);
 }
 // Коротке повідомлення внизу
 let toastT = 0;
@@ -58,3 +60,33 @@ export function toast(text) {
 }
 // Перемикач
 export const sw = (key, on, label = '') => `<button class="sw${on ? ' on' : ''}" role="switch" aria-checked="${on}" data-sw="${key}"${label ? ` aria-label="${esc(label)}"` : ''}><i></i></button>`;
+
+// Оновлення DOM «на місці»: змінюються лише відмінні вузли. Так не перезапускаються анімації відео,
+// не закриваються розгорнуті списки, не губиться фокус і прокрутка.
+export function morph(root, html) {
+  const t = document.createElement('template'); t.innerHTML = html;
+  patchChildren(root, t.content);
+}
+function same(a, b) { return a.nodeType === b.nodeType && a.nodeName === b.nodeName && (a.nodeType !== 1 || (a.dataset?.keep ?? null) === (b.dataset?.keep ?? null)); }
+function patchChildren(par, src) {
+  const a = [...par.childNodes], b = [...src.childNodes];
+  for (let i = 0; i < b.length; i++) {
+    const old = a[i], nw = b[i];
+    if (!old) { par.appendChild(nw); continue; }
+    if (!same(old, nw)) { par.replaceChild(nw, old); continue; }
+    if (old.nodeType === 3 || old.nodeType === 8) { if (old.nodeValue !== nw.nodeValue) old.nodeValue = nw.nodeValue; continue; }
+    patchNode(old, nw);
+  }
+  for (let i = b.length; i < a.length; i++) a[i].remove();
+}
+function patchNode(old, nw) {
+  // вміст SVG-ілюстрацій і стилів порівнюємо цілком (вони великі, але змінюються рідко)
+  if (old.nodeName === 'svg' || old.nodeName === 'STYLE') { if (old.outerHTML !== nw.outerHTML) old.replaceWith(nw); return; }
+  for (const { name, value } of [...nw.attributes]) if (old.getAttribute(name) !== value) old.setAttribute(name, value);
+  for (const { name } of [...old.attributes]) if (!nw.hasAttribute(name) && name !== 'open') old.removeAttribute(name);
+  const tag = old.nodeName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') { // поля з моделлю (data-in) беремо з розмітки; вільні поля (коментар, повідомлення) не чіпаємо, щоб не стерти набране
+    if (old !== document.activeElement && (!old.dataset.keep || old.dataset.in) && old.value !== (nw.value ?? '')) old.value = nw.value; if (tag === 'TEXTAREA') return; }
+  if (tag === 'SELECT') { patchChildren(old, nw); if (old !== document.activeElement) { const i = [...nw.options].findIndex(o => o.defaultSelected); if (i >= 0) old.selectedIndex = i; } return; }
+  patchChildren(old, nw);
+}

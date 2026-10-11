@@ -98,6 +98,31 @@ await step('відео: обрізка початку, вільна музика
   await p.click('[data-act="lk.back"]'); await p.click('[data-act="lk.back"]');
 });
 
+await step('відео в дописі грає без перезапуску, поки ростуть лічильники; розгорнутий список не згортається', async () => {
+  await p.click('[data-act="lk.tab"][data-v="profile"]');
+  await p.click('.gi:has(.vbox) >> nth=0');
+  await p.click('.pm-media');
+  await p.evaluate(() => { window.__svg = document.querySelector('.pm-media svg.vid'); });
+  await adv(60); await p.waitForTimeout(150);
+  assert.ok(await p.evaluate(() => document.querySelector('.pm-media svg.vid') === window.__svg && !window.__svg.classList.contains('paused')), 'той самий вузол, анімація не скинута');
+  await p.click('[data-act="lk.back"]');
+  await p.click('[data-act="lk.create"]'); await p.click('.pick-grid [data-act="cr.pick"] >> nth=0'); await p.click('[data-act="cr.next"]'); await p.click('[data-act="cr.next"]');
+  await p.fill('[data-in="cr.caption"]', 'Перевірка');
+  await p.click('.pre summary');
+  await p.click('[data-act="cr.tag"][data-t="котики"]');
+  assert.equal(await p.inputValue('[data-in="cr.caption"]'), 'Перевірка #котики');
+  await adv(30); await p.waitForTimeout(100);
+  assert.equal(await p.getAttribute('.pre', 'open'), '');
+  await p.click('[data-act="cr.back"]'); await p.click('[data-act="cr.back"]'); await p.click('[data-act="cr.back"]'); await p.click('.cf [data-v="1"]');
+});
+
+await step('коментарі під дописами інших блогерів відкриваються', async () => {
+  await p.click('[data-act="lk.tab"][data-v="feed"]');
+  await p.click('[data-act="lk.feedComments"] >> nth=0');
+  assert.ok(await p.locator('.sheet .cm').count() >= 3);
+  await p.click('[data-sh-close]');
+});
+
 await step('камера записує місце, галерея дозволяє його видалити', async () => {
   await home(); await p.click('[data-app="camera"]');
   assert.match(await p.locator('.cam-geo').innerText(), /увімк/);

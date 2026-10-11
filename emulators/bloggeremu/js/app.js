@@ -1,8 +1,8 @@
 // Симулятор блогера · телефон: головний екран, застосунки, віртуальний час, збереження.
 import { Sim, rng, newState, okState, clock, dayName, hourOf, dayOf, ago, num, plural, DAY } from './sim.js';
 import { icon } from './icons.js';
-import { photo, video, avatar } from './art.js';
-import { esc, h, setHost, banner, toast, confirm, sheet, sw } from './ui.js';
+import { photo, video, avatar, resetIds } from './art.js';
+import { esc, h, setHost, banner, toast, confirm, sheet, sw, morph } from './ui.js';
 import { SCENES, CLIPS, nicheOf } from './data.js';
 import { Likeer, logo } from './likeer.js';
 import { renderCreate, createAct, createInput, createRange, createToggle, createSelect, openCreate } from './create.js';
@@ -35,12 +35,22 @@ class Phone {
   render(reset = false) {
     const root = this.root, scrolls = {};
     if (!reset) root.querySelectorAll('[data-scroll]').forEach(e => { scrolls[e.dataset.scroll] = e.scrollTop; });
-    const af = document.activeElement, keep = af && root.contains(af) && af.dataset.keep ? { k: af.dataset.keep, s: af.selectionStart, e: af.selectionEnd } : null;
-    const vals = {}; root.querySelectorAll('[data-keep]').forEach(e => { vals[e.dataset.keep] = e.value; });
-    root.innerHTML = this.html();
-    root.querySelectorAll('[data-keep]').forEach(e => { if (e.dataset.keep in vals && !e.dataset.in) e.value = vals[e.dataset.keep]; });
-    root.querySelectorAll('[data-scroll]').forEach(e => { if (e.dataset.scroll in scrolls) e.scrollTop = scrolls[e.dataset.scroll]; else if (e.dataset.bottom) e.scrollTop = e.scrollHeight; });
-    if (keep) { const e = root.querySelector(`[data-keep="${CSS.escape(keep.k)}"]`); if (e) { e.focus(); try { e.setSelectionRange(keep.s, keep.e); } catch { /* не текст */ } } }
+    resetIds();
+    const html = this.html(), view = this.app + ':' + (this.app === 'likeer' ? this.apps.likeer.stack.map(x => x.v + (x.id || '')).join('/') : JSON.stringify(this.args));
+    // інший екран — малюємо з нуля; той самий — оновлюємо лише змінені частини
+    if (reset || view !== this.view) {
+      const af = document.activeElement, keep = af && root.contains(af) && af.dataset.keep ? { k: af.dataset.keep, s: af.selectionStart, e: af.selectionEnd } : null;
+      const vals = {}; root.querySelectorAll('[data-keep]').forEach(e => { vals[e.dataset.keep] = e.value; });
+      root.innerHTML = html;
+      root.querySelectorAll('[data-keep]').forEach(e => { if (e.dataset.keep in vals && !e.dataset.in) e.value = vals[e.dataset.keep]; });
+      root.querySelectorAll('[data-scroll]').forEach(e => { if (e.dataset.scroll in scrolls) e.scrollTop = scrolls[e.dataset.scroll]; else if (e.dataset.bottom) e.scrollTop = e.scrollHeight; });
+      if (keep) { const e = root.querySelector(`[data-keep="${CSS.escape(keep.k)}"]`); if (e) { e.focus(); try { e.setSelectionRange(keep.s, keep.e); } catch { /* не текст */ } } }
+    } else if (html !== this.lastHtml) {
+      const bottoms = [...root.querySelectorAll('[data-bottom]')].filter(e => e.scrollHeight - e.scrollTop - e.clientHeight < 40);
+      morph(root, html);
+      bottoms.forEach(e => { e.scrollTop = e.scrollHeight; });
+    }
+    this.view = view; this.lastHtml = html;
     this.bar();
   }
   later() { if (this.queued) return; this.queued = true; requestAnimationFrame(() => { this.queued = false; this.render(); }); }

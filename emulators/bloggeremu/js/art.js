@@ -3,6 +3,8 @@ import { CLIPS } from './data.js';
 import { icon, iconPath } from './icons.js';
 
 let uid = 0;
+// лічильник скидається перед кожним перемальовуванням: однаковий вміст дає однакові id
+export const resetIds = () => { uid = 0; };
 const W = 400, H = 500;
 const lin = (id, a, b, x2 = 0, y2 = 1) => `<linearGradient id="${id}" x1="0" y1="0" x2="${x2}" y2="${y2}"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>`;
 const shade = (hex, k) => { const n = parseInt(hex.slice(1), 16); const f = c => Math.max(0, Math.min(255, Math.round(c * k))); return '#' + [n >> 16, (n >> 8) & 255, n & 255].map(f).map(x => x.toString(16).padStart(2, '0')).join(''); };

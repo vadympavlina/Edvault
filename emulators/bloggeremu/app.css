@@ -414,6 +414,7 @@ button.gi:hover { filter: brightness(.94); }
 .poll-a { position: relative; display: flex; justify-content: space-between; padding: 10px 12px; border-radius: 10px; background: var(--soft); margin-top: 6px; overflow: hidden; font-size: 14px; font-weight: 600; }
 .poll-a i { position: absolute; left: 0; top: 0; bottom: 0; background: #fbd3e1; }
 .poll-a span, .poll-a b { position: relative; }
+.poll-n { display: block; margin-top: 8px; color: var(--ink2); font-size: 12.5px; }
 
 /* створення */
 .kinds { flex: none; display: flex; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }

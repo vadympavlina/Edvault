@@ -76,6 +76,8 @@ export class Sim {
     s.days.push({ day: day - 1, followers: s.followers, views: s.posts.filter(p => p.t && dayOf(p.t) === day - 1).reduce((a, p) => a + p.stats.views, 0) });
     if (s.days.length > 60) s.days.shift();
     this.prune();
+    // довіра повільно відновлюється, якщо автор поводиться чесно
+    if (s.trust < 60) s.trust = Math.min(60, s.trust + 1);
     this.refreshFeed();
     // без нових дописів кілька днів — аудиторія потроху забуває
     const last = Math.max(0, ...s.posts.filter(p => p.t).map(p => p.t));
