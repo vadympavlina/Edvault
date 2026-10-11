@@ -8,7 +8,7 @@ import { ago, num, plural, clock, dayOf, DAY, repliesFor, toneOf } from './sim.j
 import { mediaUrl } from './media.js';
 import { fmtDur, vertical, checks } from './quality.js';
 import { fileBtn, topicOptions } from './gal.js';
-import { brandScore, createChannel, updateChannel, tubeUpload, tubeDelete, tubeEdit, tubeReply, tubeHeart, tubeHide, tubeSummary, tubeFeed, tubePublishNow, isShort, SHORTS_MAX, PARTNER } from './tubesim.js';
+import { brandScore, createChannel, updateChannel, tubeUpload, tubeDelete, tubeEdit, tubeReply, tubeHeart, tubeLike, tubeMyComment, tubeHide, tubeSummary, tubeFeed, tubePublishNow, isShort, SHORTS_MAX, PARTNER } from './tubesim.js';
 import { nickErr } from './likeer.js';
 import { snap } from './create.js';
 
@@ -82,7 +82,8 @@ export class Tube {
       <h2 class="tv-title">${esc(x.title)}</h2><p class="muted sm">${num(x.views)} ${plural(x.views, 'перегляд', 'перегляди', 'переглядів')} · ${x.ago} ${plural(x.ago, 'день', 'дні', 'днів')} тому</p>
       <div class="tv-ch">${avatar({ name: c.name, color: c.color, sym: nicheOf(c.niche).icon }, 40)}<span><b>${esc(c.name)}</b><small>${num(c.followers)} підписників</small></span><span class="grow"></span><button class="btn sm${fol ? '' : ' dark'}" data-act="tb.follow" data-id="${c.id}">${fol ? 'Ви підписані' : 'Підписатися'}</button></div>
       <div class="tv-acts"><button class="pill${liked ? ' on' : ''}" data-act="tb.likeF" data-id="${x.id}" aria-pressed="${liked}">${icon('thumbUp', 18, liked)}${num(Math.round(x.views * 0.05) + (liked ? 1 : 0))}</button><button class="pill" data-act="tb.toast" data-t="Посилання скопійовано">${icon('share', 18)}Поділитися</button></div>
-      <h3 class="sec">Коментарі</h3>${cms.map((t, i) => `<div class="cm">${avatar({ name: names[i], color: AV_COLORS[(seed + i * 3) % AV_COLORS.length] }, 32)}<div class="cm-b"><p><b>${names[i]}</b> ${esc(t)}</p><small>${1 + (seed + i) % 9} год</small></div></div>`).join('')}</div></div>`;
+      <h3 class="sec">Коментарі</h3>${(this.ch.wc?.[x.id] || []).map(m => { const late = s.t - m.t >= 30; return `<div class="cm mine">${this.chAv(32)}<div class="cm-b"><p><b>${esc(this.ch.name)}</b> ${esc(m.text)}</p><small>${ago(s.t, m.t)}${late && m.tone === 'kind' ? ` · <span class="heart-by">${icon('heart', 12, true)}від автора</span>` : ''}${late && m.tone === 'rude' ? ' · <span class="neg">Автор приховав ваш коментар</span>' : ''}</small></div></div>`; }).join('')}
+      <div class="cmp-row w-in">${this.chAv(30)}<input class="in" data-keep="tbw" maxlength="300" placeholder="Додайте коментар…" aria-label="Ваш коментар"><button class="lnk strong" data-act="tb.wSend">Надіслати</button></div>${cms.map((t, i) => `<div class="cm">${avatar({ name: names[i], color: AV_COLORS[(seed + i * 3) % AV_COLORS.length] }, 32)}<div class="cm-b"><p><b>${names[i]}</b> ${esc(t)}</p><small>${1 + (seed + i) % 9} год</small></div></div>`).join('')}</div></div>`;
   }
   v_gone() { return `${this.head('')}<div class="empty">${icon('trash', 40)}<b>Відео недоступне</b></div>`; }
 
@@ -178,21 +179,22 @@ export class Tube {
     const player = v.src.own ? (g?.mid && mediaUrl(g.mid) ? `<span class="art own"><video src="${mediaUrl(g.mid)}" poster="${mediaUrl(g.mid, 'thumb')}" controls playsinline preload="metadata"></video></span>` : `<span class="art own"><span class="miss">${icon('video', 28)}<small>Файл недоступний</small></span></span>`) : video(v.src.clip);
     return `${this.head('', `<button class="ib" data-act="tb.vMenu" data-id="${v.id}" aria-label="Ще">${icon('more', 24)}</button>`)}<div class="scroll" data-scroll="tbv-${v.id}"><div class="player${v.shorts ? ' sh' : ''}">${player}</div><div class="pad">
       <h2 class="tv-title">${esc(v.title)}</h2><p class="muted sm">${v.t ? `${num(st.views)} ${plural(st.views, 'перегляд', 'перегляди', 'переглядів')} · ${ago(s.t, v.t)}` : `Вийде ${dayOf(v.sched) === dayOf(s.t) ? 'сьогодні' : 'завтра'} о ${clock(v.sched)}`}${v.vis !== 'public' ? ` · ${VIS.find(x => x[0] === v.vis)[1]}` : ''}${v.kids ? ' · Для дітей' : ''}</p>
-      <div class="tv-acts"><span class="pill static">${icon('thumbUp', 18)}${num(st.likes)}</span><span class="pill static">${icon('thumbDown', 18)}${num(st.dislikes)}</span><span class="pill static">${icon('share', 18)}${num(st.shares)}</span></div>
+      <div class="tv-acts"><button class="pill${v.liked ? ' on' : ''}" data-act="tb.likeOwn" data-id="${v.id}" aria-pressed="${!!v.liked}" aria-label="Подобається">${icon('thumbUp', 18, v.liked)}${num(st.likes)}</button><span class="pill static">${icon('thumbDown', 18)}${num(st.dislikes)}</span><span class="pill static">${icon('share', 18)}${num(st.shares)}</span></div>
       ${v.t ? `<button class="stats-btn" data-act="tb.go" data-v="stats" data-id="${v.id}">${icon('chart', 18)}<span><b>Аналітика відео</b> · покази, утримання, звідки глядачі</span>${icon('chevron', 18)}</button>` : ''}
       ${v.desc ? `<div class="tv-desc">${rich(v.desc)}</div>` : ''}
-      ${v.kids ? `<p class="muted pad-y">Коментарі вимкнено, бо відео позначено «Для дітей».</p>` : `<button class="pmore" data-act="tb.go" data-v="comments" data-id="${v.id}">Коментарі (${st.comments})${icon('chevron', 16)}</button>${v.comments.slice(-2).map(c => `<p class="pc sm"><b>${esc(s.people[c.pid]?.nick || '')}</b> ${esc(c.text)}</p>`).join('')}`}</div></div>`;
+      ${v.kids ? `<p class="muted pad-y">Коментарі вимкнено, бо відео позначено «Для дітей».</p>` : `<button class="pmore" data-act="tb.go" data-v="comments" data-id="${v.id}">Коментарі (${st.comments})${icon('chevron', 16)}</button>${v.comments.slice(-2).map(c => `<p class="pc sm"><b>${esc(c.mine ? this.ch.name : s.people[c.pid]?.nick || '')}</b> ${esc(c.text)}</p>`).join('')}`}</div></div>`;
   }
   v_comments(a) {
     const s = this.s, v = this.ch.videos.find(x => x.id === a.id); if (!v) return this.v_gone();
     const rc = a.reply && v.comments.find(c => c.id === a.reply);
-    const row = c => { const u = s.people[c.pid] || { nick: '?' }; return `<div class="cm${a.reply === c.id ? ' sel' : ''}">${avatar(u, 34)}<div class="cm-b"><p><b>@${esc(u.nick)}</b> ${esc(c.text)}</p><small>${ago(s.t, c.t)}${c.likes ? ` · ${icon('thumbUp', 12)} ${c.likes}` : ''}${c.heart ? ` · <span class="heart-by">${icon('heart', 12, true)}від автора</span>` : ''}</small>
+    const row = c => { if (c.mine) return `<div class="cm mine">${this.chAv(34)}<div class="cm-b"><p><b>${esc(this.ch.name)}</b><span class="author">автор</span> ${esc(c.text)}</p><small>${ago(s.t, c.t)}</small></div><div class="cm-side"><button class="ib sm" data-act="tb.cDel" data-c="${c.id}" aria-label="Видалити коментар">${icon('trash', 16)}</button></div></div>`;
+      const u = s.people[c.pid] || { nick: '?' }; return `<div class="cm${a.reply === c.id ? ' sel' : ''}">${avatar(u, 34)}<div class="cm-b"><p><b>@${esc(u.nick)}</b> ${esc(c.text)}</p><small>${ago(s.t, c.t)}${c.likes ? ` · ${icon('thumbUp', 12)} ${c.likes}` : ''}${c.heart ? ` · <span class="heart-by">${icon('heart', 12, true)}від автора</span>` : ''}</small>
       ${c.reply ? `<div class="cm-r">${this.chAv(24)}<p><b>${esc(this.ch.name)}</b> ${esc(c.reply.text)}</p></div>` : `<button class="lnk sm" data-act="tb.replyTo" data-c="${c.id}">Відповісти</button>`}</div>
       <div class="cm-side"><button class="ib sm${c.heart ? ' liked' : ''}" data-act="tb.heart" data-c="${c.id}" aria-label="Серце від автора" aria-pressed="${c.heart}">${icon('heart', 16, c.heart)}</button><button class="ib sm" data-act="tb.cDel" data-c="${c.id}" aria-label="Видалити коментар">${icon('trash', 16)}</button></div></div>`; };
     const sugg = rc ? repliesFor(rc).map(([t, tone], i) => `<button class="chip-btn ${tone}" data-act="tb.quick" data-i="${i}">${esc(t)}</button>`).join('') : '';
     return `${this.head('Коментарі')}<div class="scroll" data-scroll="tbc-${v.id}">${v.comments.map(row).join('') || '<div class="empty sm"><b>Коментарів поки немає</b><p>Вони з’являться, коли люди подивляться відео.</p></div>'}</div>
       <footer class="composer">${rc ? `<div class="rc-head"><span>Відповідь для <b>@${esc(s.people[rc.pid]?.nick || '')}</b></span><button class="ib sm" data-act="tb.replyTo" data-c="" aria-label="Скасувати відповідь">${icon('close', 16)}</button></div><div class="chips">${sugg}</div>` : ''}
-        <div class="cmp-row">${this.chAv(30)}<input class="in" data-keep="tbcm" placeholder="${rc ? 'Напишіть відповідь…' : 'Виберіть коментар, щоб відповісти'}" ${rc ? '' : 'disabled'} maxlength="300" aria-label="Відповідь"><button class="lnk strong" data-act="tb.send" ${rc ? '' : 'disabled'}>Надіслати</button></div></footer>`;
+        <div class="cmp-row">${this.chAv(30)}<input class="in" data-keep="tbcm" placeholder="${rc ? 'Напишіть відповідь…' : 'Додайте коментар…'}" maxlength="300" aria-label="${rc ? 'Відповідь' : 'Коментар'}"><button class="lnk strong" data-act="tb.send">Надіслати</button></div></footer>`;
   }
 
   /* ═════════ Аналітика відео ═════════ */
@@ -287,7 +289,17 @@ export class Tube {
       // коментарі
       replyTo: () => { top.reply = el.dataset.c || null; ph.render(); if (top.reply) setTimeout(() => ph.root.querySelector('[data-keep="tbcm"]')?.focus(), 0); },
       quick: () => { const v = this.ch.videos.find(x => x.id === top.id), c = v?.comments.find(x => x.id === top.reply); if (!c) return; const [t, tone] = repliesFor(c)[+el.dataset.i]; tubeReply(sim, v.id, c.id, t, tone); this.replied(tone); },
-      send: () => { const inp = ph.root.querySelector('[data-keep="tbcm"]'), t = inp?.value.trim(); if (!t || !top.reply) return; inp.value = ''; const tone = toneOf(t); tubeReply(sim, top.id, top.reply, t, tone); this.replied(tone); },
+      send: () => {
+        const inp = ph.root.querySelector('[data-keep="tbcm"]'), t = inp?.value.trim(); if (!t) return; inp.value = ''; const tone = toneOf(t);
+        if (top.reply) { tubeReply(sim, top.id, top.reply, t, tone); this.replied(tone); return; }
+        tubeMyComment(sim, top.id, t, tone); toast(tone === 'rude' ? 'Грубі слова від автора знижують довіру глядачів' : 'Коментар додано');
+      },
+      likeOwn: () => tubeLike(sim, el.dataset.id),
+      wSend: () => {
+        const inp = ph.root.querySelector('[data-keep="tbw"]'), t = inp?.value.trim(); if (!t) return; inp.value = ''; const tone = toneOf(t);
+        ((this.ch.wc ||= {})[top.id] ||= []).push({ text: t.slice(0, 300), t: s.t, tone }); ph.render(); ph.save();
+        toast(tone === 'rude' ? 'Грубий коментар можуть приховати, а вас — заблокувати' : 'Коментар додано');
+      },
       heart: () => { tubeHeart(sim, top.id, el.dataset.c); },
       cDel: () => { tubeHide(sim, top.id, el.dataset.c); toast('Коментар видалено'); },
     };

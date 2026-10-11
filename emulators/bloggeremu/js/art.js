@@ -159,7 +159,8 @@ const ANIM = {
 // clipKey — назва вбудованого кліпу або власне відео з Галереї ({ own, mid, … })
 export function video(clipKey, o = {}) {
   if (typeof clipKey === 'object' && clipKey?.own) return ownVideo(clipKey, o);
-  const c = CLIPS[clipKey] || CLIPS.laser, id = 'v' + (++uid);
+  if (!CLIPS[clipKey]) clipKey = 'laser';
+  const c = CLIPS[clipKey], id = 'v' + (++uid);
   let body = S[c.scene](id, 0.3);
   if (clipKey === 'laser') body += '<circle class="dot" cx="200" cy="420" r="8" fill="#ff1744"/><circle class="dot" cx="200" cy="420" r="16" fill="#ff1744" opacity=".3"/>';
   if (clipKey === 'pancakeflip') body = body.replace('<g class="stack">', '<g class="stack">') + '<g class="flip"><ellipse cx="200" cy="230" rx="110" ry="22" fill="#f4c27e" stroke="#e7a95b" stroke-width="6"/></g>';
@@ -173,6 +174,8 @@ export function avatar(p, size = 40) {
   if (!p) return `<span class="av" style="width:${size}px;height:${size}px"></span>`;
   const img = p.img || p.avatar?.img, src = img && mediaUrl(img, 'thumb');
   if (src) return `<span class="av" style="width:${size}px;height:${size}px"><img src="${src}" alt=""></span>`;
+  const scene = p.scene || p.avatar?.scene;
+  if (scene) return `<span class="av" style="width:${size}px;height:${size}px">${photo({ scene, v: 0.2 })}</span>`;
   const sym = p.sym || p.avatar?.sym, color = p.color || p.avatar?.color || '#455a64';
   const inner = !sym || sym === 'letter' ? `<b style="font-size:${Math.round(size * 0.42)}px">${esc((p.name || p.nick || '?').trim()[0] || '?').toUpperCase()}</b>` : icon(sym, Math.round(size * 0.5));
   return `<span class="av" style="width:${size}px;height:${size}px;background:${color}">${inner}</span>`;

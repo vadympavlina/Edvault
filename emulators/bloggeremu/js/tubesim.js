@@ -234,6 +234,14 @@ export function tubeReply(sim, vid, cid, text, tone) {
   if (c.kind === 'request' && tone === 'kind') sim.addIdea(c.text, 'comment');
   sim.emit('tube');
 }
+export function tubeLike(sim, vid) { const v = sim.s.tube.videos.find(x => x.id === vid); if (!v?.t) return; v.liked = !v.liked; v.stats.likes = Math.max(0, v.stats.likes + (v.liked ? 1 : -1)); sim.emit('tube'); }
+// окремий коментар автора під своїм відео
+export function tubeMyComment(sim, vid, text, tone) {
+  const s = sim.s, v = s.tube.videos.find(x => x.id === vid); text = String(text).trim().slice(0, 300); if (!v || !text || v.kids) return;
+  v.comments.push({ id: sim.id('tc'), pid: 'me', mine: true, text, kind: 'mine', tone, t: s.t, likes: 0, heart: false, reply: null, hidden: false }); v.stats.comments++;
+  if (tone === 'rude') s.trust = Math.max(0, s.trust - 2);
+  sim.emit('tube');
+}
 export function tubeHeart(sim, vid, cid) { const c = sim.s.tube.videos.find(x => x.id === vid)?.comments.find(x => x.id === cid); if (c) { c.heart = !c.heart; sim.emit('tube'); } }
 export function tubeHide(sim, vid, cid) { const v = sim.s.tube.videos.find(x => x.id === vid); if (!v) return; v.comments = v.comments.filter(x => x.id !== cid); sim.emit('tube'); }
 

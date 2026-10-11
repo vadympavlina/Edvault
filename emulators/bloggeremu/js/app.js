@@ -82,6 +82,7 @@ class Phone {
     }
     this.view = view; this.lastHtml = html;
     this.syncVideos();
+    this.apps.likeer.syncStory();
     this.bar();
   }
   // власні відео: грати чи стояти (атрибут data-play), звук, межі обрізки
@@ -145,8 +146,8 @@ class Phone {
     const last = s.gallery[0];
     return `<div class="cam"><header class="cam-top"><button class="ib light" data-act="ph.camBack" aria-label="Закрити">${icon('close', 24)}</button><span class="grow"></span><button class="cam-geo${s.settings.geotag ? ' on' : ''}" data-act="ph.geo" aria-pressed="${s.settings.geotag}">${icon('location', 16)}${s.settings.geotag ? 'Місце: увімк.' : 'Місце: вимк.'}</button></header>
       <div class="cam-view">${mode === 'photo' ? photo({ scene: cur, v: 0.01, dark: night }) : video(cur)}${night && mode === 'photo' ? '<span class="cam-note">Темно: фото може вийти темним</span>' : ''}<i class="cam-grid" aria-hidden="true"></i></div>
-      <div class="cam-what"><small>Що знімаємо</small><div class="cam-list">${(mode === 'photo' ? scenes : clips).map(([k, v]) => `<button class="${cur === k ? 'on' : ''}" data-act="ph.camPick" data-k="${k}">${esc(v.t)}</button>`).join('')}</div></div>
-      <div class="cam-bot"><button class="cam-last" data-act="ph.open" data-app="gallery" aria-label="Галерея">${last ? (last.type === 'video' ? video(last.clip, { paused: true }) : photo(last)) : ''}</button>
+      <div class="cam-what"><button class="cam-pick" data-act="ph.camScenes">${icon(mode === 'photo' ? 'image' : 'video', 18)}<span><small>Що знімаємо: </small>${esc((mode === 'photo' ? SCENES : CLIPS)[cur].t)}</span>${icon('down', 18)}</button></div>
+      <div class="cam-bot"><button class="cam-last" data-act="ph.open" data-app="gallery" aria-label="Галерея">${last ? (last.type === 'video' ? (last.own ? video(last, { paused: true }) : video(last.clip, { paused: true })) : photo(last, { thumb: true })) : ''}</button>
         <button class="shutter${mode === 'video' ? ' rec' : ''}" data-act="ph.shoot" aria-label="${mode === 'photo' ? 'Зробити фото' : 'Записати відео'}"><i></i></button>
         <div class="cam-mode" role="tablist"><button class="${mode === 'photo' ? 'on' : ''}" data-act="ph.camMode" data-m="photo">Фото</button><button class="${mode === 'video' ? 'on' : ''}" data-act="ph.camMode" data-m="video">Відео</button></div></div></div>`;
   }
@@ -256,6 +257,27 @@ class Phone {
       if (el.dataset.phsel === 'topic') { sim.setTopic(el.dataset.id, el.value); this.render(); this.save(); }
       if (el.dataset.file) { const files = [...el.files]; el.value = ''; this.importFiles(files, el.dataset.file); }
     });
+    // стрічка історій: перетягування мишею й коліщатко гортають уздовж
+    let drag = null;
+    root.addEventListener('mousedown', e => { const r = e.target.closest('.stories'); if (r && e.button === 0) drag = { r, x: e.clientX, l: r.scrollLeft, moved: false }; });
+    addEventListener('mousemove', e => { if (!drag) return; const dx = e.clientX - drag.x; if (Math.abs(dx) > 5) { drag.moved = true; drag.r.classList.add('drag'); } drag.r.scrollLeft = drag.l - dx; });
+    addEventListener('mouseup', () => { if (!drag) return; const r = drag.r; setTimeout(() => r.classList.remove('drag'), 0); drag = null; });
+    root.addEventListener('wheel', e => { const r = e.target.closest('.stories'); if (!r || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; const max = r.scrollWidth - r.clientWidth; if (!max) return; e.preventDefault(); r.scrollLeft += e.deltaY; }, { passive: false });
+    // історії: утримання — пауза, свайп — наступний блогер, стрілки клавіатури — гортання
+    let sv = null;
+    root.addEventListener('pointerdown', e => {
+      const v = e.target.closest('.story-view'); if (!v || e.target.closest('header button, footer button')) return;
+      const lk = this.apps.likeer; sv = { x: e.clientX, y: e.clientY, held: false, t: setTimeout(() => { sv.held = true; lk.storyHold(true); }, 220) };
+    });
+    const svEnd = e => {
+      if (!sv) return; const lk = this.apps.likeer, dx = e.clientX - sv.x, dy = e.clientY - sv.y; clearTimeout(sv.t);
+      if (sv.held) { lk.storyHold(false); lk.svSkip = true; }
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) { lk.svSkip = true; if (sv.held) lk.storyHold(false); lk.storyStep(dx < 0 ? 1 : -1, true); }
+      else if (e.type === 'pointerup' && dy > 90) { lk.svSkip = true; lk.back(); }
+      sv = null; setTimeout(() => { lk.svSkip = false; }, 0);
+    };
+    root.addEventListener('pointerup', svEnd); root.addEventListener('pointercancel', svEnd);
+    document.addEventListener('keydown', e => { if (!this.root.querySelector('.story-view') || !/^Arrow(Left|Right)$/.test(e.key) || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) return; e.preventDefault(); this.apps.likeer.storyStep(e.key === 'ArrowRight' ? 1 : -1); });
     // карусель: лічильник і крапки стежать за прокруткою
     root.addEventListener('scroll', e => {
       const c = e.target; if (!c.classList?.contains('car')) return;
@@ -270,7 +292,7 @@ class Phone {
       if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button' && e.target.dataset.act) { e.preventDefault(); e.target.click(); return; }
       if (e.key !== 'Enter' || e.shiftKey || e.target.tagName === 'TEXTAREA') return;
       const k = e.target.dataset.keep || '';
-      const btn = k === 'tbcm' ? '[data-act="tb.send"]' : k === 'cm' ? '[data-act="lk.sendReply"]' : k.startsWith('dm-') ? '[data-act="lk.dmSend"]' : k === 'idea' ? '[data-act="ph.ideaAdd"]' : k === 'ph-pass' ? '[data-act="ph.phishGo"]' : null;
+      const btn = k === 'tbw' ? '[data-act="tb.wSend"]' : k === 'tbcm' ? '[data-act="tb.send"]' : k === 'cm' ? '[data-act="lk.sendReply"]' : k.startsWith('dm-') ? '[data-act="lk.dmSend"]' : k === 'idea' ? '[data-act="ph.ideaAdd"]' : k === 'ph-pass' ? '[data-act="ph.phishGo"]' : null;
       if (btn) { e.preventDefault(); this.root.querySelector(btn)?.click(); }
     });
     this.screen.querySelector('.homebar').addEventListener('click', () => { this.screen.querySelectorAll('.sh-back, .cf-back').forEach(x => (x._api ? x._api.close() : x.remove())); this.home(); });
@@ -283,6 +305,11 @@ class Phone {
       home: () => this.home(),
       camBack: () => a.returnTo ? this.open('likeer') : this.home(),
       camPick: () => { if ((a.mode || (a.returnTo === 'video' ? 'video' : 'photo')) === 'photo') a.scene = el.dataset.k; else a.clip = el.dataset.k; this.render(); },
+      camScenes: () => {
+        const mode = a.mode || (a.returnTo === 'video' ? 'video' : 'photo'), list = Object.entries(mode === 'photo' ? SCENES : CLIPS), cur = mode === 'photo' ? a.scene : a.clip;
+        sheet({ title: mode === 'photo' ? 'Що сфотографувати?' : 'Що зняти?', html: `<div class="scene-grid">${list.map(([k, v]) => `<button class="${cur === k ? 'on' : ''}" data-k="${k}"><span>${mode === 'photo' ? photo({ scene: k, v: 0.01 }) : video(k, { paused: true })}</span>${esc(v.t)}</button>`).join('')}</div>`,
+          onOpen: api => api.el.addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; if (mode === 'photo') a.scene = b.dataset.k; else a.clip = b.dataset.k; api.close(); this.render(); }) });
+      },
       camMode: () => { a.mode = el.dataset.m; this.render(); },
       geo: () => { s.settings.geotag = !s.settings.geotag; this.render(); toast(s.settings.geotag ? 'Місце зйомки записуватиметься у фото' : 'Місце зйомки більше не записується'); },
       shoot: () => {
@@ -325,7 +352,8 @@ class Phone {
   imported(ctx, g) {
     if (!g) return;
     const lk = this.apps.likeer;
-    if (ctx === 'avatar' && this.app === 'likeer' && lk.top.v === 'editProfile') { lk.top.d.img = g.mid; this.render(); }
+    if (ctx === 'avatar' && this.app === 'likeer' && lk.top.v === 'editProfile') { lk.top.d.img = g.mid; lk.top.d.scene = ''; this.render(); }
+    if (ctx === 'avatar' && this.app === 'likeer' && lk.top.v === 'signup') { lk.reg.img = g.mid; lk.reg.scene = ''; this.render(); }
     if (ctx === 'wall') { sim.s.phone.wall = g.mid; this.render(); toast('Шпалери змінено'); }
   }
   // файл більше ніде не потрібен — звільняємо місце в браузері

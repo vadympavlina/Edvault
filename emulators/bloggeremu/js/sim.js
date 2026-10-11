@@ -351,6 +351,19 @@ export class Sim {
     if (!c.hidden) this.notify('comment', `@${author.nick}: ${text}`, p.id, null, c.id);
   }
 
+  /* ── вподобання й власні коментарі ── */
+  likePost(pid) { const p = this.s.posts.find(x => x.id === pid); if (!p || !p.t) return; p.liked = !p.liked; p.stats.likes = Math.max(0, p.stats.likes + (p.liked ? 1 : -1)); this.emit('posts'); }
+  // коментар автора під власним дописом (не відповідь, а окремий)
+  myComment(pid, text) {
+    const s = this.s, p = s.posts.find(x => x.id === pid); text = String(text).trim().slice(0, 300); if (!p || !text || p.commentsOff) return null;
+    const tone = toneOf(text), c = { id: this.id('c'), pid: 'me', mine: true, text, kind: 'mine', tone, t: s.t, likes: 0, liked: false, reply: null, hidden: false, pinned: false };
+    p.comments.push(c); p.stats.comments++;
+    if (tone === 'rude') s.trust = Math.max(0, s.trust - 2);
+    else if (s.fans.length) this.later(this.r.range(15, 80), 'fanLike', pid, c.id, 1 + this.r.int(tone === 'kind' ? 5 : 2));
+    this.emit('comments'); return c;
+  }
+  fanLike(pid, cid, n) { const [, c] = this.find(pid, cid); if (c) { c.likes += n; this.emit('comments'); } }
+
   /* ── дії з коментарями ── */
   find(pid, cid) { const p = this.s.posts.find(x => x.id === pid); return [p, p?.comments.find(x => x.id === cid)]; }
   likeComment(pid, cid) { const [, c] = this.find(pid, cid); if (!c) return; c.liked = !c.liked; c.likes += c.liked ? 1 : -1; this.emit('comments'); }

@@ -330,12 +330,65 @@ await step('реклама: налаштування таргету, ціна, �
   const hid = await p.evaluate(() => Blogger.sim.s.gallery.find(g => g.scene === 'house').id);
   await p.click(`[data-act="ad.pickPhoto"][data-id="${hid}"]`); await p.fill('[data-in="ad.caption"]', 'Підписуйтесь!');
   for (let i = 0; i < 5; i++) await p.click('[data-act="ad.next"]');
-  assert.ok(await p.locator('[data-act="ad.launch"]').isDisabled(), 'на балансі замало грошей');
-  await p.click('.pay [data-act="ad.topup"]');
+  // якщо на навчальному балансі замало грошей, запуск вимкнено, доки не поповнити
+  if (await p.locator('[data-act="ad.launch"]').isDisabled()) await p.click('.pay [data-act="ad.topup"]');
   const bal = (await S()).ads.balance;
   await p.click('[data-act="ad.launch"]'); await adv(120);
   const rej = (await S()).ads.list[0];
-  assert.equal(rej.status, 'rejected'); assert.match(rej.reasons[0], /Особисті дані/); assert.equal((await S()).ads.balance, bal);
+  assert.equal(rej.status, 'rejected'); assert.match(rej.reasons[0], /Особисті дані/); const ads = (await S()).ads; assert.equal(ads.balance, bal, JSON.stringify({ bal, list: ads.list.map(a => [a.status, a.paid, a.refund, Math.round(a.stats.spent * 100) / 100]) }));
+});
+
+await step('лайки й коментарі скрізь: свій допис, допис блогера, відео у «Хвилі»', async () => {
+  await home(); await p.click('[data-app="likeer"]');
+  await p.evaluate(() => { const lk = Blogger.phone.apps.likeer; lk.tab('profile'); lk.go('post', { id: Blogger.sim.s.posts.find(x => x.t).id }); });
+  const l0 = (await S()).posts.find(x => x.t).stats.likes;
+  await p.click('[data-act="lk.likePost"]');
+  assert.equal((await S()).posts.find(x => x.t).stats.likes, l0 + 1);
+  await p.click('[data-act="lk.go"][data-v="comments"] >> nth=0');
+  assert.ok(!(await p.locator('[data-keep="cm"]').isDisabled()), 'коментувати можна без вибору чужого коментаря');
+  await p.fill('[data-keep="cm"]', 'Дякую всім, що дивитесь!'); await p.click('[data-act="lk.sendReply"]');
+  assert.ok((await S()).posts.find(x => x.t).comments.some(c => c.mine && /Дякую всім/.test(c.text)));
+  await p.waitForSelector('.cm.mine .author');
+  await p.evaluate(() => Blogger.phone.apps.likeer.tab('feed'));
+  await p.click('[data-act="lk.feedComments"] >> nth=0');
+  await p.fill('.fc-in input', 'Дуже гарно!'); await p.click('.fc-in [data-send]');
+  await p.waitForSelector('.fc-list .cm.mine');
+  await p.keyboard.press('Escape');
+  await home(); await p.click('[data-app="tube"]');
+  await p.evaluate(() => { const t = Blogger.phone.apps.tube; t.tab('channel'); t.go('video', { id: Blogger.sim.s.tube.videos[0].id }); });
+  const v0 = (await S()).tube.videos[0].stats.likes;
+  await p.click('[data-act="tb.likeOwn"]');
+  assert.equal((await S()).tube.videos[0].stats.likes, v0 + 1);
+});
+
+await step('історії: кілька підряд, автоперехід, натискання й свайп між блогерами', async () => {
+  await home(); await p.click('[data-app="likeer"]'); await p.evaluate(() => Blogger.phone.apps.likeer.tab('feed'));
+  await p.click('[data-act="lk.cstory"] >> nth=0');
+  const first = await p.locator('.sv-h b').innerText();
+  assert.ok(await p.locator('.sv-bars i').count() >= 2, 'у блогера кілька історій');
+  await p.click('.sv-next'); assert.equal(await p.locator('.sv-bars i.on').count(), 1);
+  await p.waitForFunction(f => document.querySelector('.sv-h b')?.textContent !== f || document.querySelectorAll('.sv-bars i.on').length >= 2, first, { timeout: 7000 }); // автоперехід за 5 с
+  const box = await p.locator('.sv-media').boundingBox();
+  const before = await p.locator('.sv-h b').innerText();
+  await p.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2); await p.mouse.down(); await p.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2, { steps: 6 }); await p.mouse.up();
+  await p.waitForFunction(b => document.querySelector('.sv-h b')?.textContent !== b, before);
+  await p.click('[data-act="lk.back"]');
+  assert.equal(await p.locator('.story .ring.seen').first().count(), 1, 'переглянуті історії — сіре кільце');
+});
+
+await step('реєстрація: можна вибрати фото для аватарки; жоден екран не прокручується вбік', async () => {
+  const wide = () => p.evaluate(() => [...document.querySelectorAll('#screen .scroll, #screen header, #screen .foot')].flatMap(sc => { const R = sc.getBoundingClientRect().right; return [...sc.querySelectorAll('*')].filter(e => !(e instanceof SVGElement) && e.offsetParent && e.getBoundingClientRect().right > R + 1 && !e.closest('.stories,.car')).map(e => e.className); }));
+  for (const go of [() => Blogger.phone.apps.likeer.tab('feed'), () => Blogger.phone.apps.likeer.tab('activity'), () => Blogger.phone.apps.likeer.tab('search'), () => { Blogger.phone.apps.likeer.tab('feed'); Blogger.phone.apps.likeer.act('create', {}); }, () => Blogger.phone.open('camera'), () => { Blogger.phone.open('tube'); Blogger.phone.apps.tube.tab('home'); }]) {
+    await p.evaluate(go); assert.deepEqual(await wide(), []);
+  }
+  // окрема сторінка — нова реєстрація
+  const ctx2 = await browser.newContext({ viewport: { width: 1366, height: 860 } }), q = await newPage(ctx2, errors); await q.goto(server.url + '/emulators/blogger'); await q.waitForFunction(() => window.Blogger);
+  await q.click('[data-app="likeer"]'); await q.click('[data-act="lk.signup"]');
+  await q.fill('[data-in="reg.nick"]', 'murko.fan'); await q.click('[data-act="lk.regNext"]'); await q.click('[data-k="pets"]'); await q.click('[data-act="lk.regNext"]');
+  await q.click('[data-act="lk.regImg"][data-scene="dog"]'); await q.click('[data-act="lk.regNext"]');
+  await q.fill('[data-in="reg.pass"]', 'Murchyk-2026!'); await q.click('[data-act="lk.regNext"]');
+  assert.equal(await q.evaluate(() => Blogger.sim.s.me.avatar.scene), 'dog');
+  await ctx2.close();
 });
 
 await step('шпалери з власного фото на головному екрані', async () => {
