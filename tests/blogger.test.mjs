@@ -45,14 +45,14 @@ test('фото з адресою: коментар про приватність
   s.advance(600);
   const p = s.s.posts[0];
   assert.ok(p.comments.some(c => c.kind === 'privacy' && /Шкільн/.test(c.text)), 'хтось упізнав адресу');
-  const d = s.s.dms.find(x => x.kind === 'stranger');
+  const d = s.s.dms.find(x => x.script === 'stranger');
   assert.ok(d, 'незнайомець пише в Директ');
   s.dmReply(d.id, 'Мені 12, а тобі?', 'unsafe');
   s.advance(30);
   assert.match(d.msgs.at(-1).text, /школі/);
   // лише підписники можуть писати — незнайомець не пройде
   const t = fresh(5); t.s.settings.dms = 'followers'; t.strangerDM();
-  assert.equal(t.s.dms.filter(x => x.kind === 'stranger').length, 0);
+  assert.equal(t.s.dms.filter(x => x.script === 'stranger').length, 0);
 });
 
 test('фішинг: без двофакторного входу профіль зламують, відновлення через пошту', () => {

@@ -11,7 +11,8 @@ import { Likeer, logo, carIdx } from './likeer.js';
 import { Tube, tubeLogo } from './tube.js';
 import { adViews, adAct, adInput, adRange, adSelect } from './ads.js';
 
-Object.assign(Likeer.prototype, adViews); // «Реклама» — частина Лайкера
+Object.assign(Likeer.prototype, adViews); // «Реклама» — і в Лайкері, і у «Хвилі»
+Object.assign(Tube.prototype, adViews); Tube.prototype.platform = 'tube';
 import { renderCreate, createAct, createInput, createRange, createToggle, createSelect, openCreate, createImported } from './create.js';
 
 const KEY = 'edvault-blogger';
@@ -83,6 +84,7 @@ class Phone {
     this.view = view; this.lastHtml = html;
     this.syncVideos();
     this.apps.likeer.syncStory();
+    this.syncChat();
     this.bar();
   }
   // власні відео: грати чи стояти (атрибут data-play), звук, межі обрізки
@@ -95,6 +97,18 @@ class Phone {
       else if (!want && !v.paused) v.pause();
     }
   }
+  // відкрита розмова: співрозмовник «друкує» в реальному часі (1–3 с на репліку), а не за віртуальним годинником
+  syncChat() {
+    const lk = this.apps.likeer, top = lk.top, open = this.app === 'likeer' && top.v === 'thread' ? top.id : null;
+    sim.watch = open;
+    const d = open && sim.s.dms.find(x => x.id === open), next = d?.pending?.[0];
+    if (!next || !sim.online(sim.s.people[d.pid])) { clearTimeout(this.chatT); this.chatKey = null; return; }
+    const key = open + ':' + d.pending.length + ':' + next.text;
+    if (key === this.chatKey) return;
+    clearTimeout(this.chatT); this.chatKey = key;
+    this.chatT = setTimeout(() => { this.chatKey = null; sim.deliverNow(open); this.save(); }, Math.min(3200, 900 + next.text.length * 28));
+  }
+  adApp() { return this.app === 'tube' ? this.apps.tube : this.apps.likeer; }
   later() { if (this.queued) return; this.queued = true; requestAnimationFrame(() => { this.queued = false; this.render(); }); }
   html() {
     if (this.apps[this.app]) return this.apps[this.app].render();
@@ -238,21 +252,21 @@ class Phone {
       else if (ns === 'cr') createAct(this.apps.likeer, name, el);
       else if (ns === 'ph') this.act(name, el);
       else if (ns === 'tb') this.apps.tube.act(name, el);
-      else if (ns === 'ad') adAct(this.apps.likeer, name, el);
+      else if (ns === 'ad') adAct(this.adApp(), name, el);
       this.save();
     });
     root.addEventListener('click', e => { const t = e.target.closest('[data-sw]'); if (!t) return; const k = t.dataset.sw; if (k.startsWith('cr.')) createToggle(this.apps.likeer, k); else this.apps.likeer.toggle(k); });
     root.addEventListener('input', e => {
       const el = e.target, k = el.dataset.in;
-      if (el.dataset.adrng) { adRange(this.apps.likeer, el.dataset.adrng, el); return; }
-      if (k) { if (k.startsWith('ad.')) adInput(this.apps.likeer, k, el); else if (k.startsWith('cr.')) createInput(this.apps.likeer, k, el); else if (k.startsWith('tb.')) this.apps.tube.input(k, el); else this.apps.likeer.input(k, el); }
+      if (el.dataset.adrng) { adRange(this.adApp(), el.dataset.adrng, el); return; }
+      if (k) { if (k.startsWith('ad.')) adInput(this.adApp(), k, el); else if (k.startsWith('cr.')) createInput(this.apps.likeer, k, el); else if (k.startsWith('tb.')) this.apps.tube.input(k, el); else this.apps.likeer.input(k, el); }
     });
     root.addEventListener('change', e => {
       const el = e.target;
       if (el.dataset.rng) createRange(this.apps.likeer, el.dataset.rng, el);
       if (el.dataset.sel) this.apps.likeer.select(el.dataset.sel, el.value);
       if (el.dataset.crsel) createSelect(this.apps.likeer, el.dataset.crsel, el.value);
-      if (el.dataset.adsel) adSelect(this.apps.likeer, el.dataset.adsel, el.value);
+      if (el.dataset.adsel) adSelect(this.adApp(), el.dataset.adsel, el.value);
       if (el.dataset.tbsel) this.apps.tube.select(el.dataset.tbsel, el.value);
       if (el.dataset.phsel === 'topic') { sim.setTopic(el.dataset.id, el.value); this.render(); this.save(); }
       if (el.dataset.file) { const files = [...el.files]; el.value = ''; this.importFiles(files, el.dataset.file); }

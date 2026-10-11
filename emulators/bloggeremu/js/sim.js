@@ -4,6 +4,7 @@ import { NICHES, SCENES, CLIPS, MUSIC, MOOD_FIT, FILTERS, TAGS, TRENDS, CLICKBAI
 import { judge, vertical } from './quality.js';
 import { tubeStep } from './tubesim.js';
 import { adStep, START_BALANCE } from './adsim.js';
+import { SCRIPTS, intents, fill, voice, generic, petName, names, isFem, captionComment, LOYAL, DEFEND, followUp } from './talk.js';
 
 export const DAY = 1440;
 export const START = 16 * 60; // понеділок, 16:00 — після уроків
@@ -74,6 +75,7 @@ export class Sim {
     for (const st of s.stories) if (t - st.t < DAY) { const f = 1 - Math.exp(-(t - st.t) / 180); st.views = Math.round(st.plan * f); }
     if (Math.floor(t / 60) !== Math.floor((t - d) / 60)) ch = this.hourly() || ch;
     if (s.tube) ch = tubeStep(this, d) || ch;
+    for (const th of s.dms) if (th.pending?.length && th.pending[0].at <= t && !(th.id === this.watch && this.online(s.people[th.pid], t))) { while (th.pending.length && th.pending[0].at <= t) this.deliver(th); ch = true; }
     if (s.ads?.list.length) ch = adStep(this, d, ACTIVITY[hourOf(t)] / ACT_MAX) || ch;
     if (s.queue?.length) { const n = s.queue.length; this.runQueue(); ch = ch || n !== s.queue.length; }
     return ch;
@@ -294,7 +296,7 @@ export class Sim {
     while (add-- > 0) { this.comment(p); }
     // сповіщення про вподобання — пачками
     const lk = st.likes - before.likes;
-    if (lk > 0 && (!p.fired.lastLike || s.t - p.fired.lastLike > 90)) { p.fired.lastLike = s.t; const who = this.anyFan(); this.notify('like', lk === 1 ? `@${who.nick} вподобав(-ла) ваш допис` : `@${who.nick} та ще ${lk - 1} вподобали ваш допис`, p.id); }
+    if (lk > 0 && (!p.fired.lastLike || s.t - p.fired.lastLike > 90)) { p.fired.lastLike = s.t; const who = this.anyFan(); this.notify('like', lk === 1 ? voice(`@${who.nick} вподобав(-ла) ваш допис`, isFem(who)) : `@${who.nick} та ще ${lk - 1} вподобали ваш допис`, p.id); }
     if (P.viral > 1 && age > P.viralAt && !p.fired.viral) { p.fired.viral = true; this.notify('star', 'Ваш допис потрапив у рекомендації! Охоплення швидко росте', p.id); }
     this.milestones();
     return st.views !== before.views || st.comments !== before.comments;
@@ -318,6 +320,21 @@ export class Sim {
     let kind, text, pid = null;
     const risk = (p.risk || []).find(x => !f['risk_' + x] && x !== 'geo') || ((p.risk || []).includes('geo') && !f.risk_geo ? 'geo' : null);
     const crit = [['dark', p.dark], ['over', p.over], ['intro', p.intro], ['long', p.long], ['offtopic', p.offtopic], ['caption', p.noCaption], ['spamtags', p.spamTags], ['mute', p.music?.hit && p.claimed], ['blur', p.blur], ['dull', p.dull], ['horiz', p.horiz], ['still', p.still], ['lowres', p.lowres]].filter(([k, on]) => on && !f['c_' + k]);
+    // живі репліки: постійні глядачі, відповіді на питання з підпису, імена, прохання, ніч
+    const fill2 = (t, u) => voice(fill(t, { fem: isFem(u) }), isFem(u));
+    const loyal = s.fans.map(id => s.people[id]).filter(u => u?.loyal && !u.blocked && !f['loyal_' + u.id]);
+    const waiting = s.fans.map(id => s.people[id]).find(u => u?.wait && u.wait === p.topic && !u.blocked);
+    let special = null;
+    if (waiting && !f['req_' + waiting.id]) { f['req_' + waiting.id] = true; waiting.wait = null; waiting.rel = (waiting.rel || 0) + 2; special = { u: waiting, text: 'Мій запит виконано! Дякую-дякую!', kind: 'praise' }; }
+    else if (loyal.length && r.chance(st.comments === 0 ? 0.8 : 0.25)) { const u = r.pick(loyal); f['loyal_' + u.id] = true; special = { u, text: u.shyBrave && !u.braveDone ? (u.braveDone = true, 'Ось, наважи{вся|лася} написати коментар :) Дуже гарно!') : r.pick(LOYAL), kind: 'praise' }; }
+    else if (p.caption && (f.capN || 0) < 4 && r.chance(0.3)) { const cc = captionComment(p.caption, p.topic, r, { slides: p.carousel || 0 }); if (cc && !p.comments.some(x => x.text === cc.text)) { f.capN = (f.capN || 0) + 1; special = { u: this.anyFan(), ...cc }; } }
+    else if (!f.night && (hourOf(p.t) >= 23 || hourOf(p.t) < 5) && r.chance(0.4)) { f.night = true; special = { u: this.anyFan(), text: 'Ти чого не спиш? :) Іди відпочивай', kind: 'topic' }; }
+    else if (!f.mention && st.comments >= 2 && r.chance(0.08)) { f.mention = true; const a = this.anyFan(), b = this.person('fan', [p.topic]); special = { u: a, text: `@${b.nick} глянь, тобі сподобається :)`, kind: 'topic' }; this.later(r.range(20, 90), 'addComment', p.id, 'praise', fill2('Прийшо{в|ла} від @' + a.nick + ' :) Класно!', b), b.id); }
+    if (special && !special.u.blocked) {
+      const c = { id: this.id('c'), pid: special.u.id, text: fill2(special.text, special.u), kind: special.kind, t: s.t, likes: r.int(5), liked: false, reply: null, hidden: false, pinned: false, loyal: !!special.u.loyal };
+      if (s.settings.comments === 'off' || p.commentsOff) return;
+      st.comments++; p.comments.push(c); this.notify('comment', `@${special.u.nick}: ${c.text}`, p.id, null, c.id); return;
+    }
     if (risk && st.comments >= 1) {
       f['risk_' + risk] = true; kind = 'privacy';
       text = r.pick(C.privacy[risk === 'geo' ? 'place' : risk] || C.privacy.place);
@@ -339,6 +356,7 @@ export class Sim {
     if (p.comments.some(x => x.text === text)) { const pool = [...COMMENTS.praise, ...(COMMENTS.topic[p.topic] || [])].filter(x => !p.comments.some(c => c.text === x)); if (!pool.length) return; text = r.pick(pool); kind = /\?/.test(text) ? 'question' : 'praise'; }
     const author = pid ? s.people[pid] : this.anyFan();
     if (author.blocked) return;
+    text = voice(text, isFem(author));
     const c = { id: this.id('c'), pid: author.id, text, kind, t: s.t, likes: kind === 'bot' ? 0 : r.int(4), liked: false, reply: null, hidden: false, pinned: false };
     // фільтри коментарів
     if (s.settings.filter && (kind === 'troll' || RUDE.some(w => lc(text).includes(w)))) c.hidden = 'filter';
@@ -349,6 +367,32 @@ export class Sim {
     p.comments.push(c);
     if (p.comments.length > 60) p.comments.splice(p.comments.findIndex(x => !x.pinned && !x.reply), 1);
     if (!c.hidden) this.notify('comment', `@${author.nick}: ${text}`, p.id, null, c.id);
+    // постійні глядачі заступаються за автора
+    if (kind === 'troll' && !c.hidden && s.fans.some(id => s.people[id]?.loyal) && r.chance(0.65)) this.later(r.range(10, 45), 'defend', p.id, c.id);
+  }
+  defend(pid, cid) {
+    const s = this.s, [p, c] = this.find(pid, cid); if (!c || c.hidden) return;
+    const u = s.fans.map(id => s.people[id]).filter(x => x?.loyal && !x.blocked)[0]; if (!u) return;
+    const t = s.people[c.pid];
+    p.comments.push({ id: this.id('c'), pid: u.id, to: cid, text: voice(fill(this.r.pick(DEFEND), { fem: isFem(u), troll: t?.nick || '' }), isFem(u)), kind: 'topic', t: s.t, likes: 2 + this.r.int(6), liked: false, reply: null, hidden: false, pinned: false, loyal: true });
+    p.stats.comments++; this.notify('comment', `@${u.nick} заступи${isFem(u) ? 'лася' : 'вся'} за вас перед @${t?.nick}`, p.id); this.emit('comments');
+  }
+  // те саме у «Хвилі»
+  tubeFollow(vid, cid) {
+    const s = this.s, v = s.tube?.videos.find(x => x.id === vid), c = v?.comments.find(x => x.id === cid), u = s.people[c?.pid]; if (!c || !u || u.blocked) return;
+    const last = (c.thread || []).filter(x => x.me).at(-1) || c.reply; if (!last) return;
+    const text = fill(followUp(c.kind, last.tone, (c.thread || []).filter(x => !x.me).length + 1, this.r), { fem: isFem(u) });
+    (c.thread ||= []).push({ pid: u.id, text, t: s.t });
+    const ch = s.tube; ch.notifs.unshift({ id: this.id('tn'), icon: 'comment', text: voice(`@${u.nick} відповів(-ла) вам: ${text}`, isFem(u)), vid, cid, t: s.t }); ch.unread = (ch.unread || 0) + 1; this.emit('tnotif');
+  }
+  // глядач відповідає на вашу відповідь — розмова в гілці коментарів
+  cmFollow(pid, cid) {
+    const s = this.s, [p, c] = this.find(pid, cid), u = s.people[c?.pid]; if (!c || !u || u.blocked) return;
+    const mine = (c.thread || []).filter(x => x.me), last = mine.at(-1) || c.reply; if (!last) return;
+    const text = fill(followUp(c.kind, last.tone, (c.thread || []).filter(x => !x.me).length + 1, this.r), { fem: isFem(u) });
+    (c.thread ||= []).push({ pid: u.id, text, t: s.t });
+    if (last.reply) last.likes = (last.likes || 0) + 1;
+    this.notify('comment', voice(`@${u.nick} відповів(-ла) вам: ${text}`, isFem(u)), p.id, null, c.id); this.emit('comments');
   }
 
   /* ── вподобання й власні коментарі ── */
@@ -385,11 +429,22 @@ export class Sim {
   }
   // Відповідь на коментар. tone: kind|neutral|rude (для власного тексту визначаємо самі)
   reply(pid, cid, text, tone, extra) {
-    const s = this.s, r = this.r, [p, c] = this.find(pid, cid); if (!c || c.reply) return;
+    const s = this.s, r = this.r, [p, c] = this.find(pid, cid); if (!c) return;
     text = String(text).trim().slice(0, 300); if (!text) return;
     tone = tone || toneOf(text);
-    c.reply = { text, t: s.t, tone };
     const u = s.people[c.pid];
+    if (c.reply) {
+      // друга й далі відповіді в гілці — лише якщо останнє слово за глядачем
+      if (!c.thread?.length || c.thread.at(-1).me) return;
+      c.thread.push({ me: true, text, t: s.t, tone });
+      if (tone === 'rude') { s.trust = Math.max(0, s.trust - 2); this.cool(u, 2); }
+      else if (tone === 'kind' && u) u.rel = (u.rel || 0) + 1;
+      if (c.thread.filter(x => !x.me).length < 2 && r.chance(0.6)) this.later(r.range(8, 40), 'cmFollow', p.id, c.id);
+      this.emit('comments'); return;
+    }
+    c.reply = { text, t: s.t, tone };
+    if (u && u.kind !== 'bot' && r.chance(c.kind === 'question' ? 0.75 : c.kind === 'troll' ? 0.5 : tone === 'rude' ? 0.7 : 0.4)) this.later(r.range(8, 45), 'cmFollow', p.id, c.id);
+    if (tone === 'kind' && u) u.rel = (u.rel || 0) + 1;
     if (tone === 'rude') {
       s.trust = Math.max(0, s.trust - 3); s.heat += 2; const lost = Math.min(s.followers, r.int(3) + 1); s.followers -= lost;
       this.later(r.range(20, 80), 'addComment', p.id, 'critique', r.pick(['Навіщо так грубо відповідати?', 'Неприємно читати таке від автора', 'Можна ж ввічливо']), this.anyFan().id);
@@ -464,7 +519,7 @@ export class Sim {
   thread(pid) { let d = this.s.dms.find(x => x.pid === pid); if (!d) { d = { id: this.id('d'), pid, msgs: [], unread: 0, opts: null }; this.s.dms.unshift(d); } return d; }
   dmText(pid, text, opts = null, kind = null) {
     const s = this.s, d = this.thread(pid); if (d.blocked) return d;
-    d.msgs.push({ me: false, text, t: s.t }); d.unread++; d.opts = opts; if (kind) d.kind = kind; d.t = s.t;
+    d.msgs.push({ me: false, text: voice(text, isFem(s.people[pid])), t: s.t }); d.unread++; d.opts = opts; if (kind) d.kind = kind; d.t = s.t;
     s.dms.splice(s.dms.indexOf(d), 1); s.dms.unshift(d);
     this.notify('dm', `@${s.people[pid]?.nick || 'хтось'} надсилає повідомлення`, null, pid);
     this.emit('dms'); return d;
@@ -473,11 +528,135 @@ export class Sim {
   dmReply(did, text, key) {
     const s = this.s, d = s.dms.find(x => x.id === did); if (!d || d.blocked) return;
     text = String(text).trim().slice(0, 400); if (!text) return;
-    d.msgs.push({ me: true, text, t: s.t }); d.opts = null; d.t = s.t;
+    while (d.pending?.length) this.deliver(d); // те, що співрозмовник уже друкував, з’являється раніше за вашу відповідь
+    d.msgs.push({ me: true, text, t: s.t }); d.opts = null; d.t = s.t; d.req = false; d.nudged = false;
+    if (d.script) { this.talkReply(d, text, key); this.emit('dms'); return; }
     const h = this.handlers[d.kind];
     if (h) h.call(this, d, key || null, text);
     else if (toneOf(text) !== 'rude' && this.r.chance(0.6)) this.later(this.r.range(5, 30), 'dmText', d.pid, this.r.pick(['Дякую за відповідь!', 'Круто, чекаю нових дописів', 'Дякую!']));
     this.emit('dms');
+  }
+  /* ── розмовний рушій (див. talk.js) ── */
+  // хто в мережі: більшість людей не пише вночі; бренди — у робочий час
+  online(u, t = this.s.t) { const h = hourOf(t); if (!u) return false; if (['scam', 'bot', 'stranger', 'troll'].includes(u.kind)) return true; if (u.kind === 'brand') return h >= 9 && h < 19; return h >= 7 && h < 23; }
+  nextOnline(u, t) { let x = t; for (let i = 0; i < 48 && !this.online(u, x); i++) x = (Math.floor(x / 60) + 1) * 60; return x === t ? t : x + this.r.int(40); }
+  // почати розмову за сценарієм
+  talk(pid, script, mem = {}) {
+    const s = this.s, d = this.thread(pid), u = s.people[pid]; if (d.blocked || !SCRIPTS[script]) return d;
+    if (SCRIPTS[script].req && !s.fans.includes(pid) && s.settings.dms === 'followers') { this.notify('shield', voice(`@${u?.nick || 'хтось'} не підписаний(-а) на вас і намагався(-лася) написати. Повідомлення від незнайомих вимкнено`, isFem(u))); return d; }
+    d.script = script; d.mem = { ...mem }; d.done = false; d.nudged = false;
+    if (SCRIPTS[script].req && !s.fans.includes(pid)) d.req = true;
+    this.enter(d, SCRIPTS[script].start, '', true);
+    return d;
+  }
+  talkCtx(d, text = '') {
+    const s = this.s, u = s.people[d.pid] || {}, me = s.me || {}, caps = s.posts.filter(p => p.t).map(p => p.caption || p.text || '');
+    const pet = petName(caps), last = s.posts.find(p => p.t && (p.caption || p.text)), post = last ? (last.caption || last.text).replace(/#\S+/g, '').trim().slice(0, 34) : '';
+    const heard = names(text)[0];
+    const b = BRANDS.find(x => 'br_' + x.id === d.pid), c = CREATORS.find(x => 'cr_' + x.id === d.pid) || CREATORS.find(x => x.id === d.mem?.cid);
+    const pay = b ? (d.mem?.pay || b.pay) : 0;
+    return { fem: isFem(u), me: me.nick, niche: me.niche || 'pets', fniche: u.interests?.[0] || me.niche || 'pets', name: u.name, nick: u.nick, seed: [...(u.nick || 'x')].reduce((a, ch) => a + ch.charCodeAt(0), 0), post: post.length >= 34 ? post + '…' : post, pet, petOr: pet || 'твій улюбленець', petAns: pet ? `Його звати ${pet}` : 'Дякую! Він у мене найкращий', heardName: heard, short: text.length < 6,
+      brand: b?.name, item: b?.item, pay: b?.pay, bad: !!b?.bad, bid: b?.id, pay2n: b ? Math.round(b.pay * 1.15 / 10) * 10 : 0, pay2: b ? Math.round(b.pay * 1.15 / 10) * 10 : 0, payNow: pay, counter: !!d.mem?.counter,
+      cnick: c?.nick, ctopic: c ? nicheOf(c.niche).t.toLowerCase() : '', cid: c?.id, fmt: d.mem?.fmt || 'фото' };
+  }
+  enter(d, name, text = '', first = false) {
+    const sc = SCRIPTS[d.script], n = sc?.nodes[name]; if (!n) return;
+    const u = this.s.people[d.pid]; d.node = name;
+    let c = this.talkCtx(d, text);
+    if (n.fx) { n.fx(this, d, u, c, text); c = this.talkCtx(d, text); }
+    if (n.sys) this.sysMsg(d, n.sys);
+    const lines = (n.say || []).map(x => fill(typeof x === 'function' ? x(c) : x, c));
+    const opts = n.opts ? (typeof n.opts === 'function' ? n.opts(c) : n.opts).map(([k, t]) => [k, fill(t, c)]) : null;
+    if (lines.length) this.queue(d, lines, opts, { first }); else if (opts) d.opts = opts;
+    d.done = !!n.end; d.wait = !!opts;
+  }
+  sysMsg(d, text) { if (d.msgs.at(-1)?.sys === text) return; d.msgs.push({ sys: true, text, t: this.s.t }); this.emit('dms'); }
+  // репліки з паузами: людина спершу читає, потім друкує (довше для довгих повідомлень)
+  queue(d, lines, opts = null, o = {}) {
+    const s = this.s, u = s.people[d.pid];
+    let at = this.nextOnline(u, Math.max(s.t, d.pending?.at(-1)?.at || 0) + (o.first ? 0 : 1 + this.r.int(4)));
+    d.pending ||= [];
+    lines.forEach((text, i) => { at += 0.5 + Math.min(3, text.length / 60); d.pending.push({ at, text, opts: i === lines.length - 1 ? opts : undefined, react: o.react && i === 0, first: o.first && i === 0 }); });
+  }
+  deliver(d) {
+    const s = this.s, x = d.pending.shift(); if (!x || d.blocked) { d.pending = []; return; }
+    for (const m of d.msgs) if (m.me) m.seen = true;
+    if (x.react) { const m = [...d.msgs].reverse().find(y => y.me); if (m) m.heart = true; }
+    d.msgs.push({ me: false, text: voice(x.text, isFem(s.people[d.pid])), t: s.t }); d.t = s.t; d.unread++;
+    if (x.opts !== undefined) d.opts = x.opts;
+    s.dms.splice(s.dms.indexOf(d), 1); s.dms.unshift(d);
+    if (d.id !== this.watch && (x.first || d.pending.length === 0)) this.notify('dm', d.req ? `@${s.people[d.pid]?.nick || 'хтось'} хоче надіслати вам повідомлення` : `@${s.people[d.pid]?.nick || 'хтось'}: ${x.text.slice(0, 60)}`, null, d.pid);
+    this.emit('dms');
+  }
+  deliverNow(did) { const d = this.s.dms.find(x => x.id === did); if (d?.pending?.length) this.deliver(d); }
+  talkReply(d, text, key) {
+    const s = this.s, u = s.people[d.pid], ints = intents(text), node = SCRIPTS[d.script]?.nodes[d.node];
+    if (u) u.lastTalk = s.t;
+    // поради платформи з безпеки — на будь-яку розмову
+    if (ints.has('personal') && u?.kind !== 'stranger' && !d.mem.tipP) { d.mem.tipP = true; this.sysMsg(d, 'Підказка Лайкера: не пишіть у переписці школу, клас, адресу, вік чи телефон — навіть тим, хто здається другом.'); }
+    if (ints.has('password') && !/пароль/.test(node?.on ? Object.keys(node.on).join() : '') && d.script !== 'classmate') this.sysMsg(d, 'Підказка Лайкера: пароль і коди з SMS не повідомляють нікому — ні друзям, ні «підтримці».');
+    const kind = ints.has('kind') || ints.has('thanks');
+    if (!node || d.done) {
+      // розмова завершилася — коротка жива реакція
+      if (ints.has('rude')) { this.cool(u, 2); this.queue(d, ['Неприємно таке читати…']); }
+      else if (ints.has('bye')) this.queue(d, [this.r.pick(['Бувай! :)', 'Па-па, гарного вечора!', 'Бувай, до зв’язку!'])], null, { react: true });
+      else if (kind) this.queue(d, [fill(this.r.pick(['Дякую! :)', 'Тобі теж гарного дня', 'Взаємно!']), this.talkCtx(d))], null, { react: true });
+      else if (this.r.chance(0.7)) this.queue(d, generic(ints, this.talkCtx(d)).map(x => fill(x, this.talkCtx(d))));
+      return;
+    }
+    const on = node.on || {};
+    let to = key && on[key] ? on[key] : Object.keys(on).find(k => k !== '*' && ints.has(k));
+    if (to && on[to]) to = on[to];
+    if (!to && ints.has('rude') && !on.rude) { this.cool(u, 2); this.queue(d, [fill(this.r.pick(['Неприємно таке читати…', 'Навіщо так грубо?']), this.talkCtx(d))], node.opts ? d.opts || null : null); this.sysMsg(d, 'Грубість у переписці теж бачать: людина може зробити знімок екрана й показати іншим.'); return; }
+    if (!to && on['*']) to = on['*'];
+    if (!to) { const c = this.talkCtx(d, text); this.queue(d, generic(ints, c).map(x => fill(x, c)), d.lastOpts || null); return; }
+    if (kind) this.queue(d, [], null, {});
+    this.enter(d, to, text);
+    if (kind && d.pending?.length) d.pending[0].react = true;
+  }
+  talkLater(did, node) { const d = this.s.dms.find(x => x.id === did); if (d && !d.blocked) { d.done = false; this.enter(d, node, '', true); } }
+  // ставлення псується: при сильній образі людина відписується
+  cool(u, n) { if (!u) return; u.rel = (u.rel || 0) - n; u.loyal = false; const s = this.s; if (u.rel <= -3 && s.fans.includes(u.id)) { s.fans = s.fans.filter(x => x !== u.id); s.followers = Math.max(0, s.followers - 1); } }
+  // режисер розмов: час від часу хтось пише, залежно від того, що відбувається з профілем
+  converse() {
+    const s = this.s, r = this.r, F = s.flags, n = s.posts.filter(p => p.t).length;
+    if (!s.me || !n || s.followers < 2 || !this.online({ kind: 'fan' })) return;
+    if (F.talkAt && s.t - F.talkAt < 360 + r.int(360)) return;
+    const used = F.talked ||= {};
+    const fanPerson = () => { const pool = s.fans.map(id => s.people[id]).filter(p => p && !p.blocked && !s.dms.some(d => d.pid === p.id && d.script)); return pool.length ? r.pick(pool) : this.person('fan', [s.me.niche]); };
+    const opts = [
+      ['fan', 4, true], ['request', 2, n >= 2], ['advice', 2, s.followers >= 8 && !used.advice], ['shy', 1, n >= 2 && !used.shy],
+      ['classmate', 1, n >= 3 && !used.classmate], ['troll', 1, s.followers >= 25 && !used.troll],
+    ].filter(x => x[2]);
+    const tot = opts.reduce((a, x) => a + x[1], 0); let k = r.next() * tot, pick = opts[0][0];
+    for (const [name, w] of opts) { if ((k -= w) < 0) { pick = name; break; } }
+    F.talkAt = s.t; used[pick] = (used[pick] || 0) + 1;
+    if (pick === 'troll') { const u = this.person('troll'); this.talk(u.id, 'troll'); return; }
+    if (pick === 'classmate') { const u = this.person('fan', [s.me.niche]); this.talk(u.id, 'classmate'); return; }
+    this.talk(fanPerson().id, pick);
+  }
+  // питання в коментарях без відповіді — глядачі помічають
+  ignoredCheck() {
+    const s = this.s;
+    for (const p of s.posts) {
+      if (!p.t || s.t - p.t > 2 * DAY || p.fired.ignored) continue;
+      const qs = p.comments.filter(c => c.kind === 'question' && !c.reply && !c.hidden && s.t - c.t > 600);
+      if (qs.length < 2) continue;
+      p.fired.ignored = true; s.trust = Math.max(0, s.trust - 1);
+      for (const c of qs) { const u = s.people[c.pid]; if (u) u.rel = (u.rel || 0) - 1; }
+      this.addComment(p.id, 'critique', this.r.pick(['Автор узагалі читає коментарі? Питали ж…', 'Скільки можна питати… відповіси?', 'Шкода, що на питання ніхто не відповідає']), this.anyFan().id);
+    }
+  }
+  // без відповіді кілька годин — нагадують про себе (один раз)
+  nudge() {
+    const s = this.s;
+    for (const d of s.dms) {
+      if (!d.script || d.done || d.blocked || d.nudged || !d.wait || d.pending?.length) continue;
+      const last = d.msgs.at(-1); if (!last || last.me || last.sys || s.t - last.t < 480) continue;
+      const u = s.people[d.pid]; if (!this.online(u) || ['brand', 'troll', 'stranger'].includes(u?.kind) && d.script !== 'brand') continue;
+      d.nudged = true;
+      this.queue(d, [d.script === 'brand' ? 'Добрий день! Нагадуємо про нашу пропозицію. Чекаємо відповідь до кінця тижня' : fill(this.r.pick(['Ти тут? :)', 'Мабуть, ти зайнят{ий|а}… Напиши, як будеш вільн{ий|а}', 'Привіт ще раз! Не відволікаю?']), this.talkCtx(d))], d.opts);
+    }
   }
   readDM(did) { const d = this.s.dms.find(x => x.id === did); if (d) { d.unread = 0; this.emit('dms'); } }
 
@@ -498,15 +677,15 @@ export class Sim {
     if (!s.me) return false;
     const fire = (k, cond, fn) => { if (!F[k] && cond) { F[k] = s.t; fn(); } };
     const fan = () => s.fans.length ? s.people[r.pick(s.fans)] : this.person('fan');
-    fire('fanQ', n >= 1 && s.followers >= 3, () => this.dmText(fan().id, r.pick(['Привіт! Мені дуже подобаються твої дописи. Як ти почав(-ла) вести блог?', 'Привіт! А коли буде новий допис?', 'Привіт! Можна порадитися: як ти робиш такі гарні фото?']), null, 'fan'));
     fire('bots', n >= 2, () => this.dmText(this.person('scam').id, 'Привіт! 1000 живих підписників усього за 50 грн. Гарантія! Відповідай «так», і почнемо', [['buy', 'Так, хочу'], ['no', 'Ні, дякую']], 'buy'));
     fire('phish', n >= 2 && s.t - (F.bots || s.t) > 300, () => this.phish());
-    fire('collab', s.followers >= 60 && n >= 3, () => { const c = CREATORS.find(x => x.niche === s.me.niche) || CREATORS[0]; const u = this.creatorPerson(c); this.dmText(u.id, `Привіт! Я @${c.nick}, теж веду блог про «${nicheOf(c.niche).t.toLowerCase()}». Давай зробимо спільний допис? Ти позначиш мене, а я поділюся ним зі своїми ${num(c.followers)} підписниками.`, [['yes', 'Так, давай!'], ['no', 'Ні, дякую']], 'collab'); });
+    fire('collab', s.followers >= 60 && n >= 3, () => { const c = CREATORS.find(x => x.niche === s.me.niche) || CREATORS[0]; const u = this.creatorPerson(c); this.talk(u.id, 'collab', { cid: c.id }); });
     fire('brand', s.followers >= 120 && n >= 3, () => this.brandOffer(false));
     fire('badbrand', s.followers >= 200 && F.brand && s.t - F.brand > 600, () => this.brandOffer(true));
     fire('giveaway', n >= 4, () => { const u = this.person('scam'); u.nick = 'murko.cat.rozigrash'; u.name = 'Мурко · Розіграш'; this.dmText(u.id, 'ВІТАЄМО!!! Ви виграли новий телефон у розіграші @murko.cat! Щоб отримати приз, оплатіть доставку 99 грн за посиланням: murko-pryz.online/oplata', [['pay', 'Відкрити посилання'], ['check', 'Перевірити, хто пише'], ['no', 'Ігнорувати']], 'giveaway'); });
     // пізно ввечері — нагадування про сон
     if (hourOf(s.t) === 23 && (!F.night || s.t - F.night > 3 * DAY) && n >= 1) { F.night = s.t; this.notify('moon', 'Вже пізно. Сон важливіший за лайки — підписники нікуди не дінуться до ранку', null); }
+    this.converse(); this.nudge(); this.ignoredCheck();
     if (s.energy < 25 && (!F.tired || s.t - F.tired > DAY)) { F.tired = s.t; this.notify('battery', 'Енергія блогера на нулі: дописи стають гіршими. Відпочиньте — енергія відновлюється з часом', null); }
     return true;
   }
@@ -521,17 +700,17 @@ export class Sim {
     const b = r.pick(pool.length ? pool : BRANDS.filter(x => !x.bad));
     const id = 'br_' + b.id;
     s.people[id] ||= { id, nick: b.id + '.official', name: b.name, color: b.bad ? '#c62828' : '#00695c', kind: 'brand', brand: b.id };
-    this.dmText(id, `Добрий день! Ми — ${b.name}. Пропонуємо співпрацю: допис про наш товар (${b.item}) за ${b.pay} грн. Цікаво?`, [['yes', 'Погоджуюсь'], ['ask', 'Розкажіть більше'], ['no', 'Ні, дякую']], 'brand');
+    this.talk(id, 'brand');
   }
   strangerDM() {
     const s = this.s; if (s.settings.dms === 'followers') { this.notify('shield', 'Незнайомець намагався написати вам, але повідомлення від незнайомих людей вимкнено', null); return; }
     const u = this.person('stranger'); u.nick = 'drug_' + (100 + this.r.int(900)); u.name = 'Друг';
-    this.dmText(u.id, 'Привіт! Бачив(-ла) твої фото, ти, здається, живеш поруч зі мною. Скільки тобі років?', [['safe', 'Не скажу. Ми не знайомі'], ['unsafe', 'Мені 12, а тобі?'], ['block', 'Заблокувати']], 'stranger');
+    this.talk(u.id, 'stranger');
   }
   friendDM(postId) {
     const p = { id: postId };
     const u = this.person('fan'); u.name = 'Однокласник'; u.nick = 'odnoklasnyk_' + this.r.int(90);
-    this.dmText(u.id, 'Привіт. Навіщо ти виклав(-ла) моє фото без дозволу? Мені не подобається, як я там вийшов(-ла). Видали, будь ласка', [['del', 'Вибач, зараз видалю'], ['no', 'Та нічого страшного']], 'friend').post = p.id;
+    this.dmText(u.id, 'Привіт. Навіщо викладати моє фото без дозволу? Мені не подобається, як я там вийшов(-ла). Видали, будь ласка', [['del', 'Вибач, зараз видалю'], ['no', 'Та нічого страшного']], 'friend').post = p.id;
   }
   phish() {
     const s = this.s, u = this.person('scam'); u.nick = 'lajker.pidtrymka'; u.name = 'Лайкер Підтримка'; u.fake = true;
@@ -551,7 +730,7 @@ export class Sim {
 
   /* ── сценарії відповідей у Директі ── */
   handlers = {
-    fan(d, key, text) { if (toneOf(text) === 'rude') { const s = this.s; s.fans = s.fans.filter(x => x !== d.pid); s.followers = Math.max(0, s.followers - 1); this.later(10, 'dmText', d.pid, 'Ой… Добре, більше не напишу. Відписуюсь'); } else this.later(this.r.range(10, 40), 'dmText', d.pid, 'Дякую, що відповів(-ла)! Чекаю нових дописів'); },
+    fan(d, key, text) { if (toneOf(text) === 'rude') { const s = this.s; s.fans = s.fans.filter(x => x !== d.pid); s.followers = Math.max(0, s.followers - 1); this.later(10, 'dmText', d.pid, 'Ой… Добре, більше не напишу. Відписуюсь'); } else this.later(this.r.range(10, 40), 'dmText', d.pid, 'Дякую за відповідь! Чекаю нових дописів'); },
     buy(d, key) {
       const s = this.s;
       if (key === 'buy' || /^так/i.test(d.msgs.at(-1).text)) {

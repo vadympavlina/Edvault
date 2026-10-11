@@ -20,6 +20,17 @@ export const GOALS = {
   msg: { t: 'Більше повідомлень', r: 'повідомлення', one: 'повідомлення', icon: 'send', d: 'Показ тим, хто охоче пише в Директ. Підходить для замовлень і запитань.' },
 };
 export const PLACES = { feed: ['Стрічка', 1, 0.45], stories: ['Історії', 0.8, 0.2], reels: ['Короткі відео', 0.7, 0.35] };
+// «Хвиля»: оплата за перегляд (CPV) — платите, лише коли людина дивиться відео довше 30 с або до кінця
+export const GOALS_T = {
+  views: { t: 'Більше переглядів', r: 'оплачених переглядів', one: 'перегляд', icon: 'play', d: 'Ви платите, лише коли людина дивиться відео довше 30 секунд (або до кінця, якщо воно коротше). Хто пропустив рекламу — безкоштовно.' },
+  subs: { t: 'Більше підписників', r: 'нових підписників', one: 'підписника', icon: 'user', d: 'Платформа показує відео тим, хто часто підписується на канали. Дорожче за перегляд, зате приходять «ваші» глядачі.' },
+  reach: { t: 'Більше охоплення', r: 'охоплених людей', one: '1000 людей', icon: 'eye', d: 'Коротка заставка якомога більшій кількості людей. Платите за покази, переглядів буде мало.' },
+};
+export const PLACES_T = { instream: ['Перед іншими відео', 1, 0.5], feed: ['У пошуку й рекомендаціях', 1.15, 0.3], shorts: ['Між короткими відео', 0.75, 0.2] };
+export const goalsOf = a => (a?.platform === 'tube' ? GOALS_T : GOALS);
+export const placesOf = a => (a?.platform === 'tube' ? PLACES_T : PLACES);
+// яка частка тих, кому показали, додивиться до оплачуваного перегляду (залежить від перших секунд відео)
+export const viewRate = (a, q) => Math.max(0.06, Math.min(0.45, 0.12 + 0.32 * q - (a.intro ? 0.08 : 0)));
 export const GENDERS = { all: 'Усі', f: 'Жінки', m: 'Чоловіки' };
 
 // Підлітки (13–17): як у справжніх платформах — лише вік і місце, без статі й інтересів
@@ -45,22 +56,33 @@ export function cpm(a, q = 0.6) {
   else if (size > 3_000_000) { c *= 0.9; why.push(['+', 'Широка аудиторія — покази дешевші']); }
   if (!a.auto && !teen(a) && a.interests.length) { const k = Math.max(...a.interests.map(x => INTERESTS[x]?.[2] || 1)); c *= k; if (k > 1.1) why.push(['-', 'Популярні інтереси: за них змагається багато рекламодавців']); }
   if (teen(a)) { c *= 0.85; why.push(['i', 'Для підлітків доступні лише вік і місце']); }
-  const pl = a.place === 'auto' ? 0.85 : Object.keys(PLACES).filter(k => a.places?.includes(k)).reduce((x, k, _, arr) => x + PLACES[k][1] / arr.length, 0) || 1;
+  const PL = placesOf(a), pl = a.place === 'auto' ? 0.85 : Object.keys(PL).filter(k => a.places?.includes(k)).reduce((x, k, _, arr) => x + PL[k][1] / arr.length, 0) || 1;
   c *= pl; if (a.place === 'auto') why.push(['+', 'Автоматичне розміщення: платформа шукає дешевші місця']);
   // якісний допис дешевший: людям він цікавіший, тож платформа частіше виграє за нього аукціон
   const rel = 1.3 - 0.5 * q; c *= rel;
   why.push(q >= 0.65 ? ['+', 'Якісний допис: платформа вважає рекламу корисною й бере менше'] : q < 0.45 ? ['-', 'Слабкий допис: низька оцінка якості реклами — показ дорожчий'] : ['i', 'Звичайна якість допису']);
   if (a.goal === 'reach') c *= 0.85;
+  if (a.platform === 'tube' && a.goal !== 'reach') {
+    // ціна перегляду: та сама логіка аукціону, але платите за перегляд, а не за показ
+    const vr = viewRate(a, q), cpv = c / 1000 * 13;
+    if (a.intro) why.push(['-', 'Повільний початок відео: більшість пропускає рекламу — оплачених переглядів менше']);
+    else if (vr >= 0.3) why.push(['+', 'Цікаві перші секунди: багато хто дивиться рекламу далі']);
+    why.push(['i', `Перегляд коштує ≈ ${cpv.toFixed(2).replace('.', ',')} грн; додивляться ≈ ${Math.round(vr * 100)}% тих, кому покажуть`]);
+    return { cpm: Math.round(cpv * vr * 1000), cpv, vr, why: why.map(([k, t]) => [k, t.replace(/допис(у)?/g, 'відео')]), size };
+  }
   return { cpm: Math.round(c), why, size };
 }
 // Частка тих, хто зробив цільову дію (клік у профіль чи повідомлення) серед показів
-export function actionRate(goal, q) { return goal === 'msg' ? 0.0012 + 0.003 * q : goal === 'reach' ? 0.003 + 0.005 * q : 0.006 + 0.016 * q; }
+export function actionRate(a, q) {
+  if (a.platform === 'tube') { const vr = viewRate(a, q); return a.goal === 'subs' ? vr * (0.012 + 0.03 * q) : a.goal === 'reach' ? 0.01 + 0.02 * q : vr; }
+  return a.goal === 'msg' ? 0.0012 + 0.003 * q : a.goal === 'reach' ? 0.003 + 0.005 * q : 0.006 + 0.016 * q;
+}
 
 // Прогноз «від — до», як показують справжні рекламні кабінети
 export function forecast(a, q) {
   const { cpm: c, size } = cpm(a, q), imps = a.daily / c * 1000, total = imps * a.days;
   const reach = size * (1 - Math.exp(-total / Math.max(1, size * 1.1))); // аудиторія вичерпується — частота росте
-  const res = a.goal === 'reach' ? reach : total * actionRate(a.goal, q);
+  const res = a.goal === 'reach' ? reach : total * actionRate(a, q);
   const rng = (x, k = 0.3) => [Math.max(0, Math.round(x * (1 - k))), Math.round(x * (1 + k))];
   return { cpm: c, size, impsDay: rng(imps), reachDay: rng(Math.min(size, imps / 1.2)), reach: rng(reach), results: rng(res), freq: total / Math.max(1, reach), costPer: res ? a.daily * a.days / res : 0, total: a.daily * a.days, vat: a.daily * a.days * VAT };
 }
@@ -74,6 +96,20 @@ export function review(p) {
   if (p?.music?.hit) r.push('Чужа музика без ліцензії');
   if (p?.cb) r.push('Оманливі обіцянки в підписі (клікбейт)');
   if (p?.adBad) r.push('Заборонена тема (азартні ігри тощо)');
+  return r;
+}
+
+// сповіщення про кампанію — у тому застосунку, де її створено
+function note(sim, ad, icon, text) {
+  const s = sim.s;
+  if (ad.platform === 'tube' && s.tube) { s.tube.notifs.unshift({ id: sim.id('tn'), icon, text, ad: ad.id, t: s.t }); s.tube.unread = (s.tube.unread || 0) + 1; sim.emit('tnotif'); return; }
+  sim.notify(icon, text, null); s.notifs[0].ad = ad.id;
+}
+export function reviewVideo(v) {
+  const r = [];
+  if (v?.cb) r.push('Оманливий заголовок чи обкладинка (клікбейт)');
+  if (v?.kids) r.push('Відео «для дітей» не можна просувати рекламою з налаштуванням аудиторії');
+  if (v?.vis !== 'public') r.push('Просувати можна лише відкрите відео');
   return r;
 }
 
@@ -106,12 +142,12 @@ export function adStep(sim, d, act) {
   let ch = false;
   for (const ad of s.ads.list) {
     if (ad.status === 'review' && s.t >= ad.reviewAt) {
-      if (ad.reasons.length) { ad.status = 'rejected'; ad.end = s.t; s.ads.balance = Math.round((s.ads.balance + ad.paid) * 100) / 100; ad.refund = ad.paid; sim.notify('alert', 'Рекламу не схвалено: ' + ad.reasons[0], ad.pid || null); }
-      else { ad.status = 'active'; ad.start = s.t; sim.notify('info', 'Рекламу схвалено й запущено', ad.pid || null); }
+      if (ad.reasons.length) { ad.status = 'rejected'; ad.end = s.t; s.ads.balance = Math.round((s.ads.balance + ad.paid) * 100) / 100; ad.refund = ad.paid; note(sim, ad, 'alert', 'Рекламу не схвалено: ' + ad.reasons[0]); }
+      else { ad.status = 'active'; ad.start = s.t; note(sim, ad, 'megaphone', 'Рекламу схвалено й запущено'); }
       ch = true; continue;
     }
     if (ad.status !== 'active') continue;
-    if (s.t - ad.start >= ad.days * 1440 || ad.stats.spent >= ad.daily * ad.days - 0.01) { stopAd(sim, ad.id); sim.notify('info', `Реклама завершилася: витрачено ${Math.round(ad.stats.spent)} грн`, ad.pid || null); ch = true; continue; }
+    if (s.t - ad.start >= ad.days * 1440 || ad.stats.spent >= ad.daily * ad.days - 0.01) { stopAd(sim, ad.id); note(sim, ad, 'megaphone', `Реклама завершилася: витрачено ${Math.round(ad.stats.spent)} грн. Подивіться результати`); ch = true; continue; }
     // за добу витрачається приблизно денний бюджет; більше — коли люди онлайн
     const spend = Math.min(ad.daily * ad.days - ad.stats.spent, ad.daily * d / 1440 * (0.3 + 1.4 * act) * sim.r.range(0.85, 1.15));
     const st = ad.stats, imps = spend / ad.cpm * 1000;
@@ -119,7 +155,7 @@ export function adStep(sim, d, act) {
     st.reach = ad.size * (1 - Math.exp(-st.imps / (ad.size * 1.1)));
     // утома від реклами: що частіше одна людина бачить допис, то рідше реагує
     const tired = Math.max(0.5, 1 - Math.max(0, st.imps / Math.max(1, st.reach) - 2) * 0.12);
-    const acts = imps * actionRate(ad.goal, ad.q) * tired;
+    const acts = imps * actionRate(ad, ad.q) * tired;
     if (ad.goal === 'msg') st.msgs += acts; else st.clicks += acts;
     const fol = (ad.goal === 'msg' ? acts * 0.3 : acts) * (0.06 + 0.12 * ad.q) * (s.me?.bio ? 1 : 0.7);
     st.follows += fol; st.likes += imps * 0.006 * ad.q;
@@ -127,8 +163,16 @@ export function adStep(sim, d, act) {
     st.days[day].imps += imps; st.days[day].spent += spend; st.days[day].res += ad.goal === 'reach' ? 0 : acts;
     split(st, ad, imps);
     // ефект на справжній акаунт: нові підписники й перегляди допису
-    const whole = Math.floor(st.follows) - (ad.gained || 0);
+    const whole = ad.platform === 'tube' ? 0 : Math.floor(st.follows) - (ad.gained || 0);
     if (whole > 0) { ad.gained = (ad.gained || 0) + whole; s.followers += whole; sim.newFollowers(whole, null); }
+    if (ad.platform === 'tube') {
+      const v = s.tube?.videos.find(x => x.id === ad.vid);
+      const views = ad.goal === 'reach' ? acts : imps * viewRate(ad, ad.q) * tired, subs = ad.goal === 'subs' ? acts : views * (0.004 + 0.012 * ad.q);
+      st.views = (st.views || 0) + views; st.subsT = (st.subsT || 0) + subs;
+      const ws = Math.floor(st.subsT) - (ad.gainedT || 0); if (ws > 0 && s.tube) { ad.gainedT = (ad.gainedT || 0) + ws; s.tube.subs += ws; }
+      if (v) { v.stats.imp += Math.round(imps); v.stats.views += Math.round(views); v.stats.likes += Math.round(views * 0.03 * ad.q); v.stats.watch = Math.round(v.stats.views * (v.plan?.ret || 0.4) * v.dur / 60); const dd = Math.floor((s.t - v.t) / 1440); v.daily ||= []; while (v.daily.length <= dd) v.daily.push(0); v.daily[dd] += views; if (v.plan) v.plan.src['Реклама'] = (v.plan.src['Реклама'] || 0) + views; }
+      ch = true; continue;
+    }
     const p = ad.pid && s.posts.find(x => x.id === ad.pid);
     if (p) { p.stats.views += Math.round(imps); p.stats.likes += Math.round(imps * 0.006 * ad.q); p.stats.src['Реклама'] = Math.round((p.stats.src['Реклама'] || 0) + imps); }
     ch = true;
@@ -143,9 +187,9 @@ function split(st, ad, imps) {
   for (const [k, w] of ages) add(st.age, k, imps * w / tot);
   const g = ad.auto || teen(ad) || ad.gender === 'all' ? [['Жінки', 0.53], ['Чоловіки', 0.47]] : [[ad.gender === 'f' ? 'Жінки' : 'Чоловіки', 1]];
   for (const [k, w] of g) add(st.gender, k, imps * w);
-  const pl = ad.place === 'auto' ? Object.keys(PLACES) : ad.places;
-  const pw = pl.reduce((x, k) => x + PLACES[k][2], 0);
-  for (const k of pl) add(st.place, PLACES[k][0], imps * PLACES[k][2] / pw);
+  const PL = placesOf(ad), pl = ad.place === 'auto' ? Object.keys(PL) : ad.places.filter(k => PL[k]);
+  const pw = pl.reduce((x, k) => x + PL[k][2], 0) || 1;
+  for (const k of pl) add(st.place, PL[k][0], imps * PL[k][2] / pw);
   const city = ad.auto || ad.city === 'ua' ? [['Київ', 0.3], ['Харків', 0.12], ['Львів', 0.11], ['Одеса', 0.1], ['Дніпро', 0.09], ['Інші', 0.28]] : [[CITIES[ad.city][0], 1]];
   for (const [k, w] of city) add(st.city, k, imps * w);
 }

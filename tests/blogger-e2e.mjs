@@ -330,12 +330,12 @@ await step('реклама: налаштування таргету, ціна, �
   const hid = await p.evaluate(() => Blogger.sim.s.gallery.find(g => g.scene === 'house').id);
   await p.click(`[data-act="ad.pickPhoto"][data-id="${hid}"]`); await p.fill('[data-in="ad.caption"]', 'Підписуйтесь!');
   for (let i = 0; i < 5; i++) await p.click('[data-act="ad.next"]');
-  // якщо на навчальному балансі замало грошей, запуск вимкнено, доки не поповнити
-  if (await p.locator('[data-act="ad.launch"]').isDisabled()) await p.click('.pay [data-act="ad.topup"]');
-  const bal = (await S()).ads.balance;
-  await p.click('[data-act="ad.launch"]'); await adv(120);
+  // якщо на навчальному балансі замало грошей, кнопка пропонує поповнити й одразу запустити
+  await p.click('[data-act="ad.launch"]');
+  if (await p.locator('.cf [data-v="1"]').count()) await p.click('.cf [data-v="1"]');
+  await p.waitForSelector('.ad-st'); const bal = (await S()).ads.balance; await adv(120);
   const rej = (await S()).ads.list[0];
-  assert.equal(rej.status, 'rejected'); assert.match(rej.reasons[0], /Особисті дані/); const ads = (await S()).ads; assert.equal(ads.balance, bal, JSON.stringify({ bal, list: ads.list.map(a => [a.status, a.paid, a.refund, Math.round(a.stats.spent * 100) / 100]) }));
+  assert.equal(rej.status, 'rejected'); assert.match(rej.reasons[0], /Особисті дані/); const ads = (await S()).ads; assert.ok(rej.refund > 0 && Math.abs(rej.refund - rej.paid) < 0.01, 'гроші повертаються повністю'); assert.equal(Math.round(ads.balance * 100), Math.round((bal + rej.refund) * 100), JSON.stringify({ bal, list: ads.list.map(a => [a.status, a.paid, a.refund, Math.round(a.stats.spent * 100) / 100]) }));
 });
 
 await step('лайки й коментарі скрізь: свій допис, допис блогера, відео у «Хвилі»', async () => {
@@ -396,6 +396,43 @@ await step('шпалери з власного фото на головному 
   await p.click('.wall[data-k^="m"] >> nth=0');
   await home();
   assert.match(await p.locator('.home').getAttribute('style'), /url\(blob:/);
+});
+
+await step('Директ: людина друкує, відповідає по-живому, незнайомці — у «Запитах»', async () => {
+  await home(); await p.click('[data-app="likeer"]'); await atHour(17);
+  const did = await p.evaluate(() => { const sim = Blogger.sim, u = sim.person('fan', ['pets']); sim.s.fans.push(u.id); const d = sim.talk(u.id, 'fan'); const lk = Blogger.phone.apps.likeer; lk.tab('feed'); lk.go('dms'); lk.go('thread', { id: d.id }); return d.id; });
+  await p.waitForSelector('.typing', { timeout: 4000 });
+  await p.waitForSelector('.chips .chip-btn', { timeout: 8000 });
+  assert.match(await p.locator('.msgs, .thread, main').first().innerText(), /\S/);
+  await p.fill(`[data-keep="dm-${did}"]`, 'Дякую! Його звати Мурчик'); await p.click('[data-act="lk.dmSend"]');
+  await p.waitForFunction(id => { const d = Blogger.sim.s.dms.find(x => x.id === id); return d.msgs.filter(m => !m.me && !m.sys).length >= 2 && !d.pending?.length; }, did, { timeout: 12000 });
+  const d = (await S()).dms.find(x => x.id === did);
+  assert.ok(d.msgs.find(m => m.me).seen, 'переглянуто'); assert.match(d.msgs.map(m => m.text).join(' '), /Мурчик/);
+  // незнайомець потрапляє в запити: відповісти можна лише після «Прийняти»
+  // раніше ввімкнули «Лише підписники» — незнайомця не пропускає взагалі
+  assert.equal(await p.evaluate(() => { const sim = Blogger.sim, d = sim.talk(sim.person('stranger').id, 'stranger'); return !!d.script; }), false);
+  const sid = await p.evaluate(() => { const sim = Blogger.sim; sim.s.settings.dms = 'all'; const u = sim.person('stranger'), d = sim.talk(u.id, 'stranger'); while (d.pending?.length) sim.deliver(d); return d.id; });
+  await p.evaluate(() => Blogger.phone.apps.likeer.back());
+  await p.click('[data-act="lk.dmTab"][data-t="req"]');
+  assert.match(await p.locator('.dm-tabs').innerText(), /Запити \(1\)/);
+  await p.evaluate(id => Blogger.phone.apps.likeer.go('thread', { id }), sid);
+  assert.match(await p.locator('.req-bar').innerText(), /Прийміть запит/);
+  await p.click('[data-act="lk.dmBlock"]'); if (await p.locator('.cf [data-v="1"]').count()) await p.click('.cf [data-v="1"]');
+  assert.ok((await S()).dms.find(x => x.id === sid).blocked);
+  await p.evaluate(() => { Blogger.sim.s.settings.dms = 'followers'; });
+});
+
+await step('реклама у «Хвилі»: просування відео з оплатою за перегляд', async () => {
+  await home(); await p.click('[data-app="tube"]');
+  await p.evaluate(() => { const t = Blogger.phone.apps.tube; t.tab('channel'); t.go('video', { id: Blogger.sim.s.tube.videos.find(v => v.t && v.vis === 'public' && !v.kids).id }); });
+  await p.click('.promo-btn.red');
+  for (let i = 0; i < 8 && !(await p.locator('[data-act="ad.launch"]').count()); i++) await p.click('[data-act="ad.next"]');
+  assert.match(await p.locator('.phone').innerText(), /перегляд/i);
+  await p.click('[data-act="ad.launch"]'); if (await p.locator('.cf [data-v="1"]').count()) await p.click('.cf [data-v="1"]');
+  await adv(2 * 1440);
+  const ad = (await S()).ads.list.find(a => a.platform === 'tube');
+  assert.ok(ad && ['active', 'done'].includes(ad.status) && ad.stats.views > 0, JSON.stringify(ad?.status));
+  assert.match(await p.locator('.tiles').innerText(), /перегляд/i);
 });
 
 await step('усе зберігається після перезавантаження сторінки', async () => {

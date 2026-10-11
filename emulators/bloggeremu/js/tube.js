@@ -13,9 +13,10 @@ import { nickErr } from './likeer.js';
 import { snap } from './create.js';
 
 export const tubeLogo = (s = 28) => `<svg class="logo" width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><rect x="2" y="6" width="44" height="36" rx="11" fill="#e62117"/><path d="M19 15.5v17l14-8.5z" fill="#fff"/><path d="M6 37c5-3 9-3 14 0s9 3 14 0 8-3 10-2" stroke="#ffb3ad" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`;
+const FOLLOW = [['Дякую, що дивишся!', 'kind'], ['Нема за що :)', 'kind'], ['Ок', 'neutral']];
 const BANNERS = ['#3949ab', '#00897b', '#d81b60', '#5e35b1', '#ef6c00', '#37474f'];
 const VIS = [['public', 'Відкритий', 'Бачать усі'], ['unlisted', 'За посиланням', 'Лише ті, кому ви надіслали посилання'], ['private', 'Приватний', 'Лише ви']];
-const NOTIF_IC = { comment: 'comment', star: 'fire', trophy: 'trophy', clock: 'clock' };
+const NOTIF_IC = { comment: 'comment', star: 'fire', trophy: 'trophy', clock: 'clock', megaphone: 'megaphone', alert: 'alert' };
 const blankUpload = topic => ({ step: 'pick', gid: null, clip: null, own: false, dur: 0, title: '', desc: '', thumb: { kind: 'frame', i: -1, text: '' }, topic, kids: null, vis: 'public', sched: '' });
 
 export class Tube {
@@ -26,7 +27,7 @@ export class Tube {
   go(v, a = {}) { this.stack.push({ v, ...a }); this.ph.render(true); }
   tab(v) { this.stack = [{ v }]; if (v === 'notifs' && this.ch) this.ch.unread = 0; this.ph.render(true); }
   back() { if (this.stack.length > 1) this.stack.pop(); else this.ph.home(); this.ph.render(true); }
-  get live() { return ['home', 'channel', 'studio', 'video', 'stats', 'notifs', 'comments'].includes(this.top.v); }
+  get live() { return ['home', 'channel', 'studio', 'video', 'stats', 'notifs', 'comments', 'ads', 'adView'].includes(this.top.v); }
   chAv(size) { const c = this.ch; return avatar({ name: c.name, color: c.avatar.color, sym: c.avatar.sym, img: c.avatar.img }, size); }
 
   render() {
@@ -180,6 +181,7 @@ export class Tube {
     return `${this.head('', `<button class="ib" data-act="tb.vMenu" data-id="${v.id}" aria-label="Ще">${icon('more', 24)}</button>`)}<div class="scroll" data-scroll="tbv-${v.id}"><div class="player${v.shorts ? ' sh' : ''}">${player}</div><div class="pad">
       <h2 class="tv-title">${esc(v.title)}</h2><p class="muted sm">${v.t ? `${num(st.views)} ${plural(st.views, 'перегляд', 'перегляди', 'переглядів')} · ${ago(s.t, v.t)}` : `Вийде ${dayOf(v.sched) === dayOf(s.t) ? 'сьогодні' : 'завтра'} о ${clock(v.sched)}`}${v.vis !== 'public' ? ` · ${VIS.find(x => x[0] === v.vis)[1]}` : ''}${v.kids ? ' · Для дітей' : ''}</p>
       <div class="tv-acts"><button class="pill${v.liked ? ' on' : ''}" data-act="tb.likeOwn" data-id="${v.id}" aria-pressed="${!!v.liked}" aria-label="Подобається">${icon('thumbUp', 18, v.liked)}${num(st.likes)}</button><span class="pill static">${icon('thumbDown', 18)}${num(st.dislikes)}</span><span class="pill static">${icon('share', 18)}${num(st.shares)}</span></div>
+      ${v.t && v.vis === 'public' && !v.kids ? `<button class="promo-btn red" data-act="ad.promote" data-id="${v.id}">${icon('megaphone', 17)}Просувати відео</button>` : ''}
       ${v.t ? `<button class="stats-btn" data-act="tb.go" data-v="stats" data-id="${v.id}">${icon('chart', 18)}<span><b>Аналітика відео</b> · покази, утримання, звідки глядачі</span>${icon('chevron', 18)}</button>` : ''}
       ${v.desc ? `<div class="tv-desc">${rich(v.desc)}</div>` : ''}
       ${v.kids ? `<p class="muted pad-y">Коментарі вимкнено, бо відео позначено «Для дітей».</p>` : `<button class="pmore" data-act="tb.go" data-v="comments" data-id="${v.id}">Коментарі (${st.comments})${icon('chevron', 16)}</button>${v.comments.slice(-2).map(c => `<p class="pc sm"><b>${esc(c.mine ? this.ch.name : s.people[c.pid]?.nick || '')}</b> ${esc(c.text)}</p>`).join('')}`}</div></div>`;
@@ -189,9 +191,10 @@ export class Tube {
     const rc = a.reply && v.comments.find(c => c.id === a.reply);
     const row = c => { if (c.mine) return `<div class="cm mine">${this.chAv(34)}<div class="cm-b"><p><b>${esc(this.ch.name)}</b><span class="author">автор</span> ${esc(c.text)}</p><small>${ago(s.t, c.t)}</small></div><div class="cm-side"><button class="ib sm" data-act="tb.cDel" data-c="${c.id}" aria-label="Видалити коментар">${icon('trash', 16)}</button></div></div>`;
       const u = s.people[c.pid] || { nick: '?' }; return `<div class="cm${a.reply === c.id ? ' sel' : ''}">${avatar(u, 34)}<div class="cm-b"><p><b>@${esc(u.nick)}</b> ${esc(c.text)}</p><small>${ago(s.t, c.t)}${c.likes ? ` · ${icon('thumbUp', 12)} ${c.likes}` : ''}${c.heart ? ` · <span class="heart-by">${icon('heart', 12, true)}від автора</span>` : ''}</small>
-      ${c.reply ? `<div class="cm-r">${this.chAv(24)}<p><b>${esc(this.ch.name)}</b> ${esc(c.reply.text)}</p></div>` : `<button class="lnk sm" data-act="tb.replyTo" data-c="${c.id}">Відповісти</button>`}</div>
+      ${c.reply ? `<div class="cm-r">${this.chAv(24)}<p><b>${esc(this.ch.name)}</b><span class="author">автор</span> ${esc(c.reply.text)}</p></div>` : ''}${(c.thread || []).map(x => `<div class="cm-r">${x.me ? this.chAv(24) : avatar(s.people[x.pid] || u, 24)}<p><b>${esc(x.me ? this.ch.name : (s.people[x.pid] || u).nick)}</b>${x.me ? '<span class="author">автор</span>' : ''} ${esc(x.text)}</p></div>`).join('')}
+      ${!c.reply || (c.thread?.length && !c.thread.at(-1).me) ? `<button class="lnk sm" data-act="tb.replyTo" data-c="${c.id}">${c.reply ? 'Відповісти ще' : 'Відповісти'}</button>` : ''}</div>
       <div class="cm-side"><button class="ib sm${c.heart ? ' liked' : ''}" data-act="tb.heart" data-c="${c.id}" aria-label="Серце від автора" aria-pressed="${c.heart}">${icon('heart', 16, c.heart)}</button><button class="ib sm" data-act="tb.cDel" data-c="${c.id}" aria-label="Видалити коментар">${icon('trash', 16)}</button></div></div>`; };
-    const sugg = rc ? repliesFor(rc).map(([t, tone], i) => `<button class="chip-btn ${tone}" data-act="tb.quick" data-i="${i}">${esc(t)}</button>`).join('') : '';
+    const sugg = rc ? (rc.reply ? FOLLOW : repliesFor(rc)).map(([t, tone], i) => `<button class="chip-btn ${tone}" data-act="tb.quick" data-i="${i}">${esc(t)}</button>`).join('') : '';
     return `${this.head('Коментарі')}<div class="scroll" data-scroll="tbc-${v.id}">${v.comments.map(row).join('') || '<div class="empty sm"><b>Коментарів поки немає</b><p>Вони з’являться, коли люди подивляться відео.</p></div>'}</div>
       <footer class="composer">${rc ? `<div class="rc-head"><span>Відповідь для <b>@${esc(s.people[rc.pid]?.nick || '')}</b></span><button class="ib sm" data-act="tb.replyTo" data-c="" aria-label="Скасувати відповідь">${icon('close', 16)}</button></div><div class="chips">${sugg}</div>` : ''}
         <div class="cmp-row">${this.chAv(30)}<input class="in" data-keep="tbcm" placeholder="${rc ? 'Напишіть відповідь…' : 'Додайте коментар…'}" maxlength="300" aria-label="${rc ? 'Відповідь' : 'Коментар'}"><button class="lnk strong" data-act="tb.send">Надіслати</button></div></footer>`;
@@ -226,6 +229,7 @@ export class Tube {
     return `<header class="ah main"><b class="ah-t">Творча студія</b><span class="grow"></span><button class="btn sm red" data-act="tb.upload">${icon('upload', 15)}Відео</button></header><div class="scroll pad" data-scroll="studio">
       <div class="tiles three"><div class="tile">${icon('eye', 18)}<b>${num(sm.views)}</b><small>переглядів за 7 днів</small></div><div class="tile">${icon('tv', 18)}<b>${sm.hours.toFixed(1).replace('.', ',')}</b><small>годин перегляду</small></div><div class="tile">${icon('users', 18)}<b>${num(ch.subs)}</b><small>підписників</small></div></div>
       <section class="card-s"><b>${icon('trophy', 16)}Партнерська програма</b><p class="muted sm">Великі платформи дозволяють заробляти на рекламі після 1000 підписників і 4000 годин перегляду за рік. Це довгий шлях — і це нормально.</p>${prog('subs', ch.subs, PARTNER.subs, 'Підписники')}${prog('hours', sm.hours, PARTNER.hours, 'Години перегляду')}</section>
+      <button class="stats-btn" data-act="ad.cabinet">${icon('megaphone', 18)}<span><b>Реклама відео</b> · ${(s.ads?.list || []).filter(x => x.platform === 'tube').length} кампаній · оплата за перегляд</span>${icon('chevron', 18)}</button>
       <h3>Ваші відео</h3>${vids.length ? `<div class="st-list">${vids.map(v => { const ctr = v.stats.imp ? v.stats.views / v.stats.imp : 0; return `<button class="st-row" data-act="tb.${v.t ? 'go' : 'video'}" data-v="stats" data-id="${v.id}"><span class="tv-th${v.shorts ? ' sh' : ''}">${this.thumbHtml(v)}</span><span class="st-t"><b>${esc(v.title)}</b><small>${v.t ? `${num(v.stats.views)} перегл. · ${v.shorts ? 'коротке' : 'CTR ' + (ctr * 100).toFixed(1).replace('.', ',') + '%'} · утримання ${Math.round(v.plan.ret * 100)}%` : `Заплановано на ${clock(v.sched)}`}</small></span>${icon('chevron', 16)}</button>`; }).join('')}</div>` : `<div class="empty sm"><b>Відео ще немає</b><p>Завантажте перше — тут з’явиться його статистика.</p></div>`}
       ${br.k < 1 ? `<h3>Що покращити на каналі</h3><ul class="why tips">${br.items.filter(x => !x[1]).map(([, , t, why]) => `<li>${icon('idea', 16)}<span><b>${t}.</b> ${why}</span></li>`).join('')}</ul><button class="btn" data-act="tb.go" data-v="custom">${icon('palette', 16)}Відкрити оформлення</button>` : ''}</div>`;
   }
@@ -285,10 +289,10 @@ export class Tube {
           { t: 'Видалити відео', icon: 'trash', danger: true, on: async () => { if (await confirm('Видалити відео?', 'Видалити', true, 'Перегляди й коментарі зникнуть.')) { tubeDelete(sim, v.id); this.back(); } } },
         ]);
       },
-      notif: () => { const n = this.ch.notifs.find(x => x.id === el.dataset.id); if (n?.vid && this.ch.videos.some(v => v.id === n.vid)) this.go(n.icon === 'comment' ? 'comments' : 'video', { id: n.vid }); },
+      notif: () => { const n = this.ch.notifs.find(x => x.id === el.dataset.id); if (n?.ad && s.ads?.list.some(a => a.id === n.ad)) { this.go('adView', { id: n.ad }); return; } if (n?.vid && this.ch.videos.some(v => v.id === n.vid)) this.go(n.icon === 'comment' ? 'comments' : 'video', { id: n.vid }); },
       // коментарі
       replyTo: () => { top.reply = el.dataset.c || null; ph.render(); if (top.reply) setTimeout(() => ph.root.querySelector('[data-keep="tbcm"]')?.focus(), 0); },
-      quick: () => { const v = this.ch.videos.find(x => x.id === top.id), c = v?.comments.find(x => x.id === top.reply); if (!c) return; const [t, tone] = repliesFor(c)[+el.dataset.i]; tubeReply(sim, v.id, c.id, t, tone); this.replied(tone); },
+      quick: () => { const v = this.ch.videos.find(x => x.id === top.id), c = v?.comments.find(x => x.id === top.reply); if (!c) return; const [t, tone] = (c.reply ? FOLLOW : repliesFor(c))[+el.dataset.i]; tubeReply(sim, v.id, c.id, t, tone); this.replied(tone); },
       send: () => {
         const inp = ph.root.querySelector('[data-keep="tbcm"]'), t = inp?.value.trim(); if (!t) return; inp.value = ''; const tone = toneOf(t);
         if (top.reply) { tubeReply(sim, top.id, top.reply, t, tone); this.replied(tone); return; }

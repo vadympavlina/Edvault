@@ -6,10 +6,12 @@ import { NICHES, nicheOf, TAGS, CREATORS, AV_COLORS, AV_SYMBOLS, SCENES, FILTERS
 import { ago, num, plural, clock, dayName, dayOf, hourOf, DAY, repliesFor, toneOf, lc } from './sim.js';
 import { openCreate } from './create.js';
 import { fmtDur, checks } from './quality.js';
+import { voice, isFem } from './talk.js';
 import { fileBtn } from './gal.js';
 
+const FOLLOW_REPLIES = [['Дякую, що пишеш!', 'kind'], ['Нема за що :)', 'kind'], ['Ок', 'neutral']];
 const AV_SCENES = ['cat', 'dog', 'drawing', 'guitar', 'football', 'planet', 'mountains', 'paints', 'selfie'];
-const NOTIF_IC = { clock: 'clock', like: 'heart', comment: 'comment', follow: 'user', dm: 'send', star: 'fire', trophy: 'trophy', shield: 'shield', alert: 'alert', info: 'info', moon: 'moon', battery: 'battery', security: 'lock' };
+const NOTIF_IC = { megaphone: 'megaphone', clock: 'clock', like: 'heart', comment: 'comment', follow: 'user', dm: 'send', star: 'fire', trophy: 'trophy', shield: 'shield', alert: 'alert', info: 'info', moon: 'moon', battery: 'battery', security: 'lock' };
 export const passScore = (p, nick = '') => { if (!p) return 0; let s = 0; if (p.length >= 8) s++; if (p.length >= 12) s++; if (/\d/.test(p) && /\p{L}/u.test(p)) s++; if (/[^\p{L}\d]/u.test(p)) s++; if (/^(12345|qwerty|йцукен|password|пароль|11111)/i.test(p) || (nick && lc(p).includes(lc(nick)))) s = 0; return Math.min(4, s); };
 const PASS_T = ['Дуже слабкий', 'Слабкий', 'Середній', 'Надійний', 'Дуже надійний'];
 export const passMeter = (p, nick) => { const s = passScore(p, nick); return `<div class="pm s${s}"><i></i><i></i><i></i><i></i></div><small class="pm-t">${p ? PASS_T[s] : 'Щонайменше 8 символів: літери, цифри й знаки'}</small>`; };
@@ -243,14 +245,17 @@ export class Likeer {
     const showHidden = a.showHidden;
     const row = c => {
       if (c.mine) return `<div class="cm mine">${avatar(this.meAv(), 34)}<div class="cm-b"><p><b>${esc(s.me.nick)}</b><span class="author">автор</span> ${esc(c.text)}</p><small>${ago(s.t, c.t)}${c.likes ? ` · ${c.likes} ${plural(c.likes, 'вподобання', 'вподобання', 'вподобань')}` : ''}</small></div><div class="cm-side"><button class="ib sm" data-act="lk.cMenu" data-c="${c.id}" aria-label="Дії з коментарем">${icon('more', 18)}</button></div></div>`;
-      const u = s.people[c.pid] || { nick: '?' };
-      return `<div class="cm${c.hidden ? ' hid' : ''}${a.reply === c.id ? ' sel' : ''}">${avatar(u, 34)}<div class="cm-b"><p><b>${esc(u.nick)}</b>${u.verified ? `<span class="ver">${icon('check', 10)}</span>` : ''} ${esc(c.text)}</p>
+      const u = s.people[c.pid] || { nick: '?' }, to = c.to && p.comments.find(x => x.id === c.to), th = c.thread || [];
+      const canReply = !c.reply || (th.length && !th.at(-1).me);
+      const line = (who, text, me) => `<div class="cm-r">${me ? avatar(this.meAv(), 24) : avatar(who, 24)}<p><b>${esc(me ? s.me.nick : who.nick)}</b>${me ? '<span class="author">автор</span>' : ''} ${esc(text)}</p></div>`;
+      return `<div class="cm${c.hidden ? ' hid' : ''}${a.reply === c.id ? ' sel' : ''}">${avatar(u, 34)}<div class="cm-b">${to ? `<small class="cm-to">у відповідь @${esc(s.people[to.pid]?.nick || '')}</small>` : ''}<p><b>${esc(u.nick)}</b>${u.verified ? `<span class="ver">${icon('check', 10)}</span>` : ''}${c.loyal || u.loyal ? '<span class="fan-b">постійний глядач</span>' : ''} ${esc(c.text)}</p>
         <small>${ago(s.t, c.t)}${c.likes ? ` · ${c.likes} ${plural(c.likes, 'вподобання', 'вподобання', 'вподобань')}` : ''}${c.pinned ? ` · ${icon('pin', 12)}Закріплено` : ''}${c.hidden ? ` · ${c.hidden === 'filter' ? 'Приховано фільтром' : 'Приховано'}` : ''}</small>
-        ${c.reply ? `<div class="cm-r">${avatar(this.meAv(), 24)}<p><b>${esc(s.me.nick)}</b> ${esc(c.reply.text)}</p></div>` : `<button class="lnk sm" data-act="lk.replyTo" data-c="${c.id}">Відповісти</button>`}</div>
+        ${c.reply ? line(null, c.reply.text, true) : ''}${th.map(x => line(s.people[x.pid] || u, x.text, x.me)).join('')}
+        ${canReply ? `<button class="lnk sm" data-act="lk.replyTo" data-c="${c.id}">${c.reply ? 'Відповісти ще' : 'Відповісти'}</button>` : ''}</div>
         <div class="cm-side"><button class="ib sm${c.liked ? ' liked' : ''}" data-act="lk.cLike" data-c="${c.id}" aria-label="Вподобати коментар">${icon('heart', 16, c.liked)}</button><button class="ib sm" data-act="lk.cMenu" data-c="${c.id}" aria-label="Дії з коментарем">${icon('more', 18)}</button></div></div>`;
     };
     const rc = a.reply && p.comments.find(c => c.id === a.reply);
-    const sugg = rc ? repliesFor(rc).map(([t, tone, extra], i) => `<button class="chip-btn ${tone}" data-act="lk.quickReply" data-i="${i}">${esc(t)}</button>`).join('') : '';
+    const sugg = rc ? (rc.reply ? FOLLOW_REPLIES : repliesFor(rc)).map(([t, tone, extra], i) => `<button class="chip-btn ${tone}" data-act="lk.quickReply" data-i="${i}">${esc(t)}</button>`).join('') : '';
     return `${this.head('Коментарі')}<div class="scroll" data-scroll="cm-${p.id}">${p.caption ? `<div class="cm cap">${avatar(this.meAv(), 34)}<div class="cm-b"><p><b>${esc(s.me.nick)}</b> ${rich(p.caption)}</p><small>${ago(s.t, p.t)}</small></div></div>` : ''}
       ${list.filter(c => showHidden || !c.hidden).map(row).join('') || '<div class="empty sm"><b>Коментарів поки немає</b><p>Вони з’являтимуться, коли люди побачать допис.</p></div>'}
       ${hidden ? `<button class="pmore" data-act="lk.toggleHidden">${showHidden ? 'Сховати приховані' : `Показати приховані (${hidden})`}</button>` : ''}</div>
@@ -259,19 +264,29 @@ export class Likeer {
   }
 
   /* ═════════ Директ ═════════ */
-  v_dms() {
-    const s = this.s, list = s.dms;
-    return `${this.head('Повідомлення')}<div class="scroll" data-scroll="dms">${list.length ? list.map(d => { const u = s.people[d.pid] || { nick: '?' }, last = d.msgs.at(-1); return `<button class="dm${d.unread ? ' un' : ''}" data-act="lk.go" data-v="thread" data-id="${d.id}">${avatar(u, 50)}<div><b>${esc(u.name || u.nick)}${u.verified ? `<span class="ver">${icon('check', 10)}</span>` : ''}</b><small>${d.blocked ? 'Заблоковано' : `${last.me ? 'Ви: ' : ''}${esc(last.text.slice(0, 48))}`} · ${ago(s.t, d.t || last.t)}</small></div>${d.unread ? '<i class="udot"></i>' : ''}</button>`; }).join('') : `<div class="empty">${icon('send', 40)}<b>Повідомлень поки немає</b><p>Тут писатимуть підписники, інші блогери й бренди.</p></div>`}</div>`;
+  v_dms(a) {
+    const s = this.s, tab = a.tab || 'main', reqs = s.dms.filter(d => d.req && !d.blocked), list = s.dms.filter(d => tab === 'req' ? d.req && !d.blocked : !d.req);
+    const row = d => { const u = s.people[d.pid] || { nick: '?' }, last = [...d.msgs].reverse().find(m => !m.sys) || d.msgs.at(-1), typing = d.pending?.length && this.sim.online(u);
+      return `<button class="dm${d.unread ? ' un' : ''}" data-act="lk.go" data-v="thread" data-id="${d.id}">${avatar(u, 50)}<div><b>${esc(u.name || u.nick)}${u.verified ? `<span class="ver">${icon('check', 10)}</span>` : ''}</b><small>${d.blocked ? 'Заблоковано' : typing && d.id !== this.sim.watch ? '<i class="typing-t">друкує…</i>' : last ? `${last.me ? 'Ви: ' : ''}${esc(last.text.slice(0, 48))}` : ''} · ${ago(s.t, d.t || last?.t || s.t)}</small></div>${d.unread ? '<i class="udot"></i>' : ''}</button>`; };
+    return `${this.head('Повідомлення')}<div class="seg pad dm-tabs" role="tablist"><button role="tab" class="${tab === 'main' ? 'on' : ''}" aria-selected="${tab === 'main'}" data-act="lk.dmTab" data-t="main">Основні</button><button role="tab" class="${tab === 'req' ? 'on' : ''}" aria-selected="${tab === 'req'}" data-act="lk.dmTab" data-t="req">Запити${reqs.length ? ` (${reqs.length})` : ''}</button></div>
+      <div class="scroll" data-scroll="dms-${tab}">${tab === 'req' ? `<p class="hint">${icon('shield', 16)}<span>Тут повідомлення від людей, які на вас не підписані. Вони не бачать, чи ви прочитали, доки ви не відповісте.</span></p>` : ''}${list.length ? list.map(row).join('') : `<div class="empty">${icon('send', 40)}<b>${tab === 'req' ? 'Запитів немає' : 'Повідомлень поки немає'}</b><p>${tab === 'req' ? 'Сюди потрапляють повідомлення від незнайомих.' : 'Коли підписники напишуть вам, розмови з’являться тут.'}</p></div>`}</div>`;
   }
   v_thread(a) {
-    const s = this.s, d = s.dms.find(x => x.id === a.id); if (!d) return this.v_dms();
+    const s = this.s, d = s.dms.find(x => x.id === a.id); if (!d) return this.v_dms({});
     if (d.unread) { d.unread = 0; }
-    const u = s.people[d.pid] || { nick: '?' };
-    const msgs = d.msgs.map(m => `<div class="msg${m.me ? ' me' : ''}"><p>${rich(m.text)}</p></div>`).join('');
-    const opts = !d.blocked && d.opts ? `<div class="chips">${d.opts.map(([k, t]) => `<button class="chip-btn" data-act="lk.dmOpt" data-k="${k}">${esc(t)}</button>`).join('')}</div>` : '';
-    return `<header class="ah"><button class="ib" data-act="lk.back" aria-label="Назад">${icon('back', 24)}</button>${avatar(u, 32)}<div class="ah-who"><b>${esc(u.name || u.nick)}${u.verified ? `<span class="ver">${icon('check', 10)}</span>` : ''}</b><small>@${esc(u.nick)}</small></div><span class="grow"></span><button class="ib" data-act="lk.dmMenu" data-id="${d.id}" aria-label="Дії">${icon('more', 22)}</button></header>
-      <div class="scroll chat" data-scroll="th-${d.id}" data-bottom="1"><div class="who-card">${avatar(u, 64)}<b>${esc(u.name || u.nick)}</b><small>@${esc(u.nick)}${u.kind === 'brand' ? ' · Бізнес-профіль' : u.verified ? ' · Підтверджений профіль' : u.kind === 'scam' || u.kind === 'stranger' ? ' · Новий профіль, 0 дописів' : ''}</small></div>${msgs}${d.blocked ? '<p class="muted center">Ви заблокували цей профіль.</p>' : ''}</div>
-      ${d.blocked ? '' : `<footer class="composer">${opts}<div class="cmp-row"><input class="in" data-keep="dm-${d.id}" placeholder="Повідомлення…" maxlength="400" aria-label="Повідомлення"><button class="lnk strong" data-act="lk.dmSend" data-id="${d.id}">Надіслати</button></div></footer>`}`;
+    const u = s.people[d.pid] || { nick: '?' }, on = this.sim.online(u), typing = !d.blocked && d.pending?.length && on;
+    const lastMe = [...d.msgs].reverse().findIndex(m => m.me), lastMeI = lastMe < 0 ? -1 : d.msgs.length - 1 - lastMe;
+    const seenLast = d.msgs.at(-1)?.me || d.msgs.slice(lastMeI + 1).every(m => m.sys);
+    const msgs = d.msgs.map((m, i) => m.sys ? `<p class="msg-sys">${icon('shield', 14)}<span>${esc(m.text)}</span></p>`
+      : `<div class="msg${m.me ? ' me' : ''}${m.heart ? ' hearted' : ''}"><p>${rich(m.text)}</p>${m.heart ? `<i class="mh" aria-label="Реакція: серце">${icon('heart', 12, true)}</i>` : ''}</div>${i === lastMeI && seenLast && !d.req ? `<small class="seen">${m.seen ? 'Переглянуто' : 'Надіслано'}</small>` : ''}`).join('');
+    const opts = !d.blocked && !d.req && d.opts && !d.pending?.length ? `<div class="chips">${d.opts.map(([k, t]) => `<button class="chip-btn" data-act="lk.dmOpt" data-k="${k}">${esc(t)}</button>`).join('')}</div>` : '';
+    const status = d.blocked ? 'заблоковано' : typing ? 'друкує…' : on ? 'у мережі' : u.lastTalk || d.t ? `не в мережі · відповість ${hourOf(s.t) >= 23 || hourOf(s.t) < 7 ? 'зранку' : 'пізніше'}` : '';
+    const sub = u.kind === 'brand' ? 'Бізнес-профіль' : u.verified ? 'Підтверджений профіль' : u.kind === 'scam' || u.kind === 'stranger' || u.kind === 'troll' ? 'Новий профіль · 0 дописів · не підписаний(-а) на вас' : s.fans.includes(d.pid) ? `Підписаний(-а) на вас${u.loyal ? ' · постійний глядач' : ''}` : 'Не підписаний(-а) на вас';
+    const subT = voice(sub, isFem(u));
+    const reqBar = d.req && !d.blocked ? `<div class="req-bar"><p><b>${esc(u.name || u.nick)}</b> хоче надіслати вам повідомлення. Прийміть запит, щоб відповісти.</p><div class="row3"><button class="btn sm danger" data-act="lk.dmBlock" data-id="${d.id}">Заблокувати</button><button class="btn sm" data-act="lk.dmDel" data-id="${d.id}">Видалити</button><button class="btn sm primary" data-act="lk.dmAccept" data-id="${d.id}">Прийняти</button></div></div>` : '';
+    return `<header class="ah"><button class="ib" data-act="lk.back" aria-label="Назад">${icon('back', 24)}</button><span class="av-on${on && !d.blocked ? ' on' : ''}">${avatar(u, 32)}</span><div class="ah-who"><b>${esc(u.name || u.nick)}${u.verified ? `<span class="ver">${icon('check', 10)}</span>` : ''}</b><small class="${typing ? 'typing-t' : ''}">${status}</small></div><span class="grow"></span><button class="ib" data-act="lk.dmMenu" data-id="${d.id}" aria-label="Дії">${icon('more', 22)}</button></header>
+      <div class="scroll chat" data-scroll="th-${d.id}" data-bottom="1"><div class="who-card">${avatar(u, 64)}<b>${esc(u.name || u.nick)}</b><small>@${esc(u.nick)} · ${subT}</small></div>${msgs}${typing ? '<div class="msg typing" aria-label="Друкує"><p><i></i><i></i><i></i></p></div>' : ''}${d.blocked ? '<p class="muted center">Ви заблокували цей профіль.</p>' : ''}</div>
+      ${d.blocked ? '' : reqBar || `<footer class="composer">${opts}<div class="cmp-row"><input class="in" data-keep="dm-${d.id}" placeholder="Повідомлення…" maxlength="400" aria-label="Повідомлення"><button class="lnk strong" data-act="lk.dmSend" data-id="${d.id}">Надіслати</button></div></footer>`}`;
   }
 
   /* ═════════ Панель автора (аналітика) ═════════ */
@@ -288,6 +303,7 @@ export class Likeer {
     return `${this.head('Панель автора')}<div class="scroll pad" data-scroll="ins"><p class="muted">Останні 7 днів</p>
       <div class="tiles three">${tile('Перегляди', num(ins.views))}${tile('Взаємодії', num(ins.likes + ins.comments + ins.shares))}${tile('Залученість', (ins.er * 100).toFixed(1).replace('.', ',') + '%')}</div>
       <p class="hint">${icon('info', 16)}<span><b>Залученість</b> — яка частка глядачів поставила вподобання або написала коментар. Важливіша за кількість підписників.</span></p>
+      ${(s.ads?.list || []).length ? `<button class="stats-btn" data-act="ad.cabinet">${icon('megaphone', 18)}<span><b>Реклама:</b> ${s.ads.list.filter(x => x.status === 'active' || x.status === 'review').length} активних, ${s.ads.list.filter(x => x.status === 'done').length} завершених · ${num(Math.round(s.ads.list.reduce((x, y) => x + y.stats.follows, 0)))} підписників з реклами</span>${icon('chevron', 18)}</button>` : ''}
       <h3>Підписники: ${num(s.followers)}</h3>${line}
       ${s.bots ? `<p class="warnbox">${icon('alert', 16)}<span>${num(s.bots)} ваших підписників — боти. Вони не дивляться дописи й знижують залученість.</span></p>` : ''}
       <h3>Коли ваші підписники онлайн</h3><div class="hours">${hb}</div><div class="ch-x"><span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span>23:00</span></div>
@@ -432,7 +448,7 @@ export class Likeer {
       checkFake: () => sheet({ title: 'Перевірка допису', html: `<div class="check"><p>${icon('user', 18)}<span><b>Автор:</b> @novyny_shkola_24_7 — профіль створено вчора, без позначки перевірки, 2 дописи.</span></p><p>${icon('globe', 18)}<span><b>Джерело:</b> посилання на офіційний сайт немає.</span></p><p>${icon('search', 18)}<span><b>Інші новини:</b> на сайтах міністерства освіти й школи про скасування уроків нічого не сказано.</span></p><p>${icon('alert', 18)}<span><b>Ознаки фейку:</b> великі літери, «ТЕРМІНОВО», «поширте всім» — так пишуть, щоб ви не встигли подумати.</span></p></div><p class="hint">${icon('info', 16)}<span>Висновок: найімовірніше, це фейк. Краще не поширювати.</span></p>` }),
       shareFake: async () => { if (await confirm('Поширити цю новину у свою історію?', 'Поширити', false, 'Її побачать ваші підписники.')) { sim.story({ fake: true }); toast('Новину поширено в історію'); } },
       saveIdea: () => { sim.addIdea(el.dataset.t); toast('Ідею збережено в «Ідеї»'); },
-      notif: () => { const n = s.notifs.find(x => x.id === el.dataset.id); if (!n) return; if (n.post && s.posts.some(p => p.id === n.post)) this.go(n.icon === 'comment' ? 'comments' : 'post', { id: n.post }); else if (n.icon === 'dm' && n.pid) { const d = s.dms.find(x => x.pid === n.pid); if (d) this.go('thread', { id: d.id }); } },
+      notif: () => { const n = s.notifs.find(x => x.id === el.dataset.id); if (!n) return; if (n.ad && s.ads?.list.some(a => a.id === n.ad)) { this.go('adView', { id: n.ad }); return; } if (n.post && s.posts.some(p => p.id === n.post)) this.go(n.icon === 'comment' ? 'comments' : 'post', { id: n.post }); else if (n.icon === 'dm' && n.pid) { const d = s.dms.find(x => x.pid === n.pid); if (d) this.go('thread', { id: d.id }); } },
       ptab: () => { top.tab = el.dataset.t; this.ph.render(); },
       epColor: () => { top.d.color = el.dataset.c; this.ph.render(); },
       epSym: () => { top.d.sym = el.dataset.k; this.ph.render(); },
@@ -448,7 +464,7 @@ export class Likeer {
       cMenu: () => this.commentMenu(top.id, el.dataset.c),
       toggleHidden: () => { top.showHidden = !top.showHidden; this.ph.render(); },
       replyTo: () => { top.reply = el.dataset.c || null; this.ph.render(); setTimeout(() => this.ph.root.querySelector('[data-keep="cm"]')?.focus(), 0); },
-      quickReply: () => { const c = s.posts.find(p => p.id === top.id)?.comments.find(x => x.id === top.reply); if (!c) return; const [t, tone, extra] = repliesFor(c)[+el.dataset.i]; sim.reply(top.id, top.reply, t, tone, extra); this.afterReply(tone, extra); },
+      quickReply: () => { const c = s.posts.find(p => p.id === top.id)?.comments.find(x => x.id === top.reply); if (!c) return; const [t, tone, extra] = (c.reply ? FOLLOW_REPLIES : repliesFor(c))[+el.dataset.i]; sim.reply(top.id, top.reply, t, tone, extra); this.afterReply(tone, extra); },
       sendReply: () => {
         const inp = this.ph.root.querySelector('[data-keep="cm"]'), t = inp?.value.trim(); if (!t) return; inp.value = ''; const tone = toneOf(t);
         if (top.reply) { sim.reply(top.id, top.reply, t, tone); this.afterReply(tone); return; }
@@ -458,7 +474,11 @@ export class Likeer {
       likePost: () => sim.likePost(el.dataset.id),
       dmOpt: () => { const d = s.dms.find(x => x.id === top.id), o = d?.opts?.find(x => x[0] === el.dataset.k); if (o) sim.dmReply(d.id, o[1], o[0]); },
       dmSend: () => { const inp = this.ph.root.querySelector(`[data-keep="dm-${el.dataset.id}"]`), t = inp?.value.trim(); if (!t) return; inp.value = ''; sim.dmReply(el.dataset.id, t); },
-      dmMenu: () => { const d = s.dms.find(x => x.id === el.dataset.id); actions([{ t: 'Заблокувати', icon: 'block', danger: true, on: () => { sim.block(d.pid); toast('Заблоковано'); } }, { t: 'Поскаржитися', icon: 'flag', danger: true, on: () => { sim.report(d.pid); toast('Скаргу надіслано'); } }, { t: 'Видалити чат', icon: 'trash', on: () => { s.dms.splice(s.dms.indexOf(d), 1); this.back(); } }]); },
+      dmTab: () => { top.tab = el.dataset.t; this.ph.render(true); },
+      dmAccept: () => { const d = s.dms.find(x => x.id === el.dataset.id); if (d) { d.req = false; this.ph.render(); } },
+      dmDel: () => { s.dms = s.dms.filter(x => x.id !== el.dataset.id); this.back(); toast('Запит видалено'); },
+      dmBlock: () => { const d = s.dms.find(x => x.id === el.dataset.id); if (d) { sim.block(d.pid); toast('Заблоковано'); this.ph.render(); } },
+      dmMenu: () => { const d = s.dms.find(x => x.id === el.dataset.id); actions([!d.blocked && { t: 'Показати переписку дорослим', icon: 'shield', on: () => { sim.sysMsg(d, 'Ви показали переписку дорослим. Якщо розмова тривожна — збережіть знімки екрана, заблокуйте профіль і поскаржтеся.'); this.ph.render(); } }, { t: 'Заблокувати', icon: 'block', danger: true, on: () => { sim.block(d.pid); toast('Заблоковано'); } }, { t: 'Поскаржитися', icon: 'flag', danger: true, on: () => { sim.report(d.pid); toast('Скаргу надіслано'); } }, { t: 'Видалити чат', icon: 'trash', on: () => { s.dms.splice(s.dms.indexOf(d), 1); this.back(); } }]); },
       recover: () => { sim.sendCode(); this.go('recover', {}); toast('Код надіслано на пошту'); },
       recoverCode: () => { sim.sendCode(); toast('Новий код надіслано'); },
       recoverGo: () => { const r = this.ph.root, code = r.querySelector('[data-keep="code"]').value.trim(), np = r.querySelector('[data-keep="npass"]').value; const err = sim.recover(code, np); if (err) { top.err = err; this.ph.render(); } else { this.stack = [{ v: 'profile' }]; this.ph.render(true); toast('Доступ відновлено'); } },

@@ -2,6 +2,7 @@
 // рекомендації, підписники й коментарі. Без DOM — працює і в браузері, і в тестах.
 import { CLIPS, TAGS, CLICKBAIT, COMMENTS, CREATORS, nicheOf } from './data.js';
 import { judge, vertical } from './quality.js';
+import { voice, isFem } from './talk.js';
 
 const DAY = 1440;
 const lc = s => String(s).toLocaleLowerCase('uk');
@@ -197,6 +198,7 @@ export function tubeComment(sim, v) {
   else { kind = 'praise'; text = r.pick(COMMENTS.praise); }
   if (v.comments.some(c => c.text === text)) { kind = 'praise'; text = r.pick(COMMENTS.praise.filter(x => !v.comments.some(c => c.text === x))) || ''; if (!text) return; }
   const u = sim.person(kind === 'bot' ? 'bot' : kind === 'troll' ? 'troll' : 'fan', [v.topic]);
+  text = voice(text, isFem(u));
   const c = { id: sim.id('tc'), pid: u.id, text, kind, t: s.t, likes: kind === 'bot' ? 0 : r.int(6), heart: false, reply: null, hidden: false };
   v.comments.push(c); v.stats.comments++;
   if (v.comments.length > 50) v.comments.splice(v.comments.findIndex(x => !x.reply), 1);
@@ -226,9 +228,11 @@ export function tubeEdit(sim, id, patch) { const v = sim.s.tube.videos.find(x =>
 
 // Відповідь на коментар: тон як у Лайкері (довіра — спільна)
 export function tubeReply(sim, vid, cid, text, tone) {
-  const s = sim.s, v = s.tube.videos.find(x => x.id === vid), c = v?.comments.find(x => x.id === cid); if (!c || c.reply) return;
+  const s = sim.s, v = s.tube.videos.find(x => x.id === vid), c = v?.comments.find(x => x.id === cid); if (!c) return;
   text = String(text).trim().slice(0, 300); if (!text) return;
+  if (c.reply) { if (!c.thread?.length || c.thread.at(-1).me) return; c.thread.push({ me: true, text, t: s.t, tone }); if (c.thread.filter(x => !x.me).length < 2 && sim.r.chance(0.6)) sim.later(sim.r.range(8, 40), 'tubeFollow', vid, cid); sim.emit('tube'); return; }
   c.reply = { text, t: s.t, tone };
+  if (c.kind !== 'bot' && sim.r.chance(c.kind === 'question' || c.kind === 'request' ? 0.7 : 0.45)) sim.later(sim.r.range(8, 45), 'tubeFollow', vid, cid);
   if (tone === 'rude') { s.trust = Math.max(0, s.trust - 3); s.tube.subs = Math.max(0, s.tube.subs - 1 - sim.r.int(3)); }
   else if (tone === 'kind') { v.fired.kindN = (v.fired.kindN || 0) + 1; if (v.fired.kindN <= 3) s.trust = Math.min(100, s.trust + 1); }
   if (c.kind === 'request' && tone === 'kind') sim.addIdea(c.text, 'comment');
