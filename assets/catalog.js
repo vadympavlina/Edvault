@@ -111,14 +111,14 @@ export function mountCatalog(kind) {
   }
   function cardHtml(it) {
     const p = prog(it), c = catOf(it.cat);
-    const chips = kind === 'trainers' ? [`${it.levels} ${plural(it.levels, 'рівень', 'рівні', 'рівнів')}`, it.grades] : it.tags;
+    const chips = kind === 'trainers' ? [`${it.levels} ${plural(it.levels, 'рівень', 'рівні', 'рівнів')}`] : it.tags;
     const cat = state.filter === 'all' && !state.q ? '' : `<span class="card-cat">${esc(c.name)}</span>`;
     if (p) {
       const done = Math.round(p.passed / p.levels * 100);
       return `<a class="card trainer" href="${hrefOf(kind, it)}" data-id="${it.id}" style="--a:${it.accent}">
         <div class="cover"><span class="cover-ic">${svg(it.icon)}</span><span class="cover-n">${it.levels}<small>${plural(it.levels, 'рівень', 'рівні', 'рівнів')}</small></span></div>
         <div class="card-body">${cat}<h3 class="card-name">${hl(it.name)}</h3><p class="card-desc">${hl(it.desc)}</p></div>
-        <div class="card-meta"><span class="chip">${esc(it.grades)}</span><span class="grow"></span><span class="stars">${svg(I.star)}${p.stars} / ${p.max}</span></div>
+        <div class="card-meta"><span class="grow"></span><span class="stars">${svg(I.star)}${p.stars} / ${p.max}</span></div>
         <div class="prog"><div class="bar"><i style="width:${done}%"></i></div><span>${p.passed} з ${p.levels}</span></div>
         <div class="card-go"><span>${p.passed ? (p.passed >= p.levels ? 'Покращити результат' : 'Продовжити') : 'Почати'}</span>${svg(I.arrow)}</div>
       </a>`;
@@ -130,7 +130,7 @@ export function mountCatalog(kind) {
     </a>`;
   }
   const visible = () => K.items.filter(it => (state.filter === 'all' || it.cat === state.filter)
-    && (!state.q || [it.name, it.desc, catOf(it.cat).name, ...(it.tags || []), it.grades || ''].some(s => norm(s).includes(state.q))));
+    && (!state.q || [it.name, it.desc, catOf(it.cat).name, ...(it.tags || [])].some(s => norm(s).includes(state.q))));
 
   function render() {
     $('tabs').innerHTML = [{ id: 'all', name: 'Усі', icon: I.all }, ...K.cats].map(c => {
