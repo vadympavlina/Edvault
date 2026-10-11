@@ -2,10 +2,14 @@
 import { Sim, rng, newState, okState, clock, dayName, hourOf, dayOf, ago, num, plural, DAY } from './sim.js';
 import { icon } from './icons.js';
 import { photo, video, avatar, resetIds } from './art.js';
-import { esc, h, setHost, banner, toast, confirm, sheet, sw, morph } from './ui.js';
-import { SCENES, CLIPS, nicheOf } from './data.js';
-import { Likeer, logo } from './likeer.js';
-import { renderCreate, createAct, createInput, createRange, createToggle, createSelect, openCreate } from './create.js';
+import { esc, h, setHost, banner, toast, hideToast, confirm, sheet, sw, morph } from './ui.js';
+import { SCENES, CLIPS, NICHES, nicheOf } from './data.js';
+import { loadMedia, importFile, removeMedia, clearMedia, mediaUsage, mediaUrl } from './media.js';
+import { checks, fmtDur } from './quality.js';
+import { fileBtn, galTitle, thumb, topicOptions } from './gal.js';
+import { Likeer, logo, carIdx } from './likeer.js';
+import { Tube, tubeLogo } from './tube.js';
+import { renderCreate, createAct, createInput, createRange, createToggle, createSelect, openCreate, createImported } from './create.js';
 
 const KEY = 'edvault-blogger';
 const SPEEDS = [[0, 'Пауза'], [1, '1 хв/с'], [10, '10 хв/с'], [60, '1 год/с']];
@@ -17,13 +21,35 @@ const broken = saved && !okState(saved.s);
 const sim = new Sim(saved && !broken ? saved.s : newState());
 const ui = { speed: saved?.speed ?? 10 };
 
+// Тема нових файлів: від неї залежить, кому платформа покаже допис
+function askTopic(items) {
+  const def = sim.s.me?.niche || 'me', what = items.every(x => x.type === 'video') ? (items.length > 1 ? 'ці відео' : 'це відео') : items.length > 1 ? 'ці файли' : 'це фото';
+  return new Promise(res => {
+    let done = false;
+    const pick = t => { if (done) return; done = true; res(t); };
+    sheet({ title: `Про що ${what}?`, cls: 'topics', onClose: () => pick(def),
+      html: `<p class="muted sm">Тема допомагає платформі показати допис тим, кому це цікаво. Її можна змінити пізніше в Галереї.</p><div class="niches sm">${[...Object.entries(NICHES), ['me', { t: 'Про мене / інше', icon: 'user' }]].map(([k, n]) => `<button class="niche${k === def ? ' on' : ''}" data-t="${k}">${icon(n.icon, 20)}<span>${n.t}</span></button>`).join('')}</div>`,
+      onOpen: api => api.el.addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) { pick(b.dataset.t); api.close(); } }) });
+  });
+}
+
+// Шпалери: готові градієнти або власне фото (з затемненням, щоб білий текст читався)
+const WALLS = { dawn: 'linear-gradient(160deg, #4b2bd1 0%, #b02a7a 55%, #ff8a4c 100%)', sea: 'linear-gradient(160deg, #0d3b66 0%, #146c94 55%, #19a7a0 100%)', forest: 'linear-gradient(160deg, #1b4332 0%, #2d6a4f 55%, #52796f 100%)', night: 'linear-gradient(160deg, #0b0f2e 0%, #283593 60%, #5e35b1 100%)', berry: 'linear-gradient(160deg, #4a148c 0%, #ad1457 60%, #d84315 100%)', graphite: 'linear-gradient(160deg, #1f2933 0%, #3e4c59 60%, #616e7c 100%)' };
+const wallCss = w => WALLS[w] || (mediaUrl(w) ? `linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.42)), url(${mediaUrl(w)}) center / cover` : WALLS.dawn);
+
 class Phone {
   constructor() {
     this.sim = sim; this.root = document.getElementById('app'); this.screen = document.getElementById('screen');
     setHost(this.screen);
     this.app = 'home'; this.args = {};
-    this.apps = { likeer: new Likeer(this) };
+    this.apps = { likeer: new Likeer(this), tube: new Tube(this) };
     this.queued = false;
+    // нові файли з телефону потрапляють туди, звідки їх додавали
+    this.onImported = (ctx, items) => {
+      if (ctx === 'create' && this.app === 'likeer' && this.apps.likeer.top.v === 'create') createImported(this.apps.likeer, items);
+      else this.apps.tube?.imported?.(ctx, items);
+      if (ctx === 'avatar' || ctx === 'wall') this.imported(ctx, items[0]);
+    };
     // Лайкер має власні в’ю «створення»
     const lk = this.apps.likeer;
     lk.v_create = top => renderCreate(lk, top);
@@ -36,7 +62,7 @@ class Phone {
     const root = this.root, scrolls = {};
     if (!reset) root.querySelectorAll('[data-scroll]').forEach(e => { scrolls[e.dataset.scroll] = e.scrollTop; });
     resetIds();
-    const html = this.html(), view = this.app + ':' + (this.app === 'likeer' ? this.apps.likeer.stack.map(x => x.v + (x.id || '')).join('/') : JSON.stringify(this.args));
+    const html = this.html(), view = this.app + ':' + (this.apps[this.app] ? this.apps[this.app].stack.map(x => x.v + (x.id || '')).join('/') : JSON.stringify(this.args));
     // інший екран — малюємо з нуля; той самий — оновлюємо лише змінені частини
     if (reset || view !== this.view) {
       const af = document.activeElement, keep = af && root.contains(af) && af.dataset.keep ? { k: af.dataset.keep, s: af.selectionStart, e: af.selectionEnd } : null;
@@ -44,6 +70,7 @@ class Phone {
       root.innerHTML = html;
       root.querySelectorAll('[data-keep]').forEach(e => { if (e.dataset.keep in vals && !e.dataset.in) e.value = vals[e.dataset.keep]; });
       root.querySelectorAll('[data-scroll]').forEach(e => { if (e.dataset.scroll in scrolls) e.scrollTop = scrolls[e.dataset.scroll]; else if (e.dataset.bottom) e.scrollTop = e.scrollHeight; });
+      root.querySelectorAll('.car[data-car]').forEach(c => { const i = carIdx.get(c.dataset.car); if (i) c.scrollLeft = i * c.clientWidth; });
       if (keep) { const e = root.querySelector(`[data-keep="${CSS.escape(keep.k)}"]`); if (e) { e.focus(); try { e.setSelectionRange(keep.s, keep.e); } catch { /* не текст */ } } }
     } else if (html !== this.lastHtml) {
       const bottoms = [...root.querySelectorAll('[data-bottom]')].filter(e => e.scrollHeight - e.scrollTop - e.clientHeight < 40);
@@ -51,15 +78,26 @@ class Phone {
       bottoms.forEach(e => { e.scrollTop = e.scrollHeight; });
     }
     this.view = view; this.lastHtml = html;
+    this.syncVideos();
     this.bar();
+  }
+  // власні відео: грати чи стояти (атрибут data-play), звук, межі обрізки
+  syncVideos() {
+    for (const v of this.root.querySelectorAll('video[data-own]')) {
+      v.muted = v.dataset.sound !== '1';
+      const want = v.dataset.play === '1', s0 = +v.dataset.s || 0;
+      if (v.readyState >= 1 && v.currentTime < s0 - 0.3) v.currentTime = s0;
+      if (want && v.paused) v.play().catch(() => { /* браузер може заборонити автозапуск */ });
+      else if (!want && !v.paused) v.pause();
+    }
   }
   later() { if (this.queued) return; this.queued = true; requestAnimationFrame(() => { this.queued = false; this.render(); }); }
   html() {
-    if (this.app === 'likeer') return this.apps.likeer.render();
+    if (this.apps[this.app]) return this.apps[this.app].render();
     const fn = this['a_' + this.app] || this.a_home;
     return fn.call(this, this.args);
   }
-  get live() { return this.app === 'home' || this.app === 'mail' || (this.app === 'likeer' && this.apps.likeer.live); }
+  get live() { return this.app === 'home' || this.app === 'mail' || (this.apps[this.app]?.live ?? false); }
 
   /* ── рядок стану ── */
   bar() {
@@ -71,19 +109,29 @@ class Phone {
     document.querySelector('.pn-time b').textContent = clock(s.t);
     document.querySelector('.pn-time small').textContent = `${dayName(s.t)}, день ${dayOf(s.t) + 1}`;
     const live = Math.max(0, s.followers - s.bots);
-    document.querySelector('.pn-stats').innerHTML = s.me ? `<div><b>${num(s.followers)}</b><small>підписників${s.bots ? `, з них ${num(s.bots)} ботів` : ''}</small></div><div><b>${s.posts.filter(p => p.t).length}</b><small>дописів</small></div><div><b>${Math.round(s.trust)}</b><small>довіра</small></div>` : '<p>Створіть профіль у застосунку «Лайкер».</p>';
+    document.querySelector('.pn-stats').innerHTML = s.me || s.tube ? `<div><b>${num(s.followers)}</b><small>у Лайкері${s.bots ? `, з них ${num(s.bots)} ботів` : ''}</small></div><div><b>${s.tube ? num(s.tube.subs) : '—'}</b><small>на каналі «Хвиля»</small></div><div><b>${Math.round(s.trust)}</b><small>довіра</small></div>` : '<p>Створіть профіль у «Лайкері» або канал у «Хвилі».</p>';
   }
 
   /* ═════════ Головний екран ═════════ */
   a_home() {
     const s = sim.s, mail = s.mail.filter(m => !m.read).length, dms = s.dms.reduce((a, d) => a + (d.blocked ? 0 : d.unread), 0), lkN = s.unread.notifs + dms;
-    const today = s.posts.filter(p => p.t && dayOf(p.t) === dayOf(s.t));
+    const today = s.posts.filter(p => p.t && dayOf(p.t) === dayOf(s.t)), ch = s.tube;
     const app = (k, t, ic, badge = 0) => `<button class="app-ic" data-act="ph.open" data-app="${k}" aria-label="${t}${badge ? `, нових: ${badge}` : ''}"><span class="ai ${k}">${ic}</span>${badge ? `<i class="dot">${badge > 99 ? '99+' : badge}</i>` : ''}<small>${t}</small></button>`;
-    const tr = sim.trend;
-    return `<div class="home"><div class="hm-clock"><b>${clock(s.t)}</b><span>${dayName(s.t)}</span></div>
-      <button class="widget" data-act="ph.open" data-app="likeer">${s.me ? `<div class="wg-h">${logo(20)}<b>@${esc(s.me.nick)}</b></div><div class="wg-n"><div><b>${num(s.followers)}</b><small>підписників</small></div><div><b>${num(today.reduce((a, p) => a + p.stats.views, 0))}</b><small>переглядів сьогодні</small></div></div><p class="wg-t">${icon('fire', 14)}Тренд дня: <b>#${esc(tr.tag)}</b></p>`
-        : `<div class="wg-h">${logo(20)}<b>Лайкер</b></div><p class="wg-t">Створіть профіль і опублікуйте перший допис.</p>`}</button>
-      <div class="apps">${app('likeer', 'Лайкер', logo(54), lkN)}${app('camera', 'Камера', icon('camera', 28))}${app('gallery', 'Галерея', icon('image', 28))}${app('ideas', 'Ідеї', icon('idea', 28), 0)}${app('mail', 'Пошта', icon('mail', 28), mail)}${app('help', 'Довідка', icon('info', 28))}</div></div>`;
+    const tsum = ch ? ch.videos.reduce((a, v) => a + v.stats.views, 0) : 0;
+    return `<div class="home" style="background:${wallCss(s.phone.wall)}"><div class="hm-clock"><b>${clock(s.t)}</b><span>${dayName(s.t)}</span></div>
+      <div class="widgets"><button class="widget" data-act="ph.open" data-app="likeer"><div class="wg-h">${logo(18)}<b>Лайкер</b></div>${s.me ? `<div class="wg-n"><b>${num(s.followers)}</b><small>${plural(s.followers, 'підписник', 'підписники', 'підписників')}</small></div><p class="wg-t">${icon('eye', 13)}${num(today.reduce((a, p) => a + p.stats.views, 0))} сьогодні</p>` : '<p class="wg-t">Фото й дописи. Створіть профіль</p>'}</button>
+        <button class="widget" data-act="ph.open" data-app="tube"><div class="wg-h">${tubeLogo(18)}<b>Хвиля</b></div>${ch ? `<div class="wg-n"><b>${num(ch.subs)}</b><small>${plural(ch.subs, 'підписник', 'підписники', 'підписників')}</small></div><p class="wg-t">${icon('play', 13)}${num(tsum)} переглядів</p>` : '<p class="wg-t">Відео й короткі ролики. Створіть канал</p>'}</button></div>
+      <div class="apps">${app('likeer', 'Лайкер', logo(54), lkN)}${app('tube', 'Хвиля', tubeLogo(54), ch?.unread || 0)}${app('camera', 'Камера', icon('camera', 28))}${app('gallery', 'Галерея', icon('image', 28))}${app('ideas', 'Ідеї', icon('idea', 28), 0)}${app('mail', 'Пошта', icon('mail', 28), mail)}${app('settings', 'Налаштування', icon('gear', 28))}${app('help', 'Довідка', icon('info', 28))}</div></div>`;
+  }
+
+  /* ═════════ Налаштування телефону ═════════ */
+  a_settings() {
+    const s = sim.s, own = s.gallery.filter(g => g.own), photos = own.filter(g => g.type === 'photo').slice(0, 9), u = mediaUsage();
+    const mb = x => (x / 1048576).toFixed(x > 1048576 * 10 ? 0 : 1).replace('.', ',');
+    return `<div class="notes"><header class="ah"><button class="ib" data-act="ph.home" aria-label="Додому">${icon('back', 24)}</button><b class="ah-t">Налаштування</b></header><div class="scroll pad">
+      <h3 class="sec">Шпалери головного екрана</h3><div class="walls">${Object.keys(WALLS).map(k => `<button class="wall${s.phone.wall === k ? ' on' : ''}" style="background:${WALLS[k]}" data-act="ph.wall" data-k="${k}" aria-label="Шпалери"></button>`).join('')}${photos.map(g => `<button class="wall${s.phone.wall === g.mid ? ' on' : ''}" data-act="ph.wall" data-k="${g.mid}" aria-label="Ваше фото">${photo(g, { thumb: true })}</button>`).join('')}${fileBtn('wall', 'Фото', 'wall add', 'image/*')}</div>
+      <h3 class="sec">Мої файли</h3><div class="check"><p>${icon('image', 18)}<span>${own.filter(g => g.type === 'photo').length} фото й ${own.filter(g => g.type === 'video').length} відео · ${mb(u.bytes)} МБ</span></p><p>${icon('lock', 18)}<span>Файли зберігаються лише в цьому браузері на цьому пристрої. Їх ніхто не бачить і вони нікуди не надсилаються.</span></p></div>
+      ${u.n ? `<button class="btn danger big" data-act="ph.clearOwn" style="margin-top:14px">${icon('trash', 18)}Видалити всі мої файли</button>` : ''}</div></div>`;
   }
 
   /* ═════════ Камера ═════════ */
@@ -105,18 +153,21 @@ class Phone {
     const s = sim.s;
     if (a.id) {
       const g = s.gallery.find(x => x.id === a.id); if (!g) { a.id = null; return this.a_gallery(a); }
-      const sc = g.type === 'video' ? CLIPS[g.clip] : SCENES[g.scene];
-      return `<div class="gal"><header class="ah"><button class="ib" data-act="ph.galBack" aria-label="Назад">${icon('back', 24)}</button><b class="ah-t">${esc(sc?.t || '')}</b></header>
-        <div class="scroll"><div class="gal-big">${g.type === 'video' ? video(g.clip) : photo(g)}</div>
-        <div class="pad"><div class="check"><p>${icon('clock', 18)}<span>${dayOf(g.t) === dayOf(s.t) ? 'Сьогодні' : dayOf(g.t) === dayOf(s.t) - 1 ? 'Учора' : 'Раніше'}, ${clock(g.t)}${g.cam ? ' · знято камерою' : ''}</span></p>
-          <p>${icon('location', 18)}<span>${g.geo ? '<b>Київ, вул. Шкільна, 12</b> — місце збережено у файлі' : 'Місце не збережено'}</span>${g.geo ? `<button class="btn sm" data-act="ph.strip" data-id="${g.id}">Видалити місце</button>` : ''}</p>
+      const title = g.own ? (g.type === 'video' ? 'Ваше відео' : 'Ваше фото') : (g.type === 'video' ? CLIPS[g.clip] : SCENES[g.scene])?.t || '';
+      const st = { ok: 'check', warn: 'alert', bad: 'alert' };
+      return `<div class="gal"><header class="ah"><button class="ib" data-act="ph.galBack" aria-label="Назад">${icon('back', 24)}</button><b class="ah-t">${esc(title)}</b></header>
+        <div class="scroll"><div class="gal-big${g.own ? ' fit' : ''}">${g.type === 'video' ? (g.own ? video(g, { live: true }) : video(g.clip)) : photo(g)}</div>
+        <div class="pad">${g.own ? `<h3 class="sec">Перевірка кадру</h3><ul class="qc">${checks(g).map(([k, v, c]) => `<li class="${c}">${icon(st[c], 16)}<span><b>${k}</b>${esc(v)}</span></li>`).join('')}</ul>
+          <label class="opt"><span class="opt-ic">${icon(nicheOf(g.topic).icon, 20)}</span><div><b>Тема</b><small>Від теми залежить, кому покажуть допис</small></div><select class="in sel" data-phsel="topic" data-id="${g.id}" aria-label="Тема">${topicOptions(g.topic)}</select></label>` : ''}
+          <div class="check"><p>${icon('clock', 18)}<span>${dayOf(g.t) === dayOf(s.t) ? 'Сьогодні' : dayOf(g.t) === dayOf(s.t) - 1 ? 'Учора' : 'Раніше'}, ${clock(g.t)}${g.cam ? ' · знято камерою' : g.own ? ' · додано з пристрою' : ''}</span></p>
+          ${g.own ? `<p>${icon('lock', 18)}<span>Файл зберігається лише в цьому браузері й нікуди не надсилається</span></p>` : `<p>${icon('location', 18)}<span>${g.geo ? '<b>Київ, вул. Шкільна, 12</b> — місце збережено у файлі' : 'Місце не збережено'}</span>${g.geo ? `<button class="btn sm" data-act="ph.strip" data-id="${g.id}">Видалити місце</button>` : ''}</p>`}
           ${g.type === 'photo' && g.dark ? `<p>${icon('moon', 18)}<span>Темний кадр — допоможе фільтр «Яскраво»</span></p>` : ''}</div>
           <div class="row2"><button class="btn primary" data-act="ph.galPost" data-id="${g.id}">${icon('plusSq', 18)}Опублікувати</button><button class="btn danger" data-act="ph.galDel" data-id="${g.id}">${icon('trash', 18)}Видалити</button></div></div></div></div>`;
     }
-    const f = a.f || 'all', list = s.gallery.filter(g => f === 'all' || g.type === f);
-    return `<div class="gal"><header class="ah"><button class="ib" data-act="ph.home" aria-label="Додому">${icon('back', 24)}</button><b class="ah-t">Галерея</b><span class="grow"></span><small class="muted">${list.length}</small></header>
-      <div class="seg pad">${[['all', 'Усе'], ['photo', 'Фото'], ['video', 'Відео']].map(([k, t]) => `<button class="${f === k ? 'on' : ''}" data-act="ph.galF" data-f="${k}">${t}</button>`).join('')}</div>
-      <div class="scroll" data-scroll="gal"><div class="pick-grid">${list.map(g => `<button class="pg" data-act="ph.galOpen" data-id="${g.id}" aria-label="${esc(g.type === 'video' ? CLIPS[g.clip].t : SCENES[g.scene]?.t || '')}">${g.type === 'video' ? video(g.clip, { paused: true }) + `<i class="pg-dur">0:${CLIPS[g.clip].dur}</i>` : photo(g)}${g.geo ? `<i class="pg-geo">${icon('location', 12)}</i>` : ''}</button>`).join('')}</div></div></div>`;
+    const f = a.f || 'all', list = s.gallery.filter(g => f === 'all' || (f === 'own' ? g.own : g.type === f));
+    return `<div class="gal"><header class="ah"><button class="ib" data-act="ph.home" aria-label="Додому">${icon('back', 24)}</button><b class="ah-t">Галерея</b><span class="grow"></span>${fileBtn('gallery', 'Додати')}</header>
+      <div class="seg pad">${[['all', 'Усе'], ['photo', 'Фото'], ['video', 'Відео'], ['own', 'Мої файли']].map(([k, t]) => `<button class="${f === k ? 'on' : ''}" data-act="ph.galF" data-f="${k}">${t}</button>`).join('')}</div>
+      <div class="scroll" data-scroll="gal">${f === 'own' && !list.length ? `<div class="empty">${icon('upload', 40)}<b>Додайте свої фото й відео</b><p>Натисніть «Додати» вгорі. Файли зберігаються лише в цьому браузері: їх ніхто не побачить, а симулятор покаже, як на них відреагували б підписники.</p></div>` : `<div class="pick-grid">${list.map(g => `<button class="pg" data-act="ph.galOpen" data-id="${g.id}" aria-label="${esc(galTitle(g))}">${thumb(g)}</button>`).join('')}</div>`}</div></div>`;
   }
 
   /* ═════════ Ідеї ═════════ */
@@ -145,7 +196,10 @@ class Phone {
   a_help() {
     const q = (t, b) => `<details class="faq"><summary>${t}</summary><p>${b}</p></details>`;
     return `<div class="notes"><header class="ah"><button class="ib" data-act="ph.home" aria-label="Додому">${icon('back', 24)}</button><b class="ah-t">Довідка</b></header><div class="scroll pad">
-      <p>Це навчальний телефон із соцмережею <b>Лайкер</b>. Усі люди, коментарі й повідомлення вигадані — сміливо пробуйте.</p>
+      <p>Це навчальний телефон із соцмережею <b>Лайкер</b> і відеоплатформою <b>Хвиля</b>. Усі люди, коментарі й повідомлення вигадані — сміливо пробуйте.</p>
+      ${q('Як додати свої фото й відео?', 'Галерея → «Додати» (або «З телефону» під час створення допису). Файли зберігаються лише в цьому браузері й нікуди не надсилаються. Симулятор вимірює світло, чіткість, кольори, а у відео — чи щось відбувається з перших секунд, і на основі цього «глядачі» реагують на ваш допис.')}
+      ${q('Як зробити карусель?', 'Під час створення фото натисніть «Кілька» й вибирайте фото по черзі (до 10). Перше фото побачать у стрічці, тож ставте найкраще першим. Карусель довше розглядають і частіше зберігають.')}
+      ${q('Що таке CTR і утримання у «Хвилі»?', 'CTR (клікабельність) — яка частка людей, що побачили обкладинку, натиснула на відео. Його піднімають яскрава обкладинка з коротким написом і зрозумілий заголовок. Утримання — скільки відео в середньому дивляться. Його псує довгий нудний початок.')}
       ${q('Як працює час?', 'Час на телефоні йде швидше, ніж насправді. Швидкість змінюється на панелі праворуч. Вподобання й коментарі набираються поступово — особливо в перші години після публікації.')}
       ${q('Від чого залежать перегляди?', 'Від якості фото чи відео, опису, хештегів, часу публікації, теми каналу й довіри до вас. Після публікації відкрийте «Статистика допису» → «Що вплинуло на результат».')}
       ${q('Що показує батарея вгорі?', 'Заряд батареї — це ваша енергія блогера. Кожен допис забирає сили, а відпочинок (особливо вночі) їх повертає. Коли енергії мало, дописи виходять гіршими.')}
@@ -178,27 +232,41 @@ class Phone {
       if (ns === 'lk') this.apps.likeer.act(name, el, e);
       else if (ns === 'cr') createAct(this.apps.likeer, name, el);
       else if (ns === 'ph') this.act(name, el);
+      else if (ns === 'tb') this.apps.tube.act(name, el);
       this.save();
     });
     root.addEventListener('click', e => { const t = e.target.closest('[data-sw]'); if (!t) return; const k = t.dataset.sw; if (k.startsWith('cr.')) createToggle(this.apps.likeer, k); else this.apps.likeer.toggle(k); });
     root.addEventListener('input', e => {
       const el = e.target, k = el.dataset.in;
-      if (k) { if (k.startsWith('cr.')) createInput(this.apps.likeer, k, el); else this.apps.likeer.input(k, el); }
+      if (k) { if (k.startsWith('cr.')) createInput(this.apps.likeer, k, el); else if (k.startsWith('tb.')) this.apps.tube.input(k, el); else this.apps.likeer.input(k, el); }
     });
     root.addEventListener('change', e => {
       const el = e.target;
       if (el.dataset.rng) createRange(this.apps.likeer, el.dataset.rng, el);
       if (el.dataset.sel) this.apps.likeer.select(el.dataset.sel, el.value);
       if (el.dataset.crsel) createSelect(this.apps.likeer, el.dataset.crsel, el.value);
+      if (el.dataset.tbsel) this.apps.tube.select(el.dataset.tbsel, el.value);
+      if (el.dataset.phsel === 'topic') { sim.setTopic(el.dataset.id, el.value); this.render(); this.save(); }
+      if (el.dataset.file) { const files = [...el.files]; el.value = ''; this.importFiles(files, el.dataset.file); }
     });
+    // карусель: лічильник і крапки стежать за прокруткою
+    root.addEventListener('scroll', e => {
+      const c = e.target; if (!c.classList?.contains('car')) return;
+      const i = Math.round(c.scrollLeft / Math.max(1, c.clientWidth)), id = c.dataset.car;
+      if ((carIdx.get(id) || 0) === i) return;
+      carIdx.set(id, i); this.render();
+    }, true);
+    // обрізане відео грає лише вибраний шматок
+    const trim = e => { const v = e.target; if (v.tagName !== 'VIDEO' || !v.dataset.own) return; const s0 = +v.dataset.s || 0, e0 = +v.dataset.e || Infinity; if (v.currentTime >= e0 - 0.05 || v.currentTime < s0 - 0.3) v.currentTime = s0; };
+    root.addEventListener('timeupdate', trim, true); root.addEventListener('loadedmetadata', trim, true);
     root.addEventListener('keydown', e => {
       if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button' && e.target.dataset.act) { e.preventDefault(); e.target.click(); return; }
       if (e.key !== 'Enter' || e.shiftKey || e.target.tagName === 'TEXTAREA') return;
       const k = e.target.dataset.keep || '';
-      const btn = k === 'cm' ? '[data-act="lk.sendReply"]' : k.startsWith('dm-') ? '[data-act="lk.dmSend"]' : k === 'idea' ? '[data-act="ph.ideaAdd"]' : k === 'ph-pass' ? '[data-act="ph.phishGo"]' : null;
+      const btn = k === 'tbcm' ? '[data-act="tb.send"]' : k === 'cm' ? '[data-act="lk.sendReply"]' : k.startsWith('dm-') ? '[data-act="lk.dmSend"]' : k === 'idea' ? '[data-act="ph.ideaAdd"]' : k === 'ph-pass' ? '[data-act="ph.phishGo"]' : null;
       if (btn) { e.preventDefault(); this.root.querySelector(btn)?.click(); }
     });
-    this.screen.querySelector('.homebar').addEventListener('click', () => { this.screen.querySelectorAll('.sh-back, .cf-back').forEach(x => x.remove()); this.home(); });
+    this.screen.querySelector('.homebar').addEventListener('click', () => { this.screen.querySelectorAll('.sh-back, .cf-back').forEach(x => (x._api ? x._api.close() : x.remove())); this.home(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') { const sh = this.screen.querySelector('.sh-back:last-of-type'); if (sh) sh.click(); } });
   }
   act(name, el) {
@@ -214,7 +282,7 @@ class Phone {
         const mode = a.mode || (a.returnTo === 'video' ? 'video' : 'photo');
         const g = mode === 'photo' ? sim.takePhoto(a.scene || 'cat') : sim.recordVideo(a.clip || 'laser');
         this.screen.classList.add('flash'); setTimeout(() => this.screen.classList.remove('flash'), 160);
-        if (a.returnTo) { const lk = this.apps.likeer, d = lk.top.d; if (d) { d.gid = g.id; d.kind = mode; if (mode === 'video') { d.clip = g.clip; d.start = 0; d.end = null; } d.step = 'edit'; } this.open('likeer'); toast(mode === 'photo' ? 'Фото зроблено' : 'Відео записано'); return; }
+        if (a.returnTo) { const lk = this.apps.likeer, d = lk.top.d; this.open('likeer'); if (d) { if (d.kind !== 'story') d.kind = mode; createImported(lk, [g]); if (d.kind !== 'story') d.step = 'edit'; this.render(true); } toast(mode === 'photo' ? 'Фото зроблено' : 'Відео записано'); return; }
         this.render(); toast(mode === 'photo' ? (g.dark ? 'Фото збережено. Вийшло темнувато' : 'Фото збережено в Галерею') : 'Відео збережено в Галерею');
       },
       galF: () => { a.f = el.dataset.f; this.render(true); },
@@ -222,7 +290,11 @@ class Phone {
       galBack: () => { a.id = null; this.render(); },
       strip: () => { sim.stripGeo(el.dataset.id); toast('Місце видалено з файлу'); this.render(); },
       galPost: () => { if (!s.me) { this.open('likeer'); toast('Спершу створіть профіль'); return; } openCreate(this, { gid: el.dataset.id }); },
-      galDel: async () => { if (await confirm('Видалити з галереї?', 'Видалити', true)) { sim.deletePhoto(el.dataset.id); a.id = null; this.render(); } },
+      galDel: async () => {
+        const g = s.gallery.find(x => x.id === el.dataset.id); if (!g) return;
+        if (!(await confirm('Видалити з галереї?', 'Видалити', true, g.own && sim.mediaInUse(g.mid) && s.posts.some(p => JSON.stringify([p.photo, p.photos, p.video]).includes(g.mid)) ? 'Опубліковані дописи з цим файлом залишаться.' : ''))) return;
+        sim.deletePhoto(g.id); a.id = null; this.render(); this.gc(g);
+      },
       ideaAdd: () => { const inp = this.root.querySelector('[data-keep="idea"]'), t = inp.value.trim(); if (!t) return; inp.value = ''; sim.addIdea(t); this.render(); },
       ideaDone: () => { const i = s.ideas.find(x => x.id === el.dataset.id); if (i) { i.done = !i.done; this.render(); } },
       ideaPost: () => { if (!s.me) { this.open('likeer'); toast('Спершу створіть профіль'); return; } const i = s.ideas.find(x => x.id === el.dataset.id); if (i) openCreate(this, { idea: i }); },
@@ -232,15 +304,54 @@ class Phone {
       webClose: () => { s.flags.phishPage = false; s.flags.payPage = null; this.open('likeer'); },
       phishGo: () => { const p = this.root.querySelector('[data-keep="ph-pass"]').value; if (!p) return toast('Введіть пароль'); sim.phishLogin(p); this.open('likeer'); toast('Дякуємо! Ваш профіль підтверджено'); },
       payGo: () => { const c = this.root.querySelector('[data-keep="card"]').value.replace(/\D/g, ''); if (c.length < 12) return toast('Введіть номер картки'); sim.payScam(c); this.open('likeer'); toast('Оплату прийнято. Очікуйте доставку'); },
+      wall: () => { s.phone.wall = el.dataset.k; this.render(); },
+      clearOwn: async () => {
+        if (!(await confirm('Видалити всі свої файли?', 'Видалити', true, 'Фото й відео зникнуть із Галереї. У вже опублікованих дописах і відео замість них буде заглушка.'))) return;
+        s.gallery = s.gallery.filter(g => !g.own); if (!WALLS[s.phone.wall]) s.phone.wall = 'dawn';
+        if (s.me) s.me.avatar.img = ''; if (s.tube) { s.tube.avatar.img = ''; s.tube.banner.img = ''; }
+        await clearMedia(); this.render(true); this.save(); toast('Усі ваші файли видалено');
+      },
       reset: async () => { if (await confirm('Почати все заново?', 'Почати заново', true, 'Профіль, дописи й галерея повернуться до початкового стану.')) this.resetAll(); },
     };
     A[name]?.();
   }
-  resetAll() { try { localStorage.removeItem(KEY); } catch { /* ігноруємо */ } sim.s = newState(); sim.r = rng(sim.s); sim.refreshFeed(); sim.seedGallery(); this.apps.likeer = new Likeer(this); this.apps.likeer.v_create = top => renderCreate(this.apps.likeer, top); this.home(); this.save(); }
+  imported(ctx, g) {
+    if (!g) return;
+    const lk = this.apps.likeer;
+    if (ctx === 'avatar' && this.app === 'likeer' && lk.top.v === 'editProfile') { lk.top.d.img = g.mid; this.render(); }
+    if (ctx === 'wall') { sim.s.phone.wall = g.mid; this.render(); toast('Шпалери змінено'); }
+  }
+  // файл більше ніде не потрібен — звільняємо місце в браузері
+  gc(g) { if (g?.own && g.mid && !sim.mediaInUse(g.mid)) removeMedia(g.mid); }
+
+  // Додавання власних фото й відео. ctx — звідки: gallery, create, tube, avatar, banner, wall
+  async importFiles(files, ctx) {
+    if (!files.length) return;
+    const single = ['avatar', 'banner', 'wall', 'thumb', 'tavatar'].includes(ctx), onlyPhoto = single;
+    if (files.length > 20) { toast('Можна додати до 20 файлів за раз'); files = files.slice(0, 20); }
+    if (single) files = files.slice(0, 1);
+    toast(files.length === 1 ? 'Обробляю файл…' : `Обробляю ${files.length} ${plural(files.length, 'файл', 'файли', 'файлів')}…`);
+    const added = [], errs = [];
+    for (const f of files) {
+      try { if (onlyPhoto && !/^image\//.test(f.type) && !/\.(jpe?g|png|webp|gif|bmp|avif)$/i.test(f.name)) throw new Error('Тут потрібне фото'); added.push(await importFile(f)); }
+      catch (e) { errs.push(e.message); }
+    }
+    hideToast();
+    const report = () => { if (errs.length) sheet({ title: added.length ? 'Деякі файли не додано' : 'Файл не додано', html: `${added.length ? `<p class="muted sm">Додано: ${added.length}. Не вдалося:</p>` : ''}<ul class="errs">${errs.map(t => `<li>${icon('alert', 16)}<span>${esc(t)}</span></li>`).join('')}</ul>` }); };
+    if (!added.length) { report(); return; }
+    const topic = single ? 'me' : await askTopic(added);
+    const items = added.map(it => sim.addOwn(it, topic));
+    this.save();
+    this.onImported?.(ctx, items);
+    if (ctx === 'gallery') { this.args.f = 'own'; this.render(true); }
+    if (errs.length) report(); else if (ctx === 'gallery') toast(items.length === 1 ? 'Додано в Галерею' : `Додано ${items.length} ${plural(items.length, 'файл', 'файли', 'файлів')}`);
+  }
+  resetAll() { clearMedia(); try { localStorage.removeItem(KEY); } catch { /* ігноруємо */ } sim.s = newState(); sim.r = rng(sim.s); sim.refreshFeed(); sim.seedGallery(); this.apps.likeer = new Likeer(this); this.apps.likeer.v_create = top => renderCreate(this.apps.likeer, top); this.apps.tube = new Tube(this); this.home(); this.save(); }
   save() { clearTimeout(this.saveT); this.saveT = setTimeout(() => this.saveNow(), 600); }
   saveNow() { clearTimeout(this.saveT); try { localStorage.setItem(KEY, JSON.stringify({ s: sim.s, speed: ui.speed })); } catch { /* сховище недоступне */ } }
 }
 
+await loadMedia();
 const phone = new Phone();
 window.Blogger = { sim, phone, ui };
 
@@ -256,6 +367,13 @@ sim.on(w => {
     if (loud && now - lastBanner > 3500 && !(phone.app === 'likeer' && phone.apps.likeer.top.v === 'activity')) {
       lastBanner = now;
       banner(`${logo(22)}<span><b>Лайкер</b>${esc(n.text.slice(0, 90))}</span>`, () => { phone.open('likeer'); phone.apps.likeer.act('notif', { dataset: { id: n.id } }); });
+    }
+  }
+  if (w === 'tnotif') {
+    const n = sim.s.tube.notifs[0], now = performance.now();
+    if (n && ['comment', 'star', 'trophy'].includes(n.icon) && now - lastBanner > 3500 && phone.app !== 'tube') {
+      lastBanner = now;
+      banner(`${tubeLogo(22)}<span><b>Хвиля</b>${esc(n.text.slice(0, 90))}</span>`, () => { phone.open('tube'); phone.apps.tube.act('notif', { dataset: { id: n.id } }); });
     }
   }
   if (w === 'mail') { const m = sim.s.mail[0]; banner(`<span class="bn-ic">${icon('mail', 18)}</span><span><b>Пошта</b>${esc(m.subject)}</span>`, () => phone.open('mail', { id: m.id })); }

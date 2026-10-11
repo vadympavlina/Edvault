@@ -23,6 +23,7 @@ export function sheet(o) {
     close() { if (!el.isConnected) return; el.classList.add('out'); setTimeout(() => el.remove(), 160); o.onClose?.(); },
     set(html) { el.querySelector('.sh-body').innerHTML = html; },
   };
+  el._api = api;
   el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-sh-close]')) api.close(); });
   o.onOpen?.(api);
   return api;
@@ -59,6 +60,7 @@ export function toast(text) {
   let el = host.querySelector('.toast'); if (!el) { el = h('<div class="toast" role="status"></div>'); host.appendChild(el); }
   el.textContent = text; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2400);
 }
+export function hideToast() { host?.querySelector('.toast')?.classList.remove('on'); clearTimeout(toastT); }
 // Перемикач
 export const sw = (key, on, label = '') => `<button class="sw${on ? ' on' : ''}" role="switch" aria-checked="${on}" data-sw="${key}"${label ? ` aria-label="${esc(label)}"` : ''}><i></i></button>`;
 

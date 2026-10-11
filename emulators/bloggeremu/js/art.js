@@ -1,6 +1,7 @@
 // Симулятор блогера · ілюстрації: «фото» й «відео» (SVG), аватари. Усе намальоване кодом, без справжніх фото людей.
 import { CLIPS } from './data.js';
 import { icon, iconPath } from './icons.js';
+import { mediaUrl } from './media.js';
 
 let uid = 0;
 // лічильник скидається перед кожним перемальовуванням: однаковий вміст дає однакові id
@@ -114,12 +115,32 @@ function person(id, skin, bg, v = 0, k = 1, dx = 0, dy = 0, shirt = '#5c6bc0', e
 }
 
 // «Фото» з галереї: { scene, v, dark, blur }, filter — CSS-фільтр, text — напис, sticker — наліпка
+// напис і наліпка поверх кадру (координати рамки 400×500)
+function deco(o) {
+  const txt = o.text ? `<g><rect x="30" y="${o.textY === 'top' ? 30 : 400}" width="340" height="64" rx="14" fill="rgba(0,0,0,.45)"/><text x="200" y="${o.textY === 'top' ? 72 : 442}" fill="#fff" font-family="Inter,sans-serif" font-size="28" font-weight="800" text-anchor="middle">${esc(o.text.slice(0, 22))}</text></g>` : '';
+  const st = o.sticker ? `<g transform="translate(300 60) rotate(12)"><circle r="44" fill="#fff"/><g transform="translate(-26 -26) scale(2.2)" fill="#ff3d71" stroke="#ff3d71" stroke-width="1.2" stroke-linejoin="round">${iconPath(o.sticker)}</g></g>` : '';
+  return [txt, st];
+}
+const missing = () => `<span class="miss">${icon('image', 28)}<small>Файл недоступний</small></span>`;
+// Власне фото з телефону (зберігається в браузері)
+function ownPhoto(g, o) {
+  const src = mediaUrl(g.mid, o.thumb ? 'thumb' : 'src'), [txt, st] = deco(o);
+  return `<span class="art own">${src ? `<img src="${src}" alt="" decoding="async"${o.filter ? ` style="filter:${o.filter}"` : ''}>` : missing()}${txt || st ? `<svg class="ov" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${txt}${st}</svg>` : ''}</span>`;
+}
+// Власне відео. paused без live — лише кадр-обкладинка (легше для сітки); live — справжній плеєр
+function ownVideo(g, o) {
+  const thumb = mediaUrl(g.mid, 'thumb');
+  if (!thumb) return `<span class="art own">${missing()}</span>`;
+  if (o.paused && !o.live) return `<span class="art own"><img src="${thumb}" alt="" decoding="async"></span>`;
+  return `<span class="art own"><video src="${mediaUrl(g.mid)}" muted loop playsinline preload="metadata" data-own="1" data-play="${o.paused ? 0 : 1}" data-s="${o.start || 0}"${o.end ? ` data-e="${o.end}"` : ''}${o.sound ? ' data-sound="1"' : ''}></video></span>`;
+}
+
 export function photo(g, o = {}) {
+  if (g.own) return ownPhoto(g, o);
   const id = 'a' + (++uid), v = Math.abs(g.v || 0) * 10 % 1;
   const body = (S[g.scene] || S.cat)(id, v, o);
   const fx = [o.filter || '', g.blur ? 'blur(3px)' : ''].filter(Boolean).join(' ');
-  const txt = o.text ? `<g><rect x="30" y="${o.textY === 'top' ? 30 : 400}" width="340" height="64" rx="14" fill="rgba(0,0,0,.45)"/><text x="200" y="${o.textY === 'top' ? 72 : 442}" fill="#fff" font-family="Inter,sans-serif" font-size="28" font-weight="800" text-anchor="middle">${esc(o.text.slice(0, 22))}</text></g>` : '';
-  const st = o.sticker ? `<g transform="translate(300 60) rotate(12)"><circle r="44" fill="#fff"/><g transform="translate(-26 -26) scale(2.2)" fill="#ff3d71" stroke="#ff3d71" stroke-width="1.2" stroke-linejoin="round">${iconPath(o.sticker)}</g></g>` : '';
+  const [txt, st] = deco(o);
   return `<svg class="art" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g style="filter:${fx || 'none'}">${body}${g.dark ? '<rect width="400" height="500" fill="#000" opacity=".52"/>' : ''}</g>${txt}${st}</svg>`;
 }
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -135,7 +156,9 @@ const ANIM = {
   cover: `.strings{animation:vib .08s linear infinite alternate}.note{animation:float 2s ease-out infinite}@keyframes vib{to{transform:translateX(1.5px)}}@keyframes float{from{transform:translate(0,0);opacity:1}to{transform:translate(30px,-140px);opacity:0}}`,
   waves: `.waves{animation:sway 2.4s ease-in-out infinite alternate}@keyframes sway{to{transform:translateX(-40px)}}`,
 };
+// clipKey — назва вбудованого кліпу або власне відео з Галереї ({ own, mid, … })
 export function video(clipKey, o = {}) {
+  if (typeof clipKey === 'object' && clipKey?.own) return ownVideo(clipKey, o);
   const c = CLIPS[clipKey] || CLIPS.laser, id = 'v' + (++uid);
   let body = S[c.scene](id, 0.3);
   if (clipKey === 'laser') body += '<circle class="dot" cx="200" cy="420" r="8" fill="#ff1744"/><circle class="dot" cx="200" cy="420" r="16" fill="#ff1744" opacity=".3"/>';
@@ -148,6 +171,8 @@ export function video(clipKey, o = {}) {
 // Аватар: кольорове коло з першою літерою або значком
 export function avatar(p, size = 40) {
   if (!p) return `<span class="av" style="width:${size}px;height:${size}px"></span>`;
+  const img = p.img || p.avatar?.img, src = img && mediaUrl(img, 'thumb');
+  if (src) return `<span class="av" style="width:${size}px;height:${size}px"><img src="${src}" alt=""></span>`;
   const sym = p.sym || p.avatar?.sym, color = p.color || p.avatar?.color || '#455a64';
   const inner = !sym || sym === 'letter' ? `<b style="font-size:${Math.round(size * 0.42)}px">${esc((p.name || p.nick || '?').trim()[0] || '?').toUpperCase()}</b>` : icon(sym, Math.round(size * 0.5));
   return `<span class="av" style="width:${size}px;height:${size}px;background:${color}">${inner}</span>`;

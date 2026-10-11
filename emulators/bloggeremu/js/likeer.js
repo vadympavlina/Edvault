@@ -5,6 +5,8 @@ import { esc, rich, sheet, actions, confirm, toast, sw } from './ui.js';
 import { NICHES, nicheOf, TAGS, CREATORS, AV_COLORS, AV_SYMBOLS, SCENES, FILTERS, COMMENTS } from './data.js';
 import { ago, num, plural, clock, dayName, dayOf, hourOf, DAY, repliesFor, toneOf, lc } from './sim.js';
 import { openCreate } from './create.js';
+import { fmtDur, checks } from './quality.js';
+import { fileBtn } from './gal.js';
 
 const NOTIF_IC = { clock: 'clock', like: 'heart', comment: 'comment', follow: 'user', dm: 'send', star: 'fire', trophy: 'trophy', shield: 'shield', alert: 'alert', info: 'info', moon: 'moon', battery: 'battery', security: 'lock' };
 export const passScore = (p, nick = '') => { if (!p) return 0; let s = 0; if (p.length >= 8) s++; if (p.length >= 12) s++; if (/\d/.test(p) && /\p{L}/u.test(p)) s++; if (/[^\p{L}\d]/u.test(p)) s++; if (/^(12345|qwerty|йцукен|password|пароль|11111)/i.test(p) || (nick && lc(p).includes(lc(nick)))) s = 0; return Math.min(4, s); };
@@ -12,12 +14,25 @@ const PASS_T = ['Дуже слабкий', 'Слабкий', 'Середній',
 export const passMeter = (p, nick) => { const s = passScore(p, nick); return `<div class="pm s${s}"><i></i><i></i><i></i><i></i></div><small class="pm-t">${p ? PASS_T[s] : 'Щонайменше 8 символів: літери, цифри й знаки'}</small>`; };
 export const nickErr = n => !n ? 'Придумайте ім’я користувача' : !/^[a-z0-9._]{3,20}$/.test(n) ? 'Лише латинські малі літери, цифри, крапка й підкреслення; 3–20 символів' : /^[._]|[._]$/.test(n) ? 'Не може починатися чи закінчуватися крапкою або підкресленням' : CREATORS.some(c => c.nick === n) ? 'Це ім’я вже зайняте' : '';
 
-// Медіа допису (фото, відео або текстова картка)
+// Медіа допису (фото, карусель, відео або текстова картка)
+// o: play — грати відео; carousel — гортати всі фото; thumb — легка мініатюра для сітки; sound — зі звуком
+export const carIdx = new Map(); // який кадр каруселі зараз видно (переживає перемальовування)
 export function media(sim, p, o = {}) {
   if (p.kind === 'text') return `<div class="txtcard" style="background:${p.bg || '#5c6bc0'}"><p>${esc(p.text)}</p></div>`;
-  if (p.kind === 'video') return `<div class="vbox">${video(p.video.clip, { paused: !o.play })}${p.video.title ? `<span class="v-title">${esc(p.video.title)}</span>` : ''}${p.claimed ? `<span class="v-mute">${icon('music', 14)}Звук вимкнено</span>` : ''}<span class="v-dur">0:${String(Math.round(p.len || 20)).padStart(2, '0')}</span>${o.play ? '' : `<span class="v-play">${icon('play', 30, true)}</span>`}</div>`;
-  const g = sim.s.gallery.find(x => x.id === p.photo.gid) || { scene: p.photo.scene || 'cat' };
-  return photo(g, { filter: filterCss(p.photo.filter), text: p.photo.text, textY: p.photo.textY, sticker: p.photo.sticker });
+  if (p.kind === 'video') {
+    const v = p.video, g = v.own ? sim.s.gallery.find(x => x.id === v.gid) || v.g : null;
+    const vid = v.own ? video(g, { paused: !o.play, live: !o.thumb, start: v.start, end: v.end, sound: o.sound && !p.claimed }) : video(v.clip, { paused: !o.play });
+    return `<div class="vbox">${vid}${v.title ? `<span class="v-title">${esc(v.title)}</span>` : ''}${p.claimed ? `<span class="v-mute">${icon('music', 14)}Звук вимкнено</span>` : ''}<span class="v-dur">${fmtDur(p.len || 20)}</span>${o.play ? '' : `<span class="v-play">${icon('play', 30, true)}</span>`}${v.own && o.play && !p.claimed && !o.thumb ? `<button class="v-snd" data-act="lk.sound" aria-label="${o.sound ? 'Вимкнути звук' : 'Увімкнути звук'}" aria-pressed="${!!o.sound}">${icon(o.sound ? 'sound' : 'mute', 18)}</button>` : ''}</div>`;
+  }
+  if (!p.photo) return `<div class="txtcard" style="background:#455a64"><p>${esc(p.caption || p.text || '')}</p></div>`;
+  const one = ph => { const g = sim.s.gallery.find(x => x.id === ph.gid) || ph.g || { scene: ph.scene || 'cat' }; return photo(g, { filter: filterCss(ph.filter), text: ph.text, textY: ph.textY, sticker: ph.sticker, thumb: o.thumb }); };
+  const sl = p.photos?.length > 1 ? p.photos : null;
+  if (!sl) return one(p.photo);
+  if (!o.carousel) return `${one(sl[0])}<i class="gi-ic">${icon('layers', 16)}</i>`;
+  const i = Math.min(carIdx.get(p.id) || 0, sl.length - 1);
+  return `<div class="car-w"><div class="car" data-car="${p.id}" tabindex="0" aria-label="Карусель: ${sl.length} фото. Гортайте вбік">${sl.map(x => `<div class="car-s">${one(x)}</div>`).join('')}</div>
+    <span class="car-n">${i + 1}/${sl.length}</span>${i > 0 ? `<button class="car-a l" data-act="lk.car" data-id="${p.id}" data-d="-1" aria-label="Попереднє фото">${icon('back', 18)}</button>` : ''}${i < sl.length - 1 ? `<button class="car-a r" data-act="lk.car" data-id="${p.id}" data-d="1" aria-label="Наступне фото">${icon('chevron', 18)}</button>` : ''}
+    <span class="car-dots" aria-hidden="true">${sl.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</span></div>`;
 }
 export const filterCss = id => FILTERS.find(f => f.id === id)?.css || '';
 
@@ -48,7 +63,7 @@ export class Likeer {
     const n = this.s.unread.notifs;
     return `<nav class="tabbar">${t('feed', 'home', 'Стрічка')}${t('search', 'search', 'Пошук і тренди')}<button class="tb" data-act="lk.create" aria-label="Створити">${icon('plusSq', 26)}</button>${t('activity', 'heart', 'Активність', n ? `<i class="dot">${n > 99 ? '99+' : n}</i>` : '')}<button class="tb${v === 'profile' ? ' on' : ''}" data-act="lk.tab" data-v="profile" aria-label="Профіль">${avatar(this.meAv(), 27)}</button></nav>`;
   }
-  meAv() { const m = this.s.me; return m ? { name: m.nick, color: m.avatar.color, sym: m.avatar.sym } : null; }
+  meAv() { const m = this.s.me; return m ? { name: m.nick, color: m.avatar.color, sym: m.avatar.sym, img: m.avatar.img } : null; }
   head(title, right = '', backTo = true) { return `<header class="ah">${backTo ? `<button class="ib" data-act="lk.back" aria-label="Назад">${icon('back', 24)}</button>` : ''}<b class="ah-t">${title}</b><span class="grow"></span>${right}</header>`; }
 
   /* ═════════ Реєстрація ═════════ */
@@ -107,7 +122,7 @@ export class Likeer {
         <div class="pa"><button class="ib${f.liked ? ' liked' : ''}" data-act="lk.likeFeed" data-id="${f.id}" aria-label="Вподобати" aria-pressed="${!!f.liked}">${icon('heart', 25, f.liked)}</button><button class="ib" aria-label="Коментарі" data-act="lk.feedComments" data-id="${f.id}">${icon('comment', 24)}</button><button class="ib" aria-label="Поділитися" data-act="lk.toast" data-t="Посилання скопійовано">${icon('send', 23)}</button></div>
         <p class="pl"><b>${num(f.likes)}</b> ${plural(f.likes, 'вподобання', 'вподобання', 'вподобань')}</p><p class="pc"><b>${c ? esc(c.nick) : 'olivets.official'}</b> ${rich(f.caption)}</p>${f.ad ? '' : `<p class="pmore">Переглянути всі коментарі (${f.comments})</p>`}</article>`;
     };
-    const own = mine.map(p => `<article class="post own" data-act="lk.post" data-id="${p.id}"><header class="ph">${avatar(this.meAv(), 34)}<div><b>${esc(s.me.nick)}</b><small>${ago(s.t, p.t)} · ваш допис</small></div></header><div class="pm-media">${media(this.sim, p)}</div><div class="pa"><span>${icon('heart', 22)}</span><b>${num(p.stats.likes)}</b><span>${icon('comment', 22)}</span><b>${num(p.stats.comments)}</b><span class="grow"></span><span class="muted sm">${num(p.stats.views)} переглядів</span></div></article>`).join('');
+    const own = mine.map(p => `<article class="post own" data-act="lk.post" data-id="${p.id}"><header class="ph">${avatar(this.meAv(), 34)}<div><b>${esc(s.me.nick)}</b><small>${ago(s.t, p.t)} · ваш допис</small></div></header><div class="pm-media">${media(this.sim, p, { carousel: true })}</div><div class="pa"><span>${icon('heart', 22)}</span><b>${num(p.stats.likes)}</b><span>${icon('comment', 22)}</span><b>${num(p.stats.comments)}</b><span class="grow"></span><span class="muted sm">${num(p.stats.views)} переглядів</span></div></article>`).join('');
     return `<header class="ah main">${logo(28)}<b class="brand">Лайкер</b><span class="grow"></span><button class="ib" data-act="lk.go" data-v="dms" aria-label="Повідомлення">${icon('send', 24)}${dmN ? `<i class="dot">${dmN}</i>` : ''}</button></header>
       <div class="scroll" data-scroll="feed">${stories}${own}${s.feed.map(card).join('')}<p class="end">${icon('check', 18)}Ви переглянули всі нові дописи</p></div>`;
   }
@@ -151,7 +166,7 @@ export class Likeer {
   v_profile() {
     const s = this.s, me = s.me, posts = s.posts.filter(p => p.t), sched = s.posts.filter(p => !p.t);
     const tab = this.top.tab || 'posts';
-    const grid = list => list.length ? `<div class="grid">${list.map(p => `<button class="gi" data-act="lk.post" data-id="${p.id}" aria-label="Допис">${media(this.sim, p)}${p.kind === 'video' ? `<i class="gi-ic">${icon('play', 16, true)}</i>` : ''}${p.t ? '' : `<i class="gi-time">${icon('clock', 14)}${clock(p.sched)}</i>`}</button>`).join('')}</div>` : `<div class="empty">${icon('camera', 40)}<b>${tab === 'posts' ? 'Ще немає дописів' : 'Немає запланованих дописів'}</b><p>${tab === 'posts' ? 'Натисніть «+» унизу, щоб створити перший.' : 'Під час створення допису виберіть «Запланувати».'}</p></div>`;
+    const grid = list => list.length ? `<div class="grid">${list.map(p => `<button class="gi" data-act="lk.post" data-id="${p.id}" aria-label="Допис">${media(this.sim, p, { thumb: true })}${p.kind === 'video' ? `<i class="gi-ic">${icon('play', 16, true)}</i>` : ''}${p.t ? '' : `<i class="gi-time">${icon('clock', 14)}${clock(p.sched)}</i>`}</button>`).join('')}</div>` : `<div class="empty">${icon('camera', 40)}<b>${tab === 'posts' ? 'Ще немає дописів' : 'Немає запланованих дописів'}</b><p>${tab === 'posts' ? 'Натисніть «+» унизу, щоб створити перший.' : 'Під час створення допису виберіть «Запланувати».'}</p></div>`;
     const stories = s.stories.filter(x => s.t - x.t < DAY);
     return `<header class="ah main">${s.settings.priv ? icon('lock', 16) : ''}<b class="ah-t">${esc(me.nick)}</b><span class="grow"></span><button class="ib" data-act="lk.go" data-v="insights" aria-label="Аналітика">${icon('chart', 24)}</button><button class="ib" data-act="lk.go" data-v="settings" aria-label="Налаштування">${icon('gear', 24)}</button></header>
       <div class="scroll" data-scroll="prof"><section class="prof"><div class="pr-top"><button class="pr-av${stories.length ? ' ring' : ''}" data-act="lk.viewStory" aria-label="Ваші історії">${avatar(this.meAv(), 82)}</button>
@@ -166,12 +181,15 @@ export class Likeer {
     const s = this.s;
     if (!s.drafts.length) return `<div class="empty">${icon('edit', 40)}<b>Чернеток немає</b><p>Якщо вийти з незавершеного допису, його можна зберегти тут і продовжити пізніше.</p></div>`;
     const kind = { photo: 'Фото', video: 'Відео', text: 'Допис' };
-    return `<div class="drafts">${s.drafts.map(d => { const g = d.gid && s.gallery.find(x => x.id === d.gid); return `<div class="draft"><button class="dr-main" data-act="lk.openDraft" data-id="${d.id}"><span class="dr-m">${d.kind === 'text' ? `<span class="txtcard" style="background:${d.bg}"><p>${esc((d.txt || '').slice(0, 30))}</p></span>` : d.kind === 'video' && d.clip ? video(d.clip, { paused: true }) : g ? photo(g, { filter: filterCss(d.filter) }) : icon('image', 26)}</span><span class="dr-t"><b>${kind[d.kind] || 'Допис'}${d.caption ? ': ' + esc(d.caption.slice(0, 40)) : ''}</b><small>Збережено ${ago(s.t, d.t) === 'щойно' ? 'щойно' : ago(s.t, d.t) + ' тому'} · натисніть, щоб продовжити</small></span></button><button class="ib sm" data-act="lk.delDraft" data-id="${d.id}" aria-label="Видалити чернетку">${icon('trash', 18)}</button></div>`; }).join('')}</div>`;
+    return `<div class="drafts">${s.drafts.map(d => { const g = d.gid && s.gallery.find(x => x.id === d.gid); return `<div class="draft"><button class="dr-main" data-act="lk.openDraft" data-id="${d.id}"><span class="dr-m">${d.kind === 'text' ? `<span class="txtcard" style="background:${d.bg}"><p>${esc((d.txt || '').slice(0, 30))}</p></span>` : d.kind === 'video' && (d.clip || g) ? (g?.own ? video(g, { paused: true }) : video(d.clip, { paused: true })) : g ? photo(g, { filter: filterCss(d.filter), thumb: true }) : icon('image', 26)}</span><span class="dr-t"><b>${kind[d.kind] || 'Допис'}${d.caption ? ': ' + esc(d.caption.slice(0, 40)) : ''}</b><small>Збережено ${ago(s.t, d.t) === 'щойно' ? 'щойно' : ago(s.t, d.t) + ' тому'} · натисніть, щоб продовжити</small></span></button><button class="ib sm" data-act="lk.delDraft" data-id="${d.id}" aria-label="Видалити чернетку">${icon('trash', 18)}</button></div>`; }).join('')}</div>`;
   }
   v_editProfile(a) {
-    const me = this.s.me, d = a.d ||= { name: me.name, bio: me.bio, niche: me.niche, color: me.avatar.color, sym: me.avatar.sym };
+    const me = this.s.me, d = a.d ||= { name: me.name, bio: me.bio, niche: me.niche, color: me.avatar.color, sym: me.avatar.sym, img: me.avatar.img || '' };
+    const own = this.s.gallery.filter(g => g.own && g.type === 'photo').slice(0, 11);
     return `${this.head('Редагувати профіль', `<button class="lnk strong" data-act="lk.saveProfile">Готово</button>`)}<div class="scroll pad">
-      <div class="av-prev">${avatar({ name: me.nick, color: d.color, sym: d.sym }, 86)}</div>
+      <div class="av-prev">${avatar({ name: me.nick, color: d.color, sym: d.sym, img: d.img }, 86)}</div>
+      <p class="lbl">Фото профілю</p><div class="av-pick"><button class="avp${d.img ? '' : ' on'}" data-act="lk.epImg" data-mid="" aria-label="Без фото: значок">${avatar({ name: me.nick, color: d.color, sym: d.sym }, 52)}</button>${own.map(g => `<button class="avp${d.img === g.mid ? ' on' : ''}" data-act="lk.epImg" data-mid="${g.mid}" aria-label="Ваше фото">${avatar({ img: g.mid }, 52)}</button>`).join('')}${fileBtn('avatar', 'Додати', 'avp add', 'image/*')}</div>
+      ${d.img ? '<p class="hint">' + icon('info', 16) + '<span>Для фото профілю краще підходить зображення без облич друзів, документів і впізнаваних місць біля дому.</span></p>' : ''}
       <div class="sw-row center">${AV_COLORS.map(c => `<button class="cdot${d.color === c ? ' on' : ''}" style="background:${c}" data-act="lk.epColor" data-c="${c}" aria-label="Колір"></button>`).join('')}</div>
       <div class="sw-row center">${AV_SYMBOLS.map(k => `<button class="sym${d.sym === k ? ' on' : ''}" data-act="lk.epSym" data-k="${k}" aria-label="Значок">${k === 'letter' ? `<b>${esc(me.nick[0].toUpperCase())}</b>` : icon(k, 22)}</button>`).join('')}</div>
       <label class="fl"><span>Ім’я</span><input class="in" data-keep="ep.name" data-in="ep.name" value="${esc(d.name)}" maxlength="30"></label>
@@ -188,7 +206,7 @@ export class Likeer {
     return `${this.head(sched ? 'Запланований допис' : 'Допис', `<button class="ib" data-act="lk.postMenu" data-id="${p.id}" aria-label="Ще">${icon('more', 24)}</button>`)}
       <div class="scroll" data-scroll="post"><article class="post"><header class="ph">${avatar(this.meAv(), 34)}<div><b>${esc(s.me.nick)}</b><small>${p.place ? `${icon('location', 12)}${esc(p.place)}` : sched ? `Вийде ${dayOf(p.sched) === dayOf(s.t) ? 'сьогодні' : 'завтра'} о ${clock(p.sched)}` : ago(s.t, p.t)}</small></div></header>
       ${p.ad ? `<p class="adline${p.adMarked ? '' : ' warn'}">${icon('money', 14)}${p.adMarked ? `Реклама · ${esc(adName(p.ad))}` : 'Рекламу не позначено'}</p>` : ''}
-      <div class="pm-media" ${p.kind === 'video' ? 'data-act="lk.play"' : ''}>${media(this.sim, p, { play: a.play })}</div>
+      <div class="pm-media" ${p.kind === 'video' ? 'data-act="lk.play"' : ''}>${media(this.sim, p, { play: a.play, carousel: true, sound: this.sound })}</div>
       ${sched ? '' : `<div class="pa"><span class="ib static">${icon('heart', 25)}</span><b>${num(st.likes)}</b><button class="ib" data-act="lk.go" data-v="comments" data-id="${p.id}" aria-label="Коментарі">${icon('comment', 24)}</button><b>${num(st.comments)}</b><span class="ib static">${icon('send', 23)}</span><b>${num(st.shares)}</b><span class="grow"></span><span class="ib static">${icon('bookmark', 23)}</span><b>${num(st.saves)}</b></div>`}
       ${p.caption ? `<p class="pc"><b>${esc(s.me.nick)}</b> ${rich(p.caption)}</p>` : ''}
       ${sched ? '' : `<button class="stats-btn" data-act="lk.go" data-v="stats" data-id="${p.id}">${icon('chart', 18)}<span><b>${num(st.views)}</b> ${plural(st.views, 'перегляд', 'перегляди', 'переглядів')} · Статистика допису</span>${icon('chevron', 18)}</button>
@@ -370,7 +388,10 @@ export class Likeer {
       epColor: () => { top.d.color = el.dataset.c; this.ph.render(); },
       epSym: () => { top.d.sym = el.dataset.k; this.ph.render(); },
       epNiche: () => { top.d.niche = el.dataset.k; this.ph.render(); },
-      saveProfile: () => { const d = top.d; if (/\d{3}|школ|клас|вул/i.test(d.bio)) { toast('Схоже, в описі є особисті дані. Краще їх прибрати'); } sim.updateProfile({ name: d.name.trim(), bio: d.bio.trim(), niche: d.niche, avatar: { color: d.color, sym: d.sym } }); this.back(); toast('Профіль оновлено'); },
+      saveProfile: () => { const d = top.d; if (/\d{3}|школ|клас|вул/i.test(d.bio)) { toast('Схоже, в описі є особисті дані. Краще їх прибрати'); } sim.updateProfile({ name: d.name.trim(), bio: d.bio.trim(), niche: d.niche, avatar: { color: d.color, sym: d.sym, img: d.img || '' } }); this.back(); toast('Профіль оновлено'); },
+      epImg: () => { top.d.img = el.dataset.mid; this.ph.render(); },
+      sound: () => { this.sound = !this.sound; this.ph.render(); },
+      car: () => { const c = this.ph.root.querySelector(`.car[data-car="${el.dataset.id}"]`); if (c) c.scrollBy({ left: +el.dataset.d * c.clientWidth, behavior: 'smooth' }); },
       post: () => this.go('post', { id: el.dataset.id }),
       play: () => { top.play = !top.play; this.ph.render(); },
       postMenu: () => this.postMenu(el.dataset.id),
@@ -445,7 +466,8 @@ export class Likeer {
     ]);
   }
   photoInfo(p) {
-    const g = this.s.gallery.find(x => x.id === p.photo.gid);
+    const g = this.s.gallery.find(x => x.id === p.photo.gid) || p.photo.g;
+    if (g?.own) { sheet({ title: 'Інформація про фото', html: `<ul class="qc">${checks(g).map(([k, v, c]) => `<li class="${c}">${icon(c === 'ok' ? 'check' : 'alert', 16)}<span><b>${k}</b>${esc(v)}</span></li>`).join('')}</ul><p class="hint">${icon('info', 16)}<span>Розгорнуте пояснення — у «Статистиці допису» → «Що вплинуло на результат».</span></p>` }); return; }
     sheet({ title: 'Інформація про фото', html: `<div class="check"><p>${icon('image', 18)}<span>${esc(SCENES[g?.scene]?.t || 'Фото')}</span></p><p>${icon('location', 18)}<span>${g?.geo ? 'Місце зйомки збережено у файлі: <b>Київ, вул. Шкільна, 12</b>. Його може побачити будь-хто, хто збереже фото.' : 'Місце зйомки не збережено.'}</span></p></div>` });
   }
   editCaption(p) {

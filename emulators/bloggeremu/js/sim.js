@@ -1,6 +1,8 @@
 // Симулятор блогера · рушій: віртуальний час, охоплення дописів, реакції підписників, повідомлення, події.
 // Без DOM — працює і в браузері, і в тестах (node).
 import { NICHES, SCENES, CLIPS, MUSIC, MOOD_FIT, FILTERS, TAGS, TRENDS, CLICKBAIT, RUDE, COMMENTS, REPLIES, BRANDS, CREATORS, makePerson, nicheOf } from './data.js';
+import { judge, vertical } from './quality.js';
+import { tubeStep } from './tubesim.js';
 
 export const DAY = 1440;
 export const START = 16 * 60; // понеділок, 16:00 — після уроків
@@ -30,7 +32,7 @@ export function newState(seed = Date.now() % 100000) {
     me: null, followers: 0, following: [], trust: 60, energy: 100, money: 0, strikes: 0, bots: 0,
     posts: [], stories: [], people: {}, fans: [], dms: [], mail: [], notifs: [], ideas: [], gallery: [], feed: [], days: [],
     settings: { geotag: true, priv: false, comments: 'all', dms: 'all', filter: false, limitNew: false, twoFA: false, sessions: [{ id: 's0', dev: 'Цей телефон', city: 'Київ', now: true }] },
-    flags: {}, heat: 0, hack: null, pendingAd: null, collab: null, unread: { notifs: 0 }, drafts: [], screen: {}, breakAt: 60,
+    flags: {}, heat: 0, hack: null, pendingAd: null, collab: null, unread: { notifs: 0 }, drafts: [], screen: {}, breakAt: 60, tube: null, phone: { wall: 'dawn' },
   };
 }
 
@@ -43,7 +45,7 @@ export class Sim {
     this.r = rng(this.s);
     this.subs = new Set();
     // старі збереження: нові поля
-    this.s.drafts ||= []; this.s.screen ||= {}; this.s.breakAt ??= 60;
+    this.s.drafts ||= []; this.s.screen ||= {}; this.s.breakAt ??= 60; this.s.tube ??= null; this.s.phone ||= { wall: 'dawn' };
     if (!this.s.feed.length) this.refreshFeed();
     if (!this.s.gallery.length) this.seedGallery();
   }
@@ -70,6 +72,7 @@ export class Sim {
     }
     for (const st of s.stories) if (t - st.t < DAY) { const f = 1 - Math.exp(-(t - st.t) / 180); st.views = Math.round(st.plan * f); }
     if (Math.floor(t / 60) !== Math.floor((t - d) / 60)) ch = this.hourly() || ch;
+    if (s.tube) ch = tubeStep(this, d) || ch;
     if (s.queue?.length) { const n = s.queue.length; this.runQueue(); ch = ch || n !== s.queue.length; }
     return ch;
   }
@@ -94,7 +97,7 @@ export class Sim {
   // люди, на яких ніщо не посилається, видаляються, щоб збереження не розросталося
   prune() {
     const s = this.s, ids = Object.keys(s.people); if (ids.length < 300) return;
-    const keep = new Set([...s.fans, ...s.dms.map(d => d.pid), ...s.posts.flatMap(p => p.comments.map(c => c.pid)), ...s.stories.map(() => null)]);
+    const keep = new Set([...s.fans, ...s.dms.map(d => d.pid), ...s.posts.flatMap(p => p.comments.map(c => c.pid)), ...(s.tube?.videos || []).flatMap(v => v.comments.map(c => c.pid))]);
     for (const id of ids) if (!keep.has(id) && !id.startsWith('cr_') && !id.startsWith('br_')) delete s.people[id];
   }
 
@@ -113,7 +116,7 @@ export class Sim {
   // draft: { kind: 'photo'|'video'|'text', photo: {gid, filter, text, sticker, crop}, video: {clip, trim, title, music}, caption, place, ad, audience, sched, collab }
   publish(draft) {
     const s = this.s;
-    const p = { id: this.id('p'), kind: draft.kind, photo: draft.photo || null, video: draft.video || null, text: draft.text || '', caption: (draft.caption || '').trim(), place: draft.place || '', ad: draft.ad || null, adMarked: !!draft.adMarked, commentsOff: !!draft.commentsOff, t: 0, sched: draft.sched || 0, stats: { views: 0, reach: 0, likes: 0, comments: 0, shares: 0, saves: 0, follows: 0, unfollows: 0, watch: 0, src: {} }, comments: [], fired: {}, why: [] };
+    const p = { id: this.id('p'), kind: draft.kind, photo: draft.photo || null, photos: draft.photos?.length > 1 ? draft.photos : null, video: draft.video || null, text: draft.text || '', caption: (draft.caption || '').trim(), place: draft.place || '', ad: draft.ad || null, adMarked: !!draft.adMarked, commentsOff: !!draft.commentsOff, t: 0, sched: draft.sched || 0, stats: { views: 0, reach: 0, likes: 0, comments: 0, shares: 0, saves: 0, follows: 0, unfollows: 0, watch: 0, src: {} }, comments: [], fired: {}, why: [] };
     p.tags = [...new Set((p.caption.match(/#[\p{L}\p{N}_]+/gu) || []).map(x => lc(x.slice(1))))];
     s.posts.unshift(p);
     if (!p.sched || p.sched <= s.t) this.publishNow(p);
@@ -133,22 +136,55 @@ export class Sim {
     this.emit('posts');
   }
 
+  // Один кадр допису: якість, тема, ризики. ph: { gid, filter, g — копія власного фото на випадок, якщо його видалять із Галереї }
+  slide(ph) {
+    const s = this.s, g = s.gallery.find(x => x.id === ph.gid) || ph.g || { scene: ph.scene || 'cat' };
+    const f = FILTERS.find(x => x.id === ph.filter) || FILTERS[0], why = [], flags = {};
+    let q, topic, risk;
+    if (g.own) {
+      const j = judge(g, { filter: f }); q = j.q; j.why.forEach(w => why.push(w)); topic = g.topic || s.me?.niche || 'me'; risk = [];
+      for (const k of ['dark', 'blur', 'dull', 'lowres']) if (j.flags[k]) flags[k] = true;
+      if (j.flags.washed) flags.over = true;
+    } else {
+      const sc = SCENES[g.scene] || SCENES.cat; topic = sc.topic; q = sc.q + (g.v || 0); risk = [...(sc.risk || [])];
+      if (g.dark) { if (f.fix) { q += 0.04; why.push(['+', 'Яскравість виправила темний кадр']); } else { q -= 0.16; why.push(['-', 'Темне фото — погано видно']); flags.dark = true; } }
+      if (g.blur) { q -= 0.12; why.push(['-', 'Розмите фото']); flags.blur = true; }
+    }
+    if (f.over) { q -= 0.08; why.push(['-', 'Надто сильний фільтр']); flags.over = true; }
+    if (g.geo) risk.push('geo');
+    return { q, why, topic, risk, flags };
+  }
+
   // Модель охоплення: від чого залежить, скільки людей побачить допис і як відреагує
   model(p) {
     const s = this.s, r = this.r, me = s.me || { niche: 'pets', bio: '' }, why = p.why = [];
     const good = t => why.push(['+', t]), bad = t => why.push(['-', t]);
     let q, topic;
     if (p.kind === 'photo') {
-      const g = s.gallery.find(x => x.id === p.photo.gid) || { scene: 'cat', dark: false, risk: [] };
-      const sc = SCENES[g.scene] || SCENES.cat; topic = sc.topic; q = sc.q + (g.v || 0);
-      const f = FILTERS.find(x => x.id === p.photo.filter) || FILTERS[0];
-      if (g.dark) { if (f.fix) { q += 0.04; good('Яскравість виправила темний кадр'); } else { q -= 0.16; bad('Темне фото — погано видно'); p.dark = true; } }
-      if (g.blur) { q -= 0.12; bad('Розмите фото'); }
-      if (f.over) { q -= 0.08; bad('Надто сильний фільтр'); p.over = true; }
+      // карусель: перший кадр вирішує, чи зупиниться людина; решта — чи догортає
+      const slides = (p.photos?.length ? p.photos : [p.photo]).map(x => this.slide(x));
+      const first = slides[0]; topic = first.topic; q = first.q; first.why.forEach(w => why.push(w));
+      Object.assign(p, first.flags);
+      if (slides.length > 1) {
+        const rest = slides.slice(1), mean = rest.reduce((a, x) => a + x.q, 0) / rest.length;
+        q = 0.6 * q + 0.4 * mean + 0.04; p.carousel = slides.length;
+        good(`Карусель із ${slides.length} фото: люди гортають і довше дивляться допис`);
+        if (rest.some(x => x.q < first.q - 0.15)) bad('Слабкі кадри всередині каруселі');
+      }
       if (p.photo.text) { q += 0.03; good('Напис на фото привертає увагу'); }
       if (p.photo.crop === '45') q += 0.02;
-      p.risk = [...(sc.risk || [])];
-      if (g.geo) p.risk.push('geo');
+      p.risk = [...new Set(slides.flatMap(x => x.risk))];
+    } else if (p.kind === 'video' && p.video.own) {
+      const v = p.video, g = s.gallery.find(x => x.id === v.gid) || v.g, j = judge(g, { start: v.start, end: v.end, app: 'lk' });
+      topic = g.topic || me.niche; q = j.q; j.why.forEach(w => why.push(w));
+      p.intro = j.flags.intro; p.long = j.flags.long; p.dark = j.flags.dark; p.blur = j.flags.blur; p.still = j.flags.still; p.horiz = !vertical(g); p.lowres = j.flags.lowres;
+      if (v.title) { q += 0.04; good('Заголовок на відео'); }
+      const m = MUSIC.find(x => x.id === v.music) || MUSIC[0];
+      p.music = m;
+      if (m.hit) { q -= 0.04; bad('Чужа музика з плеєра — скарга правовласника'); }
+      else if (m.id === 'orig') good('Живий звук із відео');
+      else if (m.mood === MOOD_FIT[topic]) { q += 0.06; good('Музика пасує до відео'); }
+      p.len = j.flags.len; p.risk = g.geo ? ['geo'] : [];
     } else if (p.kind === 'video') {
       const c = CLIPS[p.video.clip] || CLIPS.laser, v = p.video; topic = c.topic; q = c.q;
       const len = Math.max(3, (v.end ?? c.dur) - (v.start || 0));
@@ -224,7 +260,7 @@ export class Sim {
       likes: Math.round(views * likeR),
       comments: Math.round(views * (0.008 + 0.022 * q) * (asks ? 1.6 : 1) + (views > 20 ? 1 : 0)),
       shares: Math.round(views * 0.012 * q * q * (useful ? 1.5 : 1)),
-      saves: Math.round(views * (useful ? 0.03 : 0.01) * q),
+      saves: Math.round(views * (useful ? 0.03 : 0.01) * q * (p.carousel ? 1.6 : 1)),
       follows: Math.round(exp * viral * (0.012 + 0.05 * q * rel) * prof * (p.cb ? 0.5 : 1) + (priv ? live * 0.004 : 0)),
       unfollows: Math.round(live * ((p.cb ? 0.01 : 0) + (p.offtopic ? 0.006 : 0) + (fatigue < 1 ? 0.004 : 0) + (p.adBad ? 0.05 : 0) + (p.ad && !p.adMarked ? 0.012 : 0))),
       watch: p.kind === 'video' ? Math.max(0.12, Math.min(0.95, 0.3 + 0.5 * q - (p.intro ? 0.12 : 0))) : 0,
@@ -279,7 +315,7 @@ export class Sim {
     const s = this.s, r = this.r, C = COMMENTS, st = p.stats, f = p.fired;
     let kind, text, pid = null;
     const risk = (p.risk || []).find(x => !f['risk_' + x] && x !== 'geo') || ((p.risk || []).includes('geo') && !f.risk_geo ? 'geo' : null);
-    const crit = [['dark', p.dark], ['over', p.over], ['intro', p.intro], ['long', p.long], ['offtopic', p.offtopic], ['caption', p.noCaption], ['spamtags', p.spamTags], ['mute', p.music?.hit && p.claimed]].filter(([k, on]) => on && !f['c_' + k]);
+    const crit = [['dark', p.dark], ['over', p.over], ['intro', p.intro], ['long', p.long], ['offtopic', p.offtopic], ['caption', p.noCaption], ['spamtags', p.spamTags], ['mute', p.music?.hit && p.claimed], ['blur', p.blur], ['dull', p.dull], ['horiz', p.horiz], ['still', p.still], ['lowres', p.lowres]].filter(([k, on]) => on && !f['c_' + k]);
     if (risk && st.comments >= 1) {
       f['risk_' + risk] = true; kind = 'privacy';
       text = r.pick(C.privacy[risk === 'geo' ? 'place' : risk] || C.privacy.place);
@@ -392,7 +428,16 @@ export class Sim {
     s.gallery.unshift(g); this.trimGallery(); this.emit('gallery'); return g;
   }
   // галерея не росте безмежно: найстаріші кадри, не використані в дописах, видаляються
-  trimGallery() { const s = this.s; if (s.gallery.length <= 80) return; const used = new Set(s.posts.map(p => p.photo?.gid).filter(Boolean)); for (let i = s.gallery.length - 1; i >= 0 && s.gallery.length > 80; i--) if (!used.has(s.gallery[i].id)) s.gallery.splice(i, 1); }
+  // старі кадри з камери видаляються; власні файли й те, що є в дописах, лишаються
+  trimGallery() { const s = this.s; if (s.gallery.length <= 80) return; const used = new Set(s.posts.flatMap(p => [p.photo?.gid, ...(p.photos || []).map(x => x.gid), p.video?.gid]).filter(Boolean)); for (let i = s.gallery.length - 1; i >= 0 && s.gallery.length > 80; i--) if (!used.has(s.gallery[i].id) && !s.gallery[i].own) s.gallery.splice(i, 1); }
+  // власний файл із телефону: опис від media.importFile + тема
+  addOwn(item, topic) { const s = this.s, g = { ...item, id: this.id('g'), topic: topic || s.me?.niche || 'me', t: s.t, geo: false }; s.gallery.unshift(g); this.emit('gallery'); return g; }
+  setTopic(id, topic) { const g = this.s.gallery.find(x => x.id === id); if (g) { g.topic = topic; this.emit('gallery'); } }
+  // чи потрібен ще файл (у Галереї, дописах, чернетках, аватарах, на каналі)
+  mediaInUse(mid) {
+    const s = this.s, j = JSON.stringify([s.gallery, s.posts.map(p => [p.photo, p.photos, p.video]), s.drafts, s.me?.avatar, s.tube, s.phone]);
+    return j.includes(`"${mid}"`);
+  }
   recordVideo(clip) { const g = { id: this.id('g'), type: 'video', clip, t: this.s.t, cam: true, geo: this.s.settings.geotag }; this.s.gallery.unshift(g); this.trimGallery(); this.emit('gallery'); return g; }
   deletePhoto(id) { const s = this.s; s.gallery = s.gallery.filter(g => g.id !== id); this.emit('gallery'); }
   stripGeo(id) { const g = this.s.gallery.find(x => x.id === id); if (g) { g.geo = false; this.emit('gallery'); } }
