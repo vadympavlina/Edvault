@@ -1351,4 +1351,4 @@ button.st-user:hover { background: rgba(0,0,0,.05); }
   .tb-mid, #tbApps { gap: 2px; }
   .tb-btn, .tb-app { width: 36px; }
 }
-@media (max-width: 640px) { #start { left: 8px; right: 8px; width: auto; margin-left: 0; } .st-pins { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 640px) { #start { left: 8px; right: 8px; width: auto; margin-left: 0; } .st-pins { grid-template-columns: repeat(4, minmax(0, 1fr)); } .st-pin { font-size: 11px; min-width: 0; } .st-pin span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; } }
