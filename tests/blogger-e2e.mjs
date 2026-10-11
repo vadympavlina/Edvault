@@ -435,6 +435,33 @@ await step('реклама у «Хвилі»: просування відео з
   assert.match(await p.locator('.tiles').innerText(), /перегляд/i);
 });
 
+await step('«Лелека»: акаунт уже є, створення каналу, допис, запрошення, статистика', async () => {
+  await home(); await p.click('[data-app="tg"]');
+  assert.match(await p.locator('.tg-app').innerText(), /Мама[\s\S]*7-А клас/);
+  await p.click('[data-act="tg.open"][data-id="mom"]'); await p.fill('[data-keep="tgm-mom"]', 'Привіт!'); await p.click('[data-act="tg.send"]');
+  await p.evaluate(() => Blogger.phone.apps.tg.back());
+  await p.click('.tg-promo'); assert.ok(await p.locator('[data-act="tg.nNext"]').isDisabled());
+  await p.fill('[data-keep="tg.nTitle"]', 'Мурчик і пригоди'); await p.click('[data-act="tg.nNext"]');
+  assert.equal(await p.locator('[data-keep="tg.nLink"]').inputValue(), 'murchyk_i_pryhody', 'посилання з назви');
+  await p.fill('[data-keep="tg.nLink"]', 'memes'); assert.match(await p.locator('[data-err]').innerText(), /зайняте/); assert.ok(await p.locator('[data-act="tg.nNext"]').isDisabled());
+  await p.fill('[data-keep="tg.nLink"]', 'murchyk_pryhody'); await p.click('[data-act="tg.nNext"]');
+  await p.click('[data-act="tg.nCreate"]');
+  assert.match(await p.locator('.tg-first').innerText(), /Канал створено/);
+  await p.fill('[data-keep="tg.post"]', 'Я вчуся в 7-А класі'); assert.match(await p.locator('[data-tgtip]').innerText(), /Особисті дані/);
+  await p.fill('[data-keep="tg.post"]', 'Привіт! Тут я розповідатиму про свого кота Мурчика: як він грається і що любить. Нові дописи щовечора.');
+  await p.click('[data-act="tg.publish"]');
+  await p.click('[data-act="tg.attach"]'); await p.click('[data-poll]'); await p.fill('[data-pq]', 'Про що написати?'); await p.fill('[data-po="0"]', 'Іграшки'); await p.fill('[data-po="1"]', 'Сон'); await p.click('[data-ok]');
+  await p.click('[data-act="tg.publish"]');
+  assert.equal(await p.locator('.tg-post').count(), 2);
+  await p.click('.tg-hav'); await p.click('[data-act="tg.invite"]'); await p.click('[data-i="class"]'); await p.click('[data-i="mom"]'); await p.click('[data-send]');
+  await adv(1440);
+  const ch = (await S()).tg.ch; assert.ok(ch.subs >= 3 && ch.posts[0].stats.views > 0, JSON.stringify({ subs: ch.subs, v: ch.posts[0].stats.views }));
+  await p.click('[data-act="tg.go"][data-v="stats"]'); assert.match(await p.locator('.tiles').innerText(), /ERR/);
+  assert.match(await p.locator('.tg-src').innerText(), /Посилання-запрошення/);
+  await p.evaluate(() => { Blogger.phone.apps.tg.stack = [{ v: 'settings' }]; Blogger.phone.render(true); });
+  await p.click('[data-act="tg.go"][data-v="privacy"]'); await p.click('[data-sw="tg.pass2"]'); assert.ok((await S()).tg.set.pass2);
+});
+
 await step('усе зберігається після перезавантаження сторінки', async () => {
   const before = await S();
   await p.evaluate(() => Blogger.phone.saveNow());

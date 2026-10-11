@@ -10,6 +10,8 @@ import { fileBtn, galTitle, thumb, topicOptions } from './gal.js';
 import { Likeer, logo, carIdx } from './likeer.js';
 import { Tube, tubeLogo } from './tube.js';
 import { adViews, adAct, adInput, adRange, adSelect } from './ads.js';
+import { Tg, tgLogo } from './tg.js';
+import { newTg, tgUnread, tgDeliver } from './tgsim.js';
 
 Object.assign(Likeer.prototype, adViews); // «Реклама» — і в Лайкері, і у «Хвилі»
 Object.assign(Tube.prototype, adViews); Tube.prototype.platform = 'tube';
@@ -46,11 +48,12 @@ class Phone {
     this.sim = sim; this.root = document.getElementById('app'); this.screen = document.getElementById('screen');
     setHost(this.screen);
     this.app = 'home'; this.args = {};
-    this.apps = { likeer: new Likeer(this), tube: new Tube(this) };
+    this.apps = { likeer: new Likeer(this), tube: new Tube(this), tg: new Tg(this) };
     this.queued = false;
     // нові файли з телефону потрапляють туди, звідки їх додавали
     this.onImported = (ctx, items) => {
       if (ctx === 'create' && this.app === 'likeer' && this.apps.likeer.top.v === 'create') createImported(this.apps.likeer, items);
+      else if (ctx === 'tgavatar' || ctx === 'tgphoto') this.apps.tg.imported(ctx, items);
       else this.apps.tube?.imported?.(ctx, items);
       if (ctx === 'avatar' || ctx === 'wall') this.imported(ctx, items[0]);
     };
@@ -85,6 +88,7 @@ class Phone {
     this.syncVideos();
     this.apps.likeer.syncStory();
     this.syncChat();
+    this.syncTg();
     this.bar();
   }
   // власні відео: грати чи стояти (атрибут data-play), звук, межі обрізки
@@ -108,6 +112,17 @@ class Phone {
     clearTimeout(this.chatT); this.chatKey = key;
     this.chatT = setTimeout(() => { this.chatKey = null; sim.deliverNow(open); this.save(); }, Math.min(3200, 900 + next.text.length * 28));
   }
+  // «Лелека»: відкритий чат — співрозмовник друкує в реальному часі
+  syncTg() {
+    const tg = this.apps.tg, open = this.app === 'tg' && tg.top.v === 'chat' ? tg.top.id : null;
+    sim.tgWatch = open;
+    const c = open && sim.s.tg.chats.find(x => x.id === open), next = c?.pending?.[0];
+    if (!next || next.at > sim.s.t + 30) { clearTimeout(this.tgT); this.tgKey = null; return; }
+    const key = open + ':' + c.pending.length + ':' + next.text;
+    if (key === this.tgKey) return;
+    clearTimeout(this.tgT); this.tgKey = key;
+    this.tgT = setTimeout(() => { this.tgKey = null; if (c.pending?.[0] === next) tgDeliver(sim, c); this.render(); this.save(); }, Math.min(3000, 800 + next.text.length * 26));
+  }
   adApp() { return this.app === 'tube' ? this.apps.tube : this.apps.likeer; }
   later() { if (this.queued) return; this.queued = true; requestAnimationFrame(() => { this.queued = false; this.render(); }); }
   html() {
@@ -127,7 +142,8 @@ class Phone {
     document.querySelector('.pn-time b').textContent = clock(s.t);
     document.querySelector('.pn-time small').textContent = `${dayName(s.t)}, день ${dayOf(s.t) + 1}`;
     const live = Math.max(0, s.followers - s.bots);
-    document.querySelector('.pn-stats').innerHTML = s.me || s.tube ? `<div><b>${num(s.followers)}</b><small>у Лайкері${s.bots ? `, з них ${num(s.bots)} ботів` : ''}</small></div><div><b>${s.tube ? num(s.tube.subs) : '—'}</b><small>на каналі «Хвиля»</small></div><div><b>${Math.round(s.trust)}</b><small>довіра</small></div>` : '<p>Створіть профіль у «Лайкері» або канал у «Хвилі».</p>';
+    const tch = s.tg?.ch;
+    document.querySelector('.pn-stats').innerHTML = s.me || s.tube || tch ? `<div><b>${num(s.followers)}</b><small>у Лайкері${s.bots ? `, з них ${num(s.bots)} ботів` : ''}</small></div><div><b>${s.tube ? num(s.tube.subs) : '—'}</b><small>на каналі «Хвиля»</small></div><div><b>${tch ? num(tch.subs) : '—'}</b><small>у каналі «Лелека»</small></div><div><b>${Math.round(s.trust)}</b><small>довіра</small></div>` : '<p>Створіть профіль у «Лайкері», канал у «Хвилі» або в «Лелеці».</p>';
   }
 
   /* ═════════ Головний екран ═════════ */
@@ -139,7 +155,7 @@ class Phone {
     return `<div class="home" style="background:${wallCss(s.phone.wall)}"><div class="hm-clock"><b>${clock(s.t)}</b><span>${dayName(s.t)}</span></div>
       <div class="widgets"><button class="widget" data-act="ph.open" data-app="likeer"><div class="wg-h">${logo(18)}<b>Лайкер</b></div>${s.me ? `<div class="wg-n"><b>${num(s.followers)}</b><small>${plural(s.followers, 'підписник', 'підписники', 'підписників')}</small></div><p class="wg-t">${icon('eye', 13)}${num(today.reduce((a, p) => a + p.stats.views, 0))} сьогодні</p>` : '<p class="wg-t">Фото й дописи. Створіть профіль</p>'}</button>
         <button class="widget" data-act="ph.open" data-app="tube"><div class="wg-h">${tubeLogo(18)}<b>Хвиля</b></div>${ch ? `<div class="wg-n"><b>${num(ch.subs)}</b><small>${plural(ch.subs, 'підписник', 'підписники', 'підписників')}</small></div><p class="wg-t">${icon('play', 13)}${num(tsum)} переглядів</p>` : '<p class="wg-t">Відео й короткі ролики. Створіть канал</p>'}</button></div>
-      <div class="apps">${app('likeer', 'Лайкер', logo(54), lkN)}${app('tube', 'Хвиля', tubeLogo(54), ch?.unread || 0)}${app('camera', 'Камера', icon('camera', 28))}${app('gallery', 'Галерея', icon('image', 28))}${app('ideas', 'Ідеї', icon('idea', 28), 0)}${app('mail', 'Пошта', icon('mail', 28), mail)}${app('settings', 'Налаштування', icon('gear', 28))}${app('help', 'Довідка', icon('info', 28))}</div></div>`;
+      <div class="apps">${app('likeer', 'Лайкер', logo(54), lkN)}${app('tube', 'Хвиля', tubeLogo(54), ch?.unread || 0)}${app('tg', 'Лелека', tgLogo(54), tgUnread(s))}${app('camera', 'Камера', icon('camera', 28))}${app('gallery', 'Галерея', icon('image', 28))}${app('ideas', 'Ідеї', icon('idea', 28), 0)}${app('mail', 'Пошта', icon('mail', 28), mail)}${app('settings', 'Налаштування', icon('gear', 28))}${app('help', 'Довідка', icon('info', 28))}</div></div>`;
   }
 
   /* ═════════ Налаштування телефону ═════════ */
@@ -214,10 +230,12 @@ class Phone {
   a_help() {
     const q = (t, b) => `<details class="faq"><summary>${t}</summary><p>${b}</p></details>`;
     return `<div class="notes"><header class="ah"><button class="ib" data-act="ph.home" aria-label="Додому">${icon('back', 24)}</button><b class="ah-t">Довідка</b></header><div class="scroll pad">
-      <p>Це навчальний телефон із соцмережею <b>Лайкер</b> і відеоплатформою <b>Хвиля</b>. Усі люди, коментарі й повідомлення вигадані — сміливо пробуйте.</p>
+      <p>Це навчальний телефон із соцмережею <b>Лайкер</b>, відеоплатформою <b>Хвиля</b> і месенджером <b>Лелека</b>. Усі люди, коментарі й повідомлення вигадані — сміливо пробуйте.</p>
       ${q('Як додати свої фото й відео?', 'Галерея → «Додати» (або «З телефону» під час створення допису). Файли зберігаються лише в цьому браузері й нікуди не надсилаються. Симулятор вимірює світло, чіткість, кольори, а у відео — чи щось відбувається з перших секунд, і на основі цього «глядачі» реагують на ваш допис.')}
       ${q('Як зробити карусель?', 'Під час створення фото натисніть «Кілька» й вибирайте фото по черзі (до 10). Перше фото побачать у стрічці, тож ставте найкраще першим. Карусель довше розглядають і частіше зберігають.')}
       ${q('Як запустити рекламу (таргет)?', 'Відкрийте свій допис → «Просувати допис» або Профіль → значок гучномовця. Майстер проведе через усі кроки: мета, аудиторія (місто, вік, інтереси), розміщення, бюджет із прогнозом ціни, перевірка правил і демо-оплата. Гроші умовні; у справжніх соцмережах рекламу запускають лише дорослі.')}
+      ${q('Як вести канал у «Лелеці»?', 'Лелека → значок олівця або «Створіть свій канал». Придумайте назву, фото й опис, виберіть публічний (його знайдуть у пошуку) чи приватний (лише за посиланням) канал і запросіть друзів посиланням. Пишіть регулярно, але не частіше кількох дописів на день; уночі надсилайте без звуку; фото й опитування підвищують залученість. У «Статистиці» видно ERR — яку частку підписників бачить допис.')}
+      ${q('Чому не можна купувати підписників і надсилати коди?', 'Куплені «підписники» — порожні акаунти: вони не читають, тож ERR падає, а платформа їх видаляє й знижує охоплення. Код зі SMS дає повний доступ до акаунта: справжня підтримка ніколи його не просить. Увімкніть хмарний пароль у налаштуваннях Лелеки.')}
       ${q('Що таке CTR і утримання у «Хвилі»?', 'CTR (клікабельність) — яка частка людей, що побачили обкладинку, натиснула на відео. Його піднімають яскрава обкладинка з коротким написом і зрозумілий заголовок. Утримання — скільки відео в середньому дивляться. Його псує довгий нудний початок.')}
       ${q('Як працює час?', 'Час на телефоні йде швидше, ніж насправді. Швидкість змінюється на панелі праворуч. Вподобання й коментарі набираються поступово — особливо в перші години після публікації.')}
       ${q('Від чого залежать перегляди?', 'Від якості фото чи відео, опису, хештегів, часу публікації, теми каналу й довіри до вас. Після публікації відкрийте «Статистика допису» → «Що вплинуло на результат».')}
@@ -253,13 +271,14 @@ class Phone {
       else if (ns === 'ph') this.act(name, el);
       else if (ns === 'tb') this.apps.tube.act(name, el);
       else if (ns === 'ad') adAct(this.adApp(), name, el);
+      else if (ns === 'tg') this.apps.tg.act(name, el);
       this.save();
     });
-    root.addEventListener('click', e => { const t = e.target.closest('[data-sw]'); if (!t) return; const k = t.dataset.sw; if (k.startsWith('cr.')) createToggle(this.apps.likeer, k); else this.apps.likeer.toggle(k); });
+    root.addEventListener('click', e => { const t = e.target.closest('[data-sw]'); if (!t) return; const k = t.dataset.sw; if (k.startsWith('cr.')) createToggle(this.apps.likeer, k); else if (k.startsWith('tg.')) this.apps.tg.toggle(k); else this.apps.likeer.toggle(k); });
     root.addEventListener('input', e => {
       const el = e.target, k = el.dataset.in;
       if (el.dataset.adrng) { adRange(this.adApp(), el.dataset.adrng, el); return; }
-      if (k) { if (k.startsWith('ad.')) adInput(this.adApp(), k, el); else if (k.startsWith('cr.')) createInput(this.apps.likeer, k, el); else if (k.startsWith('tb.')) this.apps.tube.input(k, el); else this.apps.likeer.input(k, el); }
+      if (k) { if (k.startsWith('ad.')) adInput(this.adApp(), k, el); else if (k.startsWith('cr.')) createInput(this.apps.likeer, k, el); else if (k.startsWith('tb.')) this.apps.tube.input(k, el); else if (k.startsWith('tg.')) this.apps.tg.input(k, el); else this.apps.likeer.input(k, el); }
     });
     root.addEventListener('change', e => {
       const el = e.target;
@@ -306,7 +325,7 @@ class Phone {
       if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button' && e.target.dataset.act) { e.preventDefault(); e.target.click(); return; }
       if (e.key !== 'Enter' || e.shiftKey || e.target.tagName === 'TEXTAREA') return;
       const k = e.target.dataset.keep || '';
-      const btn = k === 'tbw' ? '[data-act="tb.wSend"]' : k === 'tbcm' ? '[data-act="tb.send"]' : k === 'cm' ? '[data-act="lk.sendReply"]' : k.startsWith('dm-') ? '[data-act="lk.dmSend"]' : k === 'idea' ? '[data-act="ph.ideaAdd"]' : k === 'ph-pass' ? '[data-act="ph.phishGo"]' : null;
+      const btn = k === 'tbw' ? '[data-act="tb.wSend"]' : k === 'tbcm' ? '[data-act="tb.send"]' : k === 'cm' ? '[data-act="lk.sendReply"]' : k.startsWith('dm-') ? '[data-act="lk.dmSend"]' : k.startsWith('tgm-') ? '[data-act="tg.send"]' : k === 'tgcm' ? '[data-act="tg.cmSend"]' : k === 'idea' ? '[data-act="ph.ideaAdd"]' : k === 'ph-pass' ? '[data-act="ph.phishGo"]' : null;
       if (btn) { e.preventDefault(); this.root.querySelector(btn)?.click(); }
     });
     this.screen.querySelector('.homebar').addEventListener('click', () => { this.screen.querySelectorAll('.sh-back, .cf-back').forEach(x => (x._api ? x._api.close() : x.remove())); this.home(); });
@@ -395,7 +414,7 @@ class Phone {
     if (ctx === 'gallery') { this.args.f = 'own'; this.render(true); }
     if (errs.length) report(); else if (ctx === 'gallery') toast(items.length === 1 ? 'Додано в Галерею' : `Додано ${items.length} ${plural(items.length, 'файл', 'файли', 'файлів')}`);
   }
-  resetAll() { clearMedia(); try { localStorage.removeItem(KEY); } catch { /* ігноруємо */ } sim.s = newState(); sim.r = rng(sim.s); sim.refreshFeed(); sim.seedGallery(); this.apps.likeer = new Likeer(this); this.apps.likeer.v_create = top => renderCreate(this.apps.likeer, top); this.apps.tube = new Tube(this); this.home(); this.save(); }
+  resetAll() { clearMedia(); try { localStorage.removeItem(KEY); } catch { /* ігноруємо */ } sim.s = newState(); sim.r = rng(sim.s); sim.refreshFeed(); sim.seedGallery(); this.apps.likeer = new Likeer(this); this.apps.likeer.v_create = top => renderCreate(this.apps.likeer, top); this.apps.tube = new Tube(this); sim.s.tg = newTg(sim); this.apps.tg = new Tg(this); this.home(); this.save(); }
   save() { clearTimeout(this.saveT); this.saveT = setTimeout(() => this.saveNow(), 600); }
   saveNow() { clearTimeout(this.saveT); try { localStorage.setItem(KEY, JSON.stringify({ s: sim.s, speed: ui.speed })); } catch { /* сховище недоступне */ } }
 }
@@ -423,6 +442,13 @@ sim.on(w => {
     if (n && ['comment', 'star', 'trophy'].includes(n.icon) && now - lastBanner > 3500 && phone.app !== 'tube') {
       lastBanner = now;
       banner(`${tubeLogo(22)}<span><b>Хвиля</b>${esc(n.text.slice(0, 90))}</span>`, () => { phone.open('tube'); phone.apps.tube.act('notif', { dataset: { id: n.id } }); });
+    }
+  }
+  if (w.startsWith('tgmsg:')) {
+    const c = sim.s.tg.chats.find(x => x.id === w.slice(6)), m = c?.msgs.at(-1), now = performance.now();
+    if (m && !(phone.app === 'tg' && phone.apps.tg.top.v === 'chat') && now - lastBanner > 3500) {
+      lastBanner = now;
+      banner(`${tgLogo(22)}<span><b>${esc(c.title)}</b>${esc((c.kind === 'group' && m.from !== 'sys' ? m.from + ': ' : '') + m.text.slice(0, 80))}</span>`, () => { phone.open('tg'); phone.apps.tg.stack = [{ v: 'chats' }, { v: 'chat', id: c.id }]; phone.render(true); });
     }
   }
   if (w === 'mail') { const m = sim.s.mail[0]; banner(`<span class="bn-ic">${icon('mail', 18)}</span><span><b>Пошта</b>${esc(m.subject)}</span>`, () => phone.open('mail', { id: m.id })); }

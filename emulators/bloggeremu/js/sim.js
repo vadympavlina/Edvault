@@ -3,6 +3,7 @@
 import { NICHES, SCENES, CLIPS, MUSIC, MOOD_FIT, FILTERS, TAGS, TRENDS, CLICKBAIT, RUDE, COMMENTS, REPLIES, BRANDS, CREATORS, makePerson, nicheOf } from './data.js';
 import { judge, vertical } from './quality.js';
 import { tubeStep } from './tubesim.js';
+import { newTg, tgStep } from './tgsim.js';
 import { adStep, START_BALANCE } from './adsim.js';
 import { SCRIPTS, intents, fill, voice, generic, petName, names, isFem, captionComment, LOYAL, DEFEND, followUp } from './talk.js';
 
@@ -12,9 +13,9 @@ export const START = 16 * 60; // понеділок, 16:00 — після уро
 export const ACTIVITY = [3, 2, 1, 1, 1, 2, 4, 9, 7, 4, 4, 5, 7, 6, 8, 11, 13, 15, 18, 20, 19, 15, 9, 5];
 const ACT_MAX = Math.max(...ACTIVITY);
 export const WEEKDAYS = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П’ятниця', 'Субота', 'Неділя'];
-export const hourOf = t => Math.floor(t / 60) % 24;
+export const hourOf = t => ((Math.floor(t / 60) % 24) + 24) % 24;
 export const dayOf = t => Math.floor(t / DAY);
-export const clock = t => `${String(hourOf(t)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+export const clock = t => `${String(hourOf(t)).padStart(2, '0')}:${String(Math.floor(((t % 60) + 60) % 60)).padStart(2, '0')}`;
 export const dayName = t => WEEKDAYS[dayOf(t) % 7];
 export const ago = (now, t) => { const m = Math.max(0, Math.floor(now - t)); return m < 1 ? 'щойно' : m < 60 ? `${m} хв` : m < DAY ? `${Math.floor(m / 60)} год` : `${Math.floor(m / DAY)} дн`; };
 export const num = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '').replace('.', ',') + ' млн' : n >= 1e4 ? Math.round(n / 1e3) + ' тис.' : n >= 1e3 ? (n / 1e3).toFixed(1).replace('.0', '').replace('.', ',') + ' тис.' : String(Math.round(n));
@@ -34,7 +35,7 @@ export function newState(seed = Date.now() % 100000) {
     me: null, followers: 0, following: [], trust: 60, energy: 100, money: 0, strikes: 0, bots: 0,
     posts: [], stories: [], people: {}, fans: [], dms: [], mail: [], notifs: [], ideas: [], gallery: [], feed: [], days: [],
     settings: { geotag: true, priv: false, comments: 'all', dms: 'all', filter: false, limitNew: false, twoFA: false, sessions: [{ id: 's0', dev: 'Цей телефон', city: 'Київ', now: true }] },
-    flags: {}, heat: 0, hack: null, pendingAd: null, collab: null, unread: { notifs: 0 }, drafts: [], screen: {}, breakAt: 60, tube: null, phone: { wall: 'dawn' }, ads: { balance: START_BALANCE, list: [] },
+    flags: {}, heat: 0, hack: null, pendingAd: null, collab: null, unread: { notifs: 0 }, drafts: [], screen: {}, breakAt: 60, tube: null, tg: null, phone: { wall: 'dawn' }, ads: { balance: START_BALANCE, list: [] },
   };
 }
 
@@ -48,6 +49,7 @@ export class Sim {
     this.subs = new Set();
     // старі збереження: нові поля
     this.s.drafts ||= []; this.s.screen ||= {}; this.s.breakAt ??= 60; this.s.tube ??= null; this.s.phone ||= { wall: 'dawn' }; this.s.ads ||= { balance: START_BALANCE, list: [] };
+    if (!this.s.tg) this.s.tg = newTg(this);
     if (!this.s.feed.length) this.refreshFeed();
     if (!this.s.gallery.length) this.seedGallery();
   }
@@ -75,6 +77,7 @@ export class Sim {
     for (const st of s.stories) if (t - st.t < DAY) { const f = 1 - Math.exp(-(t - st.t) / 180); st.views = Math.round(st.plan * f); }
     if (Math.floor(t / 60) !== Math.floor((t - d) / 60)) ch = this.hourly() || ch;
     if (s.tube) ch = tubeStep(this, d) || ch;
+    if (s.tg) ch = tgStep(this, d) || ch;
     for (const th of s.dms) if (th.pending?.length && th.pending[0].at <= t && !(th.id === this.watch && this.online(s.people[th.pid], t))) { while (th.pending.length && th.pending[0].at <= t) this.deliver(th); ch = true; }
     if (s.ads?.list.length) ch = adStep(this, d, ACTIVITY[hourOf(t)] / ACT_MAX) || ch;
     if (s.queue?.length) { const n = s.queue.length; this.runQueue(); ch = ch || n !== s.queue.length; }
@@ -505,7 +508,7 @@ export class Sim {
   setTopic(id, topic) { const g = this.s.gallery.find(x => x.id === id); if (g) { g.topic = topic; this.emit('gallery'); } }
   // чи потрібен ще файл (у Галереї, дописах, чернетках, аватарах, на каналі)
   mediaInUse(mid) {
-    const s = this.s, j = JSON.stringify([s.gallery, s.posts.map(p => [p.photo, p.photos, p.video]), s.drafts, s.me?.avatar, s.tube, s.phone]);
+    const s = this.s, j = JSON.stringify([s.gallery, s.posts.map(p => [p.photo, p.photos, p.video]), s.drafts, s.me?.avatar, s.tube, s.phone, s.tg?.ch?.avatar]);
     return j.includes(`"${mid}"`);
   }
   recordVideo(clip) { const g = { id: this.id('g'), type: 'video', clip, t: this.s.t, cam: true, geo: this.s.settings.geotag }; this.s.gallery.unshift(g); this.trimGallery(); this.emit('gallery'); return g; }
