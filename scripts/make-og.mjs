@@ -78,7 +78,7 @@ const block = p => {
 <meta property="og:image" content="${img}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="${esc(p.title)} — Edvault">
+<meta property="og:image:alt" content="${esc(p.title === 'Edvault' ? 'Edvault' : p.title + ' — Edvault')}">
 <meta name="twitter:card" content="summary_large_image">
 <!-- /og -->`;
 };

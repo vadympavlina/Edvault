@@ -2,81 +2,101 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Edvault</title>
+  <meta name="theme-color" content="#0b1026">
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet" />
-  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap" rel="stylesheet" />
+
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
   <style>
-    /* Скидання базових стилів */
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    /* Заглушка головної: лише логотип, але живий — сяйво, паралакс шарів за мишкою чи нахилом телефона,
+       прожектор за курсором і частинки від кліку. Усе на CSS-змінних, які оновлює маленький скрипт унизу. */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --mx: 0; --my: 0; --px: 50%; --py: 50%; --accent: #4F6BF4; }
+    html, body { width: 100%; height: 100%; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif; color: #eef1ff; background: #0b1026; overflow: hidden;
+      display: grid; place-items: center; cursor: default; -webkit-tap-highlight-color: transparent;
     }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      background-color: #f0f2f5; /* Тло як у твоєму оригіналі (var(--bg)) */
-      font-family: 'Inter', system-ui, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
+    /* ── сяйво: три розмиті плями, що повільно пливуть ── */
+    .aurora { position: fixed; inset: -20%; filter: blur(70px) saturate(1.2); opacity: .85;
+      transform: translate3d(calc(var(--mx) * -18px), calc(var(--my) * -18px), 0); transition: transform .6s cubic-bezier(.2,.7,.2,1); }
+    .aurora i { position: absolute; border-radius: 50%; mix-blend-mode: screen; }
+    .aurora i:nth-child(1) { width: 55vmax; height: 55vmax; left: 8%; top: 4%; background: radial-gradient(circle, #4F6BF4 0%, transparent 62%); animation: drift1 22s ease-in-out infinite alternate; }
+    .aurora i:nth-child(2) { width: 48vmax; height: 48vmax; right: 2%; top: 22%; background: radial-gradient(circle, #a855f7 0%, transparent 62%); animation: drift2 26s ease-in-out infinite alternate; }
+    .aurora i:nth-child(3) { width: 50vmax; height: 50vmax; left: 28%; bottom: -6%; background: radial-gradient(circle, #06b6d4 0%, transparent 62%); animation: drift3 30s ease-in-out infinite alternate; }
+    @keyframes drift1 { to { transform: translate(14vw, 10vh) scale(1.15); } }
+    @keyframes drift2 { to { transform: translate(-16vw, 8vh) scale(.9); } }
+    @keyframes drift3 { to { transform: translate(8vw, -14vh) scale(1.1); } }
 
-    /* Контейнер для центрування */
-    .splash-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-    }
+    /* ── сітка в перспективі, що «їде» вперед ── */
+    .grid { position: fixed; left: -50%; right: -50%; bottom: -10%; height: 60vh; transform-origin: 50% 0;
+      transform: perspective(520px) rotateX(64deg) translate3d(calc(var(--mx) * -30px), 0, 0);
+      background-image: linear-gradient(rgba(148,163,255,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,255,.18) 1px, transparent 1px);
+      background-size: 56px 56px; animation: gridRun 3.2s linear infinite;
+      -webkit-mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent); mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent); }
+    @keyframes gridRun { to { background-position: 0 56px; } }
 
-    /* Логотип (іконка) */
-    .brand-mark {
-      width: 80px;
-      height: 80px;
-      background: #4F6BF4; /* Оригінальний акцентний колір */
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 24px rgba(79, 107, 244, 0.35);
-      
-      /* Анімація: назва, тривалість, рівномірність, нескінченність */
-      animation: slowRotate 10s linear infinite;
-    }
+    /* ── зорі: два шари з різною глибиною ── */
+    .stars { position: fixed; inset: -40px; pointer-events: none; }
+    .stars.s1 { transform: translate3d(calc(var(--mx) * -10px), calc(var(--my) * -10px), 0); }
+    .stars.s2 { transform: translate3d(calc(var(--mx) * -26px), calc(var(--my) * -26px), 0); }
+    .stars b { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: twinkle 4s ease-in-out infinite; }
+    @keyframes twinkle { 50% { opacity: .2; transform: scale(.6); } }
 
-    .brand-mark svg {
-      width: 40px;
-      height: 40px;
-      color: #ffffff;
-    }
+    /* ── плаваючі фігури: «скляні» значки предметів на різній глибині ── */
+    .float { position: fixed; inset: 0; pointer-events: none; }
+    .shape { position: absolute; display: grid; place-items: center; border-radius: 22px; color: #fff;
+      background: linear-gradient(145deg, rgba(255,255,255,.18), rgba(255,255,255,.04)); border: 1px solid rgba(255,255,255,.22);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 20px 50px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.25);
+      transform: translate3d(calc(var(--mx) * var(--d) * 1px), calc(var(--my) * var(--d) * 1px), 0); transition: transform .5s cubic-bezier(.2,.7,.2,1); }
+    .shape > span { display: grid; place-items: center; width: 100%; height: 100%; animation: bob var(--t, 7s) ease-in-out infinite alternate; }
+    .shape svg { width: 46%; height: 46%; opacity: .92; }
+    @keyframes bob { from { transform: translateY(-10px) rotate(-6deg); } to { transform: translateY(12px) rotate(6deg); } }
 
-    /* Текст під логотипом */
-    .brand-name {
-      font-size: 32px;
-      font-weight: 700;
-      color: #1a1d23;
-      letter-spacing: -0.5px;
-    }
+    /* ── прожектор за курсором ── */
+    .spot { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(420px circle at var(--px) var(--py), rgba(120,140,255,.16), transparent 60%); }
 
-    /* Сама анімація обертання */
-    @keyframes slowRotate {
-      0% {
-        transform: rotate(0deg);
-      }
-      100% {
-        transform: rotate(360deg);
-      }
+    /* ── логотип ── */
+    .hero { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 26px; perspective: 900px; user-select: none; }
+    .mark-wrap { transform: rotateX(calc(var(--my) * -14deg)) rotateY(calc(var(--mx) * 18deg)); transition: transform .35s cubic-bezier(.2,.7,.2,1); transform-style: preserve-3d; }
+    .mark { position: relative; width: 132px; height: 132px; border-radius: 34px; display: grid; place-items: center; cursor: pointer;
+      background: linear-gradient(145deg, #6d84ff, #4F6BF4 45%, #3a4fd6); border: 0;
+      box-shadow: 0 30px 80px rgba(79,107,244,.55), 0 0 0 1px rgba(255,255,255,.18) inset, 0 -8px 20px rgba(0,0,0,.18) inset;
+      animation: breathe 5s ease-in-out infinite; transform-style: preserve-3d; }
+    .mark::before { content: ''; position: absolute; inset: -18px; border-radius: 46px; border: 1.5px solid rgba(140,160,255,.45); animation: ring 3.2s ease-out infinite; }
+    .mark::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.45) 48%, transparent 62%); background-size: 250% 100%; animation: shine 4.5s ease-in-out infinite; }
+    .mark svg { width: 62px; height: 62px; color: #fff; transform: translateZ(30px); filter: drop-shadow(0 6px 10px rgba(0,0,0,.25)); }
+    .mark:focus-visible { outline: 3px solid #c7d2fe; outline-offset: 6px; }
+    @keyframes breathe { 50% { transform: translateY(-6px) scale(1.03); } }
+    @keyframes ring { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
+    @keyframes shine { 0%, 60% { background-position: 120% 0; } 100% { background-position: -40% 0; } }
+
+    .name { font-size: clamp(40px, 8vw, 72px); font-weight: 800; letter-spacing: -2px; line-height: 1;
+      color: #fff; text-shadow: 0 0 40px rgba(130,150,255,.55), 0 4px 30px rgba(0,0,0,.35);
+      transform: translate3d(calc(var(--mx) * 8px), calc(var(--my) * 8px), 0); transition: transform .4s cubic-bezier(.2,.7,.2,1); }
+    .name span { display: inline-block; opacity: 0; transform: translateY(24px) rotateX(-70deg); animation: rise .8s cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+
+    /* ── частинки від кліку ── */
+    .bit { position: fixed; width: 10px; height: 10px; border-radius: 2px; pointer-events: none; z-index: 5; animation: burst 1.2s cubic-bezier(.15,.7,.3,1) forwards; box-shadow: 0 0 12px currentColor; }
+    @keyframes burst { to { transform: translate(var(--bx), var(--by)) rotate(var(--br)) scale(.2); opacity: 0; } }
+
+    /* поява сцени */
+    .scene { position: fixed; inset: 0; animation: fadeIn 1.2s ease-out both; }
+    @keyframes fadeIn { from { opacity: 0; } }
+
+    @media (max-width: 600px) { .shape.hide-sm { display: none; } .mark { width: 108px; height: 108px; border-radius: 28px; } .mark svg { width: 52px; height: 52px; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .name span { opacity: 1; transform: none; }
     }
   </style>
 <meta name="description" content="Інструменти для вчителя, тренажери й емулятори для учнів — безкоштовно, просто в браузері.">
@@ -90,22 +110,82 @@
 <meta property="og:image" content="https://www.edvault.online/assets/og/edvault.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Edvault — Edvault">
+<meta property="og:image:alt" content="Edvault">
 <meta name="twitter:card" content="summary_large_image">
 <!-- /og -->
 </head>
 <body>
-
-  <div class="splash-container">
-    <div class="brand-mark">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-      </svg>
+  <div class="scene" aria-hidden="true">
+    <div class="aurora"><i></i><i></i><i></i></div>
+    <div class="stars s1"></div><div class="stars s2"></div>
+    <div class="grid"></div>
+    <div class="float">
+      <!-- значки: олівець, код, курсор, щит, нота, атом, глобус, пазл -->
+      <div class="shape" style="--d:-46;left:9%;top:14%;width:92px;height:92px"><span style="--t:8s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span></div>
+      <div class="shape" style="--d:34;right:11%;top:12%;width:78px;height:78px"><span style="--t:6.5s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg></span></div>
+      <div class="shape hide-sm" style="--d:-22;left:20%;bottom:18%;width:70px;height:70px"><span style="--t:7.5s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 4 7.07 17 2.51-7.39L21 11.07Z"/></svg></span></div>
+      <div class="shape" style="--d:52;right:16%;bottom:16%;width:100px;height:100px"><span style="--t:9s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span></div>
+      <div class="shape hide-sm" style="--d:-60;left:4%;top:52%;width:62px;height:62px"><span style="--t:6s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span></div>
+      <div class="shape hide-sm" style="--d:26;right:4%;top:46%;width:66px;height:66px"><span style="--t:8.5s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><path d="M20.2 20.2c2-2-.3-7.5-5-12.3S4 1.8 2 3.8s.3 7.5 5 12.3 10.3 6.1 12.2 4.1Z"/><path d="M15.7 15.7c4.7-4.7 7-10.2 5-12.2s-7.5.3-12.3 5-6.1 10.3-4.1 12.2 7.6-.3 12.3-5Z"/></svg></span></div>
+      <div class="shape" style="--d:-30;left:36%;top:6%;width:56px;height:56px"><span style="--t:7s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span></div>
+      <div class="shape hide-sm" style="--d:40;left:58%;bottom:6%;width:60px;height:60px"><span style="--t:9.5s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.4 7.3a1 1 0 0 1 .3.7v1.5a2.5 2.5 0 1 0 0 5V16a1 1 0 0 1-1 1H15a2.5 2.5 0 1 0-5 0H8a1 1 0 0 1-1-1v-2.5a2.5 2.5 0 1 1 0-5V7a1 1 0 0 1 1-1h2.5a2.5 2.5 0 1 1 5 0H18a1 1 0 0 1 .7.3z"/></svg></span></div>
     </div>
-    
-    <div class="brand-name">Edvault</div>
+    <div class="spot"></div>
   </div>
 
+  <main class="hero">
+    <div class="mark-wrap">
+      <button class="mark" type="button" aria-label="Edvault">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      </button>
+    </div>
+    <h1 class="name" aria-label="Edvault"></h1>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.documentElement, still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // назва з’являється по літерах
+      const name = document.querySelector('.name');
+      [...'Edvault'].forEach((ch, i) => { const s = document.createElement('span'); s.textContent = ch; s.style.animationDelay = (0.25 + i * 0.07) + 's'; s.setAttribute('aria-hidden', 'true'); name.appendChild(s); });
+
+      // зорі
+      for (const [cls, n] of [['.s1', 70], ['.s2', 40]]) {
+        const box = document.querySelector('.stars' + cls), frag = document.createDocumentFragment();
+        for (let i = 0; i < n; i++) { const b = document.createElement('b'); const z = Math.random(); Object.assign(b.style, { left: Math.random() * 100 + '%', top: Math.random() * 100 + '%', opacity: .3 + z * .7, width: 1 + z * 2 + 'px', height: 1 + z * 2 + 'px', animationDelay: -Math.random() * 4 + 's', animationDuration: 2.5 + Math.random() * 4 + 's' }); frag.appendChild(b); }
+        box.appendChild(frag);
+      }
+      if (still) return;
+
+      // паралакс: плавно наздоганяємо ціль (мишка або нахил телефона)
+      let tx = 0, ty = 0, x = 0, y = 0, raf = 0;
+      const tick = () => { x += (tx - x) * .08; y += (ty - y) * .08; root.style.setProperty('--mx', x.toFixed(4)); root.style.setProperty('--my', y.toFixed(4)); raf = Math.abs(tx - x) + Math.abs(ty - y) > .001 ? requestAnimationFrame(tick) : 0; };
+      const aim = (nx, ny) => { tx = Math.max(-1, Math.min(1, nx)); ty = Math.max(-1, Math.min(1, ny)); if (!raf) raf = requestAnimationFrame(tick); };
+      addEventListener('pointermove', e => {
+        aim(e.clientX / innerWidth * 2 - 1, e.clientY / innerHeight * 2 - 1);
+        root.style.setProperty('--px', e.clientX + 'px'); root.style.setProperty('--py', e.clientY + 'px');
+      }, { passive: true });
+      addEventListener('pointerleave', () => aim(0, 0));
+      addEventListener('deviceorientation', e => { if (e.gamma == null) return; aim(e.gamma / 30, (e.beta - 45) / 30); }, { passive: true });
+
+      // клік по логотипу (чи будь-де) — феєрверк частинок
+      const colors = ['#4F6BF4', '#a855f7', '#06b6d4', '#f472b6', '#facc15', '#ffffff'];
+      const burst = (cx, cy, n = 26) => {
+        for (let i = 0; i < n; i++) {
+          const b = document.createElement('i'), a = Math.random() * Math.PI * 2, d = 80 + Math.random() * 160;
+          b.className = 'bit';
+          Object.assign(b.style, { left: cx - 4 + 'px', top: cy - 4 + 'px', background: colors[i % colors.length], borderRadius: Math.random() < .5 ? '50%' : '2px' });
+          b.style.setProperty('--bx', Math.cos(a) * d + 'px'); b.style.setProperty('--by', Math.sin(a) * d + 'px'); b.style.setProperty('--br', (Math.random() * 720 - 360) + 'deg');
+          document.body.appendChild(b); b.addEventListener('animationend', () => b.remove());
+        }
+      };
+      addEventListener('pointerdown', e => burst(e.clientX, e.clientY, e.target.closest('.mark') ? 40 : 14));
+      document.querySelector('.mark').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { const r = e.currentTarget.getBoundingClientRect(); burst(r.left + r.width / 2, r.top + r.height / 2, 40); } });
+    })();
+  </script>
 </body>
 </html>
