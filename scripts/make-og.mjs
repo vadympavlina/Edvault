@@ -26,6 +26,9 @@ const PAGES = [
     title: 'Edvault', desc: 'Інструменти для вчителя, тренажери й емулятори для учнів — безкоштовно, просто в браузері.' },
   { path: 'tools/index.html', url: '/tools/', slug: 'tools', icon: 'tools', accent: '#0ea5e9', kind: 'Каталог',
     title: 'Інструменти для вчителя', desc: 'Вайтборд, голосування, запис екрану, відеоредактор, редактор коду й інші інструменти — без реєстрації, просто в браузері.' },
+  // стара адреса каталогу (переадресація на /tools/): та сама картка, щоб посилання теж мали прев'ю
+  { path: 'tools.html', url: '/tools/', slug: 'tools', icon: 'tools', accent: '#0ea5e9', kind: 'Каталог',
+    title: 'Інструменти для вчителя', desc: 'Вайтборд, голосування, запис екрану, відеоредактор, редактор коду й інші інструменти — без реєстрації, просто в браузері.' },
   { path: 'trainers/index.html', url: '/trainers/', slug: 'trainers', icon: 'trainers', accent: '#16a34a', kind: 'Каталог',
     title: 'Тренажери для учнів', desc: 'Мишка, файли й папки, безпека в інтернеті, сліпий друк, алгоритми, мережі — з рівнями й зірками.' },
   { path: 'emulators/windows.html', url: '/emulators/windows', slug: 'windows', icon: 'windows-emulator', accent: '#0067c0', kind: 'Навчальний емулятор',
@@ -37,7 +40,7 @@ const PAGES = [
   { path: 'equipment.html', url: '/equipment', slug: 'equipment', icon: 'equipment', accent: '#475569', kind: 'Техніка',
     title: 'Облік шкільної техніки', desc: 'Ноутбуки, проєктори й інша техніка класу: що де стоїть і в якому стані.' },
   ...TOOLS.map(t => ({ path: 'tools/' + t.file, url: '/tools/' + t.file.replace(/\.html$/, ''), slug: 'tool-' + t.id, icon: t.file.replace(/\.html$/, ''), accent: t.accent, kind: 'Інструмент для вчителя', title: t.name, desc: t.desc })),
-  ...TRAINERS.map(t => ({ path: 'trainers/' + t.file, url: '/trainers/' + t.file.replace(/\.html$/, ''), slug: 'trainer-' + t.id, icon: t.file.replace(/\.html$/, ''), accent: t.accent, kind: 'Тренажер' + (t.grades ? ` · ${t.grades}` : ''), title: t.name, desc: t.desc })),
+  ...TRAINERS.map(t => ({ path: 'trainers/' + t.file, url: '/trainers/' + t.file.replace(/\.html$/, ''), slug: 'trainer-' + t.id, icon: t.file.replace(/\.html$/, ''), accent: t.accent, kind: 'Тренажер', title: t.name, desc: t.desc })),
 ];
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
