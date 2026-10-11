@@ -1038,3 +1038,16 @@ button.pill:hover { background: #e8e9ec; } .pill.on { background: var(--ink); co
 .tg-ilist { max-height: 300px; overflow-y: auto; margin: 6px -16px 10px; }
 .tg-app .niche.on { border-color: var(--tg); background: #f2faf7; color: var(--tg-d); }
 .tg-hl small { font-size: 11.5px; }
+.tg-task { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 14px; background: #fff8e1; border-bottom: 1px solid #f3e1a8; color: #6b4b00; }
+.tg-task span { flex: 1; min-width: 0; display: flex; flex-direction: column; } .tg-task b { font-size: 13.5px; color: #4a3500; } .tg-task small { font-size: 12.5px; }
+.tg-adl.warn { display: inline-flex; align-items: center; gap: 4px; background: #fdecea; color: #a01f1f; margin-left: 4px; }
+.tg-brief { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: #fff8e1; color: #6b4b00; margin-bottom: 10px; }
+.tg-brief span { display: flex; flex-direction: column; gap: 2px; } .tg-brief b { color: #4a3500; } .tg-brief small { font-size: 13px; line-height: 1.4; }
+.tg-mark { display: flex; align-items: center; gap: 12px; width: 100%; margin: 10px 0; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line); text-align: left; }
+.tg-mark[aria-pressed="true"] { border-color: #0e7c6b; background: #f2faf7; }
+.tg-mark span { display: flex; flex-direction: column; } .tg-mark b { font-size: 14.5px; } .tg-mark small { font-size: 12.5px; color: var(--ink2); }
+.tg-earn { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 6px; }
+.tg-earn > div { padding: 10px 12px; border-radius: 14px; background: #fff8e1; } .tg-earn small { display: block; font-size: 12.5px; color: #6b4b00; } .tg-earn b { font-size: 19px; font-weight: 800; color: #4a3500; }
+.pr-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; color: var(--link); font-weight: 600; font-size: 14px; max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+.ep-share { display: flex; align-items: center; gap: 8px; width: 100%; margin: -4px 0 8px; padding: 9px 12px; border-radius: 10px; background: #e3f2ee; color: #0a6355; font-weight: 600; font-size: 13.5px; text-align: left; }
+.ep-share:hover { background: #d4ebe5; }

@@ -7,6 +7,7 @@ import { ago, num, plural, clock, dayName, dayOf, hourOf, DAY, repliesFor, toneO
 import { openCreate } from './create.js';
 import { fmtDur, checks } from './quality.js';
 import { voice, isFem } from './talk.js';
+import { TG_HOST, chLinkIn } from './tgsim.js';
 import { fileBtn } from './gal.js';
 
 const FOLLOW_REPLIES = [['Дякую, що пишеш!', 'kind'], ['Нема за що :)', 'kind'], ['Ок', 'neutral']];
@@ -181,7 +182,7 @@ export class Likeer {
     return `<header class="ah main">${s.settings.priv ? icon('lock', 16) : ''}<b class="ah-t">${esc(me.nick)}</b><span class="grow"></span><button class="ib" data-act="ad.cabinet" aria-label="Реклама">${icon('megaphone', 24)}</button><button class="ib" data-act="lk.go" data-v="insights" aria-label="Аналітика">${icon('chart', 24)}</button><button class="ib" data-act="lk.go" data-v="settings" aria-label="Налаштування">${icon('gear', 24)}</button></header>
       <div class="scroll" data-scroll="prof"><section class="prof"><div class="pr-top"><button class="pr-av${stories.length ? ' ring' : ''}" data-act="lk.viewStory" aria-label="Ваші історії">${avatar(this.meAv(), 82)}</button>
         <div class="pr-n"><b>${num(posts.length)}</b><small>${plural(posts.length, 'допис', 'дописи', 'дописів')}</small></div><div class="pr-n"><b>${num(s.followers)}</b><small>${plural(s.followers, 'підписник', 'підписники', 'підписників')}</small></div><div class="pr-n"><b>${s.following.length}</b><small>стежите</small></div></div>
-        <p class="pr-name">${esc(me.name || me.nick)}<span class="chip">${icon(nicheOf(me.niche).icon, 13)}${esc(nicheOf(me.niche).t)}</span></p>${me.bio ? `<p class="pr-bio">${rich(me.bio)}</p>` : '<p class="pr-bio muted">Додайте опис профілю — так людям легше зрозуміти, про що ваш канал.</p>'}
+        <p class="pr-name">${esc(me.name || me.nick)}<span class="chip">${icon(nicheOf(me.niche).icon, 13)}${esc(nicheOf(me.niche).t)}</span></p>${me.bio ? `<p class="pr-bio">${rich(me.bio)}</p>` : '<p class="pr-bio muted">Додайте опис профілю — так людям легше зрозуміти, про що ваш канал.</p>'}${me.link ? `<button class="pr-link" data-act="lk.openLink">${icon('link', 15)}${esc(me.link)}</button>` : ''}
         <div class="pr-btns"><button class="btn" data-act="lk.go" data-v="editProfile">Редагувати профіль</button><button class="btn" data-act="lk.go" data-v="insights">Панель автора</button></div>
         <div class="meters">${meter('Довіра', s.trust, 'shield', 'Наскільки підписники вам вірять. Росте від чесності й ввічливості, падає від обману, грубості й сумнівної реклами.')}${meter('Енергія', s.energy, 'battery', 'Ваші сили. Кожен допис забирає енергію, відпочинок — повертає. Коли енергії мало, дописи виходять гіршими.')}</div></section>
         <div class="ptabs" role="tablist"><button role="tab" aria-selected="${tab === 'posts'}" class="${tab === 'posts' ? 'on' : ''}" data-act="lk.ptab" data-t="posts" aria-label="Дописи">${icon('grid', 22)}</button><button role="tab" aria-selected="${tab === 'sched'}" class="${tab === 'sched' ? 'on' : ''}" data-act="lk.ptab" data-t="sched" aria-label="Заплановані">${icon('clock', 22)}${sched.length ? `<i class="cnt">${sched.length}</i>` : ''}</button><button role="tab" aria-selected="${tab === 'drafts'}" class="${tab === 'drafts' ? 'on' : ''}" data-act="lk.ptab" data-t="drafts" aria-label="Чернетки">${icon('edit', 22)}${s.drafts.length ? `<i class="cnt">${s.drafts.length}</i>` : ''}</button></div>
@@ -194,7 +195,7 @@ export class Likeer {
     return `<div class="drafts">${s.drafts.map(d => { const g = d.gid && s.gallery.find(x => x.id === d.gid); return `<div class="draft"><button class="dr-main" data-act="lk.openDraft" data-id="${d.id}"><span class="dr-m">${d.kind === 'text' ? `<span class="txtcard" style="background:${d.bg}"><p>${esc((d.txt || '').slice(0, 30))}</p></span>` : d.kind === 'video' && (d.clip || g) ? (g?.own ? video(g, { paused: true }) : video(d.clip, { paused: true })) : g ? photo(g, { filter: filterCss(d.filter), thumb: true }) : icon('image', 26)}</span><span class="dr-t"><b>${kind[d.kind] || 'Допис'}${d.caption ? ': ' + esc(d.caption.slice(0, 40)) : ''}</b><small>Збережено ${ago(s.t, d.t) === 'щойно' ? 'щойно' : ago(s.t, d.t) + ' тому'} · натисніть, щоб продовжити</small></span></button><button class="ib sm" data-act="lk.delDraft" data-id="${d.id}" aria-label="Видалити чернетку">${icon('trash', 18)}</button></div>`; }).join('')}</div>`;
   }
   v_editProfile(a) {
-    const me = this.s.me, d = a.d ||= { name: me.name, bio: me.bio, niche: me.niche, color: me.avatar.color, sym: me.avatar.sym, img: me.avatar.img || '', scene: me.avatar.scene || '' };
+    const me = this.s.me, d = a.d ||= { name: me.name, bio: me.bio, link: me.link || '', niche: me.niche, color: me.avatar.color, sym: me.avatar.sym, img: me.avatar.img || '', scene: me.avatar.scene || '' };
     return `${this.head('Редагувати профіль', `<button class="lnk strong" data-act="lk.saveProfile">Готово</button>`)}<div class="scroll pad">
       <div class="av-prev">${avatar({ name: me.nick, color: d.color, sym: d.sym, img: d.img, scene: d.scene }, 86)}</div>
       <p class="lbl">Фото профілю</p>${this.avPick({ ...d, nick: me.nick }, 'lk.epImg')}
@@ -203,8 +204,13 @@ export class Likeer {
       <label class="fl"><span>Ім’я</span><input class="in" data-keep="ep.name" data-in="ep.name" value="${esc(d.name)}" maxlength="30"></label>
       <label class="fl"><span>Опис профілю</span><textarea class="in" data-keep="ep.bio" data-in="ep.bio" maxlength="150" rows="3" placeholder="Про що ваш канал? Наприклад: «Малюю щодня й ділюся порадами»">${esc(d.bio)}</textarea></label>
       <p class="hint">${icon('info', 16)}<span>Не пишіть в описі школу, клас, адресу чи номер телефону.</span></p>
+      <label class="fl"><span>Посилання</span><input class="in" data-keep="ep.link" data-in="ep.link" value="${esc(d.link)}" maxlength="60" placeholder="Наприклад, на ваш канал у Лелеці" autocapitalize="off" spellcheck="false"></label>
+      ${this.chLink() && !chLinkIn(this.s.tg.ch, d.link) ? `<button class="ep-share" data-act="lk.epTg">${icon('megaphone', 16)}Вставити посилання на канал «${esc(this.s.tg.ch.title)}»</button>` : ''}
+      ${!this.s.tg?.ch?.pub && this.s.tg?.ch && chLinkIn(this.s.tg.ch, d.link) ? `<p class="warnbox">${icon('alert', 16)}<span>Це запрошення в приватний канал. У відкритому профілі його побачить будь-хто — і зможе підписатися.</span></p>` : ''}
       <p class="lbl">Тема каналу</p><div class="niches sm">${Object.entries(NICHES).map(([k, n]) => `<button class="niche${d.niche === k ? ' on' : ''}" data-act="lk.epNiche" data-k="${k}">${icon(n.icon, 20)}<span>${n.t}</span></button>`).join('')}</div></div>`;
   }
+
+  chLink() { const c = this.s.tg?.ch; return c ? TG_HOST + (c.pub ? c.link : c.invite) : ''; }
 
   /* ═════════ Допис ═════════ */
   v_post(a) {
@@ -453,7 +459,9 @@ export class Likeer {
       epColor: () => { top.d.color = el.dataset.c; this.ph.render(); },
       epSym: () => { top.d.sym = el.dataset.k; this.ph.render(); },
       epNiche: () => { top.d.niche = el.dataset.k; this.ph.render(); },
-      saveProfile: () => { const d = top.d; if (/\d{3}|школ|клас|вул/i.test(d.bio)) { toast('Схоже, в описі є особисті дані. Краще їх прибрати'); } sim.updateProfile({ name: d.name.trim(), bio: d.bio.trim(), niche: d.niche, avatar: { color: d.color, sym: d.sym, img: d.img || '', scene: d.scene || '' } }); this.back(); toast('Профіль оновлено'); },
+      epTg: () => { top.d.link = this.chLink(); this.ph.render(true); },
+      openLink: () => { const c = s.tg?.ch; if (c && chLinkIn(c, s.me.link)) { this.ph.open('tg'); const tg = this.ph.apps.tg; tg.stack = [{ v: 'chats' }, { v: 'chat', id: 'mych' }]; this.ph.render(true); } else toast('Посилання відкриється в браузері'); },
+      saveProfile: () => { const d = top.d; if (/\d{3}|школ|клас|вул/i.test(d.bio)) { toast('Схоже, в описі є особисті дані. Краще їх прибрати'); } sim.updateProfile({ name: d.name.trim(), bio: d.bio.trim(), link: (d.link || '').trim(), niche: d.niche, avatar: { color: d.color, sym: d.sym, img: d.img || '', scene: d.scene || '' } }); this.back(); toast('Профіль оновлено'); },
       epImg: () => { top.d.img = el.dataset.mid || ''; top.d.scene = el.dataset.scene || ''; this.ph.render(); },
       sound: () => { this.sound = !this.sound; this.ph.render(); },
       car: () => { const c = this.ph.root.querySelector(`.car[data-car="${el.dataset.id}"]`); if (c) c.scrollBy({ left: +el.dataset.d * c.clientWidth, behavior: 'smooth' }); },
@@ -497,6 +505,7 @@ export class Likeer {
     else if (key === 'reg.pass') { r.pass = v; this.ph.root.querySelector('[data-pm]').innerHTML = passMeter(v, r.nick); this.refreshFoot(passScore(v, r.nick) >= 2, ''); }
     else if (key === 'ep.name') this.top.d.name = v;
     else if (key === 'ep.bio') this.top.d.bio = v;
+    else if (key === 'ep.link') { this.top.d.link = v; this.ph.render(); }
     else if (key === 'rec.pass' || key === 'pw.np') { this.top[key === 'rec.pass' ? 'pass' : 'np'] = v; this.ph.root.querySelector('[data-pm]').innerHTML = passMeter(v, this.s.me.nick); }
   }
   refreshFoot(ok, err) { const b = this.ph.root.querySelector('[data-act="lk.regNext"]'); if (b) b.disabled = !ok; const e = this.ph.root.querySelector('[data-err]'); if (e) e.textContent = err || ''; }

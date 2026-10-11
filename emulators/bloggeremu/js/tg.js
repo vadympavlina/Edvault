@@ -7,12 +7,12 @@ import { NICHES, nicheOf, AV_COLORS, AV_SYMBOLS } from './data.js';
 import { num, plural, clock, dayOf, hourOf, DAY, ACTIVITY, WEEKDAYS } from './sim.js';
 import { fileBtn } from './gal.js';
 import { voice } from './talk.js';
-import { TG_HOST, REACTS, linkErr, tgSend, tgRead, tgOpt, tgBlock, tgCreateChannel, tgEditChannel, tgDeleteChannel, tgPost, tgEditPost, tgDeletePost, tgPin, tgVote, tgInvite, tgStats, tgEndSession, postCheck, realSubs, tgOnline } from './tgsim.js';
+import { TG_HOST, REACTS, linkErr, tgSend, tgRead, tgOpt, tgBlock, tgCreateChannel, tgEditChannel, tgDeleteChannel, tgPost, tgEditPost, tgDeletePost, tgPin, tgVote, tgInvite, tgStats, tgEndSession, postCheck, realSubs, tgOnline, tgAdPost, adCheck, tgMarkAd, chLinkIn } from './tgsim.js';
 
 export const tgLogo = (s = 28) => `<svg class="logo" width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><rect x="2" y="2" width="44" height="44" rx="13" fill="#0e7c6b"/><path d="M12 33.5V16a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v11a4 4 0 0 1-4 4H18.5z" fill="#fff"/><path d="M17.5 24.5c3-4.5 7.5-6 13-5.5-2.5 1.2-4.2 3-5 5.5-2.6-.9-5.2-.9-8 0z" fill="#0e7c6b"/><circle cx="29" cy="17.6" r="1.1" fill="#0e7c6b"/></svg>`;
 const SIDE = ['Настя', 'Тарас', 'Віка', 'Денис', 'Злата', 'Петро'];
 const NAME_C = { Настя: '#ad1457', Тарас: '#283593', Віка: '#6a1b9a', Денис: '#00695c', Злата: '#b23c17', Петро: '#455a64' };
-const SRC = [['invite', 'Посилання-запрошення'], ['search', 'Пошук у Лелеці'], ['fwd', 'Пересилання дописів'], ['promo', 'Взаємопіар'], ['add', 'Додані вами'], ['bots', 'Куплені боти']];
+const SRC = [['invite', 'Посилання-запрошення'], ['search', 'Пошук у Лелеці'], ['fwd', 'Пересилання дописів'], ['promo', 'Взаємопіар'], ['add', 'Додані вами'], ['likeer', 'З профілю в Лайкері'], ['tube', 'З опису каналу у Хвилі'], ['bots', 'Куплені боти']];
 const wd = t => WEEKDAYS[((dayOf(t) % 7) + 7) % 7];
 const dayLabel = (now, t) => { const d = dayOf(now) - dayOf(t); return d <= 0 ? 'Сьогодні' : d === 1 ? 'Учора' : d < 7 ? wd(t) : `${d} ${plural(d, 'день', 'дні', 'днів')} тому`; };
 const listTime = (now, t) => { const d = dayOf(now) - dayOf(t); return d <= 0 ? clock(t) : d === 1 ? 'Учора' : d < 7 ? ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'][((dayOf(t) % 7) + 7) % 7] : `${d} дн.`; };
@@ -159,6 +159,7 @@ export class Tg {
     const chips = `${g ? `<span class="tg-att">${photo(g, { thumb: true })}<button data-act="tg.attX" data-k="gid" aria-label="Прибрати фото">${icon('close', 14)}</button></span>` : ''}${att.poll ? `<span class="tg-att poll">${icon('poll', 16)}${esc(short(att.poll.q, 26))}<button data-act="tg.attX" data-k="poll" aria-label="Прибрати опитування">${icon('close', 14)}</button></span>` : ''}${att.sched ? `<span class="tg-att">${icon('clock', 16)}Вийде о ${clock(att.sched)}${dayOf(att.sched) !== dayOf(s.t) ? ' завтра' : ''}<button data-act="tg.attX" data-k="sched" aria-label="Скасувати відкладене">${icon('close', 14)}</button></span>` : ''}`;
     const hacked = this.tg.flags.hacked ? `<div class="tg-warn">${icon('alert', 16)}<span>У ваш акаунт увійшли шахраї й публікують спам! Завершіть чужий сеанс.</span><button class="btn sm danger" data-act="tg.go" data-v="sessions">Сеанси</button></div>` : '';
     return `${this.head(esc(c.title), `${num(c.subs)} ${plural(c.subs, 'підписник', 'підписники', 'підписників')}`, `<button class="ib" data-act="tg.go" data-v="stats" aria-label="Статистика">${icon('chart', 22)}</button>`, `<button class="tg-hav" data-act="tg.go" data-v="info" aria-label="Інформація про канал">${this.chAv(38)}</button>`)}${hacked}
+      ${c.adTask ? `<div class="tg-task">${icon('megaphone', 18)}<span><b>Замовлення: ${esc(c.adTask.brand)}</b><small>${num(c.adTask.pay)} грн · до ${dayLabel(s.t, c.adTask.due).toLowerCase()}, ${clock(c.adTask.due)}</small></span><button class="btn sm tg-btn" data-act="tg.adWrite">Написати</button></div>` : ''}
       ${pin ? `<button class="tg-pin" data-act="tg.toPost" data-id="${pin.id}">${icon('pin', 16)}<span><b>Закріплений допис</b><small>${esc(short(pin.text || 'Фото', 60))}</small></span></button>` : ''}
       <div class="scroll tg-bg" data-scroll="tgch" data-bottom="1"><div class="tg-msgs">${body}${start}${sched.length ? `<p class="tg-sys"><span>${icon('clock', 13)}Відкладених дописів: ${sched.length} · найближчий о ${clock(Math.min(...sched.map(p => p.sched)))}</span></p>` : ''}</div></div>
       <footer class="tg-cmp">${chips ? `<div class="tg-atts">${chips}</div>` : ''}<p class="tg-tip" data-tgtip>${this.tipHtml(a)}</p>
@@ -179,7 +180,7 @@ export class Tg {
     const by = p.by === 'evil' ? 'Невідомий адміністратор' : p.by === 'marko' ? 'Марко' : c.set.sign ? (s.me?.name || 'Автор') : '';
     const poll = p.poll ? `<div class="tg-poll"><b>${esc(p.poll.q)}</b><small>Анонімне опитування</small>${p.poll.my === null ? p.poll.opts.map(([t], i) => `<button class="tg-po" data-act="tg.vote" data-id="${p.id}" data-i="${i}">${esc(t)}</button>`).join('') : this.pollRows(p.poll.opts, p.poll.my)}</div>` : '';
     const rc = c.set.reacts ? REACTS.filter(([k]) => p.react[k]).map(([k, col]) => `<span class="tg-rc" style="--rc:${col}">${icon(k, 14, true)}${num(p.react[k])}</span>`).join('') : '';
-    return `<div class="tg-post${p.spam ? ' spam' : ''}${p.ad ? ' ad' : ''}" id="p-${p.id}">${g ? `<div class="tg-ph">${photo(g)}</div>` : ''}<div class="tg-pb">${p.ad ? '<i class="tg-adl">Реклама</i>' : ''}${p.text ? `<p>${esc(p.text)}</p>` : ''}${poll}
+    return `<div class="tg-post${p.spam ? ' spam' : ''}${p.ad ? ' ad' : ''}" id="p-${p.id}">${g ? `<div class="tg-ph">${photo(g)}</div>` : ''}<div class="tg-pb">${p.ad && (p.adMark || !p.task) ? `<i class="tg-adl">Реклама${p.brand ? ' · ' + esc(p.brand) : ''}</i>` : ''}${p.task && !p.adMark ? `<i class="tg-adl warn">${icon('alert', 12)}Реклама без позначки — бачите лише ви</i>` : ''}${p.text ? `<p>${esc(p.text)}</p>` : ''}${poll}
       <span class="tg-mt">${p.edited ? 'змінено · ' : ''}${by ? `${esc(by)} · ` : ''}${p.silent ? icon('mute', 12) : ''}${icon('eye', 13)}${num(p.stats.views)} · ${clock(p.t)}</span></div>
       ${rc ? `<div class="tg-reacts">${rc}</div>` : ''}
       <div class="tg-pa">${c.set.comments ? `<button class="tg-cm" data-act="tg.go" data-v="post" data-id="${p.id}">${icon('comment', 16)}${p.comments.length ? `${p.comments.length} ${plural(p.comments.length, 'коментар', 'коментарі', 'коментарів')}` : 'Коментувати'}</button>` : '<span></span>'}<span class="tg-fw" title="Пересилань">${icon('repost', 15)}${num(p.stats.fwd)}</span><button class="ib sm" data-act="tg.postMenu" data-id="${p.id}" aria-label="Дії з дописом">${icon('more', 18)}</button></div></div>`;
@@ -193,11 +194,12 @@ export class Tg {
 
   /* ═════════ Інформація про канал ═════════ */
   v_info() {
-    const c = this.ch, link = TG_HOST + (c.pub ? c.link : c.invite), opt = (ic, t, sub, act, extra = '') => `<button class="opt link" data-act="${act}"${extra}><span class="opt-ic">${icon(ic, 20)}</span><div><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</div>${icon('chevron', 18)}</button>`;
+    const s = this.s, c = this.ch, link = TG_HOST + (c.pub ? c.link : c.invite), opt = (ic, t, sub, act, extra = '') => `<button class="opt link" data-act="${act}"${extra}><span class="opt-ic">${icon(ic, 20)}</span><div><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</div>${icon('chevron', 18)}</button>`;
     const row = (k, t, sub, on) => `<div class="opt"><div><b>${t}</b><small>${sub}</small></div>${sw('tg.' + k, on, t)}</div>`;
     return `${this.head('Інформація', '', `<button class="lnk strong" data-act="tg.go" data-v="edit">Змінити</button>`)}<div class="scroll"><div class="tg-ihead">${this.chAv(96)}<h2>${esc(c.title)}</h2><p class="muted">${c.pub ? 'публічний' : 'приватний'} канал · ${num(c.subs)} ${plural(c.subs, 'підписник', 'підписники', 'підписників')}</p>
       <div class="tg-ibtns"><button data-act="tg.invite">${icon('users', 22)}<small>Запросити</small></button><button data-act="tg.go" data-v="stats">${icon('chart', 22)}<small>Статистика</small></button><button data-act="tg.copy">${icon('link', 22)}<small>Посилання</small></button></div></div>
       <div class="pad">${c.desc ? `<div class="tg-ibox"><small>опис</small><p>${esc(c.desc)}</p></div>` : ''}<div class="tg-ibox"><small>${c.pub ? 'посилання' : 'посилання-запрошення'}</small><p class="tg-lnk">${esc(link)}</p></div>
+      ${opt('link', 'Посилання в Лайкері', s.me ? (chLinkIn(c, s.me.link) ? 'Є в профілі · приводить читачів' : 'Додайте в профіль — підписники Лайкера знайдуть канал') : 'Спершу створіть профіль у Лайкері', 'tg.shareLk')}
       ${opt('users', 'Підписники', `${num(c.subs)}${c.bots ? ` · з них ${num(c.bots)} ботів` : ''}`, 'tg.go', ' data-v="subs"')}${opt('shield', 'Адміністратори', `${1 + (c.admins?.length || 0)}`, 'tg.go', ' data-v="admins"')}
       <h3 class="sec">Налаштування</h3>${row('reacts', 'Реакції', 'Читачі можуть ставити реакції на дописи', c.set.reacts)}${row('comments', 'Коментарі', 'Обговорення під кожним дописом', c.set.comments)}${row('sign', 'Підпис автора', 'Під дописом видно, хто з адміністраторів його написав', c.set.sign)}
       <button class="btn danger big" data-act="tg.delCh" style="margin-top:18px">${icon('trash', 18)}Видалити канал</button></div></div>`;
@@ -239,6 +241,8 @@ export class Tg {
       <div class="tiles">${tile('users', num(st.real), 'Справжніх підписників', st.bots ? `ще ${num(st.bots)} ботів` : '')}${tile('eye', num(st.avg), 'Переглядів на допис')}${tile('chart', st.err.toFixed(0) + '%', 'ERR', 'читають від підписників')}${tile('heart', st.er.toFixed(1).replace('.', ',') + '%', 'Залученість', 'реакції й пересилання')}${tile('repost', num(st.fwd), 'Пересилань', 'за 10 дописів')}${tile('edit', num(st.posts), 'Дописів')}</div>
       ${st.bots ? `<p class="warnbox">${icon('alert', 16)}<span>Підписників багато, а переглядів мало — так виглядає накрутка. ERR різко падає, і рекламодавці це одразу помічають.</span></p>` : ''}
       <details class="faq"><summary>Що таке ERR і залученість?</summary><p>ERR — яка частка підписників у середньому бачить допис. Для живого каналу це 30–60%. Залученість — скільки з тих, хто побачив, поставили реакцію чи переслали допис. Вони ростуть від цікавих дописів, фото й опитувань.</p></details>
+      <div class="tg-earn"><div><small>Зароблено на рекламі</small><b>${num(st.earned)} грн</b></div><div><small>Ціна допису зараз</small><b>≈ ${num(st.price)} грн</b></div></div>
+      <p class="muted sm">Бренди платять за справжні перегляди, а не за цифру підписників. Рекламних дописів: ${st.adsN} з ${st.posts}${st.adsN && st.adsN / Math.max(1, st.posts) > 0.3 ? ' — забагато, читачі втомлюються' : ' — краще не більше одного з п’яти'}.</p>
       <h3 class="sec">Підписники за днями</h3>${chart}
       <h3 class="sec">Звідки приходять читачі</h3><div class="tg-src">${SRC.filter(([k]) => st.src[k]).map(([k, t]) => { const p = Math.round((st.src[k] || 0) / srcTot * 100); return `<div><span>${t}</span><b>${num(st.src[k])}</b><i><b style="width:${p}%;background:${k === 'bots' ? '#c62828' : '#0e7c6b'}"></b></i></div>`; }).join('') || '<p class="muted sm">Ще немає даних. Запросіть перших читачів.</p>'}</div>
       <h3 class="sec">Коли читачі онлайн</h3>${hours}<p class="hint">${icon('clock', 16)}<span>Найбільше людей у мережі близько ${st.best}:00. Ввечері дописи бачать більше читачів, а вночі краще надсилати без звуку.</span></p>
@@ -322,6 +326,7 @@ export class Tg {
         const p = c.posts.find(x => x.id === el.dataset.id); if (!p) return;
         actions([{ t: c.pinned === p.id ? 'Відкріпити' : 'Закріпити', icon: 'pin', on: () => { tgPin(sim, p.id); ph.render(); toast(c.pinned ? 'Допис закріплено' : 'Відкріплено'); } },
           p.text && !p.ad && p.by === 'me' ? { t: 'Редагувати', icon: 'edit', on: () => this.editSheet(p) } : null,
+          p.task && !p.adMark ? { t: 'Позначити як рекламу', icon: 'megaphone', on: () => { tgMarkAd(sim, p.id); ph.render(); toast('Допис позначено як рекламу'); } } : null,
           { t: 'Статистика допису', icon: 'chart', on: () => this.postStats(p) },
           { t: 'Видалити', icon: 'trash', danger: true, on: async () => { if (await confirm('Видалити допис?', 'Видалити', true, 'Він зникне в усіх підписників.')) { tgDeletePost(sim, p.id); ph.render(); } } }]);
       },
@@ -329,6 +334,13 @@ export class Tg {
       cmDel: () => { const p = c.posts.find(x => x.id === el.dataset.id); if (p) { p.comments = p.comments.filter(m => m.id !== el.dataset.c); p.fired.cm = (p.fired.cm || 0) + 1; ph.render(); toast('Коментар видалено'); } },
       cmSend: () => { const inp = ph.root.querySelector('[data-keep="tgcm"]'), t = inp?.value.trim(); if (!t) return; inp.value = ''; const p = c.posts.find(x => x.id === el.dataset.id); p.comments.push({ id: sim.id('tc'), mine: true, text: t, t: s.t }); ph.render(); },
       invite: () => this.inviteSheet(),
+      adWrite: () => this.adSheet(),
+      shareLk: () => {
+        if (!s.me) { toast('Спершу створіть профіль у Лайкері'); return; }
+        const link = TG_HOST + (c.pub ? c.link : c.invite);
+        if (chLinkIn(c, s.me.link)) { toast('Посилання вже є в профілі Лайкера'); return; }
+        s.me.link = link; ph.render(); toast(c.pub ? 'Посилання додано в профіль Лайкера' : 'Додано. Увага: тепер приватний канал може знайти будь-хто');
+      },
       copy: () => { navigator.clipboard?.writeText('https://' + TG_HOST + (c.pub ? c.link : c.invite)).catch(() => {}); toast('Посилання скопійовано'); },
       delCh: async () => { if (await confirm('Видалити канал?', 'Видалити', true, 'Усі дописи й підписники зникнуть назавжди.')) { tgDeleteChannel(sim); this.stack = [{ v: 'chats' }]; ph.render(true); toast('Канал видалено'); } },
       unadmin: () => { c.admins = (c.admins || []).filter(x => x !== el.dataset.id); s.tg.flags.adminFull = false; ph.render(); toast('Права адміністратора забрано'); },
@@ -377,6 +389,29 @@ export class Tg {
     sheet({ title: 'Статистика допису', html: `<div class="check tg-ps">${row('eye', 'Перегляди', num(p.stats.views))}${row('heart', 'Реакції', num(r))}${row('repost', 'Пересилання', num(p.stats.fwd))}${row('users', 'Підписалися після допису', '+' + num(p.stats.joined))}${row('block', 'Відписалися', '−' + num(p.stats.left))}${p.plan ? row('chart', 'Оцінка змісту', Math.round(p.plan.q * 100) + '%') : ''}</div>
       ${p.plan?.night ? `<p class="warnbox">${icon('moon', 16)}<span>Допис вийшов уночі зі звуком — частина читачів прокинулася й відписалася.</span></p>` : ''}${p.plan?.fatigue ? `<p class="warnbox">${icon('alert', 16)}<span>Забагато дописів за добу: читачі втомлюються й відписуються.</span></p>` : ''}
       <ul class="qc">${postCheck(p).map(([k, t, why]) => `<li class="${k}">${icon(k === 'ok' ? 'check' : 'alert', 16)}<span><b>${t}</b>${esc(why)}</span></li>`).join('')}</ul>` });
+  }
+  adSheet() {
+    const c = this.ch, task = c.adTask; if (!task) return;
+    const st = { mark: false, text: task.text || '' };
+    const checks = () => adCheck(st.text, st.mark, task).map(([k, t, why]) => `<li class="${k}">${icon(k === 'ok' ? 'check' : 'alert', 16)}<span><b>${t}</b>${esc(why)}</span></li>`).join('');
+    sheet({ title: 'Рекламний допис', cls: 'tg-adsh', html: `<div class="tg-brief">${icon('megaphone', 18)}<span><b>${esc(task.brand)} · ${num(task.pay)} грн</b><small>${task.bad ? 'Бренд надіслав готовий текст.' : `Завдання: розкажіть своїми словами, чим «${esc(task.item)}» може стати в пригоді вашим читачам.`} Оплата — через добу після публікації.</small></span></div>
+      <textarea class="in" rows="5" data-adt maxlength="1500" placeholder="Наприклад: Мурчик спробував новий корм…">${esc(st.text)}</textarea>
+      <button class="tg-mark" data-mark aria-pressed="false"><i class="tg-chk"></i><span><b>Позначити як рекламу</b><small>Під дописом буде «Реклама · ${esc(task.brand)}»</small></span></button>
+      <ul class="qc" data-chk>${checks()}</ul><button class="btn tg-btn big" data-pub>Опублікувати</button>`,
+      onOpen: api => {
+        const ta = api.$('[data-adt]'), upd = () => { api.$('[data-chk]').innerHTML = checks(); };
+        ta.addEventListener('input', () => { st.text = ta.value; upd(); });
+        api.el.addEventListener('click', async e => {
+          const m = e.target.closest('[data-mark]');
+          if (m) { st.mark = !st.mark; m.setAttribute('aria-pressed', st.mark); const k = m.querySelector('.tg-chk'); k.className = 'tg-chk' + (st.mark ? ' on' : ''); k.innerHTML = st.mark ? icon('check', 15) : ''; upd(); }
+          if (e.target.closest('[data-pub]')) {
+            if (!st.text.trim()) { toast('Напишіть текст допису'); return; }
+            const bad = adCheck(st.text, st.mark, task).find(x => x[0] === 'bad');
+            if (bad && !(await confirm('Опублікувати попри це?', 'Опублікувати', true, bad[2]))) return;
+            tgAdPost(this.sim, { text: st.text.trim(), mark: st.mark }); api.close(); this.ph.render(); toast('Рекламний допис опубліковано');
+          }
+        });
+      } });
   }
   inviteSheet() {
     const c = this.ch, link = TG_HOST + (c.pub ? c.link : c.invite), list = this.tg.chats.filter(x => ['mom', 'dad', 'olia', 'marko', 'babusia', 'class'].includes(x.id)), pick = new Set();

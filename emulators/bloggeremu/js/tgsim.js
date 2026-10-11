@@ -1,6 +1,6 @@
 // Симулятор блогера · месенджер «Лелека»: готовий акаунт із чатами, власний канал (публічний або приватний),
 // охоплення дописів, реакції й пересилання, статистика та навчальні ситуації (взаємопіар, накрутка, «підтримка»-шахраї).
-import { CREATORS, nicheOf, AV_COLORS } from './data.js';
+import { CREATORS, nicheOf, AV_COLORS, BRANDS } from './data.js';
 import { intents, voice } from './talk.js';
 import { ACTIVITY, DAY, hourOf, dayOf, clock, lc } from './sim.js';
 
@@ -182,10 +182,40 @@ export function tgPublish(sim, p) {
     joined: Math.round(fwd * (1.2 + 3 * q) * (c.pub ? 1 : 0.55)), left: Math.round(real * (Math.min(0.08, fatigue * 0.05) + (night ? 0.025 : 0) + (q < 0.25 ? 0.02 : 0) + (p.ad === 'casino' ? 0.14 : 0) + (p.spam ? 0.1 : 0))),
     comments: c.set.comments && views ? Math.round(views * 0.035 * q + q * 0.8) : 0, tau: 140 + sim.r.int(80), q, night, fatigue: recent >= 4,
   };
+  const nick = s.me?.nick; if (nick && (p.text.includes('@' + nick) || /лайкер/i.test(p.text))) p.plan.lk = Math.round(views * (0.04 + 0.06 * q));
   const chat = chatOf(s, 'mych'); if (chat) bump(s, chat);
   return p;
 }
+// рекламний допис за замовленням бренду
+const HYPE = /гарантован|100\s?%|найкращ\S* у світі|миттєво|схудн|чудодійн|без зусиль/i;
+export function adCheck(text, mark, task) {
+  const out = [], len = String(text).replace(/\s/g, '').length;
+  out.push(mark ? ['ok', 'Позначено як рекламу', 'Читачі бачать, що це реклама, і довіряють вам.'] : ['bad', 'Немає позначки «Реклама»', 'Без позначки реклама вводить читачів в оману. Платформа й бренд вимагають позначати рекламу.']);
+  if (HYPE.test(text)) out.push(['bad', 'Перебільшення', 'Обіцянки на кшталт «гарантовано», «100%», «миттєво» звучать як обман.']);
+  if (len < 40) out.push(['warn', 'Замало змісту', 'Розкажіть своїми словами, чим товар може бути корисним. Так реклама не дратує.']);
+  else if (!HYPE.test(text)) out.push(['ok', 'Своїми словами', 'Чесний відгук звучить переконливіше за гучні гасла.']);
+  if (task?.bad) out.push(['bad', 'Сумнівний товар', 'Цей товар обіцяє неможливе. Така реклама шкодить читачам.']);
+  return out;
+}
+export function tgAdPost(sim, o) {
+  const s = sim.s, c = ch(s), task = c?.adTask; if (!task) return null;
+  const p = tgPost(sim, { text: o.text, gid: o.gid, ad: task.bad ? 'bad' : 'brand' });
+  p.task = { ...task }; p.adMark = !!o.mark; p.brand = task.brand;
+  const ads = c.posts.filter(x => x.t && (x.ad === 'brand' || x.ad === 'bad')).slice(-8).length, all = c.posts.filter(x => x.t).slice(-8).length;
+  if (p.plan) {
+    const real = realSubs(c), hype = HYPE.test(o.text);
+    p.plan.left += Math.round(real * ((o.mark ? 0.003 : 0.012) + (hype ? 0.02 : 0) + (task.bad ? 0.1 : 0) + (ads / Math.max(1, all) > 0.3 ? 0.05 : 0)));
+    p.plan.views = Math.round(p.plan.views * 0.85); p.plan.react = Math.round(p.plan.react * (task.bad ? 0.2 : 0.6)); p.plan.joined = Math.round(p.plan.joined * 0.4);
+    p.plan.tooMany = ads / Math.max(1, all) > 0.3;
+  }
+  c.lastTask = c.adTask; c.adTask = null;
+  later(sim, DAY, 'brandPay', p.id);
+  if (!o.mark) later(sim, 150, 'adUnmarked', p.id);
+  if (task.bad) later(sim, 240, 'badAfter');
+  sim.emit('tg'); return p;
+}
 export function tgEditPost(sim, id, text) { const p = ch(sim.s)?.posts.find(x => x.id === id); if (p) { p.text = String(text).trim().slice(0, 4000); p.edited = true; sim.emit('tg'); } }
+export function tgMarkAd(sim, id) { const p = ch(sim.s)?.posts.find(x => x.id === id); if (p && p.task) { p.adMark = true; sim.emit('tg'); } }
 export function tgDeletePost(sim, id) { const c = ch(sim.s); if (c) { c.posts = c.posts.filter(x => x.id !== id); if (c.pinned === id) c.pinned = null; sim.emit('tg'); } }
 export function tgPin(sim, id) { const c = ch(sim.s); if (c) { c.pinned = c.pinned === id ? null : id; sim.emit('tg'); } }
 export function tgVote(sim, pid, i) { const p = ch(sim.s)?.posts.find(x => x.id === pid) || null; if (p?.poll && p.poll.my === null) { p.poll.my = i; p.poll.opts[i][1]++; sim.emit('tg'); } }
@@ -215,6 +245,16 @@ const SCRIPTS = {
     on: { full: { say: ['Йес! Дякую'], fx: 'adminFull', end: true }, part: { say: ['Ок, домовились. Скину ідею, як придумаю'], fx: 'adminPart', end: true }, no: { say: ['Ну ок, як хочеш'], end: true } } },
   phish: { start: ['Служба безпеки Лелеки. На ваш канал надійшли скарги.', 'Щоб уникнути блокування, протягом 24 годин підтвердіть, що ви власник: надішліть сюди код, який зараз прийде в SMS.'], opts: [['send', 'Надіслати код'], ['ask', 'Справжня підтримка так пише?'], ['report', 'Поскаржитися й заблокувати']],
     on: { ask: { say: ['Так, це офіційне звернення. Надішліть код, інакше канал буде видалено'], sys: 'Справжня підтримка Лелеки ніколи не просить код зі SMS і не погрожує видаленням. У справжнього службового чату є синя позначка.', opts: [['send', 'Надіслати код'], ['report', 'Поскаржитися й заблокувати']] }, send: { fx: 'codeLeak', end: true }, report: { fx: 'phishReport', end: true } } },
+  brand: { start: ['Добрий день! Ми — {brand}. Бачимо, у вас живий канал про {topic}.', 'Пропонуємо рекламний допис про {item}. Оплата — {pay} грн. Цікаво?'], opts: [['terms', 'Які умови?'], ['yes', 'Так, цікаво'], ['money', 'А можна більше?'], ['no', 'Ні, дякую']],
+    on: { terms: { say: ['Один допис у вашому каналі, текст пишете самі, своїми словами. Допис має бути позначений як реклама й провисіти щонайменше добу. Оплата — після публікації.'], opts: [['yes', 'Добре, беру'], ['money', 'А можна більше?'], ['no', 'Ні, дякую']] },
+      money: { say: ['Можемо {pay2} грн — це наша найкраща ціна для каналу такого розміру'], fx: 'brandHaggle', opts: [['yes', 'Домовились'], ['no', 'Ні, дякую']] },
+      yes: { say: ['Чудово! Ще одне: вам уже є 18? Якщо ні, домовленість має погодити хтось із батьків.'], opts: [['parents', 'Мені менше 18 — покажу батькам'], ['adult', 'Мені вже є 18']] },
+      parents: { say: ['Дякуємо, що чесно! Батьки отримають умови на пошту. А ось завдання для допису:', 'Розкажіть своїми словами, чим {item} може стати в пригоді вашим читачам. Обов’язково позначте допис як рекламу. Строк — 2 дні.'], fx: 'brandDeal', end: true },
+      adult: { say: ['Для неповнолітніх домовленість однаково погоджують батьки — так вимагає закон. Покажіть, будь ласка, умови мамі чи татові.', 'А ось завдання: розкажіть своїми словами, чим {item} може стати в пригоді читачам. Позначте допис як рекламу. Строк — 2 дні.'], sys: 'Неправда про вік у домовленості — серйозна річ: через неї угоду можуть розірвати. Дітям такі домовленості завжди погоджують батьки.', fx: 'brandDeal', end: true },
+      no: { say: ['Зрозуміло, гарного дня! Якщо передумаєте — пишіть'], end: true } } },
+  badbrand: { start: ['Привіт! Ми продаємо {item}. Заплатимо {pay} грн за допис у вашому каналі.', 'Текст дамо готовий: «Пий наш чай — і схуднеш за ніч без спорту! Гарантовано на 100%!»'], opts: [['ask', 'А це правда працює?'], ['yes', 'Ого, давайте!'], ['no', 'Ні, це обман читачів']],
+    on: { ask: { say: ['Ну… головне, щоб купували :) Гроші ж хороші'], sys: 'Чаю, що «спалює жир за ніч», не існує. Реклама неправдивих товарів шкодить читачам і вашій репутації, хоч би скільки за неї платили.', opts: [['yes', 'Все одно давайте'], ['no', 'Ні, не буду обманювати читачів']] },
+      yes: { say: ['Супер! Опублікуйте текст, який ми надіслали'], fx: 'badDeal', end: true }, no: { say: ['Шкода. Інші погоджуються'], fx: 'badNo', end: true } } },
   promo: { start: ['Привіт! Я веду канал «{name}» — {subs} читачів, теж про {topic}.', 'Пропоную взаємопіар: ми розповідаємо про ваш канал, ви — про наш. Згода?'], opts: [['yes', 'Так, давай'], ['no', 'Ні, дякую']],
     on: { yes: { say: ['Супер! Сьогодні опублікуємо. Ось наш допис для вас'], fx: 'promoYes', end: true }, no: { say: ['Добре, удачі з каналом!'], end: true } } },
 };
@@ -230,7 +270,7 @@ function runNode(sim, c, node) {
 function scriptReply(sim, c, text, key) {
   const sc = SCRIPTS[c.script]; if (!sc || c.done) return;
   const ints = intents(text); let k = key;
-  if (!k) k = c.opts?.find(([, t]) => t === text)?.[0] || (ints.has('yes') ? 'yes' : ints.has('no') ? 'no' : ints.has('question') && sc.on.ask ? 'ask' : ints.has('block') || ints.has('adult') ? (sc.on.report ? 'report' : 'no') : null);
+  if (!k) k = c.opts?.find(([, t]) => t === text)?.[0] || (ints.has('money') && sc.on.money ? 'money' : ints.has('adult') && sc.on.parents ? 'parents' : ints.has('yes') ? 'yes' : ints.has('no') ? 'no' : ints.has('question') && sc.on.ask ? 'ask' : ints.has('block') || ints.has('adult') ? (sc.on.report ? 'report' : 'no') : null);
   if (!k || !sc.on[k]) { say(sim, c.id, [c.script === 'phish' ? 'Надішліть код зі SMS' : 'Так чи ні?'], c.opts, 2); return; }
   c.opts = null; runNode(sim, c, k);
 }
@@ -267,6 +307,18 @@ const TG_FX = {
   adminPart(sim) { sim.s.tg.flags.adminPart = true; later(sim, 300, 'markoIdea'); },
   codeLeak(sim) { codeLeak(sim, 'phish'); },
   phishReport(sim) { const c = chatOf(sim.s, 'phish'); if (c) { c.blocked = true; c.opts = null; } sim.s.tg.flags.phishOk = true; sim.s.trust = Math.min(100, sim.s.trust + 2); sysTip(sim, 'phish', 'Правильно! Справжня підтримка не просить коди. Профіль заблоковано, скаргу надіслано.'); },
+  brandHaggle(sim) { const x = chatOf(sim.s, sim.s.tg.flags.brandChat); if (x?.ctx) { x.ctx.pay = x.ctx.pay2; } },
+  brandDeal(sim) {
+    const s = sim.s, c = ch(s), x = chatOf(s, s.tg.flags.brandChat); if (!c || !x) return;
+    c.adTask = { bid: x.ctx.bid, brand: x.ctx.brand, item: x.ctx.item, pay: x.ctx.pay, due: s.t + 2 * DAY, chat: x.id };
+    tgPush(sim, 'mych', 'sys', `Нове рекламне замовлення: ${x.ctx.brand}, ${x.ctx.pay} грн. Напишіть допис протягом 2 днів і позначте його як рекламу.`);
+  },
+  badDeal(sim) {
+    const s = sim.s, c = ch(s), x = chatOf(s, s.tg.flags.brandChat); if (!c || !x) return;
+    c.adTask = { bid: x.ctx.bid, brand: x.ctx.brand, item: x.ctx.item, pay: x.ctx.pay, due: s.t + 2 * DAY, chat: x.id, bad: true, text: 'Пий чай «Стрункість» — і схуднеш за ніч без спорту! Гарантовано на 100%!' };
+    tgPush(sim, 'mych', 'sys', `Рекламне замовлення: ${x.ctx.brand}, ${x.ctx.pay} грн.`);
+  },
+  badNo(sim) { sim.s.trust = Math.min(100, sim.s.trust + 2); sim.s.tg.flags.badNo = true; },
   promoYes(sim) {
     const c = ch(sim.s), x = sim.s.tg.flags.promoFrom; if (!c || !x) return;
     tgPost(sim, { text: `Друзі, рекомендую канал «${x.name}» — там теж про ${x.topic}. Підписуйтеся: ${TG_HOST}${x.link}`, ad: 'promo' });
@@ -287,6 +339,21 @@ export const TG_LATER = {
     later(sim, 40, 'markoAfter');
   },
   markoAfter(sim) { sim.s.trust = Math.max(0, sim.s.trust - 4); tgPush(sim, 'mych', 'sys', 'Адміністратор Марко опублікував фото однокласника без дозволу. Ви відповідаєте за все, що виходить у каналі. Права адміністратора дають лише тим, кому довіряєте, і лише потрібні. Заберіть права в Інформації про канал → Адміністратори.'); },
+  brandPay(sim, pid) {
+    const s = sim.s, c = ch(s); if (!c) return; const p = c.posts.find(x => x.id === pid), task = p?.task;
+    if (!p) { const t = c.lastTask; if (t) tgPush(sim, t.chat, t.chat, 'Допис видалили раніше, ніж за добу. На жаль, за умовами оплату провести не можемо.'); return; }
+    s.money += task.pay; c.earned = (c.earned || 0) + task.pay; c.adsDone = (c.adsDone || 0) + 1;
+    tgPush(sim, task.chat, task.chat, `Оплату ${task.pay} грн переказано батькам на картку. Дякуємо за співпрацю!`);
+    tgPush(sim, 'mych', 'sys', `Отримано ${task.pay} грн за рекламу від «${task.brand.replace(/^.*«|»$/g, '')}»`);
+    if (p.adMark && !task.bad) s.tg.flags.brandGood = s.t;
+  },
+  adUnmarked(sim, pid) {
+    const s = sim.s, p = ch(s)?.posts.find(x => x.id === pid); if (!p || p.adMark) return;
+    s.trust = Math.max(0, s.trust - 3);
+    tgPush(sim, 'leleka', 'svc', 'У вашому каналі є рекламний допис без позначки «Реклама». Читачі мають право знати, що вам заплатили. Позначте рекламу — інакше охоплення каналу можуть знизити.');
+    if (p.task) tgPush(sim, p.task.chat, p.task.chat, 'Ми ж домовлялися про позначку «Реклама»… Додайте її, будь ласка.');
+  },
+  badAfter(sim) { const s = sim.s; s.trust = Math.max(0, s.trust - 5); tgPush(sim, 'leleka', 'svc', 'На рекламу «чаю для схуднення» в вашому каналі поскаржилися читачі: товар обіцяє неможливе. Допис приховано. Не рекламуйте те, у що самі не вірите.'); const c = ch(s); if (c) { c.posts.filter(p => p.task?.bad).forEach(p => { p.hidden = true; }); c.penalty = s.t + 2 * DAY; } },
   markoIdea(sim) { say(sim, 'marko', ['Придумав: зроби опитування, яку тему розібрати наступною. Без фоток людей, обіцяю :)'], null, 1); },
 };
 // сповіщення про допис у групі / новий запис
@@ -294,7 +361,7 @@ function maybeComment(sim, p) {
   const c = ch(sim.s), r = sim.r, n = sim.person('fan', [c.topic]), topic = nicheOf(c.topic).t.toLowerCase();
   const night = p.plan.night && !p.fired.night;
   if (night) p.fired.night = true;
-  const text = night ? 'Сповіщення о такій пізній годині мене розбудило… Можна вночі без звуку?' : p.ad === 'casino' ? 'Реклама ставок у дитячому каналі? Відписуюсь' : p.spam ? 'Це що, спам? Канал зламали?' : p.by === 'marko' ? 'Так не можна, це ж чуже фото без дозволу' : p.poll ? r.pick(['Проголосував(-ла)!', 'Цікаве опитування', 'Важкий вибір :)']) : r.pick(['Цікаво!', 'Дякую, корисно', `Більше про ${topic}, будь ласка`, 'Чекаю наступний допис', 'А звідки ти це знаєш?', 'Класно написано']);
+  const text = night ? 'Сповіщення о такій пізній годині мене розбудило… Можна вночі без звуку?' : p.ad === 'bad' ? 'Чай, що спалює жир за ніч? Це ж обман' : p.ad === 'brand' && !p.adMark ? 'Це реклама? Чому не позначено?' : p.plan?.tooMany ? 'Щось забагато реклами останнім часом…' : p.ad === 'brand' ? r.pick(['Чесно, що позначив(-ла) рекламу', 'О, корисна штука', 'Нормальна реклама, не дратує']) : p.ad === 'casino' ? 'Реклама ставок у дитячому каналі? Відписуюсь' : p.spam ? 'Це що, спам? Канал зламали?' : p.by === 'marko' ? 'Так не можна, це ж чуже фото без дозволу' : p.poll ? r.pick(['Проголосував(-ла)!', 'Цікаве опитування', 'Важкий вибір :)']) : r.pick(['Цікаво!', 'Дякую, корисно', `Більше про ${topic}, будь ласка`, 'Чекаю наступний допис', 'А звідки ти це знаєш?', 'Класно написано']);
   p.comments.push({ id: sim.id('tc'), name: n.name, color: n.color, text: voice(text, /а$|я$/.test(n.name)), t: sim.s.t });
 }
 
@@ -321,9 +388,10 @@ function grow(sim, c, p) {
   const rt = want('react'), have = Object.values(p.react).reduce((a, x) => a + x, 0);
   for (let i = have; i < rt; i++) { const k = sim.r.next() < 0.45 ? 'heart' : sim.r.next() < 0.5 ? 'fire' : sim.r.next() < 0.6 ? 'thumbUp' : 'smile'; p.react[k] = (p.react[k] || 0) + 1; }
   if (p.poll) { const v = want('votes'), cur = p.poll.opts.reduce((a, o) => a + o[1], 0) - (p.poll.my !== null ? 1 : 0); for (let i = cur; i < v; i++) { const w = p.poll.opts.map((_, j) => 1 + ((j * 7 + p.id.length) % 3)); let k = sim.r.next() * w.reduce((a, x) => a + x, 0), j = 0; while ((k -= w[j]) > 0 && j < w.length - 1) j++; p.poll.opts[j][1]++; } }
+  if (P.lk) { const k = want('lk') - (st.lk || 0); if (k > 0) { st.lk = (st.lk || 0) + k; sim.s.followers += k; if (!sim.s.tg.flags.toLk) { sim.s.tg.flags.toLk = true; sim.notify('users', `Читачі каналу «${c.title}» підписуються на вас у Лайкері`); } } }
   const j = want('joined') - st.joined; if (j > 0) { st.joined += j; c.subs += j; c.src[c.pub && sim.r.chance(0.3) ? 'search' : 'fwd'] += j; rec.joined += j; }
   const l = want('left') - st.left; if (l > 0) { const n = Math.min(l, realSubs(c)); st.left += n; c.subs -= n; rec.left += n; }
-  if (want('comments') > p.comments.length + (p.fired.cm || 0) || (P.night && !p.fired.night && st.views > 2) || ((p.ad === 'casino' || p.spam || p.by === 'marko') && !p.comments.length && st.views > 3)) maybeComment(sim, p);
+  if (want('comments') > p.comments.length + (p.fired.cm || 0) || (P.night && !p.fired.night && st.views > 2) || ((p.ad === 'casino' || p.ad === 'bad' || (p.ad === 'brand' && (!p.adMark || p.plan.tooMany)) || p.spam || p.by === 'marko') && !p.comments.length && st.views > 3)) maybeComment(sim, p);
   for (const m of [10, 50, 100, 500, 1000]) if (realSubs(c) >= m && !c.fired['s' + m]) { c.fired['s' + m] = true; tgPush(sim, 'mych', 'sys', `Ура! У каналі ${m} справжніх підписників`); }
   return true;
 }
@@ -341,6 +409,8 @@ function hourly(sim, c) {
     const n = c.bots; c.subs -= n; c.bots = 0; c.penalty = s.t + 4 * DAY; f.botsAt = 0; f.botsCaught = true; s.trust = Math.max(0, s.trust - 8);
     tgPush(sim, 'leleka', 'svc', `Ми видалили з вашого каналу ${n} неактивних акаунтів (ботів). Накрутка порушує правила: охоплення каналу знижено на 4 дні. Справжні читачі не з’являються від купленої цифри.`); changed = true;
   }
+  changed = cross(sim, c) || changed;
+  if (c.adTask && s.t > c.adTask.due) { const t = c.adTask; c.adTask = null; s.trust = Math.max(0, s.trust - 1); tgPush(sim, t.chat, t.chat, 'Строк минув, а допису немає. На жаль, домовленість скасовано.'); changed = true; }
   if (h < 9 || h > 21) return changed;
   if (f.lastEv && s.t - f.lastEv < 14 * 60) return changed;
   const ev = (name, cond, fn) => { if (!f[name] && cond) { f[name] = f.lastEv = s.t; fn(); changed = true; return true; } return false; };
@@ -352,11 +422,47 @@ function hourly(sim, c) {
     const x = openChat(sim, 'phish', { title: 'Lelekа Support', color: '#1565c0', sym: 'shield' }); x.script = 'phish'; runNode(sim, x, 'start');
     tgPush(sim, 'leleka', 'svc', 'Код для входу в Лелеку: 73 914. Нікому не повідомляйте цей код, навіть якщо хтось пише від імені Лелеки.');
   }) ||
+  ev('ev_brand', posts.length >= 3 && realSubs(c) >= 10 && days > 1.2 && r.chance(0.35), () => brandOffer(sim, c, false)) ||
+  ev('ev_brand2', f.brandGood && s.t - f.brandGood > 2 * DAY && r.chance(0.3), () => brandOffer(sim, c, false, 1.3)) ||
+  ev('ev_badbrand', f.ev_brand && days > 3 && posts.length >= 5 && r.chance(0.25), () => brandOffer(sim, c, true)) ||
   ev('ev_promo', posts.length >= 4 && realSubs(c) >= 12 && days > 2 && r.chance(0.3), () => {
     const cr = CREATORS.find(x => x.niche === c.topic) || CREATORS[0], subs = 260 + r.int(240);
     f.promoFrom = { name: cr.name.replace(/ й компанія/, '') + ': щоденник', subs, topic: nicheOf(c.topic).t.toLowerCase(), link: cr.nick.replace(/\./g, '_') + '_tg' };
     const x = openChat(sim, 'promo', { title: f.promoFrom.name, color: cr.color, sym: nicheOf(c.topic).icon }); x.script = 'promo'; x.ctx = { name: f.promoFrom.name, subs, topic: f.promoFrom.topic }; runNode(sim, x, 'start');
   });
+  return changed;
+}
+// пропозиція реклами: ціна залежить від справжніх переглядів, а не від цифри підписників
+export function adPrice(c) {
+  const last = c.posts.filter(p => p.t && !p.hidden).slice(-6), avg = last.length ? last.reduce((a, p) => a + p.stats.views, 0) / last.length : 0;
+  return Math.max(60, Math.min(5000, Math.round((avg * 4 + realSubs(c) * 0.5) / 10) * 10));
+}
+export function brandOffer(sim, c, bad, mult = 1) {
+  const s = sim.s, b = bad ? BRANDS.find(x => x.id === 'chai') : BRANDS.find(x => !x.bad && x.niche?.includes(c.topic)) || BRANDS[0];
+  const pay = bad ? 1500 : Math.round(adPrice(c) * mult / 10) * 10, id = 'br_' + b.id + (mult > 1 ? '2' : '');
+  const x = openChat(sim, id, { title: b.name, color: bad ? '#6d4c41' : '#1565c0', sym: bad ? 'spark' : 'star' });
+  x.script = bad ? 'badbrand' : 'brand'; x.done = false; x.ctx = { brand: b.name, item: b.item, pay, pay2: Math.round(pay * 1.15 / 10) * 10, topic: nicheOf(c.topic).t.toLowerCase(), bid: b.id };
+  s.tg.flags.brandChat = id; runNode(sim, x, 'start');
+}
+// посилання на канал в інших соцмережах приводять читачів
+export function chLinkIn(c, text) {
+  if (!c || !text) return false;
+  const t = String(text).toLowerCase(), at = (link) => { const k = t.indexOf((TG_HOST + link).toLowerCase()); return k >= 0 && !/[a-z0-9_]/.test(t[k + TG_HOST.length + link.length] || ''); };
+  return (c.pub && !!c.link && at(c.link)) || at(c.invite);
+}
+function cross(sim, c) {
+  const s = sim.s, f = s.tg.flags; let changed = false;
+  const lkViews = s.posts.reduce((a, p) => a + (p.t ? p.stats.views : 0), 0), tbViews = (s.tube?.videos || []).reduce((a, v) => a + (v.t ? v.stats.views : 0), 0);
+  const step = (key, total, linked, rate, src, label) => {
+    const prev = f[key] ?? total; f[key] = total; if (!linked) return;
+    let want = (total - prev) * rate * (c.penalty > s.t ? 0.5 : 1); const n = Math.floor(want) + (sim.r.next() < want % 1 ? 1 : 0);
+    for (let i = 0; i < n; i++) TG_LATER.join(sim, src);
+    if (n > 0) { changed = true; if (!f['first_' + src]) { f['first_' + src] = true; tgPush(sim, 'mych', 'sys', `Перші читачі прийшли ${label} — за посиланням на канал`); } }
+  };
+  step('lkSeen', lkViews, s.me && chLinkIn(c, `${s.me.link || ''} ${s.me.bio || ''}`), 0.012 * (s.me?.niche === c.topic ? 1 : 0.6), 'likeer', 'з Лайкера');
+  step('tbSeen', tbViews, s.tube && chLinkIn(c, s.tube.desc), 0.01, 'tube', 'з Хвилі');
+  // посилання на приватний канал у відкритому профілі
+  if (!c.pub && !f.privLeak && s.me && String(`${s.me.link} ${s.me.bio}`).includes(TG_HOST + c.invite) && !s.settings.priv) { f.privLeak = true; tgPush(sim, 'mych', 'sys', 'Посилання-запрошення приватного каналу тепер у відкритому профілі Лайкера — підписатися може будь-хто. Якщо канал для своїх, приберіть посилання або зробіть канал публічним.'); changed = true; }
   return changed;
 }
 // клас живе своїм життям
@@ -376,7 +482,8 @@ export function tgStats(sim) {
   const byHour = Array(24).fill(0); for (let h = 0; h < 24; h++) byHour[h] = ACTIVITY[h];
   const best = byHour.indexOf(Math.max(...byHour));
   const days = c.daily.slice(-14);
-  return { subs: c.subs, real, bots: c.bots, avg, err, er, fwd: last.reduce((a, p) => a + p.stats.fwd, 0), posts: posts.length, best, days, src: c.src,
+  const adsN = posts.filter(p => p.ad === 'brand' || p.ad === 'bad').length;
+  return { earned: c.earned || 0, adsN, price: adPrice(c), subs: c.subs, real, bots: c.bots, avg, err, er, fwd: last.reduce((a, p) => a + p.stats.fwd, 0), posts: posts.length, best, days, src: c.src,
     top: [...posts].sort((a, b) => b.stats.views - a.stats.views).slice(0, 3) };
 }
 export const lcTitle = t => lc(t);

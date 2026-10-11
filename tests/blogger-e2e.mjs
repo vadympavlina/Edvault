@@ -462,6 +462,28 @@ await step('«Лелека»: акаунт уже є, створення кан�
   await p.click('[data-act="tg.go"][data-v="privacy"]'); await p.click('[data-sw="tg.pass2"]'); assert.ok((await S()).tg.set.pass2);
 });
 
+await step('реклама від бренду в каналі й посилання на канал у профілі Лайкера', async () => {
+  // посилання на канал у профілі Лайкера
+  await home(); await p.click('[data-app="likeer"]');
+  await p.evaluate(() => { const lk = Blogger.phone.apps.likeer; lk.tab('profile'); lk.go('editProfile'); });
+  await p.click('[data-act="lk.epTg"]'); assert.equal(await p.locator('[data-keep="ep.link"]').inputValue(), 'leleka.me/murchyk_pryhody');
+  await p.click('[data-act="lk.saveProfile"]'); assert.match(await p.locator('.pr-link').innerText(), /leleka\.me\/murchyk_pryhody/);
+  await p.click('.pr-link'); assert.ok(await p.locator('.tg-app').count(), 'посилання відкриває канал');
+  // бренд пропонує рекламу
+  await p.evaluate(async () => { const m = await import('/emulators/bloggeremu/js/tgsim.js'), sim = Blogger.sim; m.brandOffer(sim, sim.s.tg.ch, false); const c = sim.s.tg.chats.find(x => x.id === sim.s.tg.flags.brandChat); while (c.pending?.length) m.tgDeliver(sim, c); Blogger.phone.apps.tg.stack = [{ v: 'chats' }, { v: 'chat', id: c.id }]; Blogger.phone.render(true); });
+  await p.click('[data-act="tg.opt"][data-k="yes"]'); await p.waitForSelector('[data-act="tg.opt"][data-k="parents"]', { timeout: 15000 });
+  await p.click('[data-act="tg.opt"][data-k="parents"]'); await p.waitForFunction(() => Blogger.sim.s.tg.ch.adTask, null, { timeout: 20000 });
+  await p.evaluate(() => { Blogger.phone.apps.tg.stack = [{ v: 'chats' }, { v: 'chat', id: 'mych' }]; Blogger.phone.render(true); });
+  await p.click('[data-act="tg.adWrite"]');
+  await p.fill('[data-adt]', 'Гарантовано на 100%!'); assert.match(await p.locator('[data-chk]').innerText(), /Немає позначки[\s\S]*Перебільшення/);
+  await p.fill('[data-adt]', 'Мурчик спробував новий корм — їсть із задоволенням. Якщо шукаєте корм для кота, зверніть увагу.'); await p.click('[data-mark]');
+  assert.match(await p.locator('[data-chk]').innerText(), /Позначено як рекламу/);
+  await p.click('[data-pub]'); assert.match(await p.locator('.tg-adl').last().innerText(), /Реклама/);
+  const m0 = (await S()).money; await adv(1440 + 30);
+  assert.ok((await S()).money > m0, 'оплата прийшла');
+  await p.click('[data-act="tg.go"][data-v="stats"]'); assert.match(await p.locator('.tg-earn').innerText(), /Зароблено на рекламі[\s\S]*грн/);
+});
+
 await step('усе зберігається після перезавантаження сторінки', async () => {
   const before = await S();
   await p.evaluate(() => Blogger.phone.saveNow());

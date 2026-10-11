@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Sim, newState, hourOf, DAY } from '../emulators/bloggeremu/js/sim.js';
-import { linkErr, tgSend, tgCreateChannel, tgPost, tgInvite, tgOpt, tgStats, tgEndSession, postCheck, realSubs, tgDeliver } from '../emulators/bloggeremu/js/tgsim.js';
+import { linkErr, tgSend, tgCreateChannel, tgPost, tgInvite, tgOpt, tgStats, tgEndSession, postCheck, realSubs, tgDeliver, brandOffer, adPrice, adCheck, tgAdPost, tgDeletePost, chLinkIn } from '../emulators/bloggeremu/js/tgsim.js';
 
 const fresh = (seed = 21) => new Sim(newState(seed));
 const at = (sim, h) => { while (hourOf(sim.s.t) !== h) sim.advance(5); };
@@ -107,4 +107,63 @@ test('події приходять самі й не всі одразу', () =>
   assert.ok(evs.length >= 3, `подій: ${evs.length}`);
   for (let i = 1; i < evs.length; i++) assert.ok(evs[i] - evs[i - 1] >= 14 * 60, 'між подіями щонайменше 14 годин');
   assert.ok(c.subs > 5);
+});
+
+// канал із живими читачами й кількома дописами
+const live = (seed = 9, subs = 40) => { const s = fresh(seed); s.register({ nick: 'kotyk.art', niche: 'pets', bio: 'Про котів', pass: 'Murchyk-2026!' }); at(s, 18); const c = tgCreateChannel(s, { title: 'Мурчик', pub: true, link: 'murchyk_cat', topic: 'pets' }); c.subs = subs; for (let i = 0; i < 3; i++) { tgPost(s, { text: GOOD + i }); s.advance(600); } return [s, c]; };
+const brandChat = s => s.s.tg.chats.find(x => x.id === s.s.tg.flags.brandChat);
+
+test('реклама від бренду: ціна від переглядів, торг, згода батьків, оплата через добу', () => {
+  const [s, c] = live();
+  const price = adPrice(c); assert.ok(price >= 60 && price < 1000, `ціна ${price}`);
+  const [, big] = live(9, 40); big.bots = 2000; big.subs += 2000; assert.ok(adPrice(big) < price * 1.5, 'боти майже не піднімають ціну');
+  brandOffer(s, c, false); const x = brandChat(s); flush(s, x);
+  assert.match(x.msgs.map(m => m.text).join(' '), /Корм «Мурчик»/);
+  tgOpt(s, x.id, 'money'); flush(s, x); tgOpt(s, x.id, 'yes'); flush(s, x);
+  assert.match(x.msgs.at(-1).text, /18/);
+  tgOpt(s, x.id, 'parents'); flush(s, x);
+  assert.ok(c.adTask && c.adTask.pay > price, `торг: ${c.adTask?.pay} > ${price}`);
+  const money = s.s.money, pay = c.adTask.pay;
+  const p = tgAdPost(s, { text: 'Мурчик спробував новий корм від «Мурчика» — їсть із задоволенням, а шерсть блищить. Якщо шукаєте корм, зверніть увагу.', mark: true });
+  assert.ok(p.adMark && !c.adTask);
+  s.advance(DAY + 10);
+  assert.equal(s.s.money, money + pay); assert.equal(c.earned, pay);
+  assert.match(x.msgs.at(-1).text, /Оплату/);
+  assert.equal(tgStats(s).earned, pay);
+});
+
+test('реклама без позначки, з перебільшеннями чи видалена раніше строку — погані наслідки', () => {
+  assert.equal(adCheck('Гарантовано на 100%!', false, {})[0][0], 'bad');
+  assert.ok(adCheck('Гарантовано на 100%!', true, {}).some(x => x[1] === 'Перебільшення'));
+  const [s, c] = live(10); brandOffer(s, c, false); const x = brandChat(s); flush(s, x); tgOpt(s, x.id, 'yes'); flush(s, x); tgOpt(s, x.id, 'parents'); flush(s, x);
+  const tr = s.s.trust, p = tgAdPost(s, { text: 'Купуйте корм, він класний і корисний для котів, рекомендую всім читачам.', mark: false });
+  s.advance(200);
+  assert.ok(s.s.trust < tr && chat(s, 'leleka').msgs.at(-1).text.includes('без позначки'));
+  tgDeletePost(s, p.id); const money = s.s.money; s.advance(DAY);
+  assert.equal(s.s.money, money, 'за видалений допис не платять'); assert.match(x.msgs.at(-1).text, /видалили/);
+});
+
+test('«чарівний чай»: відмова підвищує довіру, згода — скарги й приховування', () => {
+  const [a, ca] = live(11); brandOffer(a, ca, true); let x = brandChat(a); flush(a, x);
+  const t0 = a.s.trust; tgOpt(a, x.id, 'no'); flush(a, x); assert.ok(a.s.trust > t0 && !ca.adTask);
+  const [b, cb] = live(12); brandOffer(b, cb, true); x = brandChat(b); flush(b, x); tgOpt(b, x.id, 'yes'); flush(b, x);
+  assert.ok(cb.adTask?.bad); const p = tgAdPost(b, { text: cb.adTask.text, mark: true });
+  assert.ok(p.plan.left > 0); b.advance(300); assert.ok(p.hidden && cb.penalty > b.s.t);
+});
+
+test('строк минув — домовленість скасовано', () => {
+  const [s, c] = live(13); brandOffer(s, c, false); const x = brandChat(s); flush(s, x); tgOpt(s, x.id, 'yes'); flush(s, x); tgOpt(s, x.id, 'parents'); flush(s, x);
+  assert.ok(c.adTask); s.advance(2 * DAY + 70); assert.equal(c.adTask, null); assert.match(x.msgs.at(-1).text, /Строк минув/);
+});
+
+test('зв’язок платформ: посилання в профілі Лайкера приводить читачів, згадка @ніку — підписників у Лайкері', () => {
+  const run = linked => { const [s, c] = live(14, 20); if (linked) s.s.me.link = 'leleka.me/murchyk_cat'; for (let i = 0; i < 4; i++) { at(s, 19); s.publish({ kind: 'photo', photo: { gid: s.s.gallery[0].id }, caption: 'Мурчик спить #котики' }); s.advance(600); } return [s, c]; };
+  const [, a] = run(true), [, b] = run(false);
+  assert.ok((a.src.likeer || 0) > 0 && !(b.src.likeer), `з Лайкера: ${a.src.likeer}`);
+  assert.ok(chLinkIn({ pub: true, link: 'murchyk_cat', invite: '+x' }, 'мій канал leleka.me/murchyk_cat') && !chLinkIn({ pub: true, link: 'murchyk_cat', invite: '+x' }, 'leleka.me/murchyk_cats'));
+  const [s] = live(15, 60); const f0 = s.s.followers; at(s, 19); const p = tgPost(s, { text: GOOD + ' Більше фото — у моєму Лайкері @kotyk.art' }); s.advance(DAY);
+  assert.ok(p.plan.lk > 0 && s.s.followers > f0, `${s.s.followers} > ${f0}`);
+  // приватний канал у відкритому профілі
+  const t = fresh(16); t.register({ nick: 'kotyk.art', niche: 'pets', bio: 'x', pass: 'Murchyk-2026!' }); const pc = tgCreateChannel(t, { title: 'Свої', pub: false, topic: 'pets' });
+  t.s.me.link = 'leleka.me/' + pc.invite; t.advance(60); assert.ok(t.s.tg.flags.privLeak && chat(t, 'mych').msgs.some(m => /будь-хто/.test(m.text)));
 });
