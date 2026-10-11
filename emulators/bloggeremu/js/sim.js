@@ -30,7 +30,7 @@ export function newState(seed = Date.now() % 100000) {
     me: null, followers: 0, following: [], trust: 60, energy: 100, money: 0, strikes: 0, bots: 0,
     posts: [], stories: [], people: {}, fans: [], dms: [], mail: [], notifs: [], ideas: [], gallery: [], feed: [], days: [],
     settings: { geotag: true, priv: false, comments: 'all', dms: 'all', filter: false, limitNew: false, twoFA: false, sessions: [{ id: 's0', dev: 'Цей телефон', city: 'Київ', now: true }] },
-    flags: {}, heat: 0, hack: null, pendingAd: null, collab: null, unread: { notifs: 0 },
+    flags: {}, heat: 0, hack: null, pendingAd: null, collab: null, unread: { notifs: 0 }, drafts: [], screen: {}, breakAt: 60,
   };
 }
 
@@ -42,6 +42,8 @@ export class Sim {
     this.s = okState(state) ? state : newState();
     this.r = rng(this.s);
     this.subs = new Set();
+    // старі збереження: нові поля
+    this.s.drafts ||= []; this.s.screen ||= {}; this.s.breakAt ??= 60;
     if (!this.s.feed.length) this.refreshFeed();
     if (!this.s.gallery.length) this.seedGallery();
   }
@@ -63,7 +65,7 @@ export class Sim {
     if (day !== dayOf(t - d)) { this.newDay(day); ch = true; }
     s.energy = Math.min(100, s.energy + d * (hourOf(t) >= 22 || hourOf(t) < 7 ? 0.12 : 0.06));
     for (const p of s.posts) {
-      if (p.sched && !p.t && p.sched <= t) { this.publishNow(p); ch = true; }
+      if (p.sched && !p.t && p.sched <= t) { this.publishNow(p); this.notify('clock', 'Ваш запланований допис опубліковано', p.id); ch = true; }
       if (p.t && !p.deleted && t - p.t < 4 * DAY) ch = this.grow(p) || ch;
     }
     for (const st of s.stories) if (t - st.t < DAY) { const f = 1 - Math.exp(-(t - st.t) / 180); st.views = Math.round(st.plan * f); }
@@ -99,7 +101,7 @@ export class Sim {
   /* ── обліковий запис ── */
   register(me) {
     const s = this.s;
-    s.me = { nick: me.nick, name: me.name || '', bio: me.bio || '', niche: me.niche, avatar: me.avatar || { color: '#ff8a65', sym: 'letter' }, created: s.t, pass: me.pass || '', email: (me.nick || 'user') + '@poshta.ua' };
+    s.me = { nick: me.nick, name: me.name || '', bio: me.bio || '', niche: me.niche, avatar: me.avatar || { color: '#c62828', sym: 'letter' }, created: s.t, pass: me.pass || '', email: (me.nick || 'user') + '@poshta.ua' };
     s.settings.priv = !!me.priv; s.settings.twoFA = !!me.twoFA;
     this.mail('platform', 'Ласкаво просимо до Лайкера!', `Вітаємо, @${me.nick}! Ваш профіль створено.\n\nКілька порад для початку:\n• Додайте фото профілю й опис — так людям легше вас знайти.\n• Публікуйте те, що вам справді цікаво.\n• Не показуйте в дописах адресу, школу й документи.\n• Увімкніть двофакторний вхід у налаштуваннях безпеки.`, 'welcome');
     if (!me.twoFA) this.later(90, 'notify', 'shield', 'Захистіть профіль: увімкніть двофакторний вхід у Налаштуваннях → Безпека');
@@ -356,6 +358,23 @@ export class Sim {
     p.deleted = true; this.s.posts.splice(this.s.posts.indexOf(p), 1);
     if (p.risk?.length) this.s.flags.removedRisk = true;
     this.emit('posts');
+  }
+
+  /* ── чернетки ── */
+  saveDraft(d) {
+    const s = this.s, x = JSON.parse(JSON.stringify(d));
+    x.id ||= this.id('dr'); x.t = s.t;
+    s.drafts = [x, ...s.drafts.filter(y => y.id !== x.id)].slice(0, 12);
+    this.emit('drafts'); return x;
+  }
+  deleteDraft(id) { this.s.drafts = this.s.drafts.filter(x => x.id !== id); this.emit('drafts'); }
+
+  /* ── час у застосунку (цифрова рівновага) ── */
+  useTime(min) {
+    const s = this.s, day = dayOf(s.t);
+    s.screen[day] = (s.screen[day] || 0) + min;
+    for (const k of Object.keys(s.screen)) if (+k < day - 13) delete s.screen[k];
+    if (s.breakAt && s.screen[day] >= s.breakAt && s.flags.breakDay !== day) { s.flags.breakDay = day; this.notify('clock', `Сьогодні ви вже ${s.breakAt} хв у Лайкері. Час зробити перерву: прогулянка, вода, розминка для очей`, null); }
   }
 
   /* ── галерея й камера ── */

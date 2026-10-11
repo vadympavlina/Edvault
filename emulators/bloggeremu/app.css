@@ -523,3 +523,27 @@ button.pg:hover { filter: brightness(.93); }
 
 @media (max-width: 760px) { .panel { display: none; } .stage { padding: 0; } .phone { width: 100%; height: 100%; border-radius: 0; padding: 0; box-shadow: none; } .screen { border-radius: 0; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* чернетки, історії блогерів, час у застосунку, хештеги */
+.tag[role="button"] { cursor: pointer; border-radius: 4px; }
+.tag[role="button"]:hover { text-decoration: underline; }
+.drafts { display: flex; flex-direction: column; }
+.draft { display: flex; align-items: center; gap: 4px; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--line); }
+.dr-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-align: left; border-radius: 10px; }
+.dr-main:hover { background: #fafafa; }
+.dr-m { flex: none; width: 56px; height: 70px; border-radius: 8px; overflow: hidden; background: var(--soft); display: flex; align-items: center; justify-content: center; color: var(--ink2); }
+.dr-m .art { width: 100%; height: 100%; } .dr-m .txtcard { height: 100%; padding: 4px; aspect-ratio: auto; } .dr-m .txtcard p { font-size: 8px; }
+.dr-t { min-width: 0; display: flex; flex-direction: column; }
+.dr-t b { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dr-t small { color: var(--ink2); font-size: 12.5px; }
+.sv-cap { position: absolute; left: 16px; right: 16px; bottom: 18px; padding: 10px 14px; border-radius: 12px; background: rgba(0,0,0,.55); font-size: 15px; font-weight: 600; line-height: 1.4; text-align: center; }
+.btn.light { background: rgba(255,255,255,.16); color: #fff; } .btn.light:hover { background: rgba(255,255,255,.26); }
+.st-time { padding: 12px; border-radius: 14px; background: var(--soft); }
+.st-time p b { font-size: 20px; font-weight: 800; } .st-time p small { display: block; color: var(--ink2); font-size: 12.5px; }
+.st-bars { display: flex; gap: 8px; height: 90px; margin-top: 10px; align-items: flex-end; }
+.st-bars span { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.st-bars i { width: 100%; max-width: 26px; min-height: 3px; border-radius: 5px 5px 2px 2px; background: #c7c9d1; }
+.st-bars i.today { background: var(--accent); }
+.st-bars small { font-size: 11.5px; color: var(--ink2); }
+.note .btn.sm { flex: none; }
+.nt-ic.clock { background: #e8f0fe; color: #1a56c4; }

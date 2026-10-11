@@ -6,7 +6,7 @@ import { NICHES, nicheOf, TAGS, CREATORS, AV_COLORS, AV_SYMBOLS, SCENES, FILTERS
 import { ago, num, plural, clock, dayName, dayOf, hourOf, DAY, repliesFor, toneOf, lc } from './sim.js';
 import { openCreate } from './create.js';
 
-const NOTIF_IC = { like: 'heart', comment: 'comment', follow: 'user', dm: 'send', star: 'fire', trophy: 'trophy', shield: 'shield', alert: 'alert', info: 'info', moon: 'moon', battery: 'battery', security: 'lock' };
+const NOTIF_IC = { clock: 'clock', like: 'heart', comment: 'comment', follow: 'user', dm: 'send', star: 'fire', trophy: 'trophy', shield: 'shield', alert: 'alert', info: 'info', moon: 'moon', battery: 'battery', security: 'lock' };
 export const passScore = (p, nick = '') => { if (!p) return 0; let s = 0; if (p.length >= 8) s++; if (p.length >= 12) s++; if (/\d/.test(p) && /\p{L}/u.test(p)) s++; if (/[^\p{L}\d]/u.test(p)) s++; if (/^(12345|qwerty|йцукен|password|пароль|11111)/i.test(p) || (nick && lc(p).includes(lc(nick)))) s = 0; return Math.min(4, s); };
 const PASS_T = ['Дуже слабкий', 'Слабкий', 'Середній', 'Надійний', 'Дуже надійний'];
 export const passMeter = (p, nick) => { const s = passScore(p, nick); return `<div class="pm s${s}"><i></i><i></i><i></i><i></i></div><small class="pm-t">${p ? PASS_T[s] : 'Щонайменше 8 символів: літери, цифри й знаки'}</small>`; };
@@ -96,7 +96,7 @@ export class Likeer {
   v_feed() {
     const s = this.s, mine = s.posts.filter(p => p.t && s.t - p.t < DAY).slice(0, 2);
     const dmN = s.dms.reduce((a, d) => a + (d.blocked ? 0 : d.unread), 0);
-    const stories = `<div class="stories"><button class="story me" data-act="lk.newStory">${avatar(this.meAv(), 58)}<i class="plus">${icon('plus', 14)}</i><span>Ваша історія</span></button>${CREATORS.map(c => `<button class="story" data-act="lk.creator" data-id="${c.id}"><span class="ring">${avatar({ name: c.name, color: c.color, sym: nicheOf(c.niche).icon }, 54)}</span><span>${esc(c.nick)}</span></button>`).join('')}</div>`;
+    const stories = `<div class="stories"><button class="story me" data-act="lk.newStory">${avatar(this.meAv(), 58)}<i class="plus">${icon('plus', 14)}</i><span>Ваша історія</span></button>${CREATORS.map(c => `<button class="story" data-act="lk.cstory" data-id="${c.id}" aria-label="Історія ${esc(c.nick)}"><span class="ring">${avatar({ name: c.name, color: c.color, sym: nicheOf(c.niche).icon }, 54)}</span><span>${esc(c.nick)}</span></button>`).join('')}</div>`;
     const card = f => {
       if (f.fake) return `<article class="post"><header class="ph">${avatar({ name: 'Н', color: '#c62828' }, 34)}<div><b>novyny_shkola_24_7</b><small>${ago(s.t, f.t)}</small></div></header><div class="txtcard alarm"><p>${esc(f.caption)}</p></div>
         <div class="pa"><span>${icon('heart', 24)}</span><b>${num(f.likes)}</b><span>${icon('comment', 24)}</span><b>${num(f.comments)}</b><span class="grow"></span><button class="btn sm" data-act="lk.checkFake">${icon('search', 15)}Перевірити</button><button class="btn sm" data-act="lk.shareFake">${icon('repost', 15)}Поширити</button></div></article>`;
@@ -143,7 +143,7 @@ export class Likeer {
   v_activity() {
     const s = this.s, list = s.notifs.slice(0, 80);
     const today = list.filter(n => s.t - n.t < DAY), older = list.filter(n => s.t - n.t >= DAY);
-    const row = n => `<button class="nt" data-act="lk.notif" data-id="${n.id}"><span class="nt-ic ${n.icon}">${icon(NOTIF_IC[n.icon] || 'bell', 18, n.icon === 'like')}</span><p>${rich(n.text)}<small>${ago(s.t, n.t)}</small></p></button>`;
+    const row = n => `<button class="nt" data-act="lk.notif" data-id="${n.id}"><span class="nt-ic ${n.icon}">${icon(NOTIF_IC[n.icon] || 'bell', 18, n.icon === 'like')}</span><p>${rich(n.text, false)}<small>${ago(s.t, n.t)}</small></p></button>`;
     return `<header class="ah main"><b class="ah-t">Активність</b></header><div class="scroll" data-scroll="act">${list.length ? `${today.length ? `<h4 class="sec-h">Сьогодні</h4>${today.map(row).join('')}` : ''}${older.length ? `<h4 class="sec-h">Раніше</h4>${older.map(row).join('')}` : ''}` : `<div class="empty">${icon('heart', 40)}<b>Тут з’являться вподобання й коментарі</b><p>Опублікуйте перший допис — і люди почнуть реагувати.</p></div>`}</div>`;
   }
 
@@ -159,8 +159,14 @@ export class Likeer {
         <p class="pr-name">${esc(me.name || me.nick)}<span class="chip">${icon(nicheOf(me.niche).icon, 13)}${esc(nicheOf(me.niche).t)}</span></p>${me.bio ? `<p class="pr-bio">${rich(me.bio)}</p>` : '<p class="pr-bio muted">Додайте опис профілю — так людям легше зрозуміти, про що ваш канал.</p>'}
         <div class="pr-btns"><button class="btn" data-act="lk.go" data-v="editProfile">Редагувати профіль</button><button class="btn" data-act="lk.go" data-v="insights">Панель автора</button></div>
         <div class="meters">${meter('Довіра', s.trust, 'shield', 'Наскільки підписники вам вірять. Росте від чесності й ввічливості, падає від обману, грубості й сумнівної реклами.')}${meter('Енергія', s.energy, 'battery', 'Ваші сили. Кожен допис забирає енергію, відпочинок — повертає. Коли енергії мало, дописи виходять гіршими.')}</div></section>
-        <div class="ptabs"><button class="${tab === 'posts' ? 'on' : ''}" data-act="lk.ptab" data-t="posts" aria-label="Дописи">${icon('grid', 22)}</button><button class="${tab === 'sched' ? 'on' : ''}" data-act="lk.ptab" data-t="sched" aria-label="Заплановані">${icon('clock', 22)}${sched.length ? `<i class="cnt">${sched.length}</i>` : ''}</button></div>
-        ${grid(tab === 'posts' ? posts : sched)}</div>`;
+        <div class="ptabs" role="tablist"><button role="tab" aria-selected="${tab === 'posts'}" class="${tab === 'posts' ? 'on' : ''}" data-act="lk.ptab" data-t="posts" aria-label="Дописи">${icon('grid', 22)}</button><button role="tab" aria-selected="${tab === 'sched'}" class="${tab === 'sched' ? 'on' : ''}" data-act="lk.ptab" data-t="sched" aria-label="Заплановані">${icon('clock', 22)}${sched.length ? `<i class="cnt">${sched.length}</i>` : ''}</button><button role="tab" aria-selected="${tab === 'drafts'}" class="${tab === 'drafts' ? 'on' : ''}" data-act="lk.ptab" data-t="drafts" aria-label="Чернетки">${icon('edit', 22)}${s.drafts.length ? `<i class="cnt">${s.drafts.length}</i>` : ''}</button></div>
+        ${tab === 'drafts' ? this.drafts() : grid(tab === 'posts' ? posts : sched)}</div>`;
+  }
+  drafts() {
+    const s = this.s;
+    if (!s.drafts.length) return `<div class="empty">${icon('edit', 40)}<b>Чернеток немає</b><p>Якщо вийти з незавершеного допису, його можна зберегти тут і продовжити пізніше.</p></div>`;
+    const kind = { photo: 'Фото', video: 'Відео', text: 'Допис' };
+    return `<div class="drafts">${s.drafts.map(d => { const g = d.gid && s.gallery.find(x => x.id === d.gid); return `<div class="draft"><button class="dr-main" data-act="lk.openDraft" data-id="${d.id}"><span class="dr-m">${d.kind === 'text' ? `<span class="txtcard" style="background:${d.bg}"><p>${esc((d.txt || '').slice(0, 30))}</p></span>` : d.kind === 'video' && d.clip ? video(d.clip, { paused: true }) : g ? photo(g, { filter: filterCss(d.filter) }) : icon('image', 26)}</span><span class="dr-t"><b>${kind[d.kind] || 'Допис'}${d.caption ? ': ' + esc(d.caption.slice(0, 40)) : ''}</b><small>Збережено ${ago(s.t, d.t) === 'щойно' ? 'щойно' : ago(s.t, d.t) + ' тому'} · натисніть, щоб продовжити</small></span></button><button class="ib sm" data-act="lk.delDraft" data-id="${d.id}" aria-label="Видалити чернетку">${icon('trash', 18)}</button></div>`; }).join('')}</div>`;
   }
   v_editProfile(a) {
     const me = this.s.me, d = a.d ||= { name: me.name, bio: me.bio, niche: me.niche, color: me.avatar.color, sym: me.avatar.sym };
@@ -280,9 +286,17 @@ export class Likeer {
       <h3>${icon('shield', 18)}Безпека</h3>${row('set.twoFA', 'Двофакторний вхід', 'Під час входу з нового пристрою потрібен ще й код', st.twoFA)}
       <button class="opt link" data-act="lk.go" data-v="password"><div><b>Пароль</b><small>Змінити пароль профілю</small></div>${icon('chevron', 18)}</button>
       <button class="opt link" data-act="lk.go" data-v="sessions"><div><b>Де ви ввійшли</b><small>${st.sessions.length} ${plural(st.sessions.length, 'пристрій', 'пристрої', 'пристроїв')}${st.sessions.some(x => x.bad) ? ' · є незнайомий!' : ''}</small></div>${icon('chevron', 18)}</button>
+      <h3>${icon('clock', 18)}Час у Лайкері</h3>${this.screenTime()}
+      <label class="opt"><div><b>Нагадувати про перерву</b><small>Сповіщення, коли за день набереться стільки часу</small></div><select class="in sel" data-sel="breakAt" aria-label="Нагадувати про перерву">${[[0, 'Ніколи'], [30, 'Через 30 хв'], [60, 'Через 1 год'], [90, 'Через 1,5 год'], [120, 'Через 2 год']].map(([v, l]) => `<option value="${v}"${this.s.breakAt === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
       <h3>${icon('camera', 18)}Камера</h3>${row('set.geotag', 'Зберігати місце у фото', 'Телефон записує у фото, де його зроблено. Хто отримає фото, зможе дізнатися місце', st.geotag)}
       <h3>${icon('user', 18)}Профіль</h3><button class="opt link" data-act="lk.go" data-v="editProfile"><div><b>Редагувати профіль</b><small>Ім’я, опис, фото, тема каналу</small></div>${icon('chevron', 18)}</button>
       <button class="opt link danger" data-act="lk.reset"><div><b>Видалити профіль і почати заново</b><small>Усі дописи, підписники й повідомлення зникнуть</small></div>${icon('trash', 18)}</button></div>`;
+  }
+  screenTime() {
+    const s = this.s, today = dayOf(s.t), days = Array.from({ length: 7 }, (_, i) => today - 6 + i), vals = days.map(d => s.screen[d] || 0), max = Math.max(60, ...vals);
+    const fmt = m => m >= 60 ? `${Math.floor(m / 60)} год ${Math.round(m % 60)} хв` : `${Math.round(m)} хв`;
+    const avg = vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.filter(Boolean).length || 1);
+    return `<div class="st-time"><p><b>${fmt(vals[6])}</b> сьогодні<small>У середньому ${fmt(avg)} на день</small></p><div class="st-bars">${days.map((d, i) => `<span><i style="height:${Math.round(vals[i] / max * 100)}%"${i === 6 ? ' class="today"' : ''}></i><small>${['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'][((d % 7) + 7) % 7]}</small></span>`).join('')}</div></div>`;
   }
   v_password(a) {
     return `${this.head('Пароль')}<div class="scroll pad"><label class="fl"><span>Поточний пароль</span><input class="in" type="password" data-keep="op" autocomplete="current-password"></label>
@@ -303,6 +317,13 @@ export class Likeer {
       ${st.poll ? (() => { const tot = st.votes[0] + st.votes[1]; return `<div class="poll"><b>${esc(st.poll.q)}</b>${st.poll.a.map((t, j) => { const pc = tot ? Math.round(st.votes[j] / tot * 100) : 0; return `<div class="poll-a"><i style="width:${tot >= 3 ? pc : 0}%"></i><span>${esc(t)}</span><b>${tot >= 3 ? pc + '%' : ''}</b></div>`; }).join('')}<small class="poll-n">${tot >= 3 ? `${tot} ${plural(tot, 'голос', 'голоси', 'голосів')}` : 'Голоси ще збираються…'}</small></div>`; })() : ''}
       ${list.length > 1 ? `<button class="sv-prev" data-act="lk.storyNav" data-d="-1" aria-label="Попередня"></button><button class="sv-next" data-act="lk.storyNav" data-d="1" aria-label="Наступна"></button>` : ''}</div>
       <footer class="sv-f">${icon('eye', 18)}<span>${num(st.views)} ${plural(st.views, 'перегляд', 'перегляди', 'переглядів')}</span></footer></div>`;
+  }
+  v_cstory(a) {
+    const s = this.s, c = CREATORS.find(x => x.id === a.id), f = s.feed.find(x => x.cid === c.id);
+    const scene = f?.scene || Object.keys(SCENES).find(k => SCENES[k].topic === c.niche && !SCENES[k].risk);
+    return `<div class="story-view"><div class="sv-bars"><i class="on"></i></div><header class="sv-h">${avatar({ name: c.name, color: c.color, sym: nicheOf(c.niche).icon }, 32)}<b>${esc(c.nick)}</b><small>${1 + (c.followers % 9)} год</small><span class="grow"></span><button class="ib light" data-act="lk.back" aria-label="Закрити">${icon('close', 24)}</button></header>
+      <div class="sv-media">${photo({ scene, v: (f?.v || 7) / 1000 })}<p class="sv-cap">${esc(f ? f.caption.replace(/#\S+/g, '').trim() : 'Гарного дня!')}</p></div>
+      <footer class="sv-f"><button class="btn sm light" data-act="lk.creator" data-id="${c.id}">Переглянути профіль</button></footer></div>`;
   }
   v_creator(a) {
     const s = this.s, c = CREATORS.find(x => x.id === a.id), f = s.feed.filter(x => x.cid === c.id);
@@ -333,7 +354,11 @@ export class Likeer {
       newStory: () => openCreate(this.ph, { kind: 'story' }),
       viewStory: () => this.go('story', { i: 0 }),
       storyNav: () => { top.i = Math.max(0, (top.i || 0) + +el.dataset.d); this.ph.render(); },
-      creator: () => this.go('creator', { id: el.dataset.id }),
+      creator: () => { if (top.v === 'cstory') this.stack.pop(); this.go('creator', { id: el.dataset.id }); },
+      cstory: () => this.go('cstory', { id: el.dataset.id }),
+      openDraft: () => { const d = s.drafts.find(x => x.id === el.dataset.id); if (d) openCreate(this.ph, { draft: d }); },
+      delDraft: async () => { if (await confirm('Видалити чернетку?', 'Видалити', true)) { sim.deleteDraft(el.dataset.id); this.ph.render(); } },
+      tag: () => this.tagInfo(el.dataset.t),
       follow: () => { sim.follow(el.dataset.id); },
       likeFeed: () => { if (el.dataset.dbl && e.detail < 2) return; sim.likeFeed(el.dataset.id); },
       feedComments: () => this.feedComments(el.dataset.id),
@@ -387,8 +412,20 @@ export class Likeer {
     if (k === 'priv') toast(st.priv ? 'Профіль закрито: нові люди бачать лише ім’я й фото' : 'Профіль відкрито');
     this.ph.render(); this.ph.save();
   }
-  select(key, v) { this.sim.setSetting(key, v); this.ph.save(); toast('Збережено'); }
+  select(key, v) { if (key === 'breakAt') { this.s.breakAt = +v; this.s.flags.breakDay = null; } else this.sim.setSetting(key, v); this.ph.save(); toast('Збережено'); }
 
+  tagInfo(raw) {
+    const t = lc(raw), s = this.s;
+    if (t.startsWith('@')) { const c = CREATORS.find(x => x.nick === t.slice(1)); if (c) this.go('creator', { id: c.id }); else if (t.slice(1) === s.me?.nick) this.tab('profile'); return; }
+    const k = t.slice(1), d = TAGS[k], tr = this.sim.trend, mine = s.posts.filter(p => p.t && p.tags?.includes(k)).length;
+    const size = d ? d.size * 4200 : tr.tag === k ? 12000 : 40 + k.length * 7;
+    sheet({ title: '#' + k, html: `<div class="check"><p>${icon('grid', 18)}<span><b>${num(size)}</b> ${plural(size, 'допис', 'дописи', 'дописів')} з цим хештегом</span></p>
+      <p>${icon('star', 18)}<span>Тема: ${d?.topic ? nicheOf(d.topic).t : tr.tag === k ? tr.topics.map(x => nicheOf(x).t).join(', ') : 'різне'}</span></p>
+      ${tr.tag === k ? `<p>${icon('fire', 18)}<span><b>Тренд дня</b> — дописи на тему тренду отримують більше показів</span></p>` : ''}
+      ${d?.spam ? `<p>${icon('alert', 18)}<span>Хештег-спам: його ставлять усі підряд, тож він не приводить зацікавлених людей</span></p>` : ''}
+      <p>${icon('user', 18)}<span>Ваших дописів із ним: ${mine}</span></p></div>
+      <p class="hint">${icon('info', 16)}<span>${size > 20000 ? 'Великий хештег: багато глядачів, але ваш допис швидко загубиться серед інших.' : 'Невеликий хештег: глядачів менше, зате це саме ті, кому цікава ця тема.'}</span></p>` });
+  }
   feedComments(fid) {
     const s = this.s, f = s.feed.find(x => x.id === fid); if (!f) return;
     const c = CREATORS.find(x => x.id === f.cid), seed = [...fid].reduce((a, ch) => a + ch.charCodeAt(0), 0);

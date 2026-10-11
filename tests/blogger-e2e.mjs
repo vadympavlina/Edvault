@@ -113,7 +113,7 @@ await step('відео в дописі грає без перезапуску, �
   assert.equal(await p.inputValue('[data-in="cr.caption"]'), 'Перевірка #котики');
   await adv(30); await p.waitForTimeout(100);
   assert.equal(await p.getAttribute('.pre', 'open'), '');
-  await p.click('[data-act="cr.back"]'); await p.click('[data-act="cr.back"]'); await p.click('[data-act="cr.back"]'); await p.click('.cf [data-v="1"]');
+  await p.click('[data-act="cr.back"]'); await p.click('[data-act="cr.back"]'); await p.click('[data-act="cr.back"]'); await p.click('.act:has-text("Не зберігати")');
 });
 
 await step('коментарі під дописами інших блогерів відкриваються', async () => {
@@ -121,6 +121,33 @@ await step('коментарі під дописами інших блогері
   await p.click('[data-act="lk.feedComments"] >> nth=0');
   assert.ok(await p.locator('.sheet .cm').count() >= 3);
   await p.click('[data-sh-close]');
+});
+
+await step('чернетки, ідея → допис, хештег і історія блогера', async () => {
+  await p.click('[data-act="lk.tab"][data-v="feed"]');
+  await p.click('[data-act="lk.create"]'); await p.click('.pick-grid [data-act="cr.pick"] >> nth=1'); await p.click('[data-act="cr.next"]'); await p.click('[data-act="cr.next"]');
+  await p.fill('[data-in="cr.caption"]', 'Чернетка про піцу');
+  for (let i = 0; i < 3; i++) await p.click('[data-act="cr.back"]');
+  await p.click('.act:has-text("Зберегти чернетку")');
+  assert.equal((await S()).drafts.length, 1);
+  await p.click('[data-act="lk.tab"][data-v="profile"]'); await p.click('[data-act="lk.ptab"][data-t="drafts"]');
+  await p.click('[data-act="lk.openDraft"]'); await p.click('[data-act="cr.next"]');
+  assert.equal(await p.inputValue('[data-in="cr.caption"]'), 'Чернетка про піцу');
+  await p.click('[data-act="cr.publish"]');
+  assert.equal((await S()).drafts.length, 0, 'опублікована чернетка зникає');
+  await p.evaluate(() => Blogger.sim.addIdea('Покажи, чим годуєш улюбленця', 'comment'));
+  await home(); await p.click('[data-app="ideas"]'); await p.click('[data-act="ph.ideaPost"] >> nth=0');
+  await p.click('.pick-grid [data-act="cr.pick"] >> nth=0'); await p.click('[data-act="cr.next"]'); await p.click('[data-act="cr.next"]');
+  assert.match(await p.locator('.hint >> nth=0').innerText(), /Покажи, чим годуєш/);
+  await p.fill('[data-in="cr.caption"]', 'Обід Мурчика #котики'); await p.click('[data-act="cr.publish"]');
+  assert.ok((await S()).ideas.find(i => /годуєш/.test(i.text)).done);
+  await p.click('.pc .tag >> nth=0');
+  assert.match(await p.locator('.sheet').innerText(), /#котики[\s\S]*дописів з цим хештегом/);
+  await p.click('[data-sh-close]');
+  await p.click('[data-act="lk.back"]'); await p.click('[data-act="lk.tab"][data-v="feed"]');
+  await p.click('[data-act="lk.cstory"] >> nth=0');
+  assert.ok(await p.locator('.story-view .sv-cap').isVisible());
+  await p.click('[data-act="lk.back"]');
 });
 
 await step('камера записує місце, галерея дозволяє його видалити', async () => {

@@ -6,7 +6,8 @@ export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 export function h(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
 // Текст із хештегами й згадками: #тег і @нік підсвічуються
-export const rich = s => esc(s).replace(/(^|\s)([#@][\p{L}\p{N}_.]+)/gu, '$1<span class="tag">$2</span>').replace(/\n/g, '<br>');
+// active=false — лише підсвітити (усередині кнопок, де окреме натискання заважало б)
+export const rich = (s, active = true) => esc(s).replace(/(^|\s)([#@][\p{L}\p{N}_.]*[\p{L}\p{N}_])/gu, active ? '$1<span class="tag" role="button" tabindex="0" data-act="lk.tag" data-t="$2">$2</span>' : '$1<span class="tag">$2</span>').replace(/\n/g, '<br>');
 
 let host = null;
 export const setHost = el => { host = el; };

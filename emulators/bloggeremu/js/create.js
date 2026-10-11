@@ -1,7 +1,7 @@
 // Симулятор блогера · створення допису: вибір фото/відео, редактор, опис і хештеги, публікація або історія.
 import { icon } from './icons.js';
 import { photo, video } from './art.js';
-import { esc, toast, sw, confirm } from './ui.js';
+import { esc, toast, sw, confirm, actions } from './ui.js';
 import { SCENES, CLIPS, MUSIC, FILTERS, STICKERS, TAGS, BRANDS, CREATORS, nicheOf } from './data.js';
 import { clock, hourOf, dayOf, DAY, lc, num } from './sim.js';
 
@@ -15,6 +15,10 @@ export function openCreate(ph, o = {}) {
   if (!ph.sim.s.me) return;
   const d = { kind: o.kind || 'photo', step: o.gid ? 'edit' : 'pick', gid: o.gid || null, filter: 'none', text: '', textY: 'bottom', sticker: '', crop: '45', tool: 'filter', clip: o.clip || null, start: 0, end: null, title: '', music: 'none', caption: '', place: '', commentsOff: false, ad: '', adMarked: true, collab: false, when: 'now', sched: '', bg: BGS[0], txt: '', poll: false, pq: '', pa: ['', ''], story: 'photo' };
   if (o.gid) { const g = ph.sim.s.gallery.find(x => x.id === o.gid); if (g?.type === 'video') { d.kind = 'video'; d.clip = g.clip; d.gid = g.id; } }
+  // продовжити чернетку
+  if (o.draft) { Object.assign(d, JSON.parse(JSON.stringify(o.draft)), { draftId: o.draft.id }); delete d.id; delete d.t; }
+  // допис за ідеєю із застосунку «Ідеї»
+  if (o.idea) { d.idea = o.idea.text; d.ideaId = o.idea.id; }
   lk.stack = lk.stack.filter(x => x.v !== 'create');
   lk.stack.push({ v: 'create', d }); ph.render(true);
 }
@@ -76,7 +80,7 @@ export function renderCreate(lk, top) {
   const collab = s.collab && CREATORS.find(c => c.id === s.collab);
   const slots = schedSlots(s.t);
   return `<header class="ah">${back}<b class="ah-t">${d.kind === 'text' ? 'Новий допис' : 'Опис'}</b></header>
-    <div class="scroll pad" data-scroll="det"><div class="det-top"><span class="det-m">${d.kind === 'text' ? `<div class="txtcard" style="background:${d.bg}"><p>${esc(d.txt.slice(0, 60))}</p></div>` : prev(s, d)}</span>
+    <div class="scroll pad" data-scroll="det">${d.idea ? `<p class="hint">${icon('idea', 16)}<span>Ідея: <b>${esc(d.idea)}</b></span></p>` : ''}<div class="det-top"><span class="det-m">${d.kind === 'text' ? `<div class="txtcard" style="background:${d.bg}"><p>${esc(d.txt.slice(0, 60))}</p></div>` : prev(s, d)}</span>
       <textarea class="in" data-keep="cr.caption" data-in="cr.caption" rows="5" maxlength="2200" placeholder="${d.kind === 'text' ? 'Додайте хештеги (необов’язково)' : 'Напишіть опис… Розкажіть, що на фото, або поставте питання підписникам'}" aria-label="Опис">${esc(d.caption)}</textarea></div>
     <p class="muted sm right" data-cnt>${capLen} символів · ${tagN} ${tagN === 1 ? 'хештег' : tagN >= 2 && tagN <= 4 ? 'хештеги' : 'хештегів'}</p>
     <p class="lbl">Хештеги</p><div class="chips wrap" data-tags>${tags}</div>
@@ -113,7 +117,15 @@ export function createAct(lk, name, el) {
     back: async () => {
       if (d.step === 'details') d.step = d.kind === 'text' ? 'pick' : 'edit';
       else if (d.step === 'edit') d.step = 'pick';
-      else { if ((d.gid || d.txt) && !(await confirm('Скасувати допис?', 'Скасувати допис', true, 'Зміни не збережуться.'))) return; lk.stack.pop(); }
+      else {
+        if (d.gid || d.txt.trim() || d.caption.trim()) {
+          // як у справжніх застосунках: зберегти чернетку або видалити
+          actions([{ t: 'Зберегти чернетку', icon: 'edit', on: () => { const x = sim.saveDraft({ ...d, id: d.draftId, step: d.kind !== 'text' && d.gid ? 'edit' : 'pick' }); d.draftId = x.id; lk.stack.pop(); ph.render(true); toast('Чернетку збережено: Профіль → Чернетки'); } },
+            { t: d.draftId ? 'Видалити чернетку' : 'Не зберігати', icon: 'trash', danger: true, on: () => { if (d.draftId) sim.deleteDraft(d.draftId); lk.stack.pop(); ph.render(true); } }], 'Вийти з допису?');
+          return;
+        }
+        lk.stack.pop();
+      }
       top.play = false; ph.render(true);
     },
     kind: () => { d.kind = el.dataset.k; d.gid = null; d.clip = null; ph.render(true); },
@@ -140,6 +152,8 @@ export function createAct(lk, name, el) {
       const p = sim.publish(draft);
       if (d.kind === 'text') p.bg = d.bg;
       if (s.settings.comments === 'off') p.commentsOff = true;
+      if (d.draftId) sim.deleteDraft(d.draftId);
+      if (d.ideaId) { const i = s.ideas.find(x => x.id === d.ideaId); if (i) i.done = true; }
       lk.stack = [{ v: 'profile', tab: p.t ? 'posts' : 'sched' }];
       if (p.t) lk.stack.push({ v: 'post', id: p.id });
       ph.render(true); ph.save();

@@ -124,7 +124,7 @@ class Phone {
     const s = sim.s, src = { comment: 'з коментаря', me: '', trend: 'тренд' };
     return `<div class="notes"><header class="ah"><button class="ib" data-act="ph.home" aria-label="Додому">${icon('back', 24)}</button><b class="ah-t">Ідеї</b></header>
       <div class="cmp-row pad"><input class="in" data-keep="idea" placeholder="Нова ідея для допису…" maxlength="120" aria-label="Нова ідея"><button class="btn primary" data-act="ph.ideaAdd" aria-label="Додати ідею">${icon('plus', 18)}</button></div>
-      <div class="scroll" data-scroll="ideas">${s.ideas.length ? s.ideas.map(i => `<div class="note${i.done ? ' done' : ''}"><button class="chk${i.done ? ' on' : ''}" data-act="ph.ideaDone" data-id="${i.id}" aria-label="${i.done ? 'Позначити як незроблену' : 'Позначити як зроблену'}">${i.done ? icon('check', 14) : ''}</button><p>${esc(i.text)}${src[i.src] ? `<small>${src[i.src]}</small>` : ''}</p><button class="ib sm" data-act="ph.ideaDel" data-id="${i.id}" aria-label="Видалити">${icon('trash', 18)}</button></div>`).join('')
+      <div class="scroll" data-scroll="ideas">${s.ideas.length ? s.ideas.map(i => `<div class="note${i.done ? ' done' : ''}"><button class="chk${i.done ? ' on' : ''}" data-act="ph.ideaDone" data-id="${i.id}" aria-label="${i.done ? 'Позначити як незроблену' : 'Позначити як зроблену'}">${i.done ? icon('check', 14) : ''}</button><p>${esc(i.text)}${src[i.src] ? `<small>${src[i.src]}</small>` : ''}</p>${i.done ? '' : `<button class="btn sm" data-act="ph.ideaPost" data-id="${i.id}">${icon('plusSq', 15)}Допис</button>`}<button class="ib sm" data-act="ph.ideaDel" data-id="${i.id}" aria-label="Видалити">${icon('trash', 18)}</button></div>`).join('')
         : `<div class="empty">${icon('idea', 40)}<b>Записуйте ідеї для дописів</b><p>Сюди також потрапляють прохання підписників, на які ви відповіли «Класна ідея», і ідеї, збережені в розділі «Тренди й ідеї».</p></div>`}</div></div>`;
   }
 
@@ -148,6 +148,7 @@ class Phone {
       <p>Це навчальний телефон із соцмережею <b>Лайкер</b>. Усі люди, коментарі й повідомлення вигадані — сміливо пробуйте.</p>
       ${q('Як працює час?', 'Час на телефоні йде швидше, ніж насправді. Швидкість змінюється на панелі праворуч. Вподобання й коментарі набираються поступово — особливо в перші години після публікації.')}
       ${q('Від чого залежать перегляди?', 'Від якості фото чи відео, опису, хештегів, часу публікації, теми каналу й довіри до вас. Після публікації відкрийте «Статистика допису» → «Що вплинуло на результат».')}
+      ${q('Що показує батарея вгорі?', 'Заряд батареї — це ваша енергія блогера. Кожен допис забирає сили, а відпочинок (особливо вночі) їх повертає. Коли енергії мало, дописи виходять гіршими.')}
       ${q('Що таке довіра?', 'Наскільки підписники вам вірять. Росте від чесності й ввічливих відповідей, падає від грубості, обману, неправдивої або непозначеної реклами й купівлі підписників.')}
       ${q('Що робити з образливими коментарями?', 'Не відповідати грубістю. Можна приховати коментар, заблокувати автора або поскаржитися. У налаштуваннях є фільтр образливих коментарів.')}
       ${q('Якщо пише незнайомець?', 'Не називайте школу, адресу, вік і не надсилайте фото. Заблокуйте й розкажіть дорослим. Можна дозволити повідомлення лише від підписників.')}
@@ -191,6 +192,7 @@ class Phone {
       if (el.dataset.crsel) createSelect(this.apps.likeer, el.dataset.crsel, el.value);
     });
     root.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button' && e.target.dataset.act) { e.preventDefault(); e.target.click(); return; }
       if (e.key !== 'Enter' || e.shiftKey || e.target.tagName === 'TEXTAREA') return;
       const k = e.target.dataset.keep || '';
       const btn = k === 'cm' ? '[data-act="lk.sendReply"]' : k.startsWith('dm-') ? '[data-act="lk.dmSend"]' : k === 'idea' ? '[data-act="ph.ideaAdd"]' : k === 'ph-pass' ? '[data-act="ph.phishGo"]' : null;
@@ -223,6 +225,7 @@ class Phone {
       galDel: async () => { if (await confirm('Видалити з галереї?', 'Видалити', true)) { sim.deletePhoto(el.dataset.id); a.id = null; this.render(); } },
       ideaAdd: () => { const inp = this.root.querySelector('[data-keep="idea"]'), t = inp.value.trim(); if (!t) return; inp.value = ''; sim.addIdea(t); this.render(); },
       ideaDone: () => { const i = s.ideas.find(x => x.id === el.dataset.id); if (i) { i.done = !i.done; this.render(); } },
+      ideaPost: () => { if (!s.me) { this.open('likeer'); toast('Спершу створіть профіль'); return; } const i = s.ideas.find(x => x.id === el.dataset.id); if (i) openCreate(this, { idea: i }); },
       ideaDel: () => { s.ideas = s.ideas.filter(x => x.id !== el.dataset.id); this.render(); },
       mailOpen: () => { a.id = el.dataset.id; this.render(true); },
       mailBack: () => { a.id = null; this.render(); },
@@ -273,7 +276,7 @@ function jump(k) {
   sim.advance(Math.max(5, Math.round(target)));
   phone.save();
 }
-setInterval(() => { if (!ui.speed || document.hidden) return; sim.advance(ui.speed); }, 1000);
+setInterval(() => { if (!ui.speed || document.hidden) return; if (phone.app === 'likeer' && sim.s.me) sim.useTime(ui.speed); sim.advance(ui.speed); }, 1000);
 addEventListener('pagehide', () => phone.saveNow());
 document.addEventListener('visibilitychange', () => { if (document.hidden) phone.saveNow(); });
 
