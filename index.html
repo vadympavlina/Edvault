@@ -19,8 +19,9 @@
        Рельєф гір будується променем (raymarching): ерозійні схили, ліс, сніг, тіні від гір і хмар.
        Озеро з фізичним віддзеркаленням, хвилями й колами на воді; хмари в перспективі; туман над водою вранці;
        зорі, Чумацький Шлях, місяць, падаючі зірки. Другий прохід — промені світла від сонця чи місяця.
-       Паралакс — справжній рух камери за мишкою чи нахилом телефона. Клік — «перемотка» доби.
-       Для перевірки: /?t=19.5 (година), /?q=.5 (роздільна здатність). */
+       Локацією можна трохи мандрувати: тягнути — роззирнутися, колесо / W S / стрілки / два пальці — летіти,
+       подвійний клік — назад на старт. Камера не заходить у гори й воду.
+       Для перевірки: /?t=19.5 (година), /?q=.5 (роздільна здатність), /?cam=x,y,z,поворот,нахил. */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; }
     body { font-family: 'Inter', system-ui, sans-serif; overflow: hidden; color: #fff; -webkit-tap-highlight-color: transparent;
@@ -50,13 +51,13 @@
     @keyframes rise { to { opacity: 1; transform: none; filter: none; } }
     .greet { font-size: clamp(15px, 1.9vw, 21px); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: 0; animation: fade 1.4s ease-out 1.3s forwards; text-shadow: 0 2px 16px rgba(0,0,20,.5); }
     @keyframes fade { to { opacity: .9; } }
-    .lapse { position: fixed; left: 50%; bottom: 24px; translate: -50% 0; z-index: 6; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;
+    .hint { position: fixed; left: 50%; bottom: 24px; translate: -50% 0; z-index: 6; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; text-align: center; width: max-content; max-width: calc(100vw - 32px);
       background: rgba(8,12,30,.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.22);
-      opacity: 0; transition: opacity .4s; pointer-events: none; font-variant-numeric: tabular-nums; }
-    .lapse.on { opacity: 1; }
-    .hit { position: fixed; width: 90px; height: 90px; translate: -50% -50%; border-radius: 50%; border: 0; background: transparent; cursor: pointer; z-index: 4; }
-    .hit:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 4px; }
-
+      opacity: 0; transition: opacity .6s; pointer-events: none; }
+    .hint.on { opacity: .92; }
+    #gl { cursor: grab; touch-action: none; }
+    #gl.drag { cursor: grabbing; }
+    @media (max-width: 480px) { .hint { font-size: 12.5px; padding: 7px 12px; } }
     @media (max-aspect-ratio: 3/4) { .hero { top: 22vh; } }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
@@ -82,12 +83,11 @@
   <canvas id="gl" aria-hidden="true"></canvas>
   <div class="fx" id="birds" aria-hidden="true"></div>
   <div class="fx" id="ffs" aria-hidden="true"></div>
-  <button class="hit" id="hit" aria-label="Перемотати добу"></button>
   <main class="hero" id="hero">
     <h1 class="name" aria-label="Edvault"></h1>
     <p class="greet" id="greet"></p>
   </main>
-  <div class="lapse" id="lapse" role="status"></div>
+  <div class="hint" id="hint"></div>
 
   <script id="fs" type="x-shader/x-fragment">
 precision highp float;
@@ -99,7 +99,6 @@ uniform vec3 CO;     // камера
 uniform vec3 CT;     // куди дивиться камера
 uniform float FL;    // фокусна відстань
 uniform float MIST;  // ранковий туман 0..1
-uniform vec2 M;      // паралакс −1..1
 
 #define PI 3.14159265
 const float CLOUD = 14.;   // висота шару хмар
@@ -133,11 +132,12 @@ float terrain(vec2 p, int oct) {
   float w = 3.4 + .34 * max(p.y, 0.);
   float side = smoothstep(w * .5, w * 1.45, abs(p.x - 1.4 * sin(p.y * .09 + .6)));
   float back = smoothstep(17., 29., p.y);
-  float mask = max(side, back);
+  float front = smoothstep(7., 16., -p.y);    // позаду камери долину теж замикають гори
+  float mask = max(max(side, back), front);
   float amp = mix(3.6, 13., smoothstep(8., 40., p.y));
   float h = mix(-.4 + .3 * m, amp * m * m * 1.7 + .04, mask);
   // ліс: дрібні верхівки ялин на нижніх схилах
-  if (oct > 6) { float f = smoothstep(.0, .12, h) * smoothstep(1.9, 1.3, h); if (f > 0.) h += f * .035 * pow(noise(p * 34.), 1.6); }
+  if (oct > 6) { float f = smoothstep(.0, .12, h) * smoothstep(1.9, 1.3, h); if (f > 0.) h += f * (.035 * pow(noise(p * 34.), 1.6) + .012 * noise(p * 110.)); }
   return h;
 }
 
@@ -289,10 +289,10 @@ vec3 atmos(vec3 col, vec3 ro, vec3 rd, float t, Light L) {
 vec3 shadeT(vec3 p, vec3 n, vec3 rd, float t, Light L, bool full) {
   float h = p.y;
   vec3 rock = mix(vec3(.2, .19, .18), vec3(.4, .36, .32), fbm3(p.xz * 5. + p.y * 3.));
-  rock *= .82 + .18 * sin(p.y * 34. + noise(p.xz * 3.) * 7.);
+  rock *= .93 + .07 * sin(p.y * 34. + noise(p.xz * 3.) * 7.);
   float tl = 1.55 + .6 * noise(p.xz * .45);
-  float forest = smoothstep(tl, tl - .35, h) * smoothstep(.42, .62, n.y) * smoothstep(.0, .05, h);
-  vec3 fcol = vec3(.04, .07, .04) * (.7 + .5 * noise(p.xz * 26.));
+  float forest = smoothstep(tl, tl - .35, h) * smoothstep(.18, .4, n.y) * smoothstep(.0, .05, h);
+  vec3 fcol = vec3(.04, .07, .04) * (.7 + .5 * noise(p.xz * 26.)) * (.55 + .9 * noise(p.xz * 140.) * smoothstep(6., 1., t));
   vec3 alb = mix(rock, fcol, forest);
   float shore = smoothstep(.06, .0, h) * smoothstep(.5, .8, n.y);
   alb = mix(alb, vec3(.34, .3, .25) * (.8 + .4 * noise(p.xz * 40.)), shore);
@@ -331,28 +331,9 @@ vec3 waterN(vec2 p, float t) {
   return normalize(vec3(-g.x, 1., -g.y));
 }
 
-// ── передній план: ялинки по краях (силуети) ──
-float shoreY(float X, float A) { float e = smoothstep(.3 * A, .5 * A, abs(X)); return e * (.07 + .05 * fbm3(vec2(X * 2.5, 4.))) - .01; }
-float pines(vec2 uv, float A, float off, float scale, float seed, float hmax) {
-  float X = (uv.x - .5) * A - M.x * off;
-  float tx = X * scale, cell = floor(tx), lx = fract(tx) - .5;
-  float cx = (cell + .5) / scale;
-  float edge = smoothstep(.33 * A, .55 * A, abs(cx));
-  float r = h21(vec2(cell, seed));
-  float H = (.35 + .65 * r) * hmax * edge * step(.25, h21(vec2(cell, seed + 5.)));
-  if (uv.y < shoreY(X, A)) return 1.;
-  float base = shoreY(cx, A);
-  float y = (uv.y - base) / max(H, 1e-3);
-  if (H < .01 || y > 1.) return 0.;
-  float tier = fract(y * (4. + 2. * r));
-  float w = (1. - y) * (.36 + .2 * (1. - tier)) * (.8 + .2 * r) + (noise(vec2(y * 40., cell * 3.)) - .5) * .05 + (noise(vec2(y * 60., cell * 7. + sign(lx) * 3.)) - .5) * .09 * (1. - y);
-  return step(abs(lx), w) + step(abs(lx), .025) * step(y, .1);
-}
-
 vec3 aces(vec3 x) { return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), 0., 1.); }
 
 void main() {
-  vec2 uv = gl_FragCoord.xy / R;
   vec2 sp = (2. * gl_FragCoord.xy - R) / R.y;
   vec3 ro = CO, ww = normalize(CT - CO), uu = normalize(cross(vec3(0., 1., 0.), ww)), vv = cross(ww, uu);
   vec3 rd = normalize(sp.x * uu + sp.y * vv + FL * ww);
@@ -392,15 +373,6 @@ void main() {
     // маска для променів: яскраве небо біля сонця (чи місяця), не закрите хмарами
     mask = (1. - c.a * .9) * (pow(max(dot(rd, SD), 0.), 4.) * L.sunVis + .5 * pow(max(dot(rd, MD), 0.), 20.) * L.night * smoothstep(-.02, .05, MD.y));
   }
-
-  // ялинки на передньому плані
-  float A = R.x / R.y;
-  float p1 = 0., p2 = 0.;
-  if (A > 1.) { p1 = clamp(pines(uv, A, .14, 9., 2., .2), 0., 1.); p2 = clamp(pines(uv + vec2(0., .02), A, .24, 5., 9., .42), 0., 1.); }
-  vec3 pc1 = mix(vec3(.012, .024, .03), L.hor0 * .5, .3) * (.45 + .55 * L.day) + L.sunCol * L.dusk * .015;
-  col = mix(col, pc1, p1);
-  col = mix(col, vec3(.005, .009, .011) + L.sunCol * L.dusk * .012 + vec3(.01, .015, .03) * L.night, p2);
-  mask *= 1. - max(p1, p2);
 
   col *= mix(1.25, 1.1, L.night);
   col = aces(col);
@@ -443,17 +415,13 @@ void main() {
     /* ── текст ── */
     const nameEl = document.querySelector('.name');
     [...'Edvault'].forEach((ch, i) => { const s = document.createElement('span'); s.textContent = ch; s.setAttribute('aria-hidden', 'true'); s.style.animationDelay = .4 + i * .09 + 's'; nameEl.appendChild(s); });
-    const greetEl = document.getElementById('greet'), hero = document.getElementById('hero'), lapseEl = document.getElementById('lapse'), hit = document.getElementById('hit');
+    const greetEl = document.getElementById('greet'), hero = document.getElementById('hero'), hintEl = document.getElementById('hint');
     const greeting = t => t < 4.5 || t >= 22.5 ? 'Доброї ночі' : t < 11 ? 'Добрий ранок' : t < 17.5 ? 'Добрий день' : 'Добрий вечір';
 
     /* ── час ── */
     const q = parseFloat(params.get('t'));
     const realT = () => { if (!isNaN(q)) return ((q % 24) + 24) % 24; const d = new Date(); return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; };
     const ease = k => k * k * (3 - 2 * k), smooth = (x, a, b) => ease(Math.max(0, Math.min(1, (x - a) / (b - a))));
-    let lapse = null; const LAPSE = 18000;
-    const nowT = () => { if (!lapse) return realT(); const k = (performance.now() - lapse.start) / LAPSE; if (k >= 1) { lapse = null; lapseEl.classList.remove('on'); return realT(); } return (lapse.from + 24 * ease(k)) % 24; };
-    const startLapse = () => { if (lapse || still) return; lapse = { from: realT(), start: performance.now() }; lapseEl.classList.add('on'); };
-    hit.addEventListener('click', startLapse); canvas.addEventListener('click', startLapse);
 
     /* ── сонце й місяць: напрями на небі (схід ліворуч, захід праворуч) ── */
     const dir = (az, el) => [Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)];
@@ -487,17 +455,91 @@ void main() {
       }
     };
 
-    /* ── паралакс ── */
-    let tx = 0, ty = 0, mx = 0, my = 0;
-    addEventListener('pointermove', e => { tx = e.clientX / innerWidth * 2 - 1; ty = e.clientY / innerHeight * 2 - 1; }, { passive: true });
-    document.addEventListener('pointerleave', () => { tx = ty = 0; });
-    addEventListener('deviceorientation', e => { if (e.gamma == null) return; tx = Math.max(-1, Math.min(1, e.gamma / 25)); ty = Math.max(-1, Math.min(1, (e.beta - 50) / 30)); }, { passive: true });
+    /* ── рельєф (той самий, що в шейдері) — щоб камера не заходила в гори ── */
+    const fr = x => x - Math.floor(x);
+    const h21 = (x, y) => { let a = fr(x * .1031), b = fr(y * .1031), c = fr(x * .1031); const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33); a += d; b += d; c += d; return fr((a + b) * c); };
+    const noised = (x, y) => {
+      const px = Math.floor(x), py = Math.floor(y), fx = x - px, fy = y - py;
+      const ux = fx * fx * fx * (fx * (fx * 6 - 15) + 10), uy = fy * fy * fy * (fy * (fy * 6 - 15) + 10);
+      const dux = 30 * fx * fx * (fx * (fx - 2) + 1), duy = 30 * fy * fy * (fy * (fy - 2) + 1);
+      const a = h21(px, py), b = h21(px + 1, py), c = h21(px, py + 1), d = h21(px + 1, py + 1), k1 = b - a, k2 = c - a, k4 = a - b - c + d;
+      return [a + k1 * ux + k2 * uy + k4 * ux * uy, dux * (k1 + k4 * uy), duy * (k2 + k4 * ux)];
+    };
+    const terrain = (x, z) => {
+      let px = x * .11 + 1.7, py = z * .11 + 4.3, a = 0, b = .5, dx = 0, dy = 0;
+      for (let i = 0; i < 6; i++) { const n = noised(px, py); dx += n[1]; dy += n[2]; a += b * n[0] / (1 + dx * dx + dy * dy); b *= .5; const nx = (.8 * px + .6 * py) * 2, ny = (-.6 * px + .8 * py) * 2; px = nx; py = ny; }
+      const w = 3.4 + .34 * Math.max(z, 0);
+      const side = smooth(Math.abs(x - 1.4 * Math.sin(z * .09 + .6)), w * .5, w * 1.45), back = smooth(z, 17, 29), front = smooth(-z, 7, 16);
+      const mask = Math.max(side, back, front), amp = 3.6 + 9.4 * smooth(z, 8, 40);
+      return (-.4 + .3 * a) * (1 - mask) + (amp * a * a * 1.7 + .04) * mask;
+    };
+    const ground = (x, z) => { let g = 0; for (const [ox, oz] of [[0, 0], [.25, 0], [-.25, 0], [0, .25], [0, -.25]]) g = Math.max(g, terrain(x + ox, z + oz)); return g; };
+
+    /* ── мандрівка: тягнути — роззирнутися; колесо, клавіші, два пальці — летіти; подвійний клік — на старт ── */
+    const A0 = innerWidth / innerHeight;
+    const home = { pos: [0, .55, -1], yaw: 0, pitch: A0 < 1 ? .115 : .076 };
+    const cp = (params.get('cam') || '').split(',').map(Number);
+    const cam0 = cp.length === 5 && cp.every(isFinite) ? { pos: cp.slice(0, 3), yaw: cp[3], pitch: cp[4] } : home;
+    const view = { pos: [...cam0.pos], yaw: cam0.yaw, pitch: cam0.pitch, tyaw: cam0.yaw, tpitch: cam0.pitch, v: 0, sv: 0 };
+    let goHome = null, interacted = false;
+    // без анімацій (prefers-reduced-motion) кадри малюються лише під час керування
+    let activeUntil = 0, running = false;
+    const kick = () => { activeUntil = performance.now() + 2500; if (still && !running) { running = true; requestAnimationFrame(frame); } };
+    const touched = () => { kick(); if (!interacted) { interacted = true; hintEl.classList.remove('on'); } };
+    const ptrs = new Map(); let pinch = 0, lastTap = 0;
+    canvas.addEventListener('pointerdown', e => {
+      canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); canvas.classList.add('drag'); goHome = null; touched();
+      if (e.pointerType !== 'mouse') { const n = performance.now(); if (n - lastTap < 300 && ptrs.size === 1) goHome = performance.now(); lastTap = n; }
+      if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); }
+    });
+    canvas.addEventListener('pointermove', e => {
+      const p = ptrs.get(e.pointerId); if (!p) return;
+      kick();
+      const dx = e.clientX - p[0], dy = e.clientY - p[1]; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+      if (ptrs.size === 1) { const k = 2.4 / Math.max(innerWidth, innerHeight); view.tyaw -= dx * k; view.tpitch = Math.max(-.55, Math.min(.65, view.tpitch + dy * k)); }
+      else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); view.v += (d - pinch) * .0009; pinch = d; }
+    });
+    const up = e => { ptrs.delete(e.pointerId); if (!ptrs.size) canvas.classList.remove('drag'); };
+    canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+    canvas.addEventListener('dblclick', () => { goHome = performance.now(); kick(); });
+    canvas.addEventListener('wheel', e => { e.preventDefault(); touched(); goHome = null; view.v -= Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY) * (e.deltaMode ? 33 : 1), 120) * .00045; }, { passive: false });
+    const keys = new Set();
+    addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (['w', 's', 'a', 'd', 'ц', 'і', 'ф', 'в', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { keys.add(k); touched(); goHome = null; e.preventDefault(); } });
+    addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
+    addEventListener('blur', () => keys.clear());
+    setTimeout(() => { if (!interacted) hintEl.classList.add('on'); }, 2600);
+    setTimeout(() => hintEl.classList.remove('on'), 12000);
+    hintEl.textContent = matchMedia('(pointer: coarse)').matches ? 'Ведіть пальцем — роззирнутися · двома пальцями — летіти' : 'Тягніть мишкою — роззирнутися · колесо або W S — летіти';
+
+    const step = dt => {
+      const s = dt / 1000, has = k => keys.has(k);
+      if (has('w') || has('ц') || has('arrowup')) view.v += 1.6 * s;
+      if (has('s') || has('і') || has('arrowdown')) view.v -= 1.6 * s;
+      if (has('a') || has('ф')) view.sv -= 1.4 * s;
+      if (has('d') || has('в')) view.sv += 1.4 * s;
+      if (has('arrowleft')) view.tyaw -= 1.1 * s;
+      if (has('arrowright')) view.tyaw += 1.1 * s;
+      view.v = Math.max(-1.2, Math.min(1.2, view.v)); view.sv = Math.max(-.8, Math.min(.8, view.sv));
+      if (goHome) {
+        const k = Math.min(1, s * 1.8);
+        for (let i = 0; i < 3; i++) view.pos[i] += (home.pos[i] - view.pos[i]) * k;
+        view.tyaw += (Math.round((view.tyaw - home.yaw) / (2 * Math.PI)) * 2 * Math.PI + home.yaw - view.tyaw) * k; view.tpitch += (home.pitch - view.tpitch) * k; view.v *= .8; view.sv *= .8;
+        if (Math.hypot(...view.pos.map((x, i) => x - home.pos[i])) < .01) goHome = null;
+      }
+      view.yaw += (view.tyaw - view.yaw) * Math.min(1, s * 8); view.pitch += (view.tpitch - view.pitch) * Math.min(1, s * 8);
+      const f = dir(view.yaw, view.pitch), rgt = [Math.cos(view.yaw), 0, -Math.sin(view.yaw)];
+      for (let i = 0; i < 3; i++) view.pos[i] += (f[i] * view.v + rgt[i] * view.sv) * s * 2.2;
+      const damp = Math.pow(.15, s); view.v *= damp; view.sv *= damp;
+      const P = view.pos;
+      P[0] = Math.max(-15, Math.min(15, P[0])); P[2] = Math.max(-7, Math.min(36, P[2]));
+      P[1] = Math.min(9, Math.max(P[1], ground(P[0], P[2]) + .5, .12));
+    };
 
     /* ── камера (та сама, що в шейдері) ── */
     const camera = (time, A) => {
       const fl = 1.55 * Math.min(1, Math.pow(A / 1.15, .45));
-      const co = [mx * .35 + Math.sin(time * .04) * .15, .55 - my * .08 + Math.sin(time * .031) * .03, -1 + Math.sin(time * .023) * .25];
-      const ct = [0, 2.3 + (A < 1 ? .9 : 0), 22];
+      const co = [view.pos[0] + Math.sin(time * .04) * .05, view.pos[1] + Math.sin(time * .031) * .015, view.pos[2]];
+      const f = dir(view.yaw, view.pitch), ct = co.map((x, i) => x + f[i] * 10);
       return { co, ct, fl };
     };
     const norm = v => { const l = Math.hypot(...v); return v.map(x => x / l); };
@@ -523,7 +565,7 @@ void main() {
         for (const k of names) U[k] = gl.getUniformLocation(pr, k);
         return pr;
       };
-      P1 = prog('fs', ['R', 'T', 'SD', 'MD', 'CO', 'CT', 'FL', 'MIST', 'M'], U1);
+      P1 = prog('fs', ['R', 'T', 'SD', 'MD', 'CO', 'CT', 'FL', 'MIST'], U1);
       P2 = prog('post', ['S', 'R', 'SUN', 'RAY', 'T'], U2);
       if (!P1 || !P2) fallback = true;
       else {
@@ -553,13 +595,14 @@ void main() {
 
     const t0 = performance.now();
     let last = t0, frames = 0, fpsT = t0, nextFlock = 1500, lastGreet = '';
+    activeUntil = t0 + 1500; running = true;
     function frame(now) {
-      if (!still) requestAnimationFrame(frame);
+      if (!still || now < activeUntil) requestAnimationFrame(frame); else running = false;
       // ~30 кадрів на секунду: пейзаж змінюється плавно, а батарея й відеокарта не перевантажуються
-      if (now - last < 31 && !still) return;
+      if (now - last < 31) return;
       const dt = Math.min(80, now - last); last = now;
-      const hr = nowT(), time = still ? 40 : (now - t0) / 1000, A = innerWidth / innerHeight;
-      mx += (tx - mx) * .04; my += (ty - my) * .04;
+      const hr = realT(), time = still ? 40 : (now - t0) / 1000, A = innerWidth / innerHeight;
+      step(dt);
       const sd = sunDir(hr), md = moonDir(hr), cam = camera(time, A);
       const night = 1 - smooth(sd[1], -.22, -.02);
       // що підсвічує промені: сонце, а вночі — місяць
@@ -572,7 +615,6 @@ void main() {
         gl.uniform2f(U1.R, canvas.width, canvas.height); gl.uniform1f(U1.T, time);
         gl.uniform3fv(U1.SD, sd); gl.uniform3fv(U1.MD, md); gl.uniform3fv(U1.CO, cam.co); gl.uniform3fv(U1.CT, cam.ct); gl.uniform1f(U1.FL, cam.fl);
         gl.uniform1f(U1.MIST, Math.max(smooth(hr, 4, 6.5) * (1 - smooth(hr, 8, 10.5)), .35 * smooth(hr, 19, 21) + .35 * (1 - smooth(hr, 2, 4))));
-        gl.uniform2f(U1.M, mx, my);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.useProgram(P2);
@@ -589,11 +631,12 @@ void main() {
       if (now - fpsT > 4000) { frames = 0; fpsT = now; }   // вкладка була прихована
       else if (!forced && now - fpsT > 1500) { const fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now; if (fps < 24 && scale > .25) { scale *= .85; resize(); } }
 
-      hero.style.transform = `translate3d(${(-mx * 10).toFixed(2)}px, ${(-my * 6).toFixed(2)}px, 0)`;
-      ffEl.style.transform = `translate3d(${(-mx * 30).toFixed(2)}px, 0, 0)`;
+      // відлетіли чи відвернулися — напис тане, щоб не заважав роздивлятися
+      const away = Math.hypot(view.pos[0] - home.pos[0], (view.pos[1] - home.pos[1]) * 2, view.pos[2] - home.pos[2]) / 1.5 + Math.abs(Math.atan2(Math.sin(view.yaw - home.yaw), Math.cos(view.yaw - home.yaw))) / .9 + Math.abs(view.pitch - home.pitch) / .6;
+      const heroOp = 1 - smooth(away, .25, .9); hero.style.opacity = heroOp.toFixed(3); ffEl.style.opacity = heroOp.toFixed(3);
       const st = root.style;
       st.setProperty('--ff', (Math.min(1, smooth(hr, 19.8, 21) * (1 - smooth(hr, 23.4, 24)) + (1 - smooth(hr, 0, 1.2)) * .5)).toFixed(3));
-      const birdsV = smooth(hr, 6.8, 8.2) * (1 - smooth(hr, 18.6, 19.6)); st.setProperty('--birds', birdsV.toFixed(3));
+      const birdsV = smooth(hr, 6.8, 8.2) * (1 - smooth(hr, 18.6, 19.6)) * heroOp; st.setProperty('--birds', birdsV.toFixed(3));
       for (let i = flock.length - 1; i >= 0; i--) {
         const b = flock[i]; b.x += b.v * dt * .06; b.ph += dt * .002;
         b.el.style.left = b.x + '%'; b.el.style.top = b.y + Math.sin(b.ph) * .5 + '%'; b.el.style.transform = `scaleX(${b.v > 0 ? 1 : -1})`;
@@ -601,14 +644,9 @@ void main() {
       }
       if ((nextFlock -= dt) < 0) { nextFlock = 8000 + Math.random() * 9000; if (birdsV > .5 && flock.length < 10) spawnFlock(); }
       const g = greeting(hr); if (g !== lastGreet) { greetEl.textContent = g; lastGreet = g; }
-      if (lapse) lapseEl.textContent = 'Перемотка доби · ' + String(Math.floor(hr)).padStart(2, '0') + ':' + String(Math.floor(hr % 1 * 60)).padStart(2, '0');
-      // зона кліку — на сонці чи місяці, якщо вони в кадрі й над горизонтом
-      const orb = (src[1] > .01) && scr && scr[0] > .02 && scr[0] < .98 && scr[1] > .05 && scr[1] < .98;
-      hit.hidden = !orb;
-      if (orb) { hit.style.left = scr[0] * innerWidth + 'px'; hit.style.top = (1 - scr[1]) * innerHeight + 'px'; }
     }
     requestAnimationFrame(frame);
-    if (still) setInterval(() => requestAnimationFrame(frame), 30000);
+    if (still) setInterval(() => { if (!running) requestAnimationFrame(frame); }, 30000);
   })();
   </script>
 </body>
