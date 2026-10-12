@@ -4,65 +4,50 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Edvault</title>
-  <meta name="theme-color" content="#0b1230">
+  <meta name="theme-color" content="#4a301c">
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
 
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
   <style>
-    /* Заглушка головної: тривимірне гірське озеро, яке малює відеокарта (WebGL) за справжнім часом доби.
-       Рельєф гір будується променем (raymarching): ерозійні схили, ліс, сніг, тіні від гір і хмар.
-       Озеро з фізичним віддзеркаленням, хвилями й колами на воді; хмари в перспективі; туман над водою вранці;
-       зорі, Чумацький Шлях, місяць, падаючі зірки. Другий прохід — промені світла від сонця чи місяця.
-       Локацією можна трохи мандрувати: тягнути — роззирнутися, колесо / W S / стрілки / два пальці — летіти,
-       подвійний клік — назад на старт. Камера не заходить у гори й воду.
-       Для перевірки: /?t=19.5 (година), /?q=.5 (роздільна здатність), /?cam=x,y,z,поворот,нахил. */
+    /* Заглушка головної: шкільна дошка. Фактура дошки, сліди старої крейди й губки, дерев'яна рамка
+       та поличка генеруються в браузері. Крейда сама пише «Edvault», привітання за часом доби, дату
+       й «Класна робота», формули й малюнки з різних предметів; з вікна падає світло, у ньому літає пил.
+       На дошці можна писати самому: крейда чотирьох кольорів, губка стирає, двічі по губці — витерти все.
+       Для перевірки: /?t=19.5 (година). */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; }
-    body { font-family: 'Inter', system-ui, sans-serif; overflow: hidden; color: #fff; -webkit-tap-highlight-color: transparent;
-      background: linear-gradient(#0b1230, #3a2f5c 55%, #e08a6a); }
-    #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 1.6s ease; }
-    #gl.on { opacity: 1; }
-    .fx { position: fixed; inset: 0; pointer-events: none; will-change: transform; }
-
-    /* птахи */
-    .bird { position: absolute; width: 20px; height: 9px; opacity: var(--birds, 0); }
-    .bird svg { width: 100%; height: 100%; overflow: visible; }
-    .bird path { fill: none; stroke: #141a26; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transform-origin: 50% 80%; animation: flap .5s ease-in-out infinite alternate; }
-    @keyframes flap { to { transform: scaleY(-.6); } }
-
-    /* світлячки */
-    .ff { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #fff7b0; box-shadow: 0 0 8px 3px rgba(255,232,120,.8), 0 0 22px 6px rgba(255,220,90,.25); opacity: 0;
-      animation: ffly var(--d) ease-in-out infinite, ffblink var(--b) ease-in-out infinite; }
-    #ffs { opacity: var(--ff, 0); }
-    @keyframes ffly { 25% { translate: 22px -14px; } 50% { translate: 6px -32px; } 75% { translate: -18px -16px; } }
-    @keyframes ffblink { 0%, 100% { opacity: 0; } 45%, 60% { opacity: 1; } }
-
-    /* текст */
-    .hero { position: fixed; left: 0; right: 0; top: 15vh; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; pointer-events: none; z-index: 5; will-change: transform; }
-    .name { font-size: clamp(56px, 10.5vw, 136px); font-weight: 800; letter-spacing: -.045em; line-height: 1;
-      text-shadow: 0 1px 1px rgba(0,0,0,.15), 0 8px 36px rgba(0,0,20,.35), 0 0 90px rgba(0,0,30,.25); }
-    .name span { display: inline-block; opacity: 0; transform: translateY(.3em) scale(.96); filter: blur(10px); animation: rise 1.3s cubic-bezier(.2,.8,.2,1) forwards; }
-    @keyframes rise { to { opacity: 1; transform: none; filter: none; } }
-    .greet { font-size: clamp(15px, 1.9vw, 21px); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: 0; animation: fade 1.4s ease-out 1.3s forwards; text-shadow: 0 2px 16px rgba(0,0,20,.5); }
-    @keyframes fade { to { opacity: .9; } }
-    .hint { position: fixed; left: 50%; bottom: 24px; translate: -50% 0; z-index: 6; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; text-align: center; width: max-content; max-width: calc(100vw - 32px);
-      background: rgba(8,12,30,.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.22);
-      opacity: 0; transition: opacity .6s; pointer-events: none; }
-    .hint.on { opacity: .92; }
-    #gl { cursor: grab; touch-action: none; }
-    #gl.drag { cursor: grabbing; }
-    @media (max-width: 480px) { .hint { font-size: 12.5px; padding: 7px 12px; } }
-    @media (max-aspect-ratio: 3/4) { .hero { top: 22vh; } }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
-      .name span { opacity: 1; transform: none; filter: none; } .greet { opacity: .9; }
-    }
+    body { overflow: hidden; background: #5a3a21; font-family: Caveat, 'Segoe Print', cursive; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+    :root { --fw: clamp(12px, 2.3vw, 30px); --tray: clamp(20px, 2.6vw, 30px); }
+    .frame { position: fixed; inset: 0; background-color: #5a3a21; background-size: 512px 512px; }
+    .board { position: absolute; left: var(--fw); right: var(--fw); top: var(--fw); bottom: calc(var(--fw) + var(--tray) * .55); overflow: hidden; border-radius: 3px; background: #273f33;
+      box-shadow: 0 0 0 2px #2c1b0e, 0 0 0 4px rgba(255,220,180,.08), inset 0 0 0 1px rgba(0,0,0,.5), inset 0 6px 18px rgba(0,0,0,.45); }
+    .board canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    #chalk { -webkit-mask-repeat: repeat; mask-repeat: repeat; -webkit-mask-size: 192px 192px; mask-size: 192px 192px; }
+    #fx { cursor: none; touch-action: none; z-index: 3; }
+    .light { position: absolute; inset: 0; pointer-events: none; z-index: 2;
+      background: radial-gradient(ellipse 80% 70% at 35% 30%, rgba(255,250,235,.05), transparent 70%), radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,.38)); }
+    .win { position: absolute; top: 4%; height: 78%; width: 30%; display: grid; grid-template: 1fr 1fr / 1fr 1fr; gap: 9% 11%; pointer-events: none; z-index: 2;
+      transform: skewX(-14deg); filter: blur(16px); mix-blend-mode: screen; opacity: 0; transition: opacity 2s; }
+    .win i { background: var(--sun, rgba(255,244,214,.09)); border-radius: 4px; }
+    .tray { position: absolute; left: calc(var(--fw) * .4); right: calc(var(--fw) * .4); bottom: calc(var(--fw) * .55); height: var(--tray); z-index: 4; border-radius: 3px;
+      background: linear-gradient(#7c5434, #5f3e24 45%, #4a2f1a); box-shadow: 0 -2px 0 rgba(255,220,180,.12) inset, 0 6px 10px rgba(0,0,0,.45), 0 -3px 8px rgba(0,0,0,.25);
+      display: flex; align-items: flex-start; gap: clamp(8px, 1.6vw, 18px); padding: 0 clamp(14px, 6vw, 90px); }
+    .tray button { border: 0; cursor: pointer; flex: none; -webkit-tap-highlight-color: transparent; transition: transform .25s cubic-bezier(.2,.8,.3,1.3), box-shadow .25s; }
+    .tray button:focus-visible { outline: 2px solid #ffe9a8; outline-offset: 3px; }
+    .piece { width: clamp(34px, 4vw, 52px); height: clamp(8px, .95vw, 12px); margin-top: calc(var(--tray) * .12); border-radius: 6px 4px 4px 6px; background: var(--c);
+      box-shadow: inset 0 -2px 0 rgba(0,0,0,.18), inset 0 2px 0 rgba(255,255,255,.35), 0 2px 3px rgba(0,0,0,.4); transform: rotate(var(--r, 0deg)); }
+    .piece.on { transform: translateY(-9px) rotate(var(--r, 0deg)); box-shadow: inset 0 -2px 0 rgba(0,0,0,.18), inset 0 2px 0 rgba(255,255,255,.35), 0 9px 8px rgba(0,0,0,.35); }
+    .eraser { margin-left: auto; width: clamp(54px, 6.4vw, 84px); height: calc(var(--tray) * .78); margin-top: calc(var(--tray) * -.18); border-radius: 4px;
+      background: linear-gradient(#a8784d, #8a5f39 55%, #3e3e42 55%, #2f2f33); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 3px 4px rgba(0,0,0,.45); }
+    .eraser.on { transform: translateY(-8px) rotate(-4deg); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 10px 8px rgba(0,0,0,.35); }
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    @media (prefers-reduced-motion: reduce) { .tray button { transition: none; } }
   </style>
 <meta name="description" content="Інструменти для вчителя, тренажери й емулятори для учнів — безкоштовно, просто в браузері.">
 <!-- og -->
@@ -80,573 +65,398 @@
 <!-- /og -->
 </head>
 <body>
-  <canvas id="gl" aria-hidden="true"></canvas>
-  <div class="fx" id="birds" aria-hidden="true"></div>
-  <div class="fx" id="ffs" aria-hidden="true"></div>
-  <main class="hero" id="hero">
-    <h1 class="name" aria-label="Edvault"></h1>
-    <p class="greet" id="greet"></p>
-  </main>
-  <div class="hint" id="hint"></div>
-
-  <script id="fs" type="x-shader/x-fragment">
-precision highp float;
-uniform vec2 R;      // розмір полотна
-uniform float T;     // час, с
-uniform vec3 SD;     // напрям на сонце
-uniform vec3 MD;     // напрям на місяць
-uniform vec3 CO;     // камера
-uniform vec3 CT;     // куди дивиться камера
-uniform float FL;    // фокусна відстань
-uniform float MIST;  // ранковий туман 0..1
-
-#define PI 3.14159265
-const float CLOUD = 14.;   // висота шару хмар
-const float TOP = 11.;     // вище цього гір немає
-
-float h11(float p) { return fract(sin(p * 127.1) * 43758.5453); }
-float h21(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
-float noise(vec2 p) { vec2 i = floor(p), f = fract(p), u = f * f * (3. - 2. * f);
-  return mix(mix(h21(i), h21(i + vec2(1, 0)), u.x), mix(h21(i + vec2(0, 1)), h21(i + 1.), u.x), u.y); }
-// шум з похідними (для ерозії та хвиль)
-vec3 noised(vec2 x) {
-  vec2 p = floor(x), f = fract(x);
-  vec2 u = f * f * f * (f * (f * 6. - 15.) + 10.), du = 30. * f * f * (f * (f - 2.) + 1.);
-  float a = h21(p), b = h21(p + vec2(1, 0)), c = h21(p + vec2(0, 1)), d = h21(p + 1.);
-  float k1 = b - a, k2 = c - a, k4 = a - b - c + d;
-  return vec3(a + k1 * u.x + k2 * u.y + k4 * u.x * u.y, du * vec2(k1 + k4 * u.y, k2 + k4 * u.x));
-}
-const mat2 m2 = mat2(.8, -.6, .6, .8);
-float fbm(vec2 p) { float v = 0., a = .5; for (int i = 0; i < 5; i++) { v += a * noise(p); p = m2 * p * 2.02; a *= .5; } return v; }
-float fbm3(vec2 p) { float v = 0., a = .5; for (int i = 0; i < 3; i++) { v += a * noise(p); p = m2 * p * 2.02; a *= .5; } return v; }
-
-// ── рельєф: «ерозійний» fbm (схили з жолобами й гострими гребенями) ──
-float tfbm(vec2 p, int oct) {
-  float a = 0., b = .5; vec2 d = vec2(0.);
-  for (int i = 0; i < 10; i++) { if (i >= oct) break; vec3 n = noised(p); d += n.yz; a += b * n.x / (1. + dot(d, d)); b *= .5; p = m2 * p * 2.; }
-  return a;
-}
-float terrain(vec2 p, int oct) {
-  float m = tfbm(p * .11 + vec2(1.7, 4.3), oct);
-  // долина з озером: ширшає вдалині, за нею — високий хребет
-  float w = 3.4 + .34 * max(p.y, 0.);
-  float side = smoothstep(w * .5, w * 1.45, abs(p.x - 1.4 * sin(p.y * .09 + .6)));
-  float back = smoothstep(17., 29., p.y);
-  float front = smoothstep(7., 16., -p.y);    // позаду камери долину теж замикають гори
-  float mask = max(max(side, back), front);
-  float amp = mix(3.6, 13., smoothstep(8., 40., p.y));
-  float h = mix(-.4 + .3 * m, amp * m * m * 1.7 + .04, mask);
-  // ліс: дрібні верхівки ялин на нижніх схилах
-  if (oct > 6) { float f = smoothstep(.0, .12, h) * smoothstep(1.9, 1.3, h); if (f > 0.) h += f * (.035 * pow(noise(p * 34.), 1.6) + .012 * noise(p * 110.)); }
-  return h;
-}
-
-float castRay(vec3 ro, vec3 rd, float tmax, int steps, int oct) {
-  float t = .02;
-  for (int i = 0; i < 160; i++) {
-    if (i >= steps) break;
-    vec3 p = ro + rd * t;
-    if (p.y > TOP && rd.y > 0.) return 1e4;
-    float h = p.y - terrain(p.xz, oct);
-    if (h < .0015 * t) return t;
-    t += max(.45 * h, .003 * t);
-    if (t > tmax) return 1e4;
-  }
-  return t;
-}
-vec3 calcN(vec3 p, float t, int oct) {
-  vec2 e = vec2(.0012 * t + .001, 0.);
-  return normalize(vec3(terrain(p.xz - e.xy, oct) - terrain(p.xz + e.xy, oct), 2. * e.x, terrain(p.xz - e.yx, oct) - terrain(p.xz + e.yx, oct)));
-}
-float softShadow(vec3 p, vec3 l) {
-  float res = 1., t = .04;
-  for (int i = 0; i < 22; i++) {
-    vec3 q = p + l * t; float h = q.y - terrain(q.xz, 4);
-    res = min(res, 10. * h / t);
-    if (res < .01 || q.y > TOP) break;
-    t += clamp(h, .04, .9);
-  }
-  return clamp(res, 0., 1.);
-}
-
-// ── світло доби ──
-struct Light { float e, day, dusk, night, sunVis; vec3 sunCol, zen, hor, hor0, amb; };
-Light light() {
-  Light L; L.e = SD.y;
-  L.day = smoothstep(-.04, .28, L.e);
-  L.dusk = exp(-pow((L.e + .01) / .13, 2.));
-  L.night = 1. - smoothstep(-.22, -.02, L.e);
-  L.sunVis = smoothstep(-.03, .02, L.e);
-  L.sunCol = mix(vec3(1., .36, .1), vec3(1., .92, .8), smoothstep(.0, .35, L.e));
-  vec3 zD = vec3(.06, .22, .6), hD = vec3(.58, .76, .95);
-  vec3 zS = vec3(.15, .13, .38), hS = vec3(1., .45, .2);
-  vec3 zN = vec3(.006, .012, .04), hN = vec3(.04, .06, .13);
-  L.zen = mix(mix(zN, zD, L.day), zS, L.dusk * .55);
-  L.hor0 = mix(mix(hN, hD, L.day), vec3(.55, .4, .55), L.dusk * .5);
-  L.hor = mix(mix(hN, hD, L.day), hS, L.dusk * .85);
-  L.amb = mix(vec3(.05, .07, .15), vec3(.62, .72, .9), L.day) + L.dusk * vec3(.3, .14, .1);
-  return L;
-}
-
-// ── небо: розсіювання, сонце, зорі, місяць ──
-vec3 sky(vec3 rd, Light L, bool discs) {
-  float y = max(rd.y, 0.);
-  float az = max(dot(normalize(rd.xz + 1e-5), normalize(SD.xz + 1e-5)), 0.);
-  vec3 hor = mix(L.hor0, L.hor, .25 + .75 * pow(az, 2.));
-  vec3 col = mix(hor, L.zen, pow(smoothstep(0., .65, y), .55));
-  float sd = max(dot(rd, SD), 0.);
-  col += L.sunCol * L.sunVis * (.3 * pow(sd, 5.) + .5 * pow(sd, 40.) + 2. * pow(sd, 500.)) * (.55 + .6 * L.dusk);
-  col += L.sunCol * L.dusk * .45 * exp(-y * 8.) * pow(az, 3.);
-  if (discs) col = mix(col, L.sunCol * vec3(9., 8., 6.5), smoothstep(.99984, .9999, dot(rd, SD)) * L.sunVis);
-
-  if (L.night > .01) {
-    vec2 a = vec2(atan(rd.x, rd.z), asin(clamp(rd.y, -1., 1.)));
-    vec2 sg = a * 190.; vec2 cell = floor(sg); float r = h21(cell);
-    float star = step(.985, r) * smoothstep(.45, .0, length(fract(sg) - .5 - (vec2(h21(cell + 7.), h21(cell + 3.)) - .5) * .5));
-    star *= (.5 + .5 * sin(T * (1.5 + r * 4.) + r * 60.)) * (.4 + .6 * h21(cell + 11.));
-    vec2 sg2 = a * 70.; vec2 c2 = floor(sg2);
-    float big = step(.993, h21(c2)) * smoothstep(.3, .0, length(fract(sg2) - .5));
-    vec3 tint = mix(vec3(.75, .85, 1.), vec3(1., .85, .7), h21(c2 + 5.));
-    float band = exp(-pow(dot(rd, normalize(vec3(.75, .2, -.6))) * 3.2, 2.));
-    float mw = band * fbm(a * 5. + 2.) * smoothstep(.0, .25, y);
-    float horz = smoothstep(.0, .12, y);
-    col += L.night * horz * (vec3(star) * 1.3 + tint * big * 1.4 + vec3(.5, .55, .8) * mw * .35 + vec3(.25, .2, .3) * band * mw * mw * .6);
-    // падаюча зірка
-    float seg = floor(T / 8.), ft = fract(T / 8.) * 8.;
-    if (ft < .9) {
-      vec2 st = vec2((h11(seg) - .5) * 1.4, .35 + h11(seg + 3.) * .35), dir = normalize(vec2(-1. + 2. * step(.5, h11(seg + 9.)), -.45));
-      vec2 hp = st + dir * ft * .5, rel = a - hp;
-      float along = dot(rel, -dir), perp = abs(dot(rel, vec2(-dir.y, dir.x)));
-      col += L.night * horz * vec3(1.) * smoothstep(.0025, 0., perp) * smoothstep(.2, 0., along) * step(0., along) * sin(ft / .9 * PI) * 1.6;
-    }
-  }
-  // місяць
-  float moonVis = smoothstep(-.02, .03, MD.y) * (1. - L.day * .85);
-  if (moonVis > .01) {
-    float md = max(dot(rd, MD), 0.);
-    col += vec3(.5, .58, .85) * moonVis * (.15 * pow(md, 8.) + .4 * pow(md, 150.)) * (L.night + .2);
-    if (discs) {
-      vec3 mu = normalize(cross(vec3(0., 1., 0.), MD)), mv = cross(MD, mu);
-      vec2 lp = vec2(dot(rd - MD, mu), dot(rd - MD, mv)) / .028;
-      float d = length(lp);
-      if (d < 1.1) {
-        float tex = .78 + .3 * fbm(lp * 2.2 + 4.) - .18 * smoothstep(.3, .6, noise(lp * 1.6 + 9.));
-        float phase = smoothstep(-.35, .25, lp.x * .6 + sqrt(max(0., 1. - d * d)) * .8 - .2);
-        vec3 mc = vec3(1., .97, .9) * tex * (.15 + 1.4 * phase);
-        col = mix(col, mc * 1.4, smoothstep(1., .94, d) * moonVis);
-      }
-    }
-  }
-  return col;
-}
-
-// ── хмари: шар на висоті, у перспективі ──
-float cloudDen(vec2 xz, float lod) {
-  vec2 cp = xz * .035 + vec2(T * .005, T * .002);
-  vec2 w = vec2(fbm3(cp * 1.1 + T * .003), fbm3(cp * 1.1 + 4.1));
-  return fbm(cp + w * .8);
-}
-vec4 clouds(vec3 ro, vec3 rd, Light L) {
-  if (rd.y < .015) return vec4(0.);
-  float t = (CLOUD - ro.y) / rd.y;
-  vec2 xz = ro.xz + rd.xz * t;
-  float dn = cloudDen(xz, 0.);
-  float cov = .48 - .04 * L.dusk;
-  float den = smoothstep(cov, cov + .26, dn) * exp(-t * .0035);
-  if (den < .002) return vec4(0.);
-  float dn2 = cloudDen(xz + normalize(SD.xz + 1e-4) * 3.5, 0.);
-  float lit = clamp(.55 + (dn - dn2) * 3.5, 0., 1.);
-  vec3 cLit = mix(vec3(.12, .14, .22), vec3(1.1, 1.06, 1.02), L.day);
-  cLit = mix(cLit, L.sunCol * vec3(1.35, .95, .8), L.dusk * .8);
-  vec3 cShade = mix(L.zen * .8 + .03, L.hor * .5 + vec3(.06, .06, .1), .5) * mix(.55, .95, L.day);
-  float sd = max(dot(rd, SD), 0.);
-  vec3 cc = mix(cShade, cLit, lit) * (1. + (1.2 * pow(sd, 6.) * (1. - den)) * L.sunVis);
-  cc += vec3(.03, .04, .08) * L.night;
-  cc = mix(cc, L.hor, 1. - exp(-t * .006));
-  return vec4(cc, den * .93);
-}
-float cloudShadow(vec3 p) {
-  if (SD.y < .03) return 1.;
-  vec2 xz = p.xz + SD.xz / SD.y * (CLOUD - p.y);
-  vec2 cp = xz * .035 + vec2(T * .005, T * .002);
-  return 1. - .65 * smoothstep(.48, .74, fbm(cp + vec2(fbm3(cp * 1.1 + T * .003), fbm3(cp * 1.1 + 4.1)) * .8));
-}
-
-// ── серпанок і туман над водою ──
-vec3 fogCol(vec3 rd, Light L) {
-  float az = max(dot(normalize(rd.xz + 1e-5), normalize(SD.xz + 1e-5)), 0.);
-  return mix(L.hor0, L.hor, .3 + .7 * az * az) * .92 + L.sunCol * L.sunVis * .45 * pow(max(dot(rd, SD), 0.), 6.);
-}
-vec3 atmos(vec3 col, vec3 ro, vec3 rd, float t, Light L) {
-  vec3 p = ro + rd * t;
-  col = mix(col, fogCol(rd, L), 1. - exp(-t * .017));
-  float mist = (1. - exp(-t * .07)) * exp(-max(p.y, 0.) * 1.6) * (.45 + .55 * fbm3(p.xz * .22 + vec2(T * .025, T * .008)));
-  vec3 mc = mix(fogCol(rd, L), vec3(1.), .2 * L.day) * mix(.9, 1.1, L.day);
-  return mix(col, mc, clamp(mist * (.12 + .88 * MIST), 0., .9));
-}
-
-// ── матеріали гір ──
-vec3 shadeT(vec3 p, vec3 n, vec3 rd, float t, Light L, bool full) {
-  float h = p.y;
-  vec3 rock = mix(vec3(.2, .19, .18), vec3(.4, .36, .32), fbm3(p.xz * 5. + p.y * 3.));
-  rock *= .93 + .07 * sin(p.y * 34. + noise(p.xz * 3.) * 7.);
-  float tl = 1.55 + .6 * noise(p.xz * .45);
-  float forest = smoothstep(tl, tl - .35, h) * smoothstep(.18, .4, n.y) * smoothstep(.0, .05, h);
-  vec3 fcol = vec3(.04, .07, .04) * (.7 + .5 * noise(p.xz * 26.)) * (.55 + .9 * noise(p.xz * 140.) * smoothstep(6., 1., t));
-  vec3 alb = mix(rock, fcol, forest);
-  float shore = smoothstep(.06, .0, h) * smoothstep(.5, .8, n.y);
-  alb = mix(alb, vec3(.34, .3, .25) * (.8 + .4 * noise(p.xz * 40.)), shore);
-  float sl = 3.5 + .9 * noise(p.xz * .5);
-  float snow = smoothstep(sl - .3, sl + .3, h + 1.6 * n.y - 1.1 + .5 * noise(p.xz * 7.)) * smoothstep(.3, .55, n.y);
-  alb = mix(alb, vec3(.9, .93, 1.), snow);
-
-  float dif = max(dot(n, SD), 0.) * L.sunVis;
-  if (full && dif > .005) dif *= softShadow(p + n * .01, SD);
-  dif *= cloudShadow(p);
-  vec3 lin = L.sunCol * dif * (L.day * 2.4 + L.dusk * 1.8);
-  lin += L.amb * (.45 + .45 * n.y) * .5;
-  lin += L.sunCol * L.dusk * .12 * max(dot(n, -vec3(SD.x, 0., SD.z)), 0.);     // відсвіт неба на тіньових схилах
-  lin += vec3(.3, .4, .75) * L.night * (.1 + 1.1 * max(dot(n, MD), 0.) * smoothstep(-.02, .05, MD.y));
-  vec3 col = alb * lin;
-  col += snow * L.sunCol * pow(max(dot(reflect(rd, n), SD), 0.), 24.) * dif * .35;
-  return col;
-}
-
-// ── вода ──
-vec3 waterN(vec2 p, float t) {
-  vec3 a = noised(p * vec2(2., 1.2) + vec2(0., T * .3));
-  vec3 b = noised(p * 5.3 + vec2(T * .35, T * .15));
-  vec3 c = noised(p * 13. - vec2(T * .6, T * .7));
-  vec2 g = a.yz * 2. * .5 + b.yz * 5.3 * .2 + c.yz * 13. * .05;
-  // кола від риб і крапель
-  for (int k = 0; k < 3; k++) {
-    float fk = float(k), per = 5. + fk * 1.9, tt = T + fk * 2.3;
-    float id = floor(tt / per), ph = fract(tt / per) * per;
-    vec2 c0 = vec2((h11(id + fk * 13.) - .5) * 5., 2.5 + h11(id * 1.7 + fk) * 9.);
-    vec2 d = p - c0; float r = length(d), fr = ph * .32;
-    float wv = cos((r - fr) * 70.) * exp(-pow((r - fr) * 14., 2.)) * exp(-ph * .45);
-    g += d / max(r, 1e-3) * wv * 1.6;
-  }
-  g *= .012 / (1. + t * .07);
-  return normalize(vec3(-g.x, 1., -g.y));
-}
-
-vec3 aces(vec3 x) { return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), 0., 1.); }
-
-void main() {
-  vec2 sp = (2. * gl_FragCoord.xy - R) / R.y;
-  vec3 ro = CO, ww = normalize(CT - CO), uu = normalize(cross(vec3(0., 1., 0.), ww)), vv = cross(ww, uu);
-  vec3 rd = normalize(sp.x * uu + sp.y * vv + FL * ww);
-  Light L = light();
-
-  float tw = rd.y < 0. ? -ro.y / rd.y : 1e4;
-  float tt = castRay(ro, rd, min(tw, 95.), 140, 7);
-  vec3 col; float mask = 0.;
-  if (tt < tw && tt < 1e3) {
-    vec3 p = ro + rd * tt;
-    col = shadeT(p, calcN(p, tt, 9), rd, tt, L, true);
-    col = atmos(col, ro, rd, tt, L);
-  } else if (tw < 1e3) {
-    // озеро: віддзеркалення гір і неба з френелем, глибина, відблиски
-    vec3 p = ro + rd * tw;
-    vec3 n = waterN(p.xz, tw);
-    vec3 rr = reflect(rd, n);
-    rr.y = abs(rr.y);
-    float tr = castRay(p + vec3(0., .001, 0.), rr, 90., 100, 6);
-    vec3 refl;
-    if (tr < 1e3) { vec3 q = p + rr * tr; vec3 nq = calcN(q, tr + tw, 6); refl = atmos(shadeT(q, nq, rr, tr + tw, L, false), p, rr, tr, L); }
-    else { refl = sky(rr, L, false); vec4 c = clouds(p, rr, L); refl = mix(refl, c.rgb, c.a); }
-    float fre = .02 + .98 * pow(1. - max(dot(-rd, n), 0.), 5.);
-    float depth = max(-terrain(p.xz, 4), 0.);
-    vec3 body = mix(vec3(.06, .09, .06) * (L.amb + L.sunCol * L.day * .6), vec3(.004, .02, .03) * (L.amb + .2), smoothstep(.0, .25, depth));
-    col = mix(body, refl * vec3(.85, .92, .95), clamp(fre * 1.15, 0., 1.));
-    float sp1 = pow(max(dot(rr, SD), 0.), 900.) * L.sunVis, sp2 = pow(max(dot(rr, SD), 0.), 60.) * L.sunVis;
-    col += L.sunCol * (sp1 * 25. + sp2 * .6) * (.5 + L.dusk);
-    float mvis = smoothstep(-.02, .05, MD.y) * L.night;
-    col += vec3(.75, .82, 1.) * mvis * (pow(max(dot(rr, MD), 0.), 1800.) * 7. + pow(max(dot(rr, MD), 0.), 80.) * .12);
-    col += vec3(.6, .65, .7) * smoothstep(.03, .0, depth) * .05 * (L.amb.b + .2);    // світла кромка біля берега
-    col = atmos(col, ro, rd, tw, L);
-  } else {
-    col = sky(rd, L, true);
-    vec4 c = clouds(ro, rd, L);
-    col = mix(col, c.rgb, c.a);
-    // маска для променів: яскраве небо біля сонця (чи місяця), не закрите хмарами
-    mask = (1. - c.a * .9) * (pow(max(dot(rd, SD), 0.), 4.) * L.sunVis + .5 * pow(max(dot(rd, MD), 0.), 20.) * L.night * smoothstep(-.02, .05, MD.y));
-  }
-
-  col *= mix(1.25, 1.1, L.night);
-  col = aces(col);
-  col = pow(col, vec3(.95));
-  gl_FragColor = vec4(col, clamp(mask, 0., 1.));
-}
-  </script>
-  <script id="post" type="x-shader/x-fragment">
-precision mediump float;
-uniform sampler2D S;
-uniform vec2 R;      // розмір полотна
-uniform vec2 SUN;    // сонце (чи місяць) на екрані, 0..1
-uniform float RAY;   // сила променів
-uniform float T;
-float h21(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
-void main() {
-  vec2 uv = gl_FragCoord.xy / R;
-  vec3 col = texture2D(S, uv).rgb;
-  // промені світла: радіальне розмиття яскравого неба від сонця
-  if (RAY > .01) {
-    vec2 d = (SUN - uv) * (.92 / 36.);
-    vec2 q = uv + d * h21(gl_FragCoord.xy + fract(T) * 17.);
-    vec3 acc = vec3(0.); float w = 1.;
-    for (int i = 0; i < 36; i++) { q += d; vec4 s = texture2D(S, q); acc += s.rgb * s.a * w; w *= .965; }
-    col += acc * (RAY / 36.) * 1.6;
-  }
-  vec2 vq = uv - .5; col *= 1. - dot(vq, vq) * .5;
-  col += (h21(gl_FragCoord.xy + fract(T) * 31.7) - .5) * .02;
-  gl_FragColor = vec4(col, 1.);
-}
-  </script>
+  <div class="frame" id="frame">
+    <main class="board" id="board">
+      <h1 class="sr">Edvault</h1>
+      <canvas id="bg" aria-hidden="true"></canvas>
+      <canvas id="chalk" aria-hidden="true"></canvas>
+      <div class="win" id="win" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="light" aria-hidden="true"></div>
+      <canvas id="fx" role="img" aria-label="Шкільна дошка: на ній можна писати крейдою"></canvas>
+    </main>
+    <div class="tray" id="tray">
+      <button class="piece on" style="--c:#f4f2ea;--r:-2deg" data-c="#f4f2ea" aria-label="Біла крейда" aria-pressed="true"></button>
+      <button class="piece" style="--c:#f2dc84;--r:3deg" data-c="#f2dc84" aria-label="Жовта крейда" aria-pressed="false"></button>
+      <button class="piece" style="--c:#f3a9c3;--r:-4deg" data-c="#f3a9c3" aria-label="Рожева крейда" aria-pressed="false"></button>
+      <button class="piece" style="--c:#a3cdf2;--r:2deg" data-c="#a3cdf2" aria-label="Блакитна крейда" aria-pressed="false"></button>
+      <button class="eraser" id="eraser" aria-label="Губка: стирати. Двічі — витерти всю дошку" title="Губка: стирати. Двічі — витерти всю дошку" aria-pressed="false"></button>
+    </div>
+  </div>
 
   <script>
   (() => {
-    const root = document.documentElement, still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const canvas = document.getElementById('gl');
-    const gl = canvas.getContext('webgl', { antialias: false, alpha: false, depth: false, powerPreference: 'high-performance' });
-    const params = new URLSearchParams(location.search);
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const $ = id => document.getElementById(id);
+    const board = $('board'), bg = $('bg'), ch = $('chalk'), fx = $('fx'), win = $('win');
+    const bx = bg.getContext('2d'), cx = ch.getContext('2d'), fxx = fx.getContext('2d');
+    const FONT = "Caveat, 'Segoe Print', 'Comic Sans MS', cursive";
+    let W = 0, H = 0;
 
-    /* ── текст ── */
-    const nameEl = document.querySelector('.name');
-    [...'Edvault'].forEach((ch, i) => { const s = document.createElement('span'); s.textContent = ch; s.setAttribute('aria-hidden', 'true'); s.style.animationDelay = .4 + i * .09 + 's'; nameEl.appendChild(s); });
-    const greetEl = document.getElementById('greet'), hero = document.getElementById('hero'), hintEl = document.getElementById('hint');
-    const greeting = t => t < 4.5 || t >= 22.5 ? 'Доброї ночі' : t < 11 ? 'Добрий ранок' : t < 17.5 ? 'Добрий день' : 'Добрий вечір';
+    // випадкові числа з зерном — щоб перемальовування після зміни розміру було тим самим
+    const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const R = Math.random;
 
-    /* ── час ── */
-    const q = parseFloat(params.get('t'));
-    const realT = () => { if (!isNaN(q)) return ((q % 24) + 24) % 24; const d = new Date(); return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; };
-    const ease = k => k * k * (3 - 2 * k), smooth = (x, a, b) => ease(Math.max(0, Math.min(1, (x - a) / (b - a))));
+    /* ── час, привітання, дата словами ── */
+    const q = parseFloat(new URLSearchParams(location.search).get('t'));
+    const hour = () => { if (!isNaN(q)) return ((q % 24) + 24) % 24; const d = new Date(); return d.getHours() + d.getMinutes() / 60; };
+    const greeting = t => t < 4.5 || t >= 22.5 ? 'Доброї ночі!' : t < 11 ? 'Добрий ранок!' : t < 17.5 ? 'Добрий день!' : 'Добрий вечір!';
+    const ORD = ['', 'перше', 'друге', 'третє', 'четверте', "п'яте", 'шосте', 'сьоме', 'восьме', "дев'яте", 'десяте', 'одинадцяте', 'дванадцяте', 'тринадцяте', 'чотирнадцяте', "п'ятнадцяте", 'шістнадцяте', 'сімнадцяте', 'вісімнадцяте', "дев'ятнадцяте", 'двадцяте'];
+    const MON = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+    const dayWord = n => n <= 20 ? ORD[n] : n < 30 ? 'двадцять ' + ORD[n - 20] : n === 30 ? 'тридцяте' : 'тридцять перше';
+    const dateWords = () => { const d = new Date(), s = dayWord(d.getDate()) + ' ' + MON[d.getMonth()]; return s[0].toUpperCase() + s.slice(1); };
 
-    /* ── сонце й місяць: напрями на небі (схід ліворуч, захід праворуч) ── */
-    const dir = (az, el) => [Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)];
-    const sunDir = t => {
-      const p = (t - 6) / 13.8;
-      if (p >= 0 && p <= 1) return dir((p - .5) * 1.5, Math.sin(p * Math.PI) * .7);
-      const n = ((t - 19.8 + 24) % 24) / 10.2; return dir(.75 + n * (2 * Math.PI - 1.5), -Math.sin(n * Math.PI) * .5);
-    };
-    const moonDir = t => {
-      const n = ((t - 19.2 + 24) % 24) / 11.4;
-      if (n <= 1) return dir(.55 + (n - .5) * .6, Math.sin(n * Math.PI) * .42);
-      return dir(0, -.3);
-    };
+    /* ── дерев'яна рамка: текстура з волокнами й сучками ── */
+    (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+      const r = rng(7);
+      for (let y = 0; y < 512; y++) {
+        const v = Math.sin(y * .21 + Math.sin(y * .031) * 4) * .5 + Math.sin(y * .9 + Math.sin(y * .07) * 2) * .25 + (r() - .5) * .35;
+        const l = 26 + v * 6; g.fillStyle = `hsl(27 ${44 + v * 6}% ${l}%)`; g.fillRect(0, y, 512, 1);
+      }
+      for (let i = 0; i < 900; i++) { const y = r() * 512, x = r() * 512; g.fillStyle = `rgba(${r() < .5 ? '30,16,6' : '255,220,170'},${.05 + r() * .08})`; g.fillRect(x, y, 20 + r() * 140, 1); }
+      for (let k = 0; k < 3; k++) {
+        const x = r() * 512, y = r() * 512;
+        for (let i = 9; i > 0; i--) { g.strokeStyle = `rgba(40,20,8,${.05 + .03 * (9 - i)})`; g.lineWidth = 1.2; g.beginPath(); g.ellipse(x, y, i * 7, i * 2.4, 0, 0, Math.PI * 2); g.stroke(); }
+      }
+      $('frame').style.backgroundImage = `linear-gradient(rgba(0,0,0,.08), rgba(0,0,0,.2)), url(${c.toDataURL()})`;
+    })();
 
-    /* ── птахи й світлячки (поверх полотна) ── */
-    const birdsEl = document.getElementById('birds'), ffEl = document.getElementById('ffs'), flock = [];
-    for (let i = 0; i < (innerWidth < 600 ? 12 : 26); i++) {
-      const f = document.createElement('i'); f.className = 'ff';
-      const side = Math.random() < .5 ? Math.random() * 28 : 72 + Math.random() * 28;
-      Object.assign(f.style, { left: side + '%', top: 66 + Math.random() * 30 + '%' });
-      f.style.setProperty('--d', 6 + Math.random() * 8 + 's'); f.style.setProperty('--b', 2 + Math.random() * 3 + 's'); f.style.animationDelay = `${-Math.random() * 10}s, ${-Math.random() * 5}s`;
-      ffEl.appendChild(f);
+    /* ── зерно дошки: крейда не лягає в дрібні западинки (маска для шару крейди) ── */
+    (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 192; const g = c.getContext('2d'), im = g.createImageData(192, 192), r = rng(3);
+      for (let i = 0; i < 192 * 192; i++) { const v = r(); im.data[i * 4 + 3] = v < .16 ? 40 + v * 500 : 200 + (v - .16) * 66; }
+      g.putImageData(im, 0, 0);
+      const url = `url(${c.toDataURL()})`; ch.style.webkitMaskImage = url; ch.style.maskImage = url;
+    })();
+
+    /* ── поверхня дошки: колір, плями, сліди губки, старі напівстерті написи, дрібне зерно ── */
+    function paintBoard() {
+      const r = rng(11);
+      bx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const g = bx.createRadialGradient(W * .42, H * .38, 0, W * .5, H * .5, Math.hypot(W, H) * .62);
+      g.addColorStop(0, '#34533f'); g.addColorStop(.55, '#2a4535'); g.addColorStop(1, '#1d3228');
+      bx.fillStyle = g; bx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 70; i++) {
+        const x = r() * W, y = r() * H, rad = 40 + r() * 220, light = r() < .55;
+        const gg = bx.createRadialGradient(x, y, 0, x, y, rad);
+        gg.addColorStop(0, light ? `rgba(220,235,225,${.012 + r() * .022})` : `rgba(0,10,5,${.03 + r() * .04})`); gg.addColorStop(1, 'rgba(0,0,0,0)');
+        bx.fillStyle = gg; bx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+      }
+      // широкі розводи від губки
+      bx.save(); bx.lineCap = 'round'; bx.lineJoin = 'round'; bx.shadowColor = 'rgba(230,240,230,.05)'; bx.shadowBlur = 24;
+      for (let k = 0; k < 9; k++) {
+        bx.strokeStyle = `rgba(225,238,228,${.014 + r() * .016})`; bx.lineWidth = 40 + r() * 70; bx.beginPath();
+        let x = r() * W, y = r() * H; bx.moveTo(x, y);
+        for (let s = 0; s < 6; s++) { x += (r() - .3) * W * .25; y += (r() - .5) * H * .25; bx.quadraticCurveTo(x - 40 + r() * 80, y - 60 + r() * 120, x, y); }
+        bx.stroke();
+      }
+      // напівстерті написи минулих уроків
+      const ghosts = ['sin²α + cos²α = 1', 'Домашнє завдання', 'S = πr²', 'Fe + O₂ → Fe₃O₄', 'x² − 5x + 6 = 0', 'v = s / t', 'Present Simple', '§ 12, впр. 4', '1 км = 1000 м', 'CO₂'];
+      bx.textBaseline = 'middle';
+      for (let i = 0; i < 9; i++) {
+        bx.save(); bx.translate(r() * W, r() * H); bx.rotate((r() - .5) * .12);
+        bx.font = `600 ${Math.round(18 + r() * 34)}px ${FONT}`; bx.shadowColor = 'rgba(230,240,230,.06)'; bx.shadowBlur = 6;
+        bx.fillStyle = `rgba(230,240,232,${.012 + r() * .016})`; bx.fillText(ghosts[i % ghosts.length], 0, 0); bx.restore();
+      }
+      bx.restore();
+      // дрібне зерно
+      const im = bx.getImageData(0, 0, bg.width, bg.height), d = im.data;
+      for (let i = 0; i < d.length; i += 4) { const n = (R() - .5) * 13 + (R() < .004 ? 16 : 0); d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+      bx.putImageData(im, 0, 0);
     }
-    const spawnFlock = () => {
-      const n = 3 + Math.floor(Math.random() * 5), y = 22 + Math.random() * 16, dir = Math.random() < .5 ? 1 : -1, v = dir * (.03 + Math.random() * .012);
+
+    /* ── штрих крейди: багато дрібних зерен навколо лінії; швидкий рух — блідіший ── */
+    function chalkSeg(x0, y0, x1, y1, w, col, rnd, k = 1) {
+      const d = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(d / .7));
+      cx.fillStyle = col;
       for (let i = 0; i < n; i++) {
-        const b = document.createElement('div'); b.className = 'bird';
-        b.innerHTML = '<svg viewBox="0 0 20 9"><path d="M1 2 Q5.5 7.5 10 5.5 Q14.5 7.5 19 2"/></svg>';
-        b.querySelector('path').style.animationDelay = -Math.random() * .5 + 's'; b.style.scale = .6 + Math.random() * .5;
-        birdsEl.appendChild(b); flock.push({ el: b, x: dir > 0 ? -6 - i * 2.2 : 106 + i * 2.2, y: y + Math.abs(i - n / 2) * 1.6, v, ph: Math.random() * 6 });
+        const t = i / n, px = x0 + (x1 - x0) * t, py = y0 + (y1 - y0) * t;
+        for (let j = 0; j < 5; j++) {
+          const rr = w * .5 * Math.sqrt(rnd()), a = rnd() * 6.283, s = .7 + rnd() * 1.5;
+          cx.globalAlpha = (.22 + rnd() * .62) * k; cx.fillRect(px + Math.cos(a) * rr - s / 2, py + Math.sin(a) * rr - s / 2, s, s);
+        }
       }
-    };
-
-    /* ── рельєф (той самий, що в шейдері) — щоб камера не заходила в гори ── */
-    const fr = x => x - Math.floor(x);
-    const h21 = (x, y) => { let a = fr(x * .1031), b = fr(y * .1031), c = fr(x * .1031); const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33); a += d; b += d; c += d; return fr((a + b) * c); };
-    const noised = (x, y) => {
-      const px = Math.floor(x), py = Math.floor(y), fx = x - px, fy = y - py;
-      const ux = fx * fx * fx * (fx * (fx * 6 - 15) + 10), uy = fy * fy * fy * (fy * (fy * 6 - 15) + 10);
-      const dux = 30 * fx * fx * (fx * (fx - 2) + 1), duy = 30 * fy * fy * (fy * (fy - 2) + 1);
-      const a = h21(px, py), b = h21(px + 1, py), c = h21(px, py + 1), d = h21(px + 1, py + 1), k1 = b - a, k2 = c - a, k4 = a - b - c + d;
-      return [a + k1 * ux + k2 * uy + k4 * ux * uy, dux * (k1 + k4 * uy), duy * (k2 + k4 * ux)];
-    };
-    const terrain = (x, z) => {
-      let px = x * .11 + 1.7, py = z * .11 + 4.3, a = 0, b = .5, dx = 0, dy = 0;
-      for (let i = 0; i < 6; i++) { const n = noised(px, py); dx += n[1]; dy += n[2]; a += b * n[0] / (1 + dx * dx + dy * dy); b *= .5; const nx = (.8 * px + .6 * py) * 2, ny = (-.6 * px + .8 * py) * 2; px = nx; py = ny; }
-      const w = 3.4 + .34 * Math.max(z, 0);
-      const side = smooth(Math.abs(x - 1.4 * Math.sin(z * .09 + .6)), w * .5, w * 1.45), back = smooth(z, 17, 29), front = smooth(-z, 7, 16);
-      const mask = Math.max(side, back, front), amp = 3.6 + 9.4 * smooth(z, 8, 40);
-      return (-.4 + .3 * a) * (1 - mask) + (amp * a * a * 1.7 + .04) * mask;
-    };
-    const ground = (x, z) => { let g = 0; for (const [ox, oz] of [[0, 0], [.25, 0], [-.25, 0], [0, .25], [0, -.25]]) g = Math.max(g, terrain(x + ox, z + oz)); return g; };
-
-    /* ── мандрівка: тягнути — роззирнутися; колесо, клавіші, два пальці — летіти; подвійний клік — на старт ── */
-    const A0 = innerWidth / innerHeight;
-    const home = { pos: [0, .55, -1], yaw: 0, pitch: A0 < 1 ? .115 : .076 };
-    const cp = (params.get('cam') || '').split(',').map(Number);
-    const cam0 = cp.length === 5 && cp.every(isFinite) ? { pos: cp.slice(0, 3), yaw: cp[3], pitch: cp[4] } : home;
-    const view = { pos: [...cam0.pos], yaw: cam0.yaw, pitch: cam0.pitch, tyaw: cam0.yaw, tpitch: cam0.pitch, v: 0, sv: 0 };
-    let goHome = null, interacted = false;
-    // без анімацій (prefers-reduced-motion) кадри малюються лише під час керування
-    let activeUntil = 0, running = false;
-    const kick = () => { activeUntil = performance.now() + 2500; if (still && !running) { running = true; requestAnimationFrame(frame); } };
-    const touched = () => { kick(); if (!interacted) { interacted = true; hintEl.classList.remove('on'); } };
-    const ptrs = new Map(); let pinch = 0, lastTap = 0;
-    canvas.addEventListener('pointerdown', e => {
-      canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); canvas.classList.add('drag'); goHome = null; touched();
-      if (e.pointerType !== 'mouse') { const n = performance.now(); if (n - lastTap < 300 && ptrs.size === 1) goHome = performance.now(); lastTap = n; }
-      if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); }
-    });
-    canvas.addEventListener('pointermove', e => {
-      const p = ptrs.get(e.pointerId); if (!p) return;
-      kick();
-      const dx = e.clientX - p[0], dy = e.clientY - p[1]; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
-      if (ptrs.size === 1) { const k = 2.4 / Math.max(innerWidth, innerHeight); view.tyaw -= dx * k; view.tpitch = Math.max(-.55, Math.min(.65, view.tpitch + dy * k)); }
-      else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); view.v += (d - pinch) * .0009; pinch = d; }
-    });
-    const up = e => { ptrs.delete(e.pointerId); if (!ptrs.size) canvas.classList.remove('drag'); };
-    canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
-    canvas.addEventListener('dblclick', () => { goHome = performance.now(); kick(); });
-    canvas.addEventListener('wheel', e => { e.preventDefault(); touched(); goHome = null; view.v -= Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY) * (e.deltaMode ? 33 : 1), 120) * .00045; }, { passive: false });
-    const keys = new Set();
-    addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (['w', 's', 'a', 'd', 'ц', 'і', 'ф', 'в', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { keys.add(k); touched(); goHome = null; e.preventDefault(); } });
-    addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
-    addEventListener('blur', () => keys.clear());
-    setTimeout(() => { if (!interacted) hintEl.classList.add('on'); }, 2600);
-    setTimeout(() => hintEl.classList.remove('on'), 12000);
-    hintEl.textContent = matchMedia('(pointer: coarse)').matches ? 'Ведіть пальцем — роззирнутися · двома пальцями — летіти' : 'Тягніть мишкою — роззирнутися · колесо або W S — летіти';
-
-    const step = dt => {
-      const s = dt / 1000, has = k => keys.has(k);
-      if (has('w') || has('ц') || has('arrowup')) view.v += 1.6 * s;
-      if (has('s') || has('і') || has('arrowdown')) view.v -= 1.6 * s;
-      if (has('a') || has('ф')) view.sv -= 1.4 * s;
-      if (has('d') || has('в')) view.sv += 1.4 * s;
-      if (has('arrowleft')) view.tyaw -= 1.1 * s;
-      if (has('arrowright')) view.tyaw += 1.1 * s;
-      view.v = Math.max(-1.2, Math.min(1.2, view.v)); view.sv = Math.max(-.8, Math.min(.8, view.sv));
-      if (goHome) {
-        const k = Math.min(1, s * 1.8);
-        for (let i = 0; i < 3; i++) view.pos[i] += (home.pos[i] - view.pos[i]) * k;
-        view.tyaw += (Math.round((view.tyaw - home.yaw) / (2 * Math.PI)) * 2 * Math.PI + home.yaw - view.tyaw) * k; view.tpitch += (home.pitch - view.tpitch) * k; view.v *= .8; view.sv *= .8;
-        if (Math.hypot(...view.pos.map((x, i) => x - home.pos[i])) < .01) goHome = null;
+      cx.globalAlpha = 1;
+    }
+    // губка: стирає не до кінця й лишає білуватий розвід на дошці
+    function eraseSeg(x0, y0, x1, y1, rad, strength = .38) {
+      const d = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(d / (rad * .3)));
+      cx.save(); cx.globalCompositeOperation = 'destination-out';
+      for (let i = 0; i <= n; i++) {
+        const t = i / n, px = x0 + (x1 - x0) * t, py = y0 + (y1 - y0) * t;
+        const g = cx.createRadialGradient(px, py, 0, px, py, rad); g.addColorStop(0, `rgba(0,0,0,${strength})`); g.addColorStop(.7, `rgba(0,0,0,${strength * .6})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+        cx.fillStyle = g; cx.fillRect(px - rad, py - rad, rad * 2, rad * 2);
+        if (i % 3 === 0) { bx.fillStyle = 'rgba(230,240,232,.0045)'; bx.beginPath(); bx.arc(px, py, rad * 1.05, 0, 6.283); bx.fill(); }
       }
-      view.yaw += (view.tyaw - view.yaw) * Math.min(1, s * 8); view.pitch += (view.tpitch - view.pitch) * Math.min(1, s * 8);
-      const f = dir(view.yaw, view.pitch), rgt = [Math.cos(view.yaw), 0, -Math.sin(view.yaw)];
-      for (let i = 0; i < 3; i++) view.pos[i] += (f[i] * view.v + rgt[i] * view.sv) * s * 2.2;
-      const damp = Math.pow(.15, s); view.v *= damp; view.sv *= damp;
-      const P = view.pos;
-      P[0] = Math.max(-15, Math.min(15, P[0])); P[2] = Math.max(-7, Math.min(36, P[2]));
-      P[1] = Math.min(9, Math.max(P[1], ground(P[0], P[2]) + .5, .12));
-    };
+      cx.restore();
+    }
 
-    /* ── камера (та сама, що в шейдері) ── */
-    const camera = (time, A) => {
-      const fl = 1.55 * Math.min(1, Math.pow(A / 1.15, .45));
-      const co = [view.pos[0] + Math.sin(time * .04) * .05, view.pos[1] + Math.sin(time * .031) * .015, view.pos[2]];
-      const f = dir(view.yaw, view.pitch), ct = co.map((x, i) => x + f[i] * 10);
-      return { co, ct, fl };
-    };
-    const norm = v => { const l = Math.hypot(...v); return v.map(x => x / l); };
-    const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-    const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-    // напрям → точка на екрані (частки 0..1, y знизу); null, якщо позаду
-    const project = (cam, d, A) => {
-      const ww = norm(cam.ct.map((x, i) => x - cam.co[i])), uu = norm(cross([0, 1, 0], ww)), vv = cross(ww, uu);
-      const z = dot(d, ww); if (z <= .05) return null;
-      const sx = dot(d, uu) / z * cam.fl, sy = dot(d, vv) / z * cam.fl;
-      return [(sx / A + 1) / 2, (sy + 1) / 2];
-    };
+    /* ── елементи на дошці: написи (проявляються «рукою») і малюнки (штрихами) ── */
+    // напис: малюємо в окреме полотно, шорсткі краї; профіль чорнила по стовпчиках — щоб крейда «ходила» по літерах
+    function textItem(o) {
+      const size = o.size, c = document.createElement('canvas'), g = c.getContext('2d');
+      g.font = `700 ${size}px ${FONT}`;
+      const tw = g.measureText(o.text).width, pad = size * .35;
+      c.width = Math.ceil((tw + pad * 2) * dpr); c.height = Math.ceil(size * 1.5 * dpr);
+      g.scale(dpr, dpr); g.font = `700 ${size}px ${FONT}`; g.textBaseline = 'middle'; g.fillStyle = o.color;
+      const cy = size * .75;
+      g.globalAlpha = .1; for (let i = 0; i < 6; i++) g.fillText(o.text, pad + (R() - .5) * 1.6, cy + (R() - .5) * 1.6);
+      g.globalAlpha = o.alpha || .9; g.fillText(o.text, pad, cy);
+      g.globalCompositeOperation = 'destination-out'; g.globalAlpha = 1;
+      const area = (tw + pad * 2) * size * 1.5;
+      for (let i = 0; i < area / 9; i++) { const s = .5 + R() * 1.4; g.globalAlpha = .3 + R() * .7; g.fillRect(R() * (tw + pad * 2), R() * size * 1.5, s, s); }
+      // профіль
+      const im = g.getImageData(0, 0, c.width, c.height).data, cols = [], cum = [0];
+      for (let x = 0; x < c.width; x++) {
+        let top = -1, bot = -1, cnt = 0;
+        for (let y = 0; y < c.height; y += 2) if (im[(y * c.width + x) * 4 + 3] > 60) { if (top < 0) top = y; bot = y; cnt++; }
+        cols.push([top, bot]); cum.push(cum[x] + (cnt ? cnt + 2 : .15));
+      }
+      return { ...o, kind: 'text', c, cols, cum, w: c.width / dpr, h: c.height / dpr, done: 0 };
+    }
+    const toScreen = (it, lx, ly) => { const cs = Math.cos(it.rot || 0), sn = Math.sin(it.rot || 0); return [it.x + lx * cs - ly * sn, it.y + lx * sn + ly * cs]; };
+    function drawTextCols(it, from, to) {
+      if (to <= from) return;
+      cx.save(); cx.translate(it.x, it.y); cx.rotate(it.rot || 0);
+      cx.drawImage(it.c, from, 0, to - from, it.c.height, -it.w / 2 + from / dpr, -it.h / 2, (to - from) / dpr, it.h);
+      cx.restore();
+    }
+    // малюнок: ламані в одиницях розміру, з легким тремтінням руки
+    function shapeItem(o) {
+      const r = rng(o.seed), ph = [r() * 9, r() * 9, r() * 9, r() * 9];
+      const paths = o.paths.map(p => p.map(([a, b], i) => {
+        const t = i * .15;
+        return [o.x + (a + .018 * Math.sin(t * 1.7 + ph[0]) + .012 * Math.sin(t * 4.1 + ph[1])) * o.size, o.y + (b + .018 * Math.sin(t * 1.3 + ph[2]) + .012 * Math.sin(t * 3.7 + ph[3])) * o.size];
+      }));
+      let len = 0; const segs = [];
+      paths.forEach((p, pi) => { for (let i = 1; i < p.length; i++) { const l = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); segs.push({ a: p[i - 1], b: p[i], l, col: (o.colors && o.colors[pi]) || o.color }); len += l; } });
+      return { ...o, kind: 'shape', segs, len, si: 0, rnd: rng(o.seed + 1) };
+    }
+    const ellipse = (rx, ry, rot, n = 64, from = 0, to = 1.03) => { const pts = []; for (let i = 0; i <= n; i++) { const a = (from + (to - from) * i / n) * 6.283; const x = Math.cos(a) * rx, y = Math.sin(a) * ry; pts.push([x * Math.cos(rot) - y * Math.sin(rot), x * Math.sin(rot) + y * Math.cos(rot)]); } return pts; };
+    const line = (a, b, n = 12) => { const p = []; for (let i = 0; i <= n; i++) p.push([a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n]); return p; };
 
-    /* ── WebGL: сцена в текстуру, потім промені й зерно ── */
-    let fallback = !gl, P1, P2, U1 = {}, U2 = {}, tex, fbo;
-    if (gl) {
-      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(s)); return null; } return s; };
-      const prog = (fsId, names, U) => {
-        const vs = sh(gl.VERTEX_SHADER, 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }'), fs = sh(gl.FRAGMENT_SHADER, document.getElementById(fsId).textContent);
-        if (!vs || !fs) return null;
-        const pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.bindAttribLocation(pr, 0, 'p'); gl.linkProgram(pr);
-        if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return null;
-        for (const k of names) U[k] = gl.getUniformLocation(pr, k);
-        return pr;
-      };
-      P1 = prog('fs', ['R', 'T', 'SD', 'MD', 'CO', 'CT', 'FL', 'MIST'], U1);
-      P2 = prog('post', ['S', 'R', 'SUN', 'RAY', 'T'], U2);
-      if (!P1 || !P2) fallback = true;
-      else {
-        const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-        tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
-        for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
-        fbo = gl.createFramebuffer();
+    /* ── розкладка ── */
+    const C = { w: '#f4f2ea', y: '#f2dc84', p: '#f3a9c3', b: '#a3cdf2' };
+    let items = [], queue = [], strokes = [];
+    function layout() {
+      const port = W / H < .9, u = Math.min(W, H * 1.6) / 100;
+      const T = (text, x, y, size, color = C.w, rot = 0, alpha = .84, dur = 1) => textItem({ text, x: x * W, y: y * H, size, color, rot, alpha, dur });
+      const S = (paths, x, y, size, color, seed, dur = 1, colors) => shapeItem({ paths, x: x * W, y: y * H, size, color, colors, seed, dur });
+      const titleSize = port ? Math.min(W * .3, H * .13) : Math.min(W * .19, H * .3);
+      const list = [];
+      const tY = port ? .44 : .47;
+      list.push(T('Edvault', .5, tY, titleSize, C.w, -.02, .95, 2.6));
+      list.push(T(greeting(hour()), .5, tY + titleSize * .62 / H, titleSize * .3, C.w, -.01, .9, 1.3));
+      const atom = [ellipse(1, .36, 0), ellipse(1, .36, 1.047), ellipse(1, .36, 2.094), ellipse(.09, .09, 0, 12, 0, 2.2)];
+      const tri = [[[-1, .62], [1.05, .62], [-1, -.72], [-1, .66]], [[-1, .38], [-.76, .38], [-.76, .62]]];
+      const wave = [[...line([-1.25, 0], [1.3, 0]), [1.18, -.1], [1.3, 0], [1.18, .1]], [...line([-1.1, .75], [-1.1, -.85]), [-1.2, -.73], [-1.1, -.85], [-1, -.73]], Array.from({ length: 60 }, (_, i) => { const x = -1.05 + i * 2.15 / 59; return [x, -.48 * Math.sin((x + 1.05) * 3.2)]; })];
+      const fs = port ? W * .07 : u * 4.3;
+      if (!port) {
+        list.push(T(dateWords(), .5, .075, u * 3.6, C.w, 0, .8, 1.3));
+        list.push(T('Класна робота', .5, .145, u * 3.6, C.w, 0, .8, 1.1));
+        list.push(T('a² + b² = c²', .17, .2, fs, C.w, -.05, .78, 1.1));
+        list.push(S(atom, .84, .23, u * 5.2, C.b, 3, 1.4));
+        list.push(S(tri, .14, .5, u * 5, C.w, 5, 1.1));
+        list.push(T('a', .14, .5 + u * 4.4 / H, fs * .75, C.w, 0, .7, .3), T('c', .14 + u * 5.6 / W, .5 - u * .3 / H, fs * .75, C.w, 0, .7, .3));
+        list.push(T('H₂O', .86, .5, fs * 1.05, C.w, .04, .8, .8));
+        list.push(T('2 + 2 = 4', .15, .8, fs, C.w, -.03, .8, 1));
+        list.push(S([[[-.5, 0], [-.1, .4], [.6, -.5]]], .15 + (fs * 2.3) / W, .8, u * 2.4, C.p, 8, .4));
+        list.push(T('π ≈ 3,14', .46, .82, fs, C.p, .03, .8, 1));
+        list.push(S(wave, .8, .79, u * 6, C.w, 9, 1.6, [C.w, C.w, C.y]));
+        list.push(T('Візьміть крейду — і пишіть', .5, .935, u * 2.9, C.y, -.01, .75, 1.4));
+      } else {
+        list.push(T(dateWords(), .5, .06, W * .07, C.w, 0, .8, 1.2));
+        list.push(T('Класна робота', .5, .11, W * .07, C.w, 0, .8, 1));
+        list.push(T('a² + b² = c²', .3, .21, fs, C.w, -.05, .78, 1));
+        list.push(S(atom, .78, .24, W * .1, C.b, 3, 1.2));
+        list.push(S(tri, .25, .7, W * .09, C.w, 5, 1));
+        list.push(S(wave, .73, .7, W * .11, C.w, 9, 1.4, [C.w, C.w, C.y]));
+        list.push(T('H₂O', .3, .84, fs * 1.05, C.w, .04, .8, .7));
+        list.push(T('π ≈ 3,14', .72, .845, fs, C.p, .03, .8, .9));
+        list.push(T('Візьміть крейду — і пишіть', .5, .945, W * .055, C.y, -.01, .75, 1.3));
+      }
+      return list;
+    }
+
+    /* ── анімація письма ── */
+    let cur = null, tip = null, pause = 0;
+    function finishItem(it) {
+      if (it.kind === 'text') { drawTextCols(it, it.done, it.c.width); it.done = it.c.width; }
+      else { for (; it.si < it.segs.length; it.si++) { const s = it.segs[it.si]; chalkSeg(s.a[0], s.a[1], s.b[0], s.b[1], it.size * .045 + 1.6, s.col, it.rnd, .9); } }
+    }
+    function finishAll() { if (cur) { finishItem(cur); cur = null; } while (queue.length) { const it = queue.shift(); finishItem(it); } tip = null; }
+    function stepWriting(dt) {
+      if (pause > 0) { pause -= dt; return; }
+      if (!cur) { if (!queue.length) { tip = null; return; } cur = queue.shift(); cur.t = 0; }
+      const it = cur; it.t += dt / 1000;
+      const p = Math.min(1, it.t / it.dur), e = p < 1 ? p * (1.15 - .15 * p) : 1;
+      if (it.kind === 'text') {
+        const target = it.cum[it.cum.length - 1] * e;
+        let col = it.done; while (col < it.c.width && it.cum[col + 1] <= target) col++;
+        drawTextCols(it, it.done, col); it.done = col;
+        const pr = it.cols[Math.min(col, it.cols.length - 1)];
+        const ly = pr[0] >= 0 ? pr[0] + (pr[1] - pr[0]) * (.5 + .5 * Math.sin(performance.now() / 38)) : it.c.height / 2;
+        tip = toScreen(it, -it.w / 2 + col / dpr, -it.h / 2 + ly / dpr); tip.col = it.color;
+      } else {
+        const target = it.len * e; let acc = 0;
+        for (let i = 0; i < it.segs.length; i++) { if (i >= it.si && acc + it.segs[i].l <= target) { const s = it.segs[i]; chalkSeg(s.a[0], s.a[1], s.b[0], s.b[1], it.size * .045 + 1.6, s.col, it.rnd, .9); it.si = i + 1; tip = [s.b[0], s.b[1]]; tip.col = s.col; } acc += it.segs[i].l; }
+      }
+      if (tip && R() < .5) dust.push({ x: tip[0], y: tip[1], vx: (R() - .5) * .02, vy: R() * .02, life: 1, s: .6 + R() * 1.2 });
+      if (p >= 1) { finishItem(it); cur = null; pause = 120 + R() * 220; }
+    }
+
+    /* ── власне письмо ── */
+    let tool = { kind: 'chalk', color: C.w }, drawing = null, hover = null;
+    const pieces = [...document.querySelectorAll('.piece')], eraserBtn = $('eraser');
+    const setTool = t => { tool = t; pieces.forEach(p => { const on = t.kind === 'chalk' && p.dataset.c === t.color; p.classList.toggle('on', on); p.setAttribute('aria-pressed', on); }); eraserBtn.classList.toggle('on', t.kind === 'eraser'); eraserBtn.setAttribute('aria-pressed', t.kind === 'eraser'); };
+    pieces.forEach(p => p.addEventListener('click', () => setTool({ kind: 'chalk', color: p.dataset.c })));
+    let lastEr = 0;
+    eraserBtn.addEventListener('click', () => { const n = performance.now(); if (n - lastEr < 400) wipe(); else setTool({ kind: 'eraser' }); lastEr = n; });
+    const chalkW = () => Math.max(3.5, Math.min(8, Math.min(W, H) * .0075));
+    const eraseR = () => Math.max(22, Math.min(46, Math.min(W, H) * .045));
+    const pos = e => { const b = board.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+    fx.addEventListener('pointerdown', e => {
+      if (wiping) return;
+      fx.setPointerCapture(e.pointerId); finishAll();
+      const p = pos(e), er = tool.kind === 'eraser' || e.button === 2;
+      drawing = { er, color: tool.color, seed: (R() * 1e9) | 0, w: chalkW(), r: eraseR(), pts: [[p[0] / W, p[1] / H]], last: p, t: performance.now() };
+      drawing.rnd = rng(drawing.seed);
+      if (!er) chalkSeg(p[0], p[1], p[0] + .1, p[1] + .1, drawing.w, drawing.color, drawing.rnd);
+      hover = p;
+    });
+    fx.addEventListener('pointermove', e => {
+      const p = pos(e); hover = e.pointerType === 'mouse' || drawing ? p : null;
+      if (!drawing) return;
+      const now = performance.now(), d = Math.hypot(p[0] - drawing.last[0], p[1] - drawing.last[1]);
+      if (d < 1.2) return;
+      const v = d / Math.max(8, now - drawing.t), k = Math.max(.55, Math.min(1, 1.15 - v * .35));
+      if (drawing.er) eraseSeg(drawing.last[0], drawing.last[1], p[0], p[1], drawing.r);
+      else { chalkSeg(drawing.last[0], drawing.last[1], p[0], p[1], drawing.w, drawing.color, drawing.rnd, k); if (R() < .25) dust.push({ x: p[0], y: p[1], vx: (R() - .5) * .02, vy: R() * .02, life: 1, s: .6 + R() * 1.2 }); }
+      drawing.pts.push([p[0] / W, p[1] / H, k]); drawing.last = p; drawing.t = now;
+    });
+    const end = () => { if (drawing) { strokes.push(drawing); drawing = null; } };
+    fx.addEventListener('pointerup', e => { end(); if (e.pointerType !== 'mouse') hover = null; });
+    fx.addEventListener('pointercancel', end);
+    fx.addEventListener('pointerleave', () => { if (!drawing) hover = null; });
+    fx.addEventListener('contextmenu', e => e.preventDefault());
+
+    // повторне малювання власних штрихів (після зміни розміру вікна)
+    function replay(s) {
+      const rnd = rng(s.seed), sx = W, sy = H;
+      for (let i = 1; i < s.pts.length; i++) {
+        const a = s.pts[i - 1], b = s.pts[i];
+        if (s.er) eraseSeg(a[0] * sx, a[1] * sy, b[0] * sx, b[1] * sy, s.r);
+        else chalkSeg(a[0] * sx, a[1] * sy, b[0] * sx, b[1] * sy, s.w, s.color, rnd, b[2] || 1);
       }
     }
 
-    // роздільна здатність підлаштовується під швидкість пристрою
-    const forced = parseFloat(params.get('q'));
-    let scale = forced || Math.min(1, (innerWidth < 700 ? 0.5 : 0.65) * Math.min(devicePixelRatio || 1, 2));
-    const resize = () => {
-      const w = Math.max(240, Math.round(innerWidth * scale)), h = Math.max(180, Math.round(innerHeight * scale));
-      if (canvas.width === w && canvas.height === h) return;
-      canvas.width = w; canvas.height = h;
-      if (!fallback) {
-        gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-        if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) fallback = true;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    /* ── витерти всю дошку: губка проходить змійкою, потім крейда пише знову ── */
+    let wiping = null;
+    function wipe() {
+      if (wiping) return; finishAll(); drawing = null;
+      const rows = Math.max(3, Math.round(H / (eraseR() * 2.4))), pts = [];
+      for (let i = 0; i <= rows; i++) { const y = H * (i + .5) / (rows + 1); pts.push(i % 2 ? [W + 40, y] : [-40, y], i % 2 ? [-40, y] : [W + 40, y]); }
+      wiping = { pts, i: 0, t: 0, last: pts[0] };
+      if (still) { while (stepWipe(1000)); }
+    }
+    function stepWipe(dt) {
+      const w = wiping, speed = Math.max(W, H) * 2.6 / 1000;
+      let move = speed * dt;
+      while (move > 0 && w.i < w.pts.length - 1) {
+        const a = w.last, b = w.pts[w.i + 1], d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        const k = Math.min(1, move / Math.max(d, 1e-3)), n = [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+        eraseSeg(a[0], a[1], n[0], n[1], eraseR() * 1.5, .5); w.last = n; move -= d * k;
+        if (k >= 1) w.i++;
       }
-    };
-    addEventListener('resize', resize); resize();
+      hover = w.last;
+      if (w.i >= w.pts.length - 1) {
+        cx.save(); cx.globalCompositeOperation = 'destination-out'; cx.fillStyle = 'rgba(0,0,0,.85)'; cx.fillRect(0, 0, W, H); cx.restore();
+        wiping = null; hover = null; strokes = []; items = layout(); queue = [...items]; pause = 500; return false;
+      }
+      return true;
+    }
 
-    const t0 = performance.now();
-    let last = t0, frames = 0, fpsT = t0, nextFlock = 1500, lastGreet = '';
-    activeUntil = t0 + 1500; running = true;
+    /* ── світло з вікна й пил у ньому ── */
+    function sunlight() {
+      const h = hour(), day = Math.max(0, Math.min(1, (h - 7) / 1.2)) * Math.max(0, Math.min(1, (18.6 - h) / 1.4));
+      win.style.opacity = (day * .9).toFixed(2);
+      win.style.left = (-8 + Math.max(0, Math.min(1, (h - 8) / 10)) * 70) + '%';
+      const warm = Math.max(0, Math.min(1, (h - 15.5) / 3));
+      win.style.setProperty('--sun', `rgba(255,${244 - warm * 50},${214 - warm * 90},${.08 + warm * .02})`);
+      board.style.filter = h < 6.5 || h > 20.5 ? 'brightness(.82) saturate(.9)' : '';
+    }
+    const dust = [], motes = Array.from({ length: still ? 0 : 38 }, () => ({ x: R(), y: R(), vx: (R() - .5) * .00002, vy: (R() - .5) * .00002, ph: R() * 6, s: .6 + R() * 1.4 }));
+
+    function drawStick(x, y, col) {
+      const g = fxx; g.save(); g.translate(x, y); g.rotate(-.95);
+      g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 10; g.shadowOffsetX = 5; g.shadowOffsetY = 8;
+      const L = Math.max(46, Math.min(70, W * .045)), w = L * .19;
+      const gr = g.createLinearGradient(0, -w / 2, 0, w / 2); gr.addColorStop(0, '#ffffff'); gr.addColorStop(.35, col); gr.addColorStop(1, 'rgba(120,120,110,1)');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(3, -w * .32); g.lineTo(L, -w / 2); g.arc(L, 0, w / 2, -Math.PI / 2, Math.PI / 2); g.lineTo(3, w * .32); g.quadraticCurveTo(-1, 0, 3, -w * .32); g.fill();
+      g.shadowColor = 'transparent'; g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(6, -w * .38, L - 8, w * .14);
+      g.restore();
+    }
+    function drawEraser(x, y) {
+      const g = fxx, ew = Math.max(56, Math.min(92, W * .065)), eh = ew * .42;
+      g.save(); g.translate(x, y); g.rotate(-.12); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 14; g.shadowOffsetX = 6; g.shadowOffsetY = 9;
+      const gr = g.createLinearGradient(0, -eh / 2, 0, eh / 2); gr.addColorStop(0, '#b07f52'); gr.addColorStop(.55, '#8a5f39'); gr.addColorStop(.56, '#46464b'); gr.addColorStop(1, '#2c2c30');
+      g.fillStyle = gr; g.beginPath(); g.roundRect ? g.roundRect(-ew / 2, -eh / 2, ew, eh, 4) : g.rect(-ew / 2, -eh / 2, ew, eh); g.fill();
+      g.restore();
+    }
+
+    /* ── головний цикл ── */
+    let last = performance.now();
     function frame(now) {
-      if (!still || now < activeUntil) requestAnimationFrame(frame); else running = false;
-      // ~30 кадрів на секунду: пейзаж змінюється плавно, а батарея й відеокарта не перевантажуються
-      if (now - last < 31) return;
-      const dt = Math.min(80, now - last); last = now;
-      const hr = realT(), time = still ? 40 : (now - t0) / 1000, A = innerWidth / innerHeight;
-      step(dt);
-      const sd = sunDir(hr), md = moonDir(hr), cam = camera(time, A);
-      const night = 1 - smooth(sd[1], -.22, -.02);
-      // що підсвічує промені: сонце, а вночі — місяць
-      const useMoon = sd[1] < -.02 && md[1] > 0, src = useMoon ? md : sd;
-      const scr = project(cam, src, A);
-      if (!fallback) {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.useProgram(P1);
-        gl.uniform2f(U1.R, canvas.width, canvas.height); gl.uniform1f(U1.T, time);
-        gl.uniform3fv(U1.SD, sd); gl.uniform3fv(U1.MD, md); gl.uniform3fv(U1.CO, cam.co); gl.uniform3fv(U1.CT, cam.ct); gl.uniform1f(U1.FL, cam.fl);
-        gl.uniform1f(U1.MIST, Math.max(smooth(hr, 4, 6.5) * (1 - smooth(hr, 8, 10.5)), .35 * smooth(hr, 19, 21) + .35 * (1 - smooth(hr, 2, 4))));
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.useProgram(P2);
-        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(U2.S, 0);
-        gl.uniform2f(U2.R, canvas.width, canvas.height); gl.uniform1f(U2.T, time);
-        const low = Math.exp(-Math.pow(sd[1] / .22, 2));
-        const ray = useMoon ? .35 * night : smooth(sd[1], -.03, .02) * (.35 + .65 * low);
-        gl.uniform2f(U2.SUN, scr ? scr[0] : .5, scr ? scr[1] : 1.6); gl.uniform1f(U2.RAY, scr ? ray : ray * .4);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-        if (!canvas.classList.contains('on')) canvas.classList.add('on');
-        window.__frames = (window.__frames || 0) + 1;
+      const dt = Math.min(50, now - last); last = now;
+      if (wiping) stepWiping(dt); else stepWriting(dt);
+      fxx.setTransform(dpr, 0, 0, dpr, 0, 0); fxx.clearRect(0, 0, W, H);
+      // пил у промені світла
+      const wo = parseFloat(win.style.opacity) || 0;
+      for (const m of motes) {
+        m.x += m.vx * dt + Math.sin(now / 4000 + m.ph) * .00001 * dt; m.y += m.vy * dt - .000004 * dt; m.ph += dt * .001;
+        if (m.x < 0) m.x += 1; if (m.x > 1) m.x -= 1; if (m.y < 0) m.y += 1; if (m.y > 1) m.y -= 1;
+        const a = (.25 + .2 * Math.sin(m.ph)) * (.25 + wo);
+        fxx.fillStyle = `rgba(255,248,225,${a.toFixed(3)})`; fxx.beginPath(); fxx.arc(m.x * W, m.y * H, m.s, 0, 6.283); fxx.fill();
       }
-      frames++;
-      if (now - fpsT > 4000) { frames = 0; fpsT = now; }   // вкладка була прихована
-      else if (!forced && now - fpsT > 1500) { const fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now; if (fps < 24 && scale > .25) { scale *= .85; resize(); } }
-
-      // відлетіли чи відвернулися — напис тане, щоб не заважав роздивлятися
-      const away = Math.hypot(view.pos[0] - home.pos[0], (view.pos[1] - home.pos[1]) * 2, view.pos[2] - home.pos[2]) / 1.5 + Math.abs(Math.atan2(Math.sin(view.yaw - home.yaw), Math.cos(view.yaw - home.yaw))) / .9 + Math.abs(view.pitch - home.pitch) / .6;
-      const heroOp = 1 - smooth(away, .25, .9); hero.style.opacity = heroOp.toFixed(3); ffEl.style.opacity = heroOp.toFixed(3);
-      const st = root.style;
-      st.setProperty('--ff', (Math.min(1, smooth(hr, 19.8, 21) * (1 - smooth(hr, 23.4, 24)) + (1 - smooth(hr, 0, 1.2)) * .5)).toFixed(3));
-      const birdsV = smooth(hr, 6.8, 8.2) * (1 - smooth(hr, 18.6, 19.6)) * heroOp; st.setProperty('--birds', birdsV.toFixed(3));
-      for (let i = flock.length - 1; i >= 0; i--) {
-        const b = flock[i]; b.x += b.v * dt * .06; b.ph += dt * .002;
-        b.el.style.left = b.x + '%'; b.el.style.top = b.y + Math.sin(b.ph) * .5 + '%'; b.el.style.transform = `scaleX(${b.v > 0 ? 1 : -1})`;
-        if (b.x < -12 || b.x > 112) { b.el.remove(); flock.splice(i, 1); }
+      // крейдяний пил, що осипається
+      for (let i = dust.length - 1; i >= 0; i--) {
+        const d = dust[i]; d.vy += .00006 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.life -= dt / 1400;
+        if (d.life <= 0 || d.y > H) { dust.splice(i, 1); continue; }
+        fxx.fillStyle = `rgba(240,240,232,${(d.life * .5).toFixed(3)})`; fxx.fillRect(d.x, d.y, d.s, d.s);
       }
-      if ((nextFlock -= dt) < 0) { nextFlock = 8000 + Math.random() * 9000; if (birdsV > .5 && flock.length < 10) spawnFlock(); }
-      const g = greeting(hr); if (g !== lastGreet) { greetEl.textContent = g; lastGreet = g; }
+      if (dust.length > 400) dust.splice(0, dust.length - 400);
+      // рука з крейдою чи губкою
+      if (wiping && hover) drawEraser(hover[0], hover[1]);
+      else if (tip) drawStick(tip[0], tip[1], tip.col || C.w);
+      else if (hover) { if (tool.kind === 'eraser' || (drawing && drawing.er)) drawEraser(hover[0], hover[1]); else drawStick(hover[0], hover[1], tool.color); }
+      requestAnimationFrame(frame);
     }
-    requestAnimationFrame(frame);
-    if (still) setInterval(() => { if (!running) requestAnimationFrame(frame); }, 30000);
+    const stepWiping = dt => stepWipe(dt);
+
+    /* ── розмір ── */
+    function resize() {
+      const b = board.getBoundingClientRect(); W = b.width; H = b.height;
+      for (const c of [bg, ch, fx]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+      cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      paintBoard();
+      cur = null; tip = null; queue = []; wiping = null;
+      items = layout(); items.forEach(finishItem);
+      strokes.forEach(replay);
+    }
+    let rt = 0;
+    addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
+
+    const go = () => {
+      const b = board.getBoundingClientRect(); W = b.width; H = b.height;
+      for (const c of [bg, ch, fx]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+      cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      paintBoard(); items = layout(); queue = [...items]; pause = 450;
+      if (still) finishAll();
+      sunlight(); setInterval(sunlight, 60000);
+      requestAnimationFrame(t => { last = t; frame(t); });
+    };
+    Promise.race([Promise.all([document.fonts.load(`700 80px Caveat`), document.fonts.load(`700 80px Caveat`, 'Добрий ранок')]), new Promise(r => setTimeout(r, 2500))]).then(go, go);
   })();
   </script>
 </body>
