@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Edvault</title>
-  <meta name="theme-color" content="#1b2056">
+  <meta name="theme-color" content="#0b1230">
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,74 +15,51 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
   <style>
-    /* Заглушка головної: гірський пейзаж, що живе за справжнім часом доби.
-       Кольори неба, гір і туману плавно перетікають між «опорними» годинами (PAL у скрипті),
-       сонце й місяць ходять по дузі й ховаються за горами, вночі — зорі й падаючі зірки,
-       удень — птахи, увечері — світлячки. Шари зсуваються за мишкою чи нахилом телефона (паралакс).
+    /* Заглушка головної: гірське озеро, яке малює відеокарта (WebGL-шейдер) за справжнім часом доби.
+       Небо з розсіюванням світла, сонце й місяць, промені з-за гір, хмари, що пливуть і підсвічуються,
+       гори з освітленими схилами, снігом і серпанком, туман, озеро з віддзеркаленням і брижами,
+       зорі й падаючі зірки. Поверх — птахи й світлячки. Паралакс за мишкою чи нахилом телефона.
        Клік по сонцю чи місяцю — «перемотка» доби. Для перевірки: /?t=19.5 (година). */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; }
-    body { font-family: 'Inter', system-ui, sans-serif; overflow: hidden; background: var(--sky2, #1b2056); color: #fff; -webkit-tap-highlight-color: transparent; }
-
-    .scene { position: fixed; inset: 0; overflow: hidden; background: linear-gradient(to bottom, var(--sky0) 0%, var(--sky1) 48%, var(--sky2) 74%, var(--sky2) 100%); }
-    .layer { position: absolute; left: -6%; width: 112%; top: -4%; height: 108%; pointer-events: none; will-change: transform; }
-    .layer svg { position: absolute; left: 0; bottom: 0; width: 100%; height: min(100%, 150vw); display: block; }
-
-    /* зорі */
-    .stars { opacity: var(--stars); }
-    .stars i { position: absolute; border-radius: 50%; background: #fff; animation: tw var(--tw) ease-in-out infinite; }
-    @keyframes tw { 50% { opacity: .25; } }
-    .shoot { position: absolute; height: 2px; width: 140px; border-radius: 2px; background: linear-gradient(90deg, rgba(255,255,255,.95), transparent);
-      transform-origin: 0 50%; animation: shoot 1.1s cubic-bezier(.3,.1,.4,1) forwards; filter: drop-shadow(0 0 6px rgba(255,255,255,.8)); }
-    @keyframes shoot { from { opacity: 0; translate: 0 0; } 15% { opacity: 1; } to { opacity: 0; translate: -420px 220px; } }
-
-    /* сонце, місяць і сяйво біля обрію */
-    .glow { position: absolute; width: 120vmax; height: 120vmax; margin: -60vmax 0 0 -60vmax; border-radius: 50%;
-      background: radial-gradient(circle, var(--glow) 0%, transparent 55%); opacity: var(--glowA); mix-blend-mode: screen; }
-    .orb { position: absolute; width: 11vmin; height: 11vmin; min-width: 70px; min-height: 70px; translate: -50% -50%; border-radius: 50%; pointer-events: auto; cursor: pointer; border: 0; }
-    .sun { background: radial-gradient(circle at 50% 50%, #fffbe8 0%, var(--sunC) 58%, var(--sunE) 100%); box-shadow: 0 0 60px 18px var(--sunH), 0 0 160px 60px var(--sunH2); }
-    .moon { background: radial-gradient(circle at 38% 36%, #fbfbf4, #dfe3ea 60%, #b9c0cc); box-shadow: 0 0 40px 10px rgba(220,228,255,.35), 0 0 120px 40px rgba(160,180,255,.18); }
-    .moon::before, .moon::after { content: ''; position: absolute; border-radius: 50%; background: rgba(150,158,175,.35); }
-    .moon::before { width: 22%; height: 22%; left: 52%; top: 26%; } .moon::after { width: 14%; height: 14%; left: 30%; top: 58%; }
-    .orb:focus-visible { outline: 3px solid rgba(255,255,255,.8); outline-offset: 8px; }
-
-    /* хмари: м'які градієнтні «клубки», колір залежить від освітлення */
-    .cloud { position: absolute; width: 20vw; height: 4.6vw; min-width: 170px; min-height: 40px; opacity: var(--cloudA); }
-    .cloud i { position: absolute; border-radius: 50%; background: radial-gradient(closest-side, var(--cloud) 0%, var(--cloud) 45%, transparent 100%); }
-
-    /* туман між горами */
-    .fog { position: absolute; left: 0; right: 0; height: 26%; background: linear-gradient(to bottom, transparent, var(--fog) 55%, transparent); opacity: var(--fogA); }
+    body { font-family: 'Inter', system-ui, sans-serif; overflow: hidden; color: #fff; -webkit-tap-highlight-color: transparent;
+      background: linear-gradient(#0b1230, #3a2f5c 55%, #e08a6a); }
+    #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 1.6s ease; }
+    #gl.on { opacity: 1; }
+    .fx { position: fixed; inset: 0; pointer-events: none; will-change: transform; }
 
     /* птахи */
-    .bird { position: absolute; width: 22px; height: 10px; opacity: var(--birds); }
+    .bird { position: absolute; width: 20px; height: 9px; opacity: var(--birds, 0); }
     .bird svg { width: 100%; height: 100%; overflow: visible; }
-    .bird path { fill: none; stroke: var(--birdC); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transform-origin: 50% 80%; animation: flap .55s ease-in-out infinite alternate; }
-    @keyframes flap { to { transform: scaleY(-.55); } }
+    .bird path { fill: none; stroke: #141a26; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transform-origin: 50% 80%; animation: flap .5s ease-in-out infinite alternate; }
+    @keyframes flap { to { transform: scaleY(-.6); } }
 
     /* світлячки */
-    .ff { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #fff6a8; box-shadow: 0 0 10px 3px rgba(255,236,120,.75); opacity: 0;
+    .ff { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #fff7b0; box-shadow: 0 0 8px 3px rgba(255,232,120,.8), 0 0 22px 6px rgba(255,220,90,.25); opacity: 0;
       animation: ffly var(--d) ease-in-out infinite, ffblink var(--b) ease-in-out infinite; }
-    .fireflies { opacity: var(--ff); }
-    @keyframes ffly { 33% { translate: 26px -18px; } 66% { translate: -14px -34px; } }
-    @keyframes ffblink { 0%, 100% { opacity: 0; } 40%, 60% { opacity: 1; } }
+    #ffs { opacity: var(--ff, 0); }
+    @keyframes ffly { 25% { translate: 22px -14px; } 50% { translate: 6px -32px; } 75% { translate: -18px -16px; } }
+    @keyframes ffblink { 0%, 100% { opacity: 0; } 45%, 60% { opacity: 1; } }
 
     /* текст */
-    .hero { position: fixed; left: 0; right: 0; top: 17vh; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; pointer-events: none; z-index: 5; will-change: transform; }
-    .name { font-size: clamp(54px, 10vw, 128px); font-weight: 800; letter-spacing: -.04em; line-height: 1;
-      text-shadow: 0 2px 0 rgba(0,0,0,.06), 0 10px 40px var(--shadow), 0 0 80px var(--shadow); }
-    .name span { display: inline-block; opacity: 0; transform: translateY(.35em); filter: blur(8px); animation: rise 1s cubic-bezier(.2,.8,.2,1) forwards; }
+    .hero { position: fixed; left: 0; right: 0; top: 15vh; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; pointer-events: none; z-index: 5; will-change: transform; }
+    .name { font-size: clamp(56px, 10.5vw, 136px); font-weight: 800; letter-spacing: -.045em; line-height: 1;
+      text-shadow: 0 1px 1px rgba(0,0,0,.15), 0 8px 36px rgba(0,0,20,.35), 0 0 90px rgba(0,0,30,.25); }
+    .name span { display: inline-block; opacity: 0; transform: translateY(.3em) scale(.96); filter: blur(10px); animation: rise 1.3s cubic-bezier(.2,.8,.2,1) forwards; }
     @keyframes rise { to { opacity: 1; transform: none; filter: none; } }
-    .greet { font-size: clamp(16px, 2vw, 22px); font-weight: 600; letter-spacing: .02em; opacity: 0; animation: fade 1.2s ease-out 1s forwards; text-shadow: 0 2px 18px var(--shadow); }
-    @keyframes fade { to { opacity: .92; } }
-    .lapse { position: fixed; left: 50%; bottom: 26px; translate: -50% 0; z-index: 6; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;
-      background: rgba(10,14,40,.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.25);
+    .greet { font-size: clamp(15px, 1.9vw, 21px); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: 0; animation: fade 1.4s ease-out 1.3s forwards; text-shadow: 0 2px 16px rgba(0,0,20,.5); }
+    @keyframes fade { to { opacity: .9; } }
+    .lapse { position: fixed; left: 50%; bottom: 24px; translate: -50% 0; z-index: 6; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;
+      background: rgba(8,12,30,.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.22);
       opacity: 0; transition: opacity .4s; pointer-events: none; font-variant-numeric: tabular-nums; }
     .lapse.on { opacity: 1; }
+    .hit { position: fixed; width: 90px; height: 90px; translate: -50% -50%; border-radius: 50%; border: 0; background: transparent; cursor: pointer; z-index: 4; }
+    .hit:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 4px; }
 
-    @media (max-aspect-ratio: 3/4) { .hero { top: 31vh; } }
+    @media (max-aspect-ratio: 3/4) { .hero { top: 22vh; } }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
-      .name span { opacity: 1; transform: none; filter: none; } .greet { opacity: .92; }
+      .name span { opacity: 1; transform: none; filter: none; } .greet { opacity: .9; }
     }
   </style>
 <meta name="description" content="Інструменти для вчителя, тренажери й емулятори для учнів — безкоштовно, просто в браузері.">
@@ -101,222 +78,388 @@
 <!-- /og -->
 </head>
 <body>
-  <div class="scene" id="scene" aria-hidden="true"></div>
+  <canvas id="gl" aria-hidden="true"></canvas>
+  <div class="fx" id="birds" aria-hidden="true"></div>
+  <div class="fx" id="ffs" aria-hidden="true"></div>
+  <button class="hit" id="hit" aria-label="Перемотати добу"></button>
   <main class="hero" id="hero">
     <h1 class="name" aria-label="Edvault"></h1>
     <p class="greet" id="greet"></p>
   </main>
   <div class="lapse" id="lapse" role="status"></div>
 
+  <script id="fs" type="x-shader/x-fragment">
+precision highp float;
+uniform vec2 R;      // розмір полотна
+uniform float T;     // час, с
+uniform float HR;    // година доби 0..24
+uniform vec2 M;      // паралакс −1..1
+
+#define PI 3.14159265
+const float WATER = .255;   // рівень озера (частка висоти)
+// на вузьких (портретних) екранах світ стискається по горизонталі, щоб у кадр вміщалися гори з обох боків
+float KX() { return pow(max(1., 1.1 * R.y / R.x), .75); }
+
+float h11(float p) { return fract(sin(p * 127.1) * 43758.5453); }
+float h21(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+float noise(vec2 p) { vec2 i = floor(p), f = fract(p), u = f * f * (3. - 2. * f);
+  return mix(mix(h21(i), h21(i + vec2(1, 0)), u.x), mix(h21(i + vec2(0, 1)), h21(i + 1.), u.x), u.y); }
+float fbm(vec2 p) { float v = 0., a = .5; mat2 m = mat2(1.6, 1.2, -1.2, 1.6); for (int i = 0; i < 5; i++) { v += a * noise(p); p = m * p; a *= .5; } return v; }
+float fbm3(vec2 p) { float v = 0., a = .5; mat2 m = mat2(1.6, 1.2, -1.2, 1.6); for (int i = 0; i < 3; i++) { v += a * noise(p); p = m * p; a *= .5; } return v; }
+
+// гребені гір: «ridged» шум, гострі вершини
+float ridge(float x, float s, int oct) {
+  float v = 0., a = .6, f = 1., w = 1.;
+  for (int i = 0; i < 7; i++) { if (i >= oct) break; float n = noise(vec2(x * f, s + float(i) * 13.7)); n = 1. - abs(n * 2. - 1.); n *= n; v += a * n * w; w = clamp(n * 1.6, 0., 1.); f *= 2.13; a *= .5; }
+  return v;
+}
+// висота шару гір (у частках екрана)
+float valley(float x, float w) { return smoothstep(w * .25, w, abs(x)); }
+float mtn(int i, float x, int oct) {
+  if (i == 0) return .36 + (.16 + .34 * valley(x, .95)) * ridge(x * .9 + 3.1, 1.3, oct);
+  if (i == 1) return .31 + (.08 + .3 * valley(x + .1, .8)) * ridge(x * 1.3 + 11.4, 5.7, oct);
+  return .27 + (.03 + .2 * valley(x - .05, .7)) * ridge(x * 2.1 + 27.9, 9.1, oct);
+}
+
+// стан доби: висота сонця (−1..1) та положення сонця/місяця на екрані
+float dayP() { return (HR - 6.) / 13.8; }                     // 6:00 → 19:48
+float sunE() { float p = dayP(); if (p >= 0. && p <= 1.) return sin(p * PI) * .95; float q = mod(HR - 19.8 + 24., 24.) / 10.2; return -sin(clamp(q, 0., 1.) * PI) * .7; }
+vec2 sunPos(float A) { float p = dayP(); return vec2((p - .5) * .62 / KX(), WATER + .06 + sin(clamp(p, -.1, 1.1) * PI) * .6); }
+vec2 moonPos(float A) { float q = mod(HR - 19.8 + 24., 24.) / 10.2; return vec2((q - .5) * .56 / KX(), WATER + .08 + sin(clamp(q, -.1, 1.1) * PI) * .56); }
+
+struct Light { float e, day, dusk, night; vec3 sunCol, zen, hor, amb, fog; };
+Light light() {
+  Light L; L.e = sunE();
+  L.day = smoothstep(-.06, .3, L.e);
+  L.dusk = exp(-pow((L.e + .02) / .17, 2.));            // сутінки й золота година
+  L.night = 1. - smoothstep(-.28, -.02, L.e);
+  L.sunCol = mix(vec3(1., .42, .16), vec3(1., .93, .82), smoothstep(.0, .45, L.e));
+  vec3 zD = vec3(.06, .22, .62), hD = vec3(.55, .74, .95);
+  vec3 zS = vec3(.16, .14, .4), hS = vec3(1., .44, .2);
+  vec3 zN = vec3(.008, .016, .05), hN = vec3(.05, .07, .16);
+  L.zen = mix(mix(zN, zD, L.day), zS, L.dusk * .55);
+  L.hor = mix(mix(hN, hD, L.day), hS, L.dusk * .85);
+  L.amb = mix(vec3(.05, .07, .14), vec3(.75, .82, .95), L.day) + L.dusk * vec3(.35, .12, .05);
+  L.fog = mix(L.hor, L.zen, .25) * mix(.9, 1., L.day);
+  return L;
+}
+
+// ── небо, хмари, гори (усе, що над водою) ──
+vec3 above(vec2 uv, float A, Light L, bool refl) {
+  float X = (uv.x - .5) * A;
+  vec2 sp = sunPos(A), mp = moonPos(A);
+  float hgt = clamp((uv.y - WATER) / (1. - WATER), 0., 1.);
+  vec3 col = mix(L.hor, L.zen, pow(hgt, .5));
+  // розсіювання біля сонця (Мі) і загальне тепле сяйво над обрієм
+  vec2 ds = vec2(X - sp.x - M.x * .01, uv.y - sp.y);
+  float d = length(ds);
+  float sunVis = smoothstep(-.12, .02, L.e);
+  col += L.sunCol * sunVis * (.55 * exp(-d * 2.6) + .8 * exp(-d * 10.) + 3. * exp(-d * 45.)) * (.45 + .55 * L.dusk);
+  col += L.sunCol * L.dusk * .35 * exp(-abs(uv.y - WATER) * 7.) * exp(-abs(X - sp.x) * .9);
+  // диск сонця
+  if (!refl) col = mix(col, vec3(7., 6.2, 5.) * L.sunCol, smoothstep(.03, .025, d) * sunVis);
+
+  // ніч: зорі, Чумацький Шлях, місяць
+  if (L.night > .01) {
+    vec2 sg = vec2(X, uv.y) * 260.; vec2 cell = floor(sg); float r = h21(cell);
+    float star = step(.987, r) * smoothstep(.5, .0, length(fract(sg) - .5 - (vec2(h21(cell + 7.), h21(cell + 3.)) - .5) * .5));
+    star *= .55 + .45 * sin(T * (1.5 + r * 4.) + r * 60.);
+    float band = exp(-pow((uv.y - .62 - X * .28) * 3.6, 2.));
+    float mw = band * fbm(vec2(X, uv.y) * 6. + 2.) * .5;
+    col += L.night * (vec3(star) * smoothstep(WATER, WATER + .12, uv.y) * 1.3 + vec3(.55, .6, .85) * mw * .45 + vec3(1.) * step(.9975, h21(floor(sg * .5))) * smoothstep(.35, .0, length(fract(sg * .5) - .5)) * 1.2);
+    // падаюча зірка (раз на ~7 с)
+    float seg = floor(T / 7.), ft = fract(T / 7.) * 7.;
+    if (ft < .9) {
+      vec2 st = vec2((h11(seg) - .5) * A * .9, .7 + h11(seg + 3.) * .25), dir = normalize(vec2(-1., -.42));
+      vec2 hp = st + dir * ft * .55, rel = vec2(X, uv.y) - hp;
+      float along = dot(rel, -dir), perp = abs(dot(rel, vec2(-dir.y, dir.x)));
+      col += L.night * vec3(1.) * smoothstep(.0025, 0., perp) * smoothstep(.22, 0., along) * step(0., along) * sin(ft / .9 * PI) * 1.4;
+    }
+    float dm = length(vec2(X - mp.x, uv.y - mp.y));
+    float moonVis = smoothstep(-.02, .04, mp.y - WATER - .02) * L.night;
+    col += vec3(.55, .62, .85) * moonVis * (.25 * exp(-dm * 7.) + .4 * exp(-dm * 26.));
+    float disc = smoothstep(.034, .03, dm);
+    vec3 mcol = vec3(.95, .94, .88) * (.82 + .25 * fbm(vec2(X - mp.x, uv.y - mp.y) * 60.)) * smoothstep(.06, -.01, length(vec2(X - mp.x - .014, uv.y - mp.y + .008)) - .024 + .01);
+    if (!refl) col = mix(col, mcol * 1.5, disc * moonVis);
+  }
+
+  // гори: три хребти
+  // від ближнього хребта до дальнього: перший, що закриває піксель, і малюємо (решту не рахуємо)
+  float XW = X * KX(), sx = sp.x * KX();
+  bool hit = false;
+  for (int j = 0; j < 3; j++) {
+    int i = 2 - j;
+    float par = (i == 0 ? .02 : i == 1 ? .045 : .08);
+    float xi = XW - M.x * par;
+    float h = mtn(i, xi, refl ? 4 : 7);
+    if (uv.y < h) {
+      float dep = h - uv.y;
+      float depth = clamp(dep / .25, 0., 1.);
+      // великий нахил схилу — з гладкого силуету (без дрібних октав, щоб не було смуг)
+      float e = .02, dh = (mtn(i, xi + e, 3) - mtn(i, xi - e, 3)) / (2. * e);
+      // рельєф схилу: ерозійні жолоби й ребра, що збігають від гребеня вниз і вбік
+      vec2 fp = vec2(xi + dep * clamp(dh, -1.5, 1.5) * .55 + .05 * fbm3(vec2(xi * 4., dep * 6.)), dep);
+      float s1 = float(i) * 7.3;
+      #define FACE(q) (.6 * (1. - abs(noise(vec2((q).x * 9., (q).y * 4. + s1)) * 2. - 1.)) + .3 * noise(vec2((q).x * 26., (q).y * 7. + s1)) + .12 * noise((q) * vec2(70., 30.)))
+      float f0 = FACE(fp), fx = FACE(fp + vec2(.002, 0.)), fy = FACE(fp + vec2(0., .002));
+      vec3 N = normalize(vec3(-(fx - f0) / .002 * .045 - dh * .9 * (1. - depth * .5), (fy - f0) / .002 * .03 + .35, 1.));
+      vec3 Ld = normalize(vec3(clamp((sx - xi) * 1.6, -1.2, 1.2), max(L.e, -.05) * 1.4 + .25, .45));
+      float lam = clamp(dot(N, Ld), 0., 1.);
+      float tex = fbm(vec2(xi * 18., uv.y * 22.));
+      vec3 rock = mix(vec3(.2, .21, .25), vec3(.34, .31, .29), tex) * (i == 0 ? 1. : i == 1 ? .8 : .62);
+      rock *= .75 + .5 * f0;
+      // сніг: вище лінії снігу, на пологих і звернених угору місцях
+      float snowLine = (i == 0 ? .5 : .47) + .05 * fbm(vec2(xi * 7., 1.)) - dep * .25;
+      float snow = (i < 2) ? smoothstep(snowLine, snowLine + .025, uv.y + tex * .04) * smoothstep(.05, .45, N.y + f0 * .3) : 0.;
+      rock = mix(rock, vec3(.9, .93, .98), snow * smoothstep(.0, .08, h - .42));
+      vec3 sunL = L.sunCol * pow(lam, 1.4) * (L.day * 1.7 + L.dusk * 1.2);
+      vec3 sky = L.amb * (.4 + .3 * N.y);
+      vec3 c = rock * (sky + sunL) * mix(1., .7, depth);
+      // контрове світло на гребені, коли сонце низько за горами
+      c += L.sunCol * L.dusk * smoothstep(.012, 0., dep) * .6 * exp(-abs(xi - sx) * 1.5);
+      c += vec3(.35, .42, .7) * L.night * (.1 + .45 * lam) * (rock + .1);                 // місячне світло
+      // повітряна перспектива: далі — більше серпанку
+      float haze = (i == 0 ? .5 : i == 1 ? .3 : .14) + .12 * (1. - L.day) * L.day;
+      c = mix(c, L.fog, haze * (1. - depth * .35));
+      // туман, що тече біля підніжжя
+      float base = (i == 0 ? .36 : i == 1 ? .31 : .27);
+      float fg = smoothstep(.09, .0, uv.y - base) * fbm3(vec2(xi * 2.3 + T * .018 * float(i + 1), uv.y * 9.));
+      c = mix(c, L.fog * 1.08 + L.sunCol * L.dusk * .15, clamp(fg * 1.3, 0., .85));
+      col = c; hit = true; break;
+    }
+  }
+  // хмари: шум із «закрученням», дрейф, підсвітка з боку сонця
+  if (!hit && uv.y > WATER + .1) {
+    vec2 cp = vec2(X * .9 + T * .006 - M.x * .02, (uv.y - .55) * 3.2);
+    vec2 w = vec2(fbm3(cp * 1.3 + T * .01), fbm3(cp * 1.3 + 4.1));
+    float dn = fbm(cp * vec2(1.2, 2.6) + w * .9 + vec2(T * .012, 0.));
+    float band = smoothstep(.4, .62, uv.y) * smoothstep(1.05, .8, uv.y);
+    float cov = .46 - .04 * L.dusk;
+    float den = smoothstep(cov, cov + .22, dn) * band;
+    vec2 toSun = normalize(vec2(sp.x - X, sp.y - uv.y) + 1e-4);
+    float dn2 = fbm(cp * vec2(1.2, 2.6) + w * .9 + vec2(T * .012, 0.) + toSun * .09);
+    float lit = clamp(.55 + (dn - dn2) * 3.2, 0., 1.);
+    vec3 cLit = mix(vec3(.14, .16, .24), vec3(1.05, 1.02, 1.), L.day);
+    cLit = mix(cLit, L.sunCol * vec3(1.25, .95, .85), L.dusk * .75);
+    vec3 cShade = mix(L.zen * .7 + .02, L.hor * .55 + vec3(.06, .06, .1), .5) * mix(.6, 1., L.day);
+    vec3 cc = mix(cShade, cLit, lit) * (1. + .6 * exp(-length(vec2(X - sp.x, uv.y - sp.y)) * 4.) * L.dusk);
+    cc = mix(cc, cc + vec3(.04, .05, .09), L.night * .5);
+    col = mix(col, cc, den * .9);
+  }
+
+  // дальній берег: смуга ялинок
+  float fx0 = XW - M.x * .1;
+  float dens = smoothstep(.3, .62, fbm3(vec2(fx0 * 3.5, 2.)));
+  float shape = .003 + .006 * fbm3(vec2(fx0 * 30., 5.));            // підлісок
+  for (int k = 0; k < 3; k++) {
+    float sc = k == 0 ? 140. : k == 1 ? 83. : 51.;
+    float tx = fx0 * sc + float(k) * .37, cell = floor(tx);
+    float r = h21(vec2(cell, float(k) * 4.1 + 3.)), r2 = h21(vec2(cell, float(k) * 2.3 + 9.));
+    float lx = fract(tx) - .5 - (r2 - .5) * .4;
+    float th = (.004 + .016 * r * (1. + float(k) * .35)) * (.35 + .65 * dens) * step(.2, r2);
+    float wd = .28 + .2 * r2;
+    shape = max(shape, th * (1. - abs(lx) / wd) + .0015 * sin(lx * 60. + cell));
+  }
+  if (uv.y < WATER + .004 + shape) {
+    float fy = (uv.y - WATER) / max(shape + .004, 1e-3);
+    vec3 tc = vec3(.03, .05, .045) * (L.amb * (.7 + .5 * fy) + L.sunCol * (L.day * .5 + L.dusk * .4) * fy);
+    col = mix(tc, L.fog * .6, .3);
+  }
+  return col;
+}
+
+// ── передній план: береги з ялинками по краях кадру ──
+float shoreY(float X, float A) { float e = smoothstep(.22 * A, .5 * A, abs(X)); return e * (.06 + .05 * fbm3(vec2(X * 2.5, 4.))) - .01; }
+float pines(vec2 uv, float A, float off, float scale, float seed, float hmax) {
+  float X = (uv.x - .5) * A - M.x * off;
+  float tx = X * scale, cell = floor(tx), lx = fract(tx) - .5;
+  float cx = (cell + .5) / scale;
+  float edge = smoothstep(.28 * A, .55 * A, abs(cx));
+  float r = h21(vec2(cell, seed));
+  float H = (.35 + .65 * r) * hmax * edge * step(.25, h21(vec2(cell, seed + 5.)));
+  if (uv.y < shoreY(X, A)) return 1.;
+  float base = shoreY(cx, A);
+  float y = (uv.y - base) / max(H, 1e-3);
+  if (H < .01 || y > 1.) return 0.;
+  float tier = fract(y * (4. + 2. * r));
+  float w = (1. - y) * (.36 + .2 * (1. - tier)) * (.8 + .2 * r) + (noise(vec2(y * 40., cell * 3.)) - .5) * .05 + (noise(vec2(y * 60., cell * 7. + sign(lx) * 3.)) - .5) * .09 * (1. - y);
+  return step(abs(lx), w) + step(abs(lx), .025) * step(y, .1);
+}
+
+vec3 aces(vec3 x) { return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), 0., 1.); }
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / R;
+  float A = R.x / R.y;
+  Light L = light();
+  vec3 col;
+  float X = (uv.x - .5) * A;
+  if (uv.y >= WATER) {
+    col = above(uv, A, L, false);
+  } else {
+    // озеро: дзеркало з перспективними брижами
+    float dz = WATER - uv.y, z = 1. / (dz + .015);
+    vec2 wp = vec2(X * z * .35, z * 1.6);
+    float wv = noise(wp * vec2(1., .35) + vec2(0., T * .35)) + .5 * noise(wp * 2.3 + vec2(T * .2, T * .6));
+    vec2 ruv = vec2(uv.x + (wv - .75) * .012 * (1. - dz * 2.) * smoothstep(.0, .04, dz), WATER + dz + (wv - .75) * .006);
+    vec3 refl = above(ruv, A, L, true);
+    float fres = .25 + .75 * pow(1. - clamp(dz / WATER, 0., 1.), 3.);
+    vec3 deep = mix(vec3(.004, .015, .03), vec3(.03, .09, .14), L.day) + L.sunCol * L.dusk * .03;
+    col = mix(deep, refl * vec3(.82, .9, .95), fres * .92);
+    // сонячна (або місячна) доріжка з відблисками
+    vec2 sp = sunPos(A), mp = moonPos(A);
+    float sv = smoothstep(-.1, .02, L.e), mv = L.night * smoothstep(-.02, .04, mp.y - WATER - .02);
+    float sparkle = pow(noise(wp * vec2(3.5, 1.2) + vec2(T * .9, T * 1.3)), 6.) * 3.;
+    float pathS = exp(-pow((X - sp.x) * (2.2 + dz * 14.), 2.)) * sv, pathM = exp(-pow((X - mp.x) * (3. + dz * 16.), 2.)) * mv;
+    col += L.sunCol * pathS * (sparkle + .25) * (.6 + .9 * L.dusk) + vec3(.7, .78, 1.) * pathM * (sparkle + .15) * .6;
+    col += L.fog * .12 * smoothstep(.006, .0, dz);
+  }
+
+  // промені з-за гір (сонце низько)
+  vec2 sp = sunPos(A);
+  float rayAmt = smoothstep(-.06, .04, L.e) * (.35 + .65 * L.dusk) * (1. - .6 * L.day * (1. - L.dusk));
+  if (rayAmt > .02) {
+    vec2 p = vec2(X, uv.y), dir = sp - p; float acc = 0.;
+    for (int k = 0; k < 14; k++) {
+      vec2 q = p + dir * (float(k) + h21(uv * R + T)) / 14.;
+      float hm = max(mtn(0, q.x * KX() - M.x * .02, 3), mtn(1, q.x * KX() - M.x * .045, 3));
+      acc += step(hm, q.y) * step(WATER, q.y);
+    }
+    acc /= 14.;
+    col += L.sunCol * acc * rayAmt * .32 * exp(-length(dir) * 1.3);
+  }
+
+  // ялинки на передньому плані (два шари для глибини)
+  float p1 = clamp(pines(uv, A * KX(), .14, 9., 2., .2), 0., 1.), p2 = clamp(pines(uv + vec2(0., .02), A * KX(), .24, 5., 9., .42), 0., 1.);
+  vec3 pc1 = mix(vec3(.012, .024, .03), L.fog * .5, .3) * (.45 + .55 * L.day) + L.sunCol * L.dusk * .015;
+  col = mix(col, pc1, p1);
+  vec3 pc2 = vec3(.005, .009, .011) + L.sunCol * L.dusk * .012 + vec3(.01, .015, .03) * L.night;
+  col = mix(col, pc2, p2);
+
+  // кіношна обробка: експозиція, тонмапінг, віньєтка, зерно
+  col *= mix(1.25, 1.05, L.night);
+  col = aces(col);
+  col = pow(col, vec3(.95));
+  vec2 vq = uv - .5; col *= 1. - dot(vq, vq) * .55;
+  col += (h21(uv * R + fract(T) * 31.7) - .5) * .018;
+  gl_FragColor = vec4(col, 1.);
+}
+  </script>
+
   <script>
   (() => {
-    const scene = document.getElementById('scene'), root = document.documentElement, still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const W = 1600, H = 900, NS = 'http://www.w3.org/2000/svg';
-
-    /* ── палітра за годинами: небо (3), сяйво, гори від дальніх до ближніх (4), туман, хмари, ліс ── */
-    const PAL = [
-      [0,    ['#04071a', '#0a1235', '#18214d'], '#3a3f8f', ['#262f57', '#1b2347', '#121a38', '#0b1129'], '#1c2550', '#2a3360', '#070b1d'],
-      [4.8,  ['#070c2a', '#1d2257', '#3f3a73'], '#5b4a8a', ['#38386a', '#2a2b57', '#1d1f44', '#121530'], '#3a3870', '#3c3a6c', '#0b0d22'],
-      [6,    ['#283a86', '#a3628f', '#ff9a72'], '#ff8e66', ['#9a6f99', '#6c4d82', '#463764', '#2a2246'], '#c58aa0', '#ffc1a6', '#1b1631'],
-      [7.5,  ['#4a86d6', '#a6c8ef', '#ffe0bd'], '#ffd8a0', ['#9cb1d1', '#7690b9', '#55719a', '#36506f'], '#d9e6f5', '#ffffff', '#1f3247'],
-      [12,   ['#2774da', '#73b2f1', '#cbe7ff'], '#ffffff', ['#a2bbdb', '#7c9cc4', '#5a7ba2', '#3b5a7b'], '#e6f1fc', '#ffffff', '#21384d'],
-      [16.5, ['#3175cf', '#8bbbea', '#ffe6c2'], '#fff1d0', ['#a7b3d0', '#8093ba', '#5e6f97', '#3e4b6c'], '#f1e6e0', '#fff7ee', '#232d45'],
-      [18.8, ['#384192', '#d26a86', '#ffa35e'], '#ff8a4a', ['#a8668e', '#7a4a7e', '#503264', '#2f1e46'], '#e29a98', '#ffc59a', '#1c1330'],
-      [20.2, ['#151a4f', '#4e3577', '#b65a74'], '#d0627a', ['#5c4373', '#43325f', '#2d2349', '#1b1633'], '#5b467c', '#6a5486', '#0e0c20'],
-      [21.6, ['#060a24', '#121a44', '#262c5e'], '#46407a', ['#2c3460', '#20284f', '#151c3e', '#0d132c'], '#262d58', '#2e3664', '#080c1f'],
-      [24,   ['#04071a', '#0a1235', '#18214d'], '#3a3f8f', ['#262f57', '#1b2347', '#121a38', '#0b1129'], '#1c2550', '#2a3360', '#070b1d'],
-    ];
-    const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-    const mix = (a, b, k) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * k)).join(',')})`; };
-    const ease = k => k * k * (3 - 2 * k);
-    const rgb = c => c.startsWith('#') ? hex(c) : c.match(/\d+/g).map(Number);
-    const mixRgb = (a, b, k) => { const A = rgb(a), B = rgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * k)).join(',')})`; };
-    function palette(t) {
-      let i = 0; while (PAL[i + 1][0] <= t) i++;
-      const a = PAL[i], b = PAL[i + 1], k = ease((t - a[0]) / (b[0] - a[0]));
-      const m = (x, y) => mix(x, y, k);
-      return { sky: a[1].map((c, j) => m(c, b[1][j])), glow: m(a[2], b[2]), mtn: a[3].map((c, j) => m(c, b[3][j])), fog: m(a[4], b[4]), cloud: m(a[5], b[5]), front: m(a[6], b[6]) };
-    }
-    const S1 = 6.1, S2 = 20; // схід і захід
-    const smooth = (x, a, b) => ease(Math.max(0, Math.min(1, (x - a) / (b - a))));
-
-    /* ── шари ── */
-    const layers = [];
-    const layer = (depth, cls = '') => { const el = document.createElement('div'); el.className = 'layer ' + cls; scene.appendChild(el); layers.push({ el, depth }); return el; };
-
-    // зорі
-    const stars = layer(4, 'stars');
-    for (let i = 0; i < (innerWidth < 600 ? 110 : 220); i++) {
-      const s = document.createElement('i'), z = Math.random() ** 2;
-      Object.assign(s.style, { left: Math.random() * 100 + '%', top: Math.random() * 62 + '%', width: .8 + z * 2.4 + 'px', height: .8 + z * 2.4 + 'px', opacity: .35 + z * .65 });
-      s.style.setProperty('--tw', 2 + Math.random() * 5 + 's'); s.style.animationDelay = -Math.random() * 6 + 's';
-      stars.appendChild(s);
-    }
-
-    // сонце, місяць, сяйво (за горами)
-    const sky = layer(8);
-    const glow = document.createElement('div'); glow.className = 'glow'; sky.appendChild(glow);
-    const sun = document.createElement('button'); sun.className = 'orb sun'; sun.setAttribute('aria-label', 'Сонце: перемотати добу'); sky.appendChild(sun);
-    const moon = document.createElement('button'); moon.className = 'orb moon'; moon.setAttribute('aria-label', 'Місяць: перемотати добу'); sky.appendChild(moon);
-
-    // хмари: дальні й ближні
-    const clouds = [];
-    const cloudLayer = (depth, n, top, scale) => {
-      const L = layer(depth);
-      for (let i = 0; i < n; i++) {
-        const c = document.createElement('div'); c.className = 'cloud';
-        // широка пласка основа + кілька «бань» зверху
-        const base = document.createElement('i'); Object.assign(base.style, { width: '100%', height: '55%', left: '0', top: '45%' }); c.appendChild(base);
-        for (let j = 0; j < 3; j++) { const b = document.createElement('i'), w = 26 + Math.random() * 22; Object.assign(b.style, { width: w + '%', height: w * 2.6 + '%', left: 8 + j * 26 + Math.random() * 8 + '%', top: 52 - w * 2.2 + Math.random() * 10 + '%' }); c.appendChild(b); }
-        c.style.top = top[0] + Math.random() * (top[1] - top[0]) + '%'; c.style.scale = scale * (.7 + Math.random() * .6);
-        L.appendChild(c); clouds.push({ el: c, x: Math.random() * 120 - 10, v: (.4 + Math.random() * .5) * scale });
-      }
-    };
-    cloudLayer(12, 4, [4, 16], .75);
-
-    // гори: плавні хребти з шумом
-    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    function ridge(base, amp, waves, jag, sharp = true) {
-      const ph = waves.map(() => rnd() * Math.PI * 2), pts = [];
-      for (let x = -40; x <= W + 40; x += 12) {
-        let y = base; waves.forEach((f, i) => { const r = 1 - Math.abs(Math.sin(x / W * Math.PI * f + ph[i])); y -= (r ** (sharp ? 1.6 : 1) - .35) * amp / (i * .9 + 1); });
-        y += (rnd() - .5) * jag; pts.push([x, y]);
-      }
-      let d = `M${pts[0][0]} ${H} L${pts[0][0]} ${pts[0][1]}`;
-      for (let i = 1; i < pts.length; i++) { const [x0, y0] = pts[i - 1], [x1, y1] = pts[i]; d += ` Q${x0} ${y0} ${(x0 + x1) / 2} ${(y0 + y1) / 2}`; }
-      return { d: d + ` L${W + 40} ${H} Z`, pts };
-    }
-    const mtnEls = [];
-    const MTN = [[440, 190, [2.2, 4.6, 9.5], 6, 18], [540, 160, [3.1, 6.2, 12], 8, 28], [640, 120, [2.6, 5.8, 13], 8, 42], [735, 80, [1.8, 4.4, 10], 6, 58]];
-    MTN.forEach(([base, amp, waves, jag, depth], i) => {
-      const L = layer(depth), svg = document.createElementNS(NS, 'svg');
-      svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('preserveAspectRatio', 'xMidYMax slice');
-      const g = document.createElementNS(NS, 'linearGradient'); g.id = 'mg' + i; g.setAttribute('x1', 0); g.setAttribute('y1', 0); g.setAttribute('x2', 0); g.setAttribute('y2', 1);
-      g.innerHTML = '<stop offset="0"/><stop offset=".55"/><stop offset="1"/>'; const defs = document.createElementNS(NS, 'defs'); defs.appendChild(g); svg.appendChild(defs);
-      const p = document.createElementNS(NS, 'path'); p.setAttribute('d', ridge(base, amp, waves, jag).d); p.setAttribute('fill', `url(#mg${i})`); svg.appendChild(p); L.appendChild(svg); mtnEls.push(g.querySelectorAll('stop'));
-      if (i < 3) { const f = document.createElement('div'); f.className = 'fog'; f.style.top = (base / H * 100 + 4 + i * 2) + '%'; L.appendChild(f); }
-      if (i === 1) cloudLayer(depth + 4, 2, [30, 38], 1);
-    });
-
-    // передній план: пагорб із ялинковим лісом
-    const front = layer(76), fsvg = document.createElementNS(NS, 'svg');
-    fsvg.setAttribute('viewBox', `0 0 ${W} ${H}`); fsvg.setAttribute('preserveAspectRatio', 'xMidYMax slice');
-    const hill = ridge(815, 34, [.9, 2.3], 3, false), hp = document.createElementNS(NS, 'path'); hp.setAttribute('d', hill.d);
-    let trees = '';
-    const yAt = x => { const i = Math.max(0, Math.min(hill.pts.length - 1, Math.round((x + 40) / 20))); return hill.pts[i][1]; };
-    for (let x = -30; x < W + 30; x += 9 + rnd() * 22) {
-      if (Math.abs(x - W / 2) < 260 && rnd() < .7) continue; // поляна посередині
-      const h = 40 + rnd() * 80, w = h * (.32 + rnd() * .1), y = yAt(x) + 6;
-      trees += `M${x} ${y - h}L${x + w * .55} ${y - h * .55}L${x + w * .3} ${y - h * .55}L${x + w * .8} ${y - h * .2}L${x + w * .45} ${y - h * .2}L${x + w} ${y}L${x - w} ${y}L${x - w * .45} ${y - h * .2}L${x - w * .8} ${y - h * .2}L${x - w * .3} ${y - h * .55}L${x - w * .55} ${y - h * .55}Z`;
-    }
-    const tp = document.createElementNS(NS, 'path'); tp.setAttribute('d', trees);
-    fsvg.append(hp, tp); front.appendChild(fsvg);
-
-    // світлячки над лісом
-    const ffL = layer(84, 'fireflies');
-    for (let i = 0; i < (innerWidth < 600 ? 14 : 30); i++) {
-      const f = document.createElement('i'); f.className = 'ff';
-      Object.assign(f.style, { left: Math.random() * 100 + '%', top: 72 + Math.random() * 24 + '%' });
-      f.style.setProperty('--d', 6 + Math.random() * 8 + 's'); f.style.setProperty('--b', 2 + Math.random() * 3 + 's'); f.style.animationDelay = `${-Math.random() * 10}s, ${-Math.random() * 5}s`;
-      ffL.appendChild(f);
-    }
-
-    // птахи
-    const birdL = layer(30), flock = [];
-    const spawnFlock = () => {
-      const n = 3 + Math.floor(Math.random() * 4), y = 18 + Math.random() * 20, dir = Math.random() < .5 ? 1 : -1;
-      for (let i = 0; i < n; i++) {
-        const b = document.createElement('div'); b.className = 'bird';
-        b.innerHTML = '<svg viewBox="0 0 22 10"><path d="M1 2 Q6 8 11 6 Q16 8 21 2"/></svg>';
-        b.querySelector('path').style.animationDelay = -Math.random() * .5 + 's';
-        b.style.scale = .7 + Math.random() * .5;
-        birdL.appendChild(b); flock.push({ el: b, x: dir > 0 ? -8 - i * 2.5 : 108 + i * 2.5, y: y + (i % 2 ? 2.5 : -1) * (i / 2), v: dir * (.035 + Math.random() * .01), ph: Math.random() * 6 });
-      }
-    };
+    const root = document.documentElement, still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const canvas = document.getElementById('gl');
+    const gl = canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'high-performance' });
 
     /* ── текст ── */
     const nameEl = document.querySelector('.name');
-    [...'Edvault'].forEach((ch, i) => { const s = document.createElement('span'); s.textContent = ch; s.setAttribute('aria-hidden', 'true'); s.style.animationDelay = .3 + i * .08 + 's'; nameEl.appendChild(s); });
-    const greetEl = document.getElementById('greet'), hero = document.getElementById('hero'), lapseEl = document.getElementById('lapse'), themeMeta = document.querySelector('meta[name="theme-color"]');
+    [...'Edvault'].forEach((ch, i) => { const s = document.createElement('span'); s.textContent = ch; s.setAttribute('aria-hidden', 'true'); s.style.animationDelay = .4 + i * .09 + 's'; nameEl.appendChild(s); });
+    const greetEl = document.getElementById('greet'), hero = document.getElementById('hero'), lapseEl = document.getElementById('lapse'), hit = document.getElementById('hit');
     const greeting = t => t < 4.5 || t >= 22.5 ? 'Доброї ночі' : t < 11 ? 'Добрий ранок' : t < 17.5 ? 'Добрий день' : 'Добрий вечір';
 
     /* ── час ── */
     const q = parseFloat(new URLSearchParams(location.search).get('t'));
     const realT = () => { if (!isNaN(q)) return ((q % 24) + 24) % 24; const d = new Date(); return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; };
-    let lapse = null;
-    const LAPSE = 14000;
+    const ease = k => k * k * (3 - 2 * k), smooth = (x, a, b) => ease(Math.max(0, Math.min(1, (x - a) / (b - a))));
+    let lapse = null; const LAPSE = 16000;
     const nowT = () => { if (!lapse) return realT(); const k = (performance.now() - lapse.start) / LAPSE; if (k >= 1) { lapse = null; lapseEl.classList.remove('on'); return realT(); } return (lapse.from + 24 * ease(k)) % 24; };
-    const startLapse = () => { if (lapse || still) return; lapse = { from: realT(), start: performance.now() }; lapseEl.classList.add('on'); };
-    sun.addEventListener('click', startLapse); moon.addEventListener('click', startLapse);
+    hit.addEventListener('click', () => { if (lapse || still) return; lapse = { from: realT(), start: performance.now() }; lapseEl.classList.add('on'); });
 
-    /* ── оновлення сцени ── */
-    let lastT = -1, starsV = 0, birdsV = 0;
-    function paint(t) {
-      if (Math.abs(t - lastT) < .002) return;
-      lastT = t; const P = palette(t), st = root.style;
-      st.setProperty('--sky0', P.sky[0]); st.setProperty('--sky1', P.sky[1]); st.setProperty('--sky2', P.sky[2]);
-      mtnEls.forEach((st3, i) => { const c = P.mtn[i]; st3[0].setAttribute('stop-color', mixRgb(c, P.sky[1], .18 - i * .04)); st3[1].setAttribute('stop-color', c); st3[2].setAttribute('stop-color', mixRgb(c, P.fog, .45 - i * .08)); }); tp.setAttribute('fill', P.front); hp.setAttribute('fill', P.front);
-      st.setProperty('--fog', P.fog); st.setProperty('--cloud', P.cloud); st.setProperty('--glow', P.glow);
-      const day = smooth(t, S1 - .6, S1 + .9) * (1 - smooth(t, S2 - .9, S2 + .6));
-      starsV = Math.max(0, Math.min(1, 1 - smooth(t, 4.6, 6.4) + smooth(t, 20, 21.8)));
-      birdsV = smooth(t, 7, 8.5) * (1 - smooth(t, 18, 19.2));
-      st.setProperty('--stars', starsV.toFixed(3));
-      st.setProperty('--fogA', (.35 + .4 * (1 - day)).toFixed(3));
-      st.setProperty('--cloudA', (.45 + .35 * day).toFixed(3));
-      st.setProperty('--birds', birdsV.toFixed(3));
-      st.setProperty('--ff', Math.min(1, smooth(t, 19.8, 21) * (1 - smooth(t, 23.5, 24)) + (1 - smooth(t, 0, 1.5)) * .6).toFixed(3));
-      st.setProperty('--birdC', mix('#1b2238', '#2a2440', smooth(t, 16, 19)));
-      st.setProperty('--shadow', day > .5 ? 'rgba(20,40,90,.35)' : 'rgba(0,0,20,.55)');
-      // сонце: дуга від сходу до заходу; низько над обрієм — тепліше й більше сяйво
-      const p = (t - S1) / (S2 - S1), pc = Math.max(0, Math.min(1, p)), sunUp = p > -.05 && p < 1.05;
-      const sx = 8 + 84 * p, sy = 56 - Math.sin(pc * Math.PI) ** .7 * 47;
-      sun.style.left = sx + '%'; sun.style.top = sy + '%'; sun.style.display = sunUp ? '' : 'none';
-      const low = 1 - Math.min(1, Math.sin(pc * Math.PI) * 1.8);
-      st.setProperty('--sunC', mix('#fff2b0', '#ffb15c', low)); st.setProperty('--sunE', mix('#ffe08a', '#ff7b3d', low));
-      st.setProperty('--sunH', `rgba(255,${Math.round(220 - 80 * low)},${Math.round(150 - 90 * low)},.55)`);
-      st.setProperty('--sunH2', `rgba(255,${Math.round(200 - 70 * low)},120,${(.18 + .22 * low).toFixed(2)})`);
-      // місяць: від заходу до сходу
-      const mp = ((t - S2 + 24) % 24) / (24 - S2 + S1), mpc = Math.max(0, Math.min(1, mp)), moonUp = mp > -.05 && mp < 1.05;
-      moon.style.left = 8 + 84 * mp + '%'; moon.style.top = 56 - Math.sin(mpc * Math.PI) ** .7 * 46 + '%'; moon.style.display = moonUp ? '' : 'none';
-      // сяйво: біля сонця, а в сутінках — над обрієм
-      glow.style.left = (sunUp ? sx : 50) + '%'; glow.style.top = (sunUp ? Math.max(sy, 40) : 58) + '%';
-      const twilight = Math.max(smooth(t, 4.4, 5.8) * (1 - smooth(t, 6, 7)), smooth(t, 19.4, 20) * (1 - smooth(t, 20.6, 21.8)));
-      st.setProperty('--glowA', (sunUp ? .35 + .55 * low : .55 * twilight).toFixed(3));
-      greetEl.textContent = greeting(t);
-      if (lapse) lapseEl.textContent = 'Перемотка доби · ' + String(Math.floor(t)).padStart(2, '0') + ':' + String(Math.floor(t % 1 * 60)).padStart(2, '0');
-      themeMeta.content = P.sky[0];
+    /* ── птахи й світлячки (поверх полотна) ── */
+    const birdsEl = document.getElementById('birds'), ffEl = document.getElementById('ffs'), flock = [];
+    for (let i = 0; i < (innerWidth < 600 ? 12 : 26); i++) {
+      const f = document.createElement('i'); f.className = 'ff';
+      const side = Math.random() < .5 ? Math.random() * 30 : 70 + Math.random() * 30;
+      Object.assign(f.style, { left: side + '%', top: 64 + Math.random() * 30 + '%' });
+      f.style.setProperty('--d', 6 + Math.random() * 8 + 's'); f.style.setProperty('--b', 2 + Math.random() * 3 + 's'); f.style.animationDelay = `${-Math.random() * 10}s, ${-Math.random() * 5}s`;
+      ffEl.appendChild(f);
     }
+    const spawnFlock = () => {
+      const n = 3 + Math.floor(Math.random() * 5), y = 22 + Math.random() * 18, dir = Math.random() < .5 ? 1 : -1, v = dir * (.03 + Math.random() * .012);
+      for (let i = 0; i < n; i++) {
+        const b = document.createElement('div'); b.className = 'bird';
+        b.innerHTML = '<svg viewBox="0 0 20 9"><path d="M1 2 Q5.5 7.5 10 5.5 Q14.5 7.5 19 2"/></svg>';
+        b.querySelector('path').style.animationDelay = -Math.random() * .5 + 's'; b.style.scale = .6 + Math.random() * .5;
+        birdsEl.appendChild(b); flock.push({ el: b, x: dir > 0 ? -6 - i * 2.2 : 106 + i * 2.2, y: y + Math.abs(i - n / 2) * 1.6, v, ph: Math.random() * 6 });
+      }
+    };
 
-    /* ── паралакс і рух ── */
+    /* ── паралакс ── */
     let tx = 0, ty = 0, mx = 0, my = 0;
     addEventListener('pointermove', e => { tx = e.clientX / innerWidth * 2 - 1; ty = e.clientY / innerHeight * 2 - 1; }, { passive: true });
     document.addEventListener('pointerleave', () => { tx = ty = 0; });
     addEventListener('deviceorientation', e => { if (e.gamma == null) return; tx = Math.max(-1, Math.min(1, e.gamma / 25)); ty = Math.max(-1, Math.min(1, (e.beta - 50) / 30)); }, { passive: true });
 
-    let last = performance.now(), nextShoot = 2000, nextFlock = 1500;
+    /* ── положення сонця/місяця (як у шейдері) — для зони кліку ── */
+    const WATER = .255;
+    const orbXY = t => {
+      const p = (t - 6) / 13.8, kx = Math.pow(Math.max(1, 1.1 * innerHeight / innerWidth), .75);
+      if (p >= 0 && p <= 1) return [(p - .5) * .62 / kx, WATER + .06 + Math.sin(p * Math.PI) * .6];
+      const qn = ((t - 19.8 + 24) % 24) / 10.2; return [(qn - .5) * .56 / kx, WATER + .08 + Math.sin(Math.min(1, Math.max(0, qn)) * Math.PI) * .56];
+    };
+
+    let fallback = !gl, U = {};
+    if (gl) {
+      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(s)); return null; } return s; };
+      const vs = sh(gl.VERTEX_SHADER, 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }');
+      const fs = sh(gl.FRAGMENT_SHADER, document.getElementById('fs').textContent);
+      if (!vs || !fs) fallback = true;
+      else {
+        const prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) fallback = true;
+        else {
+          gl.useProgram(prog);
+          const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+          const loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+          for (const k of ['R', 'T', 'HR', 'M']) U[k] = gl.getUniformLocation(prog, k);
+        }
+      }
+    }
+
+    // роздільна здатність підлаштовується під швидкість пристрою
+    const forced = parseFloat(new URLSearchParams(location.search).get('q'));
+    let scale = forced || Math.min(1, (innerWidth < 700 ? 0.55 : 0.75) * Math.min(devicePixelRatio || 1, 2));
+    const resize = () => { const w = Math.max(320, Math.round(innerWidth * scale)), h = Math.max(240, Math.round(innerHeight * scale)); if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; } };
+    addEventListener('resize', resize); resize();
+
+    const t0 = performance.now();
+    let last = t0, frames = 0, fpsT = t0, nextFlock = 1500, lastGreet = '';
     function frame(now) {
       const dt = Math.min(64, now - last); last = now;
-      paint(nowT());
-      mx += (tx - mx) * .06; my += (ty - my) * .06;
-      for (const L of layers) L.el.style.transform = `translate3d(${(-mx * L.depth * .5).toFixed(2)}px, ${(-my * L.depth * .25).toFixed(2)}px, 0)`;
-      hero.style.transform = `translate3d(${(-mx * 10).toFixed(2)}px, ${(-my * 6).toFixed(2)}px, 0)`;
-      const speed = lapse ? 8 : 1;
-      for (const c of clouds) { c.x += c.v * dt * .0012 * speed; if (c.x > 112) c.x = -28; c.el.style.left = c.x + '%'; }
+      const hr = nowT();
+      mx += (tx - mx) * .05; my += (ty - my) * .05;
+      if (!fallback) {
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.uniform2f(U.R, canvas.width, canvas.height);
+        gl.uniform1f(U.T, still ? 40 : (now - t0) / 1000);
+        gl.uniform1f(U.HR, hr);
+        gl.uniform2f(U.M, mx, my);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        if (!canvas.classList.contains('on')) canvas.classList.add('on');
+      }
+      frames++;
+      if (!forced && now - fpsT > 1500) { const fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now; if (fps < 40 && scale > .3) { scale *= .82; resize(); } else if (fps > 58 && scale < .95 && innerWidth > 700) { scale = Math.min(.95, scale * 1.08); resize(); } }
+
+      hero.style.transform = `translate3d(${(-mx * 12).toFixed(2)}px, ${(-my * 7).toFixed(2)}px, 0)`;
+      ffEl.style.transform = `translate3d(${(-mx * 30).toFixed(2)}px, 0, 0)`;
+      const st = root.style;
+      st.setProperty('--ff', (Math.min(1, smooth(hr, 19.6, 20.8) * (1 - smooth(hr, 23.4, 24)) + (1 - smooth(hr, 0, 1.2)) * .5)).toFixed(3));
+      const birdsV = smooth(hr, 6.8, 8.2) * (1 - smooth(hr, 18.6, 19.6)); st.setProperty('--birds', birdsV.toFixed(3));
       for (let i = flock.length - 1; i >= 0; i--) {
         const b = flock[i]; b.x += b.v * dt * .06; b.ph += dt * .002;
-        b.el.style.left = b.x + '%'; b.el.style.top = b.y + Math.sin(b.ph) * .6 + '%'; b.el.style.transform = `scaleX(${b.v > 0 ? 1 : -1})`;
-        if (b.x < -15 || b.x > 115) { b.el.remove(); flock.splice(i, 1); }
+        b.el.style.left = b.x + '%'; b.el.style.top = b.y + Math.sin(b.ph) * .5 + '%'; b.el.style.transform = `scaleX(${b.v > 0 ? 1 : -1})`;
+        if (b.x < -12 || b.x > 112) { b.el.remove(); flock.splice(i, 1); }
       }
-      if ((nextShoot -= dt) < 0) {
-        nextShoot = 3500 + Math.random() * 6000;
-        if (starsV > .6) { const e = document.createElement('i'); e.className = 'shoot'; Object.assign(e.style, { left: 30 + Math.random() * 65 + '%', top: 4 + Math.random() * 26 + '%', rotate: (152 + Math.random() * 10) + 'deg' }); stars.appendChild(e); e.addEventListener('animationend', () => e.remove()); }
-      }
-      if ((nextFlock -= dt) < 0) { nextFlock = 9000 + Math.random() * 9000; if (birdsV > .5 && flock.length < 8) spawnFlock(); }
-      requestAnimationFrame(frame);
+      if ((nextFlock -= dt) < 0) { nextFlock = 8000 + Math.random() * 9000; if (birdsV > .5 && flock.length < 10) spawnFlock(); }
+      const g = greeting(hr); if (g !== lastGreet) { greetEl.textContent = g; lastGreet = g; }
+      if (lapse) lapseEl.textContent = 'Перемотка доби · ' + String(Math.floor(hr)).padStart(2, '0') + ':' + String(Math.floor(hr % 1 * 60)).padStart(2, '0');
+      const [ox, oy] = orbXY(hr), A = innerWidth / innerHeight;
+      hit.style.left = (ox / A + .5) * innerWidth + 'px'; hit.style.top = (1 - oy) * innerHeight + 'px';
+      if (!still) requestAnimationFrame(frame);
     }
-    paint(nowT());
-    clouds.forEach(c => { c.el.style.left = c.x + '%'; });
-    if (still) setInterval(() => paint(nowT()), 30000); else requestAnimationFrame(frame);
+    requestAnimationFrame(frame);
+    if (still) setInterval(() => requestAnimationFrame(frame), 30000);
   })();
   </script>
 </body>
