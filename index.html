@@ -15,11 +15,12 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
   <style>
-    /* Заглушка головної: гірське озеро, яке малює відеокарта (WebGL-шейдер) за справжнім часом доби.
-       Небо з розсіюванням світла, сонце й місяць, промені з-за гір, хмари, що пливуть і підсвічуються,
-       гори з освітленими схилами, снігом і серпанком, туман, озеро з віддзеркаленням і брижами,
-       зорі й падаючі зірки. Поверх — птахи й світлячки. Паралакс за мишкою чи нахилом телефона.
-       Клік по сонцю чи місяцю — «перемотка» доби. Для перевірки: /?t=19.5 (година). */
+    /* Заглушка головної: тривимірне гірське озеро, яке малює відеокарта (WebGL) за справжнім часом доби.
+       Рельєф гір будується променем (raymarching): ерозійні схили, ліс, сніг, тіні від гір і хмар.
+       Озеро з фізичним віддзеркаленням, хвилями й колами на воді; хмари в перспективі; туман над водою вранці;
+       зорі, Чумацький Шлях, місяць, падаючі зірки. Другий прохід — промені світла від сонця чи місяця.
+       Паралакс — справжній рух камери за мишкою чи нахилом телефона. Клік — «перемотка» доби.
+       Для перевірки: /?t=19.5 (година), /?q=.5 (роздільна здатність). */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; }
     body { font-family: 'Inter', system-ui, sans-serif; overflow: hidden; color: #fff; -webkit-tap-highlight-color: transparent;
@@ -92,189 +93,251 @@
 precision highp float;
 uniform vec2 R;      // розмір полотна
 uniform float T;     // час, с
-uniform float HR;    // година доби 0..24
+uniform vec3 SD;     // напрям на сонце
+uniform vec3 MD;     // напрям на місяць
+uniform vec3 CO;     // камера
+uniform vec3 CT;     // куди дивиться камера
+uniform float FL;    // фокусна відстань
+uniform float MIST;  // ранковий туман 0..1
 uniform vec2 M;      // паралакс −1..1
 
 #define PI 3.14159265
-const float WATER = .255;   // рівень озера (частка висоти)
-// на вузьких (портретних) екранах світ стискається по горизонталі, щоб у кадр вміщалися гори з обох боків
-float KX() { return pow(max(1., 1.1 * R.y / R.x), .75); }
+const float CLOUD = 14.;   // висота шару хмар
+const float TOP = 11.;     // вище цього гір немає
 
 float h11(float p) { return fract(sin(p * 127.1) * 43758.5453); }
 float h21(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float noise(vec2 p) { vec2 i = floor(p), f = fract(p), u = f * f * (3. - 2. * f);
   return mix(mix(h21(i), h21(i + vec2(1, 0)), u.x), mix(h21(i + vec2(0, 1)), h21(i + 1.), u.x), u.y); }
-float fbm(vec2 p) { float v = 0., a = .5; mat2 m = mat2(1.6, 1.2, -1.2, 1.6); for (int i = 0; i < 5; i++) { v += a * noise(p); p = m * p; a *= .5; } return v; }
-float fbm3(vec2 p) { float v = 0., a = .5; mat2 m = mat2(1.6, 1.2, -1.2, 1.6); for (int i = 0; i < 3; i++) { v += a * noise(p); p = m * p; a *= .5; } return v; }
-
-// гребені гір: «ridged» шум, гострі вершини
-float ridge(float x, float s, int oct) {
-  float v = 0., a = .6, f = 1., w = 1.;
-  for (int i = 0; i < 7; i++) { if (i >= oct) break; float n = noise(vec2(x * f, s + float(i) * 13.7)); n = 1. - abs(n * 2. - 1.); n *= n; v += a * n * w; w = clamp(n * 1.6, 0., 1.); f *= 2.13; a *= .5; }
-  return v;
+// шум з похідними (для ерозії та хвиль)
+vec3 noised(vec2 x) {
+  vec2 p = floor(x), f = fract(x);
+  vec2 u = f * f * f * (f * (f * 6. - 15.) + 10.), du = 30. * f * f * (f * (f - 2.) + 1.);
+  float a = h21(p), b = h21(p + vec2(1, 0)), c = h21(p + vec2(0, 1)), d = h21(p + 1.);
+  float k1 = b - a, k2 = c - a, k4 = a - b - c + d;
+  return vec3(a + k1 * u.x + k2 * u.y + k4 * u.x * u.y, du * vec2(k1 + k4 * u.y, k2 + k4 * u.x));
 }
-// висота шару гір (у частках екрана)
-float valley(float x, float w) { return smoothstep(w * .25, w, abs(x)); }
-float mtn(int i, float x, int oct) {
-  if (i == 0) return .36 + (.16 + .34 * valley(x, .95)) * ridge(x * .9 + 3.1, 1.3, oct);
-  if (i == 1) return .31 + (.08 + .3 * valley(x + .1, .8)) * ridge(x * 1.3 + 11.4, 5.7, oct);
-  return .27 + (.03 + .2 * valley(x - .05, .7)) * ridge(x * 2.1 + 27.9, 9.1, oct);
+const mat2 m2 = mat2(.8, -.6, .6, .8);
+float fbm(vec2 p) { float v = 0., a = .5; for (int i = 0; i < 5; i++) { v += a * noise(p); p = m2 * p * 2.02; a *= .5; } return v; }
+float fbm3(vec2 p) { float v = 0., a = .5; for (int i = 0; i < 3; i++) { v += a * noise(p); p = m2 * p * 2.02; a *= .5; } return v; }
+
+// ── рельєф: «ерозійний» fbm (схили з жолобами й гострими гребенями) ──
+float tfbm(vec2 p, int oct) {
+  float a = 0., b = .5; vec2 d = vec2(0.);
+  for (int i = 0; i < 10; i++) { if (i >= oct) break; vec3 n = noised(p); d += n.yz; a += b * n.x / (1. + dot(d, d)); b *= .5; p = m2 * p * 2.; }
+  return a;
+}
+float terrain(vec2 p, int oct) {
+  float m = tfbm(p * .11 + vec2(1.7, 4.3), oct);
+  // долина з озером: ширшає вдалині, за нею — високий хребет
+  float w = 3.4 + .34 * max(p.y, 0.);
+  float side = smoothstep(w * .5, w * 1.45, abs(p.x - 1.4 * sin(p.y * .09 + .6)));
+  float back = smoothstep(17., 29., p.y);
+  float mask = max(side, back);
+  float amp = mix(3.6, 13., smoothstep(8., 40., p.y));
+  float h = mix(-.4 + .3 * m, amp * m * m * 1.7 + .04, mask);
+  // ліс: дрібні верхівки ялин на нижніх схилах
+  if (oct > 6) { float f = smoothstep(.0, .12, h) * smoothstep(1.9, 1.3, h); if (f > 0.) h += f * .035 * pow(noise(p * 34.), 1.6); }
+  return h;
 }
 
-// стан доби: висота сонця (−1..1) та положення сонця/місяця на екрані
-float dayP() { return (HR - 6.) / 13.8; }                     // 6:00 → 19:48
-float sunE() { float p = dayP(); if (p >= 0. && p <= 1.) return sin(p * PI) * .95; float q = mod(HR - 19.8 + 24., 24.) / 10.2; return -sin(clamp(q, 0., 1.) * PI) * .7; }
-vec2 sunPos(float A) { float p = dayP(); return vec2((p - .5) * .62 / KX(), WATER + .06 + sin(clamp(p, -.1, 1.1) * PI) * .6); }
-vec2 moonPos(float A) { float q = mod(HR - 19.8 + 24., 24.) / 10.2; return vec2((q - .5) * .56 / KX(), WATER + .08 + sin(clamp(q, -.1, 1.1) * PI) * .56); }
+float castRay(vec3 ro, vec3 rd, float tmax, int steps, int oct) {
+  float t = .02;
+  for (int i = 0; i < 160; i++) {
+    if (i >= steps) break;
+    vec3 p = ro + rd * t;
+    if (p.y > TOP && rd.y > 0.) return 1e4;
+    float h = p.y - terrain(p.xz, oct);
+    if (h < .0015 * t) return t;
+    t += max(.45 * h, .003 * t);
+    if (t > tmax) return 1e4;
+  }
+  return t;
+}
+vec3 calcN(vec3 p, float t, int oct) {
+  vec2 e = vec2(.0012 * t + .001, 0.);
+  return normalize(vec3(terrain(p.xz - e.xy, oct) - terrain(p.xz + e.xy, oct), 2. * e.x, terrain(p.xz - e.yx, oct) - terrain(p.xz + e.yx, oct)));
+}
+float softShadow(vec3 p, vec3 l) {
+  float res = 1., t = .04;
+  for (int i = 0; i < 22; i++) {
+    vec3 q = p + l * t; float h = q.y - terrain(q.xz, 4);
+    res = min(res, 10. * h / t);
+    if (res < .01 || q.y > TOP) break;
+    t += clamp(h, .04, .9);
+  }
+  return clamp(res, 0., 1.);
+}
 
-struct Light { float e, day, dusk, night; vec3 sunCol, zen, hor, amb, fog; };
+// ── світло доби ──
+struct Light { float e, day, dusk, night, sunVis; vec3 sunCol, zen, hor, hor0, amb; };
 Light light() {
-  Light L; L.e = sunE();
-  L.day = smoothstep(-.06, .3, L.e);
-  L.dusk = exp(-pow((L.e + .02) / .17, 2.));            // сутінки й золота година
-  L.night = 1. - smoothstep(-.28, -.02, L.e);
-  L.sunCol = mix(vec3(1., .42, .16), vec3(1., .93, .82), smoothstep(.0, .45, L.e));
-  vec3 zD = vec3(.06, .22, .62), hD = vec3(.55, .74, .95);
-  vec3 zS = vec3(.16, .14, .4), hS = vec3(1., .44, .2);
-  vec3 zN = vec3(.008, .016, .05), hN = vec3(.05, .07, .16);
+  Light L; L.e = SD.y;
+  L.day = smoothstep(-.04, .28, L.e);
+  L.dusk = exp(-pow((L.e + .01) / .13, 2.));
+  L.night = 1. - smoothstep(-.22, -.02, L.e);
+  L.sunVis = smoothstep(-.03, .02, L.e);
+  L.sunCol = mix(vec3(1., .36, .1), vec3(1., .92, .8), smoothstep(.0, .35, L.e));
+  vec3 zD = vec3(.06, .22, .6), hD = vec3(.58, .76, .95);
+  vec3 zS = vec3(.15, .13, .38), hS = vec3(1., .45, .2);
+  vec3 zN = vec3(.006, .012, .04), hN = vec3(.04, .06, .13);
   L.zen = mix(mix(zN, zD, L.day), zS, L.dusk * .55);
+  L.hor0 = mix(mix(hN, hD, L.day), vec3(.55, .4, .55), L.dusk * .5);
   L.hor = mix(mix(hN, hD, L.day), hS, L.dusk * .85);
-  L.amb = mix(vec3(.05, .07, .14), vec3(.75, .82, .95), L.day) + L.dusk * vec3(.35, .12, .05);
-  L.fog = mix(L.hor, L.zen, .25) * mix(.9, 1., L.day);
+  L.amb = mix(vec3(.05, .07, .15), vec3(.62, .72, .9), L.day) + L.dusk * vec3(.3, .14, .1);
   return L;
 }
 
-// ── небо, хмари, гори (усе, що над водою) ──
-vec3 above(vec2 uv, float A, Light L, bool refl) {
-  float X = (uv.x - .5) * A;
-  vec2 sp = sunPos(A), mp = moonPos(A);
-  float hgt = clamp((uv.y - WATER) / (1. - WATER), 0., 1.);
-  vec3 col = mix(L.hor, L.zen, pow(hgt, .5));
-  // розсіювання біля сонця (Мі) і загальне тепле сяйво над обрієм
-  vec2 ds = vec2(X - sp.x - M.x * .01, uv.y - sp.y);
-  float d = length(ds);
-  float sunVis = smoothstep(-.12, .02, L.e);
-  col += L.sunCol * sunVis * (.55 * exp(-d * 2.6) + .8 * exp(-d * 10.) + 3. * exp(-d * 45.)) * (.45 + .55 * L.dusk);
-  col += L.sunCol * L.dusk * .35 * exp(-abs(uv.y - WATER) * 7.) * exp(-abs(X - sp.x) * .9);
-  // диск сонця
-  if (!refl) col = mix(col, vec3(7., 6.2, 5.) * L.sunCol, smoothstep(.03, .025, d) * sunVis);
+// ── небо: розсіювання, сонце, зорі, місяць ──
+vec3 sky(vec3 rd, Light L, bool discs) {
+  float y = max(rd.y, 0.);
+  float az = max(dot(normalize(rd.xz + 1e-5), normalize(SD.xz + 1e-5)), 0.);
+  vec3 hor = mix(L.hor0, L.hor, .25 + .75 * pow(az, 2.));
+  vec3 col = mix(hor, L.zen, pow(smoothstep(0., .65, y), .55));
+  float sd = max(dot(rd, SD), 0.);
+  col += L.sunCol * L.sunVis * (.3 * pow(sd, 5.) + .5 * pow(sd, 40.) + 2. * pow(sd, 500.)) * (.55 + .6 * L.dusk);
+  col += L.sunCol * L.dusk * .45 * exp(-y * 8.) * pow(az, 3.);
+  if (discs) col = mix(col, L.sunCol * vec3(9., 8., 6.5), smoothstep(.99984, .9999, dot(rd, SD)) * L.sunVis);
 
-  // ніч: зорі, Чумацький Шлях, місяць
   if (L.night > .01) {
-    vec2 sg = vec2(X, uv.y) * 260.; vec2 cell = floor(sg); float r = h21(cell);
-    float star = step(.987, r) * smoothstep(.5, .0, length(fract(sg) - .5 - (vec2(h21(cell + 7.), h21(cell + 3.)) - .5) * .5));
-    star *= .55 + .45 * sin(T * (1.5 + r * 4.) + r * 60.);
-    float band = exp(-pow((uv.y - .62 - X * .28) * 3.6, 2.));
-    float mw = band * fbm(vec2(X, uv.y) * 6. + 2.) * .5;
-    col += L.night * (vec3(star) * smoothstep(WATER, WATER + .12, uv.y) * 1.3 + vec3(.55, .6, .85) * mw * .45 + vec3(1.) * step(.9975, h21(floor(sg * .5))) * smoothstep(.35, .0, length(fract(sg * .5) - .5)) * 1.2);
-    // падаюча зірка (раз на ~7 с)
-    float seg = floor(T / 7.), ft = fract(T / 7.) * 7.;
+    vec2 a = vec2(atan(rd.x, rd.z), asin(clamp(rd.y, -1., 1.)));
+    vec2 sg = a * 190.; vec2 cell = floor(sg); float r = h21(cell);
+    float star = step(.985, r) * smoothstep(.45, .0, length(fract(sg) - .5 - (vec2(h21(cell + 7.), h21(cell + 3.)) - .5) * .5));
+    star *= (.5 + .5 * sin(T * (1.5 + r * 4.) + r * 60.)) * (.4 + .6 * h21(cell + 11.));
+    vec2 sg2 = a * 70.; vec2 c2 = floor(sg2);
+    float big = step(.993, h21(c2)) * smoothstep(.3, .0, length(fract(sg2) - .5));
+    vec3 tint = mix(vec3(.75, .85, 1.), vec3(1., .85, .7), h21(c2 + 5.));
+    float band = exp(-pow(dot(rd, normalize(vec3(.75, .2, -.6))) * 3.2, 2.));
+    float mw = band * fbm(a * 5. + 2.) * smoothstep(.0, .25, y);
+    float horz = smoothstep(.0, .12, y);
+    col += L.night * horz * (vec3(star) * 1.3 + tint * big * 1.4 + vec3(.5, .55, .8) * mw * .35 + vec3(.25, .2, .3) * band * mw * mw * .6);
+    // падаюча зірка
+    float seg = floor(T / 8.), ft = fract(T / 8.) * 8.;
     if (ft < .9) {
-      vec2 st = vec2((h11(seg) - .5) * A * .9, .7 + h11(seg + 3.) * .25), dir = normalize(vec2(-1., -.42));
-      vec2 hp = st + dir * ft * .55, rel = vec2(X, uv.y) - hp;
+      vec2 st = vec2((h11(seg) - .5) * 1.4, .35 + h11(seg + 3.) * .35), dir = normalize(vec2(-1. + 2. * step(.5, h11(seg + 9.)), -.45));
+      vec2 hp = st + dir * ft * .5, rel = a - hp;
       float along = dot(rel, -dir), perp = abs(dot(rel, vec2(-dir.y, dir.x)));
-      col += L.night * vec3(1.) * smoothstep(.0025, 0., perp) * smoothstep(.22, 0., along) * step(0., along) * sin(ft / .9 * PI) * 1.4;
-    }
-    float dm = length(vec2(X - mp.x, uv.y - mp.y));
-    float moonVis = smoothstep(-.02, .04, mp.y - WATER - .02) * L.night;
-    col += vec3(.55, .62, .85) * moonVis * (.25 * exp(-dm * 7.) + .4 * exp(-dm * 26.));
-    float disc = smoothstep(.034, .03, dm);
-    vec3 mcol = vec3(.95, .94, .88) * (.82 + .25 * fbm(vec2(X - mp.x, uv.y - mp.y) * 60.)) * smoothstep(.06, -.01, length(vec2(X - mp.x - .014, uv.y - mp.y + .008)) - .024 + .01);
-    if (!refl) col = mix(col, mcol * 1.5, disc * moonVis);
-  }
-
-  // гори: три хребти
-  // від ближнього хребта до дальнього: перший, що закриває піксель, і малюємо (решту не рахуємо)
-  float XW = X * KX(), sx = sp.x * KX();
-  bool hit = false;
-  for (int j = 0; j < 3; j++) {
-    int i = 2 - j;
-    float par = (i == 0 ? .02 : i == 1 ? .045 : .08);
-    float xi = XW - M.x * par;
-    float h = mtn(i, xi, refl ? 4 : 7);
-    if (uv.y < h) {
-      float dep = h - uv.y;
-      float depth = clamp(dep / .25, 0., 1.);
-      // великий нахил схилу — з гладкого силуету (без дрібних октав, щоб не було смуг)
-      float e = .02, dh = (mtn(i, xi + e, 3) - mtn(i, xi - e, 3)) / (2. * e);
-      // рельєф схилу: ерозійні жолоби й ребра, що збігають від гребеня вниз і вбік
-      vec2 fp = vec2(xi + dep * clamp(dh, -1.5, 1.5) * .55 + .05 * fbm3(vec2(xi * 4., dep * 6.)), dep);
-      float s1 = float(i) * 7.3;
-      #define FACE(q) (.6 * (1. - abs(noise(vec2((q).x * 9., (q).y * 4. + s1)) * 2. - 1.)) + .3 * noise(vec2((q).x * 26., (q).y * 7. + s1)) + .12 * noise((q) * vec2(70., 30.)))
-      float f0 = FACE(fp), fx = FACE(fp + vec2(.002, 0.)), fy = FACE(fp + vec2(0., .002));
-      vec3 N = normalize(vec3(-(fx - f0) / .002 * .045 - dh * .9 * (1. - depth * .5), (fy - f0) / .002 * .03 + .35, 1.));
-      vec3 Ld = normalize(vec3(clamp((sx - xi) * 1.6, -1.2, 1.2), max(L.e, -.05) * 1.4 + .25, .45));
-      float lam = clamp(dot(N, Ld), 0., 1.);
-      float tex = fbm(vec2(xi * 18., uv.y * 22.));
-      vec3 rock = mix(vec3(.2, .21, .25), vec3(.34, .31, .29), tex) * (i == 0 ? 1. : i == 1 ? .8 : .62);
-      rock *= .75 + .5 * f0;
-      // сніг: вище лінії снігу, на пологих і звернених угору місцях
-      float snowLine = (i == 0 ? .5 : .47) + .05 * fbm(vec2(xi * 7., 1.)) - dep * .25;
-      float snow = (i < 2) ? smoothstep(snowLine, snowLine + .025, uv.y + tex * .04) * smoothstep(.05, .45, N.y + f0 * .3) : 0.;
-      rock = mix(rock, vec3(.9, .93, .98), snow * smoothstep(.0, .08, h - .42));
-      vec3 sunL = L.sunCol * pow(lam, 1.4) * (L.day * 1.7 + L.dusk * 1.2);
-      vec3 sky = L.amb * (.4 + .3 * N.y);
-      vec3 c = rock * (sky + sunL) * mix(1., .7, depth);
-      // контрове світло на гребені, коли сонце низько за горами
-      c += L.sunCol * L.dusk * smoothstep(.012, 0., dep) * .6 * exp(-abs(xi - sx) * 1.5);
-      c += vec3(.35, .42, .7) * L.night * (.1 + .45 * lam) * (rock + .1);                 // місячне світло
-      // повітряна перспектива: далі — більше серпанку
-      float haze = (i == 0 ? .5 : i == 1 ? .3 : .14) + .12 * (1. - L.day) * L.day;
-      c = mix(c, L.fog, haze * (1. - depth * .35));
-      // туман, що тече біля підніжжя
-      float base = (i == 0 ? .36 : i == 1 ? .31 : .27);
-      float fg = smoothstep(.09, .0, uv.y - base) * fbm3(vec2(xi * 2.3 + T * .018 * float(i + 1), uv.y * 9.));
-      c = mix(c, L.fog * 1.08 + L.sunCol * L.dusk * .15, clamp(fg * 1.3, 0., .85));
-      col = c; hit = true; break;
+      col += L.night * horz * vec3(1.) * smoothstep(.0025, 0., perp) * smoothstep(.2, 0., along) * step(0., along) * sin(ft / .9 * PI) * 1.6;
     }
   }
-  // хмари: шум із «закрученням», дрейф, підсвітка з боку сонця
-  if (!hit && uv.y > WATER + .1) {
-    vec2 cp = vec2(X * .9 + T * .006 - M.x * .02, (uv.y - .55) * 3.2);
-    vec2 w = vec2(fbm3(cp * 1.3 + T * .01), fbm3(cp * 1.3 + 4.1));
-    float dn = fbm(cp * vec2(1.2, 2.6) + w * .9 + vec2(T * .012, 0.));
-    float band = smoothstep(.4, .62, uv.y) * smoothstep(1.05, .8, uv.y);
-    float cov = .46 - .04 * L.dusk;
-    float den = smoothstep(cov, cov + .22, dn) * band;
-    vec2 toSun = normalize(vec2(sp.x - X, sp.y - uv.y) + 1e-4);
-    float dn2 = fbm(cp * vec2(1.2, 2.6) + w * .9 + vec2(T * .012, 0.) + toSun * .09);
-    float lit = clamp(.55 + (dn - dn2) * 3.2, 0., 1.);
-    vec3 cLit = mix(vec3(.14, .16, .24), vec3(1.05, 1.02, 1.), L.day);
-    cLit = mix(cLit, L.sunCol * vec3(1.25, .95, .85), L.dusk * .75);
-    vec3 cShade = mix(L.zen * .7 + .02, L.hor * .55 + vec3(.06, .06, .1), .5) * mix(.6, 1., L.day);
-    vec3 cc = mix(cShade, cLit, lit) * (1. + .6 * exp(-length(vec2(X - sp.x, uv.y - sp.y)) * 4.) * L.dusk);
-    cc = mix(cc, cc + vec3(.04, .05, .09), L.night * .5);
-    col = mix(col, cc, den * .9);
-  }
-
-  // дальній берег: смуга ялинок
-  float fx0 = XW - M.x * .1;
-  float dens = smoothstep(.3, .62, fbm3(vec2(fx0 * 3.5, 2.)));
-  float shape = .003 + .006 * fbm3(vec2(fx0 * 30., 5.));            // підлісок
-  for (int k = 0; k < 3; k++) {
-    float sc = k == 0 ? 140. : k == 1 ? 83. : 51.;
-    float tx = fx0 * sc + float(k) * .37, cell = floor(tx);
-    float r = h21(vec2(cell, float(k) * 4.1 + 3.)), r2 = h21(vec2(cell, float(k) * 2.3 + 9.));
-    float lx = fract(tx) - .5 - (r2 - .5) * .4;
-    float th = (.004 + .016 * r * (1. + float(k) * .35)) * (.35 + .65 * dens) * step(.2, r2);
-    float wd = .28 + .2 * r2;
-    shape = max(shape, th * (1. - abs(lx) / wd) + .0015 * sin(lx * 60. + cell));
-  }
-  if (uv.y < WATER + .004 + shape) {
-    float fy = (uv.y - WATER) / max(shape + .004, 1e-3);
-    vec3 tc = vec3(.03, .05, .045) * (L.amb * (.7 + .5 * fy) + L.sunCol * (L.day * .5 + L.dusk * .4) * fy);
-    col = mix(tc, L.fog * .6, .3);
+  // місяць
+  float moonVis = smoothstep(-.02, .03, MD.y) * (1. - L.day * .85);
+  if (moonVis > .01) {
+    float md = max(dot(rd, MD), 0.);
+    col += vec3(.5, .58, .85) * moonVis * (.15 * pow(md, 8.) + .4 * pow(md, 150.)) * (L.night + .2);
+    if (discs) {
+      vec3 mu = normalize(cross(vec3(0., 1., 0.), MD)), mv = cross(MD, mu);
+      vec2 lp = vec2(dot(rd - MD, mu), dot(rd - MD, mv)) / .028;
+      float d = length(lp);
+      if (d < 1.1) {
+        float tex = .78 + .3 * fbm(lp * 2.2 + 4.) - .18 * smoothstep(.3, .6, noise(lp * 1.6 + 9.));
+        float phase = smoothstep(-.35, .25, lp.x * .6 + sqrt(max(0., 1. - d * d)) * .8 - .2);
+        vec3 mc = vec3(1., .97, .9) * tex * (.15 + 1.4 * phase);
+        col = mix(col, mc * 1.4, smoothstep(1., .94, d) * moonVis);
+      }
+    }
   }
   return col;
 }
 
-// ── передній план: береги з ялинками по краях кадру ──
-float shoreY(float X, float A) { float e = smoothstep(.22 * A, .5 * A, abs(X)); return e * (.06 + .05 * fbm3(vec2(X * 2.5, 4.))) - .01; }
+// ── хмари: шар на висоті, у перспективі ──
+float cloudDen(vec2 xz, float lod) {
+  vec2 cp = xz * .035 + vec2(T * .005, T * .002);
+  vec2 w = vec2(fbm3(cp * 1.1 + T * .003), fbm3(cp * 1.1 + 4.1));
+  return fbm(cp + w * .8);
+}
+vec4 clouds(vec3 ro, vec3 rd, Light L) {
+  if (rd.y < .015) return vec4(0.);
+  float t = (CLOUD - ro.y) / rd.y;
+  vec2 xz = ro.xz + rd.xz * t;
+  float dn = cloudDen(xz, 0.);
+  float cov = .48 - .04 * L.dusk;
+  float den = smoothstep(cov, cov + .26, dn) * exp(-t * .0035);
+  if (den < .002) return vec4(0.);
+  float dn2 = cloudDen(xz + normalize(SD.xz + 1e-4) * 3.5, 0.);
+  float lit = clamp(.55 + (dn - dn2) * 3.5, 0., 1.);
+  vec3 cLit = mix(vec3(.12, .14, .22), vec3(1.1, 1.06, 1.02), L.day);
+  cLit = mix(cLit, L.sunCol * vec3(1.35, .95, .8), L.dusk * .8);
+  vec3 cShade = mix(L.zen * .8 + .03, L.hor * .5 + vec3(.06, .06, .1), .5) * mix(.55, .95, L.day);
+  float sd = max(dot(rd, SD), 0.);
+  vec3 cc = mix(cShade, cLit, lit) * (1. + (1.2 * pow(sd, 6.) * (1. - den)) * L.sunVis);
+  cc += vec3(.03, .04, .08) * L.night;
+  cc = mix(cc, L.hor, 1. - exp(-t * .006));
+  return vec4(cc, den * .93);
+}
+float cloudShadow(vec3 p) {
+  if (SD.y < .03) return 1.;
+  vec2 xz = p.xz + SD.xz / SD.y * (CLOUD - p.y);
+  vec2 cp = xz * .035 + vec2(T * .005, T * .002);
+  return 1. - .65 * smoothstep(.48, .74, fbm(cp + vec2(fbm3(cp * 1.1 + T * .003), fbm3(cp * 1.1 + 4.1)) * .8));
+}
+
+// ── серпанок і туман над водою ──
+vec3 fogCol(vec3 rd, Light L) {
+  float az = max(dot(normalize(rd.xz + 1e-5), normalize(SD.xz + 1e-5)), 0.);
+  return mix(L.hor0, L.hor, .3 + .7 * az * az) * .92 + L.sunCol * L.sunVis * .45 * pow(max(dot(rd, SD), 0.), 6.);
+}
+vec3 atmos(vec3 col, vec3 ro, vec3 rd, float t, Light L) {
+  vec3 p = ro + rd * t;
+  col = mix(col, fogCol(rd, L), 1. - exp(-t * .017));
+  float mist = (1. - exp(-t * .07)) * exp(-max(p.y, 0.) * 1.6) * (.45 + .55 * fbm3(p.xz * .22 + vec2(T * .025, T * .008)));
+  vec3 mc = mix(fogCol(rd, L), vec3(1.), .2 * L.day) * mix(.9, 1.1, L.day);
+  return mix(col, mc, clamp(mist * (.12 + .88 * MIST), 0., .9));
+}
+
+// ── матеріали гір ──
+vec3 shadeT(vec3 p, vec3 n, vec3 rd, float t, Light L, bool full) {
+  float h = p.y;
+  vec3 rock = mix(vec3(.2, .19, .18), vec3(.4, .36, .32), fbm3(p.xz * 5. + p.y * 3.));
+  rock *= .82 + .18 * sin(p.y * 34. + noise(p.xz * 3.) * 7.);
+  float tl = 1.55 + .6 * noise(p.xz * .45);
+  float forest = smoothstep(tl, tl - .35, h) * smoothstep(.42, .62, n.y) * smoothstep(.0, .05, h);
+  vec3 fcol = vec3(.04, .07, .04) * (.7 + .5 * noise(p.xz * 26.));
+  vec3 alb = mix(rock, fcol, forest);
+  float shore = smoothstep(.06, .0, h) * smoothstep(.5, .8, n.y);
+  alb = mix(alb, vec3(.34, .3, .25) * (.8 + .4 * noise(p.xz * 40.)), shore);
+  float sl = 3.5 + .9 * noise(p.xz * .5);
+  float snow = smoothstep(sl - .3, sl + .3, h + 1.6 * n.y - 1.1 + .5 * noise(p.xz * 7.)) * smoothstep(.3, .55, n.y);
+  alb = mix(alb, vec3(.9, .93, 1.), snow);
+
+  float dif = max(dot(n, SD), 0.) * L.sunVis;
+  if (full && dif > .005) dif *= softShadow(p + n * .01, SD);
+  dif *= cloudShadow(p);
+  vec3 lin = L.sunCol * dif * (L.day * 2.4 + L.dusk * 1.8);
+  lin += L.amb * (.45 + .45 * n.y) * .5;
+  lin += L.sunCol * L.dusk * .12 * max(dot(n, -vec3(SD.x, 0., SD.z)), 0.);     // відсвіт неба на тіньових схилах
+  lin += vec3(.3, .4, .75) * L.night * (.1 + 1.1 * max(dot(n, MD), 0.) * smoothstep(-.02, .05, MD.y));
+  vec3 col = alb * lin;
+  col += snow * L.sunCol * pow(max(dot(reflect(rd, n), SD), 0.), 24.) * dif * .35;
+  return col;
+}
+
+// ── вода ──
+vec3 waterN(vec2 p, float t) {
+  vec3 a = noised(p * vec2(2., 1.2) + vec2(0., T * .3));
+  vec3 b = noised(p * 5.3 + vec2(T * .35, T * .15));
+  vec3 c = noised(p * 13. - vec2(T * .6, T * .7));
+  vec2 g = a.yz * 2. * .5 + b.yz * 5.3 * .2 + c.yz * 13. * .05;
+  // кола від риб і крапель
+  for (int k = 0; k < 3; k++) {
+    float fk = float(k), per = 5. + fk * 1.9, tt = T + fk * 2.3;
+    float id = floor(tt / per), ph = fract(tt / per) * per;
+    vec2 c0 = vec2((h11(id + fk * 13.) - .5) * 5., 2.5 + h11(id * 1.7 + fk) * 9.);
+    vec2 d = p - c0; float r = length(d), fr = ph * .32;
+    float wv = cos((r - fr) * 70.) * exp(-pow((r - fr) * 14., 2.)) * exp(-ph * .45);
+    g += d / max(r, 1e-3) * wv * 1.6;
+  }
+  g *= .012 / (1. + t * .07);
+  return normalize(vec3(-g.x, 1., -g.y));
+}
+
+// ── передній план: ялинки по краях (силуети) ──
+float shoreY(float X, float A) { float e = smoothstep(.3 * A, .5 * A, abs(X)); return e * (.07 + .05 * fbm3(vec2(X * 2.5, 4.))) - .01; }
 float pines(vec2 uv, float A, float off, float scale, float seed, float hmax) {
   float X = (uv.x - .5) * A - M.x * off;
   float tx = X * scale, cell = floor(tx), lx = fract(tx) - .5;
   float cx = (cell + .5) / scale;
-  float edge = smoothstep(.28 * A, .55 * A, abs(cx));
+  float edge = smoothstep(.33 * A, .55 * A, abs(cx));
   float r = h21(vec2(cell, seed));
   float H = (.35 + .65 * r) * hmax * edge * step(.25, h21(vec2(cell, seed + 5.)));
   if (uv.y < shoreY(X, A)) return 1.;
@@ -290,58 +353,82 @@ vec3 aces(vec3 x) { return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) 
 
 void main() {
   vec2 uv = gl_FragCoord.xy / R;
-  float A = R.x / R.y;
+  vec2 sp = (2. * gl_FragCoord.xy - R) / R.y;
+  vec3 ro = CO, ww = normalize(CT - CO), uu = normalize(cross(vec3(0., 1., 0.), ww)), vv = cross(ww, uu);
+  vec3 rd = normalize(sp.x * uu + sp.y * vv + FL * ww);
   Light L = light();
-  vec3 col;
-  float X = (uv.x - .5) * A;
-  if (uv.y >= WATER) {
-    col = above(uv, A, L, false);
+
+  float tw = rd.y < 0. ? -ro.y / rd.y : 1e4;
+  float tt = castRay(ro, rd, min(tw, 95.), 140, 7);
+  vec3 col; float mask = 0.;
+  if (tt < tw && tt < 1e3) {
+    vec3 p = ro + rd * tt;
+    col = shadeT(p, calcN(p, tt, 9), rd, tt, L, true);
+    col = atmos(col, ro, rd, tt, L);
+  } else if (tw < 1e3) {
+    // озеро: віддзеркалення гір і неба з френелем, глибина, відблиски
+    vec3 p = ro + rd * tw;
+    vec3 n = waterN(p.xz, tw);
+    vec3 rr = reflect(rd, n);
+    rr.y = abs(rr.y);
+    float tr = castRay(p + vec3(0., .001, 0.), rr, 90., 100, 6);
+    vec3 refl;
+    if (tr < 1e3) { vec3 q = p + rr * tr; vec3 nq = calcN(q, tr + tw, 6); refl = atmos(shadeT(q, nq, rr, tr + tw, L, false), p, rr, tr, L); }
+    else { refl = sky(rr, L, false); vec4 c = clouds(p, rr, L); refl = mix(refl, c.rgb, c.a); }
+    float fre = .02 + .98 * pow(1. - max(dot(-rd, n), 0.), 5.);
+    float depth = max(-terrain(p.xz, 4), 0.);
+    vec3 body = mix(vec3(.06, .09, .06) * (L.amb + L.sunCol * L.day * .6), vec3(.004, .02, .03) * (L.amb + .2), smoothstep(.0, .25, depth));
+    col = mix(body, refl * vec3(.85, .92, .95), clamp(fre * 1.15, 0., 1.));
+    float sp1 = pow(max(dot(rr, SD), 0.), 900.) * L.sunVis, sp2 = pow(max(dot(rr, SD), 0.), 60.) * L.sunVis;
+    col += L.sunCol * (sp1 * 25. + sp2 * .6) * (.5 + L.dusk);
+    float mvis = smoothstep(-.02, .05, MD.y) * L.night;
+    col += vec3(.75, .82, 1.) * mvis * (pow(max(dot(rr, MD), 0.), 1800.) * 7. + pow(max(dot(rr, MD), 0.), 80.) * .12);
+    col += vec3(.6, .65, .7) * smoothstep(.03, .0, depth) * .05 * (L.amb.b + .2);    // світла кромка біля берега
+    col = atmos(col, ro, rd, tw, L);
   } else {
-    // озеро: дзеркало з перспективними брижами
-    float dz = WATER - uv.y, z = 1. / (dz + .015);
-    vec2 wp = vec2(X * z * .35, z * 1.6);
-    float wv = noise(wp * vec2(1., .35) + vec2(0., T * .35)) + .5 * noise(wp * 2.3 + vec2(T * .2, T * .6));
-    vec2 ruv = vec2(uv.x + (wv - .75) * .012 * (1. - dz * 2.) * smoothstep(.0, .04, dz), WATER + dz + (wv - .75) * .006);
-    vec3 refl = above(ruv, A, L, true);
-    float fres = .25 + .75 * pow(1. - clamp(dz / WATER, 0., 1.), 3.);
-    vec3 deep = mix(vec3(.004, .015, .03), vec3(.03, .09, .14), L.day) + L.sunCol * L.dusk * .03;
-    col = mix(deep, refl * vec3(.82, .9, .95), fres * .92);
-    // сонячна (або місячна) доріжка з відблисками
-    vec2 sp = sunPos(A), mp = moonPos(A);
-    float sv = smoothstep(-.1, .02, L.e), mv = L.night * smoothstep(-.02, .04, mp.y - WATER - .02);
-    float sparkle = pow(noise(wp * vec2(3.5, 1.2) + vec2(T * .9, T * 1.3)), 6.) * 3.;
-    float pathS = exp(-pow((X - sp.x) * (2.2 + dz * 14.), 2.)) * sv, pathM = exp(-pow((X - mp.x) * (3. + dz * 16.), 2.)) * mv;
-    col += L.sunCol * pathS * (sparkle + .25) * (.6 + .9 * L.dusk) + vec3(.7, .78, 1.) * pathM * (sparkle + .15) * .6;
-    col += L.fog * .12 * smoothstep(.006, .0, dz);
+    col = sky(rd, L, true);
+    vec4 c = clouds(ro, rd, L);
+    col = mix(col, c.rgb, c.a);
+    // маска для променів: яскраве небо біля сонця (чи місяця), не закрите хмарами
+    mask = (1. - c.a * .9) * (pow(max(dot(rd, SD), 0.), 4.) * L.sunVis + .5 * pow(max(dot(rd, MD), 0.), 20.) * L.night * smoothstep(-.02, .05, MD.y));
   }
 
-  // промені з-за гір (сонце низько)
-  vec2 sp = sunPos(A);
-  float rayAmt = smoothstep(-.06, .04, L.e) * (.35 + .65 * L.dusk) * (1. - .6 * L.day * (1. - L.dusk));
-  if (rayAmt > .02) {
-    vec2 p = vec2(X, uv.y), dir = sp - p; float acc = 0.;
-    for (int k = 0; k < 14; k++) {
-      vec2 q = p + dir * (float(k) + h21(uv * R + T)) / 14.;
-      float hm = max(mtn(0, q.x * KX() - M.x * .02, 3), mtn(1, q.x * KX() - M.x * .045, 3));
-      acc += step(hm, q.y) * step(WATER, q.y);
-    }
-    acc /= 14.;
-    col += L.sunCol * acc * rayAmt * .32 * exp(-length(dir) * 1.3);
-  }
-
-  // ялинки на передньому плані (два шари для глибини)
-  float p1 = clamp(pines(uv, A * KX(), .14, 9., 2., .2), 0., 1.), p2 = clamp(pines(uv + vec2(0., .02), A * KX(), .24, 5., 9., .42), 0., 1.);
-  vec3 pc1 = mix(vec3(.012, .024, .03), L.fog * .5, .3) * (.45 + .55 * L.day) + L.sunCol * L.dusk * .015;
+  // ялинки на передньому плані
+  float A = R.x / R.y;
+  float p1 = 0., p2 = 0.;
+  if (A > 1.) { p1 = clamp(pines(uv, A, .14, 9., 2., .2), 0., 1.); p2 = clamp(pines(uv + vec2(0., .02), A, .24, 5., 9., .42), 0., 1.); }
+  vec3 pc1 = mix(vec3(.012, .024, .03), L.hor0 * .5, .3) * (.45 + .55 * L.day) + L.sunCol * L.dusk * .015;
   col = mix(col, pc1, p1);
-  vec3 pc2 = vec3(.005, .009, .011) + L.sunCol * L.dusk * .012 + vec3(.01, .015, .03) * L.night;
-  col = mix(col, pc2, p2);
+  col = mix(col, vec3(.005, .009, .011) + L.sunCol * L.dusk * .012 + vec3(.01, .015, .03) * L.night, p2);
+  mask *= 1. - max(p1, p2);
 
-  // кіношна обробка: експозиція, тонмапінг, віньєтка, зерно
-  col *= mix(1.25, 1.05, L.night);
+  col *= mix(1.25, 1.1, L.night);
   col = aces(col);
   col = pow(col, vec3(.95));
-  vec2 vq = uv - .5; col *= 1. - dot(vq, vq) * .55;
-  col += (h21(uv * R + fract(T) * 31.7) - .5) * .018;
+  gl_FragColor = vec4(col, clamp(mask, 0., 1.));
+}
+  </script>
+  <script id="post" type="x-shader/x-fragment">
+precision mediump float;
+uniform sampler2D S;
+uniform vec2 R;      // розмір полотна
+uniform vec2 SUN;    // сонце (чи місяць) на екрані, 0..1
+uniform float RAY;   // сила променів
+uniform float T;
+float h21(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+void main() {
+  vec2 uv = gl_FragCoord.xy / R;
+  vec3 col = texture2D(S, uv).rgb;
+  // промені світла: радіальне розмиття яскравого неба від сонця
+  if (RAY > .01) {
+    vec2 d = (SUN - uv) * (.92 / 36.);
+    vec2 q = uv + d * h21(gl_FragCoord.xy + fract(T) * 17.);
+    vec3 acc = vec3(0.); float w = 1.;
+    for (int i = 0; i < 36; i++) { q += d; vec4 s = texture2D(S, q); acc += s.rgb * s.a * w; w *= .965; }
+    col += acc * (RAY / 36.) * 1.6;
+  }
+  vec2 vq = uv - .5; col *= 1. - dot(vq, vq) * .5;
+  col += (h21(gl_FragCoord.xy + fract(T) * 31.7) - .5) * .02;
   gl_FragColor = vec4(col, 1.);
 }
   </script>
@@ -350,7 +437,8 @@ void main() {
   (() => {
     const root = document.documentElement, still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const canvas = document.getElementById('gl');
-    const gl = canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'high-performance' });
+    const gl = canvas.getContext('webgl', { antialias: false, alpha: false, depth: false, powerPreference: 'high-performance' });
+    const params = new URLSearchParams(location.search);
 
     /* ── текст ── */
     const nameEl = document.querySelector('.name');
@@ -359,24 +447,38 @@ void main() {
     const greeting = t => t < 4.5 || t >= 22.5 ? 'Доброї ночі' : t < 11 ? 'Добрий ранок' : t < 17.5 ? 'Добрий день' : 'Добрий вечір';
 
     /* ── час ── */
-    const q = parseFloat(new URLSearchParams(location.search).get('t'));
+    const q = parseFloat(params.get('t'));
     const realT = () => { if (!isNaN(q)) return ((q % 24) + 24) % 24; const d = new Date(); return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; };
     const ease = k => k * k * (3 - 2 * k), smooth = (x, a, b) => ease(Math.max(0, Math.min(1, (x - a) / (b - a))));
-    let lapse = null; const LAPSE = 16000;
+    let lapse = null; const LAPSE = 18000;
     const nowT = () => { if (!lapse) return realT(); const k = (performance.now() - lapse.start) / LAPSE; if (k >= 1) { lapse = null; lapseEl.classList.remove('on'); return realT(); } return (lapse.from + 24 * ease(k)) % 24; };
-    hit.addEventListener('click', () => { if (lapse || still) return; lapse = { from: realT(), start: performance.now() }; lapseEl.classList.add('on'); });
+    const startLapse = () => { if (lapse || still) return; lapse = { from: realT(), start: performance.now() }; lapseEl.classList.add('on'); };
+    hit.addEventListener('click', startLapse); canvas.addEventListener('click', startLapse);
+
+    /* ── сонце й місяць: напрями на небі (схід ліворуч, захід праворуч) ── */
+    const dir = (az, el) => [Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)];
+    const sunDir = t => {
+      const p = (t - 6) / 13.8;
+      if (p >= 0 && p <= 1) return dir((p - .5) * 1.5, Math.sin(p * Math.PI) * .7);
+      const n = ((t - 19.8 + 24) % 24) / 10.2; return dir(.75 + n * (2 * Math.PI - 1.5), -Math.sin(n * Math.PI) * .5);
+    };
+    const moonDir = t => {
+      const n = ((t - 19.2 + 24) % 24) / 11.4;
+      if (n <= 1) return dir(.55 + (n - .5) * .6, Math.sin(n * Math.PI) * .42);
+      return dir(0, -.3);
+    };
 
     /* ── птахи й світлячки (поверх полотна) ── */
     const birdsEl = document.getElementById('birds'), ffEl = document.getElementById('ffs'), flock = [];
     for (let i = 0; i < (innerWidth < 600 ? 12 : 26); i++) {
       const f = document.createElement('i'); f.className = 'ff';
-      const side = Math.random() < .5 ? Math.random() * 30 : 70 + Math.random() * 30;
-      Object.assign(f.style, { left: side + '%', top: 64 + Math.random() * 30 + '%' });
+      const side = Math.random() < .5 ? Math.random() * 28 : 72 + Math.random() * 28;
+      Object.assign(f.style, { left: side + '%', top: 66 + Math.random() * 30 + '%' });
       f.style.setProperty('--d', 6 + Math.random() * 8 + 's'); f.style.setProperty('--b', 2 + Math.random() * 3 + 's'); f.style.animationDelay = `${-Math.random() * 10}s, ${-Math.random() * 5}s`;
       ffEl.appendChild(f);
     }
     const spawnFlock = () => {
-      const n = 3 + Math.floor(Math.random() * 5), y = 22 + Math.random() * 18, dir = Math.random() < .5 ? 1 : -1, v = dir * (.03 + Math.random() * .012);
+      const n = 3 + Math.floor(Math.random() * 5), y = 22 + Math.random() * 16, dir = Math.random() < .5 ? 1 : -1, v = dir * (.03 + Math.random() * .012);
       for (let i = 0; i < n; i++) {
         const b = document.createElement('div'); b.className = 'bird';
         b.innerHTML = '<svg viewBox="0 0 20 9"><path d="M1 2 Q5.5 7.5 10 5.5 Q14.5 7.5 19 2"/></svg>';
@@ -391,60 +493,106 @@ void main() {
     document.addEventListener('pointerleave', () => { tx = ty = 0; });
     addEventListener('deviceorientation', e => { if (e.gamma == null) return; tx = Math.max(-1, Math.min(1, e.gamma / 25)); ty = Math.max(-1, Math.min(1, (e.beta - 50) / 30)); }, { passive: true });
 
-    /* ── положення сонця/місяця (як у шейдері) — для зони кліку ── */
-    const WATER = .255;
-    const orbXY = t => {
-      const p = (t - 6) / 13.8, kx = Math.pow(Math.max(1, 1.1 * innerHeight / innerWidth), .75);
-      if (p >= 0 && p <= 1) return [(p - .5) * .62 / kx, WATER + .06 + Math.sin(p * Math.PI) * .6];
-      const qn = ((t - 19.8 + 24) % 24) / 10.2; return [(qn - .5) * .56 / kx, WATER + .08 + Math.sin(Math.min(1, Math.max(0, qn)) * Math.PI) * .56];
+    /* ── камера (та сама, що в шейдері) ── */
+    const camera = (time, A) => {
+      const fl = 1.55 * Math.min(1, Math.pow(A / 1.15, .45));
+      const co = [mx * .35 + Math.sin(time * .04) * .15, .55 - my * .08 + Math.sin(time * .031) * .03, -1 + Math.sin(time * .023) * .25];
+      const ct = [0, 2.3 + (A < 1 ? .9 : 0), 22];
+      return { co, ct, fl };
+    };
+    const norm = v => { const l = Math.hypot(...v); return v.map(x => x / l); };
+    const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    // напрям → точка на екрані (частки 0..1, y знизу); null, якщо позаду
+    const project = (cam, d, A) => {
+      const ww = norm(cam.ct.map((x, i) => x - cam.co[i])), uu = norm(cross([0, 1, 0], ww)), vv = cross(ww, uu);
+      const z = dot(d, ww); if (z <= .05) return null;
+      const sx = dot(d, uu) / z * cam.fl, sy = dot(d, vv) / z * cam.fl;
+      return [(sx / A + 1) / 2, (sy + 1) / 2];
     };
 
-    let fallback = !gl, U = {};
+    /* ── WebGL: сцена в текстуру, потім промені й зерно ── */
+    let fallback = !gl, P1, P2, U1 = {}, U2 = {}, tex, fbo;
     if (gl) {
       const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(s)); return null; } return s; };
-      const vs = sh(gl.VERTEX_SHADER, 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }');
-      const fs = sh(gl.FRAGMENT_SHADER, document.getElementById('fs').textContent);
-      if (!vs || !fs) fallback = true;
+      const prog = (fsId, names, U) => {
+        const vs = sh(gl.VERTEX_SHADER, 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }'), fs = sh(gl.FRAGMENT_SHADER, document.getElementById(fsId).textContent);
+        if (!vs || !fs) return null;
+        const pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.bindAttribLocation(pr, 0, 'p'); gl.linkProgram(pr);
+        if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return null;
+        for (const k of names) U[k] = gl.getUniformLocation(pr, k);
+        return pr;
+      };
+      P1 = prog('fs', ['R', 'T', 'SD', 'MD', 'CO', 'CT', 'FL', 'MIST', 'M'], U1);
+      P2 = prog('post', ['S', 'R', 'SUN', 'RAY', 'T'], U2);
+      if (!P1 || !P2) fallback = true;
       else {
-        const prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
-        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) fallback = true;
-        else {
-          gl.useProgram(prog);
-          const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-          const loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-          for (const k of ['R', 'T', 'HR', 'M']) U[k] = gl.getUniformLocation(prog, k);
-        }
+        const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+        for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+        fbo = gl.createFramebuffer();
       }
     }
 
     // роздільна здатність підлаштовується під швидкість пристрою
-    const forced = parseFloat(new URLSearchParams(location.search).get('q'));
-    let scale = forced || Math.min(1, (innerWidth < 700 ? 0.55 : 0.75) * Math.min(devicePixelRatio || 1, 2));
-    const resize = () => { const w = Math.max(320, Math.round(innerWidth * scale)), h = Math.max(240, Math.round(innerHeight * scale)); if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; } };
+    const forced = parseFloat(params.get('q'));
+    let scale = forced || Math.min(1, (innerWidth < 700 ? 0.5 : 0.65) * Math.min(devicePixelRatio || 1, 2));
+    const resize = () => {
+      const w = Math.max(240, Math.round(innerWidth * scale)), h = Math.max(180, Math.round(innerHeight * scale));
+      if (canvas.width === w && canvas.height === h) return;
+      canvas.width = w; canvas.height = h;
+      if (!fallback) {
+        gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+        if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) fallback = true;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      }
+    };
     addEventListener('resize', resize); resize();
 
     const t0 = performance.now();
     let last = t0, frames = 0, fpsT = t0, nextFlock = 1500, lastGreet = '';
     function frame(now) {
-      const dt = Math.min(64, now - last); last = now;
-      const hr = nowT();
-      mx += (tx - mx) * .05; my += (ty - my) * .05;
+      if (!still) requestAnimationFrame(frame);
+      // ~30 кадрів на секунду: пейзаж змінюється плавно, а батарея й відеокарта не перевантажуються
+      if (now - last < 31 && !still) return;
+      const dt = Math.min(80, now - last); last = now;
+      const hr = nowT(), time = still ? 40 : (now - t0) / 1000, A = innerWidth / innerHeight;
+      mx += (tx - mx) * .04; my += (ty - my) * .04;
+      const sd = sunDir(hr), md = moonDir(hr), cam = camera(time, A);
+      const night = 1 - smooth(sd[1], -.22, -.02);
+      // що підсвічує промені: сонце, а вночі — місяць
+      const useMoon = sd[1] < -.02 && md[1] > 0, src = useMoon ? md : sd;
+      const scr = project(cam, src, A);
       if (!fallback) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.uniform2f(U.R, canvas.width, canvas.height);
-        gl.uniform1f(U.T, still ? 40 : (now - t0) / 1000);
-        gl.uniform1f(U.HR, hr);
-        gl.uniform2f(U.M, mx, my);
+        gl.useProgram(P1);
+        gl.uniform2f(U1.R, canvas.width, canvas.height); gl.uniform1f(U1.T, time);
+        gl.uniform3fv(U1.SD, sd); gl.uniform3fv(U1.MD, md); gl.uniform3fv(U1.CO, cam.co); gl.uniform3fv(U1.CT, cam.ct); gl.uniform1f(U1.FL, cam.fl);
+        gl.uniform1f(U1.MIST, Math.max(smooth(hr, 4, 6.5) * (1 - smooth(hr, 8, 10.5)), .35 * smooth(hr, 19, 21) + .35 * (1 - smooth(hr, 2, 4))));
+        gl.uniform2f(U1.M, mx, my);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.useProgram(P2);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(U2.S, 0);
+        gl.uniform2f(U2.R, canvas.width, canvas.height); gl.uniform1f(U2.T, time);
+        const low = Math.exp(-Math.pow(sd[1] / .22, 2));
+        const ray = useMoon ? .35 * night : smooth(sd[1], -.03, .02) * (.35 + .65 * low);
+        gl.uniform2f(U2.SUN, scr ? scr[0] : .5, scr ? scr[1] : 1.6); gl.uniform1f(U2.RAY, scr ? ray : ray * .4);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
         if (!canvas.classList.contains('on')) canvas.classList.add('on');
+        window.__frames = (window.__frames || 0) + 1;
       }
       frames++;
-      if (!forced && now - fpsT > 1500) { const fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now; if (fps < 40 && scale > .3) { scale *= .82; resize(); } else if (fps > 58 && scale < .95 && innerWidth > 700) { scale = Math.min(.95, scale * 1.08); resize(); } }
+      if (now - fpsT > 4000) { frames = 0; fpsT = now; }   // вкладка була прихована
+      else if (!forced && now - fpsT > 1500) { const fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now; if (fps < 24 && scale > .25) { scale *= .85; resize(); } }
 
-      hero.style.transform = `translate3d(${(-mx * 12).toFixed(2)}px, ${(-my * 7).toFixed(2)}px, 0)`;
+      hero.style.transform = `translate3d(${(-mx * 10).toFixed(2)}px, ${(-my * 6).toFixed(2)}px, 0)`;
       ffEl.style.transform = `translate3d(${(-mx * 30).toFixed(2)}px, 0, 0)`;
       const st = root.style;
-      st.setProperty('--ff', (Math.min(1, smooth(hr, 19.6, 20.8) * (1 - smooth(hr, 23.4, 24)) + (1 - smooth(hr, 0, 1.2)) * .5)).toFixed(3));
+      st.setProperty('--ff', (Math.min(1, smooth(hr, 19.8, 21) * (1 - smooth(hr, 23.4, 24)) + (1 - smooth(hr, 0, 1.2)) * .5)).toFixed(3));
       const birdsV = smooth(hr, 6.8, 8.2) * (1 - smooth(hr, 18.6, 19.6)); st.setProperty('--birds', birdsV.toFixed(3));
       for (let i = flock.length - 1; i >= 0; i--) {
         const b = flock[i]; b.x += b.v * dt * .06; b.ph += dt * .002;
@@ -454,9 +602,10 @@ void main() {
       if ((nextFlock -= dt) < 0) { nextFlock = 8000 + Math.random() * 9000; if (birdsV > .5 && flock.length < 10) spawnFlock(); }
       const g = greeting(hr); if (g !== lastGreet) { greetEl.textContent = g; lastGreet = g; }
       if (lapse) lapseEl.textContent = 'Перемотка доби · ' + String(Math.floor(hr)).padStart(2, '0') + ':' + String(Math.floor(hr % 1 * 60)).padStart(2, '0');
-      const [ox, oy] = orbXY(hr), A = innerWidth / innerHeight;
-      hit.style.left = (ox / A + .5) * innerWidth + 'px'; hit.style.top = (1 - oy) * innerHeight + 'px';
-      if (!still) requestAnimationFrame(frame);
+      // зона кліку — на сонці чи місяці, якщо вони в кадрі й над горизонтом
+      const orb = (src[1] > .01) && scr && scr[0] > .02 && scr[0] < .98 && scr[1] > .05 && scr[1] < .98;
+      hit.hidden = !orb;
+      if (orb) { hit.style.left = scr[0] * innerWidth + 'px'; hit.style.top = (1 - scr[1]) * innerHeight + 'px'; }
     }
     requestAnimationFrame(frame);
     if (still) setInterval(() => requestAnimationFrame(frame), 30000);
