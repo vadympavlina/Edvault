@@ -183,6 +183,54 @@ await step('кілька тижнів поспіль, звіт і збереже
   assert.equal((await S()).flags.reportMade, true);
 });
 
+await step('файл: зберегти всю гру у файл і відкрити її в іншому браузері', async () => {
+  const fs = await import('node:fs');
+  await go('dash');
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.click('.side [data-act="saveFile"]')]);
+  assert.match(dl.suggestedFilename(), /^startup_[A-Za-z0-9-]+_[A-Za-z0-9-]+_tyzhden-\d+\.json$/);
+  const path = await dl.path(), text = fs.readFileSync(path, 'utf8'), data = JSON.parse(text);
+  const cur = await S();
+  assert.equal(data.app, 'edvault-startup'); assert.equal(data.format, 1);
+  assert.deepEqual(data.state, cur, 'у файлі повний стан гри');
+  assert.ok(data.state.journal.length > 3 && data.state.history.length >= 3 && data.state.inbox.length > 0, 'журнал, історія й пошта');
+  assert.equal(data.summary['Учень'], cur.founder.name);
+  assert.match(await p.locator('.side').innerText(), /У файл збережено на тижні/);
+  // інший браузер: порожньо → відкрити файл із майстра
+  const q = await newPage(await browser.newContext({ viewport: { width: 1366, height: 900 } }), errors);
+  await q.goto(server.url + '/emulators/startup'); await q.evaluate(() => localStorage.clear()); await q.reload(); await q.waitForSelector('.wizard');
+  const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.click('.wizard [data-act="openFile"]')]);
+  await fc.setFiles(path);
+  await q.waitForSelector('.md.file-open');
+  assert.match(await q.locator('.md.file-open').innerText(), /Файл цілий/);
+  await q.click('.md.file-open [data-f="play"]');
+  await q.waitForSelector('#main .pg-h');
+  assert.equal(await q.locator('.wizard').count(), 0);
+  const back = await q.evaluate(() => JSON.parse(JSON.stringify(window.Startup.sim.s)));
+  assert.deepEqual(back, cur, 'гра відновилась повністю');
+  // гра продовжується
+  await q.evaluate(() => { window.Startup.sim.s.hours.product = 20; });
+  await q.click('[data-act="endWeek"]'); await q.waitForSelector('.md.week, .md.confirm'); const c = q.locator('.md.confirm .btn.primary'); if (await c.count()) { await c.click(); await q.waitForSelector('.md.week'); }
+  await q.click('.md [data-md-close]');
+  assert.equal(await q.evaluate(() => window.Startup.sim.s.week), cur.week + 1);
+  // файл, змінений вручну, — попередження в звіті
+  const forged = JSON.parse(text); forged.state.cash = 99999999;
+  const fpath = path + '-forged.json'; fs.writeFileSync(fpath, JSON.stringify(forged));
+  const [fc2] = await Promise.all([q.waitForEvent('filechooser'), q.click('.side [data-act="openFile"]')]);
+  await fc2.setFiles(fpath);
+  await q.waitForSelector('.md.file-open');
+  assert.match(await q.locator('.md.file-open').innerText(), /змінювали вручну[\s\S]*буде замінена/);
+  await q.click('.md.file-open [data-f="report"]');
+  await q.waitForSelector('.report');
+  assert.match(await q.locator('.report').innerText(), /змінювали вручну[\s\S]*Журнал рішень[\s\S]*Усі тижні/);
+  // не той файл — зрозуміла помилка, гра не ламається
+  const bad = path + '-bad.json'; fs.writeFileSync(bad, '{"hello": 1}');
+  const [fc3] = await Promise.all([q.waitForEvent('filechooser'), q.click('.side [data-act="openFile"]')]);
+  await fc3.setFiles(bad);
+  await q.waitForSelector('#toast.on');
+  assert.match(await q.locator('#toast').innerText(), /не збереження|пошкоджений/);
+  assert.equal(await q.evaluate(() => window.Startup.sim.s.cash), 99999999);
+});
+
 await step('телефон: меню відкривається кнопкою', async () => {
   const m = await newPage(await browser.newContext({ viewport: { width: 390, height: 844 } }), errors);
   await m.goto(server.url + '/emulators/startup');

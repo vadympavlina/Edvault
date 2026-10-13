@@ -117,7 +117,7 @@ const M = {
     s.pay ||= { main: null, b2b: null, seen: [] };
     s.orders ||= []; s.offersFl ||= {}; s.gigs ||= []; s.gigsDone ??= 0; s.gigIncome ??= 0; s.rating ??= 0; s.myGigs ||= [];
     s.port ||= {}; s.loan ??= null; s.crowd ??= null; s.plan ??= null; s.canvas ||= {};
-    s.sprint ??= null; s.sprints ||= []; s.retroBuff ??= null;
+    s.sprint ??= null; s.sprints ||= []; s.retroBuff ??= null; s.journal ||= [];
     s.hours.freelance ??= 0;
     s.fl ||= { landing: 0, copy: 0, video: 0, illus: 0, smmUntil: -1 };
   },
@@ -132,12 +132,12 @@ const M = {
     return (tone + font + pos * 1.4 + logo) / 4.4;
   },
   trustM(k) { return .82 + .33 * this.brandFit(k); },
-  setBrand(key, v) { this.s.brand[key] = v; },
+  setBrand(key, v) { if (this.s.brand[key] === v) return; this.s.brand[key] = v; const t = { font: () => `шрифт «${FONTS[v]?.t}»`, tone: () => `тон «${TONES[v]?.t}»`, position: () => v === 'vague' ? 'розмите позиціонування «для всіх»' : `позиціонування для «${this.seg(v)?.short}»` }[key]; if (t) this.log(`Бренд: ${t()}.`); },
   drawLogo() {
     // логотип своїми силами: забирає 6 годин із розробки цього тижня
     if (this.hoursNow().product < 6) return null;
     const q = clamp(.25 + .2 * this.fSkill().design + this.r.range(-.05, .1), .2, .95);
-    this.addBusy(this.s.week, 'product', 6); this.s.brand.logo = { q, by: 'self' };
+    this.addBusy(this.s.week, 'product', 6); this.s.brand.logo = { q, by: 'self' }; this.log(`Логотип зроблено самостійно: якість ${Math.round(q * 100)}%.`);
     return q;
   },
 
@@ -148,7 +148,7 @@ const M = {
     if (P.hw && this.I.kind !== 'hardware') return false;
     if (P.cost) { if (this.s.cash < P.cost) return false; this.s.cash -= P.cost; this.s.ledgerExtra = (this.s.ledgerExtra || 0) + P.cost; }
     this.s.promos.push({ id, until: this.s.week + P.weeks, start: this.s.week });
-    this.s.promoLog.push({ id, week: this.s.week, season: this.season() });
+    this.s.promoLog.push({ id, week: this.s.week, season: this.season() }); this.log(`Запущено акцію: ${P.t}.`);
     if (P.aware) this.s.brand.aware = clamp(this.s.brand.aware + P.aware, 0, 1);
     if (P.social) this.s.organic.social += P.social;
     return true;
@@ -164,6 +164,7 @@ const M = {
     if (P.b2b && which !== 'b2b') return false;
     if (P.apps && this.I.kind === 'hardware') return false;
     if (P.setup && !(this.s.pay.paid || []).includes(id)) { if (this.s.cash < P.setup) return false; this.s.cash -= P.setup; this.s.ledgerExtra = (this.s.ledgerExtra || 0) + P.setup; (this.s.pay.paid ||= []).push(id); }
+    if (this.s.pay[which] !== id) this.log(`Платіжна система${which === 'b2b' ? ' для організацій' : ''}: ${P.t}.`);
     this.s.pay[which] = id; this.seePay(id);
     return true;
   },
@@ -193,6 +194,7 @@ const M = {
     const fee = escrow ? Math.round(f.price * .08) : 0, total = f.price + fee;
     if (s.cash < total) return false;
     s.cash -= total; s.ledgerExtra = (s.ledgerExtra || 0) + total;
+    this.log(`Замовлення фрилансеру: ${TASKS[task].t} — ${f.name}, ${fmt(total)}${escrow ? ', безпечна угода' : ', оплата напряму'}.`);
     s.orders.push({ id: this.id('o'), task, who: f.name, rating: f.rating, price: f.price, fee, escrow, due: s.week + f.weeks, q: f.q, scam: f.scam, status: 'work' });
     s.offersFl[task].list = s.offersFl[task].list.filter(x => x !== f);
     return true;
@@ -204,7 +206,7 @@ const M = {
     else s.fl[o.task] = Math.max(s.fl[o.task] || 0, q);
     if (o.task === 'illus') s.product.quality = clamp(s.product.quality + q * 8, 0, 98);
   },
-  revise(oid) { const o = this.s.orders.find(x => x.id === oid); if (!o || o.status !== 'weak' || !o.escrow || o.revised) return false; o.revised = true; o.status = 'work'; o.due = this.s.week + 1; o.q = clamp(o.q + .25, 0, .95); return true; },
+  revise(oid) { const o = this.s.orders.find(x => x.id === oid); if (!o || o.status !== 'weak' || !o.escrow || o.revised) return false; o.revised = true; this.log(`Запит на доопрацювання: ${TASKS[o.task].t}.`); o.status = 'work'; o.due = this.s.week + 1; o.q = clamp(o.q + .25, 0, .95); return true; },
   // множник реєстрацій від роботи фрилансерів
   flSignup() { const f = this.s.fl; return 1 + f.landing * .18 + f.copy * .1 + f.illus * .03; },
   flContent() { return this.s.fl.smmUntil > this.s.week ? 6 * (this.s.fl.smmQ || .5) : 0; },
@@ -224,7 +226,7 @@ const M = {
     this.s.gigs = this.s.gigs.filter(x => x !== g);
     const deal = { ...g, terms, done: 0, start: this.s.week, deadline: this.s.week + Math.ceil(g.hours / 10) + 1 };
     if (terms === 'prepay') { const a = Math.round(g.pay / 2); this.s.cash += a; this.s.ledgerIn = (this.s.ledgerIn || 0) + a; deal.got = a; }
-    this.s.myGigs.push(deal);
+    this.s.myGigs.push(deal); this.log(`Взято фриланс-замовлення: «${g.t}», ${fmt(g.pay)} (${{ prepay: 'передоплата 50%', escrow: 'безпечна угода', none: 'без передоплати' }[terms]}).`);
     return true;
   },
 
@@ -236,7 +238,7 @@ const M = {
     if (a === 'meme') this.s.flags.memeBought = true;
     const p = this.s.port[a] ||= { v: 0, in: 0, since: this.s.week };
     p.v += amt * (1 - A.fee); p.in += amt; if (a === 'deposit') p.since = this.s.week;
-    this.s.cash -= amt; this.s.flags.invested = true;
+    this.s.cash -= amt; this.s.flags.invested = true; this.log(`Вкладено ${fmt(amt)}: ${A.t}.`);
     return true;
   },
   sell(a, amt) {
@@ -245,7 +247,7 @@ const M = {
     let got = amt * (1 - A.fee);
     if (a === 'deposit' && this.s.week - p.since < 13) { const share = amt / p.v; got = Math.min(got, p.in * share); }
     p.in = p.in * (1 - amt / p.v); p.v -= amt; if (p.v < 1) delete this.s.port[a];
-    this.s.cash += got;
+    this.s.cash += got; this.log(`Продано вкладення (${A.t}): отримано ${fmt(got)}.`);
     return Math.round(got);
   },
 
@@ -259,13 +261,14 @@ const M = {
     const lim = this.loanLimit(); amt = Math.round(amt); if (amt <= 0 || amt > lim) return false;
     const rate = .26, i = rate / 52, n = Math.round(months * W2M), pay = amt * i / (1 - Math.pow(1 + i, -n));
     this.s.loan = { amt, rate, n, left: n, pay: Math.round(pay), owed: amt, start: this.s.week };
-    this.s.cash += amt; this.s.ledgerIn = (this.s.ledgerIn || 0) + amt;
+    this.s.cash += amt; this.s.ledgerIn = (this.s.ledgerIn || 0) + amt; this.log(`Взято кредит ${fmt(amt)} під ${Math.round(rate * 100)}% річних на ${months} міс.`);
     return true;
   },
   canCrowd() { return !this.s.crowd || this.s.crowd.status === 'failed'; },
   startCrowd(goal, reward) {
     if (!this.canCrowd()) return false;
     this.s.crowd = { goal: Math.round(goal), reward: Math.round(reward), start: this.s.week, end: this.s.week + 4, raised: 0, backers: 0, status: 'live' };
+    this.log(`Запущено краудфандинг: мета ${fmt(goal)}, винагорода ${fmt(reward)}.`);
     return true;
   },
 
@@ -292,7 +295,7 @@ const M = {
   },
 
   /* ── фінплан ── */
-  setPlan(months) { this.s.plan = { week: this.s.week, months: months.map(m => ({ rev: Math.max(0, Math.round(m.rev)), cost: Math.max(0, Math.round(m.cost)) })) }; },
+  setPlan(months) { this.log(`Складено фінплан на 3 місяці: виручка ${months.map(m => fmt(m.rev)).join(' / ')}.`); this.s.plan = { week: this.s.week, months: months.map(m => ({ rev: Math.max(0, Math.round(m.rev)), cost: Math.max(0, Math.round(m.cost)) })) }; },
   planFact() {
     const p = this.s.plan; if (!p) return [];
     return p.months.map((m, i) => {
@@ -319,13 +322,14 @@ const M = {
     if (!plan.length) return false;
     p.queue = [...plan, ...p.queue.filter(x => !plan.includes(x))];
     const planned = sum(plan.map(id => this.feature(id).cost - (p.progress[id] || 0)));
+    this.log(`Розпочато спринт ${this.s.sprints.length + 1}: ${plan.map(id => this.feature(id).t).join(', ')} (${Math.round(planned)} оч.).`);
     this.s.sprint = { n: this.s.sprints.length + 1, start: this.s.week, len, plan, planned: Math.round(planned), burn: [Math.round(planned)], crunch: this.s.crunch };
     return true;
   },
   velocity() { const v = this.s.sprints.slice(-3); return v.length ? Math.round(sum(v.map(x => x.done)) / v.length) : null; },
   retro(choice) {
     const last = this.s.sprints.at(-1); if (!last || last.retro) return false;
-    last.retro = choice; this.s.retroBuff = { k: choice, until: this.s.week + 2 };
+    last.retro = choice; this.log(`Ретроспектива спринту ${last.n}: ${{ focus: 'більше фокусу', tests: 'писати тести', pair: 'робота в парах', rest: 'відпочити' }[choice]}.`); this.s.retroBuff = { k: choice, until: this.s.week + 2 };
     if (choice === 'pair') for (const m of this.s.team) m.morale = clamp(m.morale + 6, 0, 100);
     if (choice === 'rest') this.s.founder.energy = clamp(this.s.founder.energy + 12, 0, 100);
     return true;

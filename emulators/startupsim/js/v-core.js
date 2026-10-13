@@ -69,17 +69,39 @@ function lastWeek(S) {
   </section>`;
 }
 
+// поради, які вже є в «Перших кроках», не дублюємо, поки список видно
+const IN_STEPS = new Set(['talk', 'talk2', 'build', 'launch', 'form', 'pay']);
 export function mentorCard(S) {
-  const t = S.tips()[0]; if (!t) return '';
+  const steps = !!firstSteps(S), t = S.tips().find(x => !steps || x.urgent || !IN_STEPS.has(x.id)); if (!t) return '';
   return `<section class="mentor ${t.urgent ? 'urgent' : ''}"><span class="avatar">${icon('bulb', 20)}</span><div><b>Наставниця Ірина</b><p>${esc(t.text)}${t.term ? ` ${term(t.term, 'Що це?')}` : ''}</p>
     <div class="row gap sm">${t.go ? `<button class="btn sm primary" data-act="go" data-to="${t.go}">Перейти</button>` : ''}${t.urgent ? '' : `<button class="btn sm ghost" data-act="dismissTip" data-id="${t.id}">Зрозуміло</button>`}</div></div></section>`;
+}
+
+/* ═════════ Перші кроки: простий план для новачка ═════════ */
+export function firstSteps(S) {
+  const s = S.s; if (s.dismissed.firstSteps) return '';
+  const talks = sum(Object.values(s.know).map(k => k.n));
+  const steps = [
+    ['Поговоріть із трьома клієнтами', 'Розділ «Клієнти» → кнопка «Інтерв\'ю». Питайте про факти, а не про свою ідею.', 'customers', talks >= 3],
+    ['Заповніть бізнес-план', 'Хоча б 5 з 9 блоків у розділі «Бізнес-план».', 'plan', S.canvasFilled() >= 5],
+    ['Додайте функції в розробку', 'Розділ «Продукт»: 2–3 функції, яких найбільше бракує клієнтам.', 'product', s.product.built.length > 0 || s.product.queue.length > 0],
+    ['Зареєструйте ФОП або ТОВ', 'Розділ «Фінанси». Без цього клієнти не зможуть вам платити.', 'finance', s.company.form !== 'none'],
+    ['Запустіть першу версію (MVP)', 'Розділ «Продукт» → «Запустити MVP», щойно готова хоч одна функція.', 'product', s.product.launched],
+    ['Отримайте першу оплату', 'Потрібні функція оплати, реєстрація й розумна ціна (розділ «Ціна»).', 'pricing', !!s.ach.firstPay],
+    ['Збережіть гру у файл', 'Кнопка «Зберегти» вгорі сторінки. Файл можна здати викладачеві.', 'file', s.flags.fileWeek != null],
+  ];
+  const done = steps.filter(x => x[3]).length; if (done === steps.length) return '';
+  const next = steps.findIndex(x => !x[3]);
+  return `<section class="card first-steps"><header class="card-h"><h3>${icon('flag')} Перші кроки</h3><span class="chip ${done ? 'acc' : ''}">${done} з ${steps.length}</span></header>
+    <ol>${steps.map(([t, d, go, ok], i) => `<li class="${ok ? 'done' : i === next ? 'next' : ''}"><span class="num">${ok ? icon('check', 14) : i + 1}</span><span><b>${t}</b><small>${d}</small></span>${!ok && i === next ? (go === 'file' ? `<button class="btn sm primary" data-act="saveFile">Зберегти</button>` : `<button class="btn sm primary" data-act="go" data-to="${go}">Перейти</button>`) : ''}</li>`).join('')}</ol>
+    <div class="row end"><button class="btn sm ghost" data-act="dismissTip" data-id="firstSteps">Сховати список</button></div></section>`;
 }
 
 /* ═════════ Огляд ═════════ */
 function dash(S) {
   const s = S.s, h = s.history, labels = h.map(x => String(x.week + 1));
   const achs = Object.keys(s.ach);
-  return `${mentorCard(S)}${kpis(S)}
+  return `${mentorCard(S)}${firstSteps(S)}${kpis(S)}
   <div class="grid g2">
     <div class="col">${weekPlan(S)}</div>
     <div class="col">
@@ -121,6 +143,17 @@ function help(S, ui) {
       <li><b>Стежте за грошима.</b> Runway — скільки тижнів ви ще протримаєтеся. Інвестори, гранти, кредит, краудфандинг чи фриланс допоможуть дотягнути.</li>
       <li><b>Наймайте вчасно.</b> Команда пришвидшує, але зарплати з'їдають гроші.</li>
     </ol><p class="muted sm">Гра триває ${WEEKS} тижнів (2 роки). Усі люди й компанії вигадані.</p></section>
+    <section class="card"><header class="card-h"><h3>${icon('save')} Збереження й файли</h3></header><ul class="facts">
+      <li>Гра автоматично зберігається в цьому браузері. Але на спільному комп'ютері чи в іншому браузері її не буде — тому <b>зберігайте у файл</b>.</li>
+      <li><b>Зберегти у файл</b> — кнопка «Зберегти» вгорі сторінки або в меню (Ctrl+S). У файлі є все: кожен тиждень, усі рішення, журнал дій, бізнес-план, бренд, пошта, команда, фінанси.</li>
+      <li><b>Відкрити файл</b> — кнопка в меню (або Ctrl+O). Можна також просто перетягнути файл на сторінку. Гра продовжиться з того самого місця.</li>
+    </ul><div class="row gap wrap"><button class="btn primary" data-act="saveFile">${icon('save', 16)} Зберегти у файл</button><button class="btn" data-act="openFile">${icon('open', 16)} Відкрити файл</button></div></section>
+    <section class="card"><header class="card-h"><h3>${icon('user')} Для викладача</h3></header><ol class="steps">
+      <li><b>Учні здають файл.</b> Наприкінці заняття чи гри учень натискає «Зберегти у файл» і надсилає файл .json.</li>
+      <li><b>Відкрийте файл учня.</b> «Відкрити файл» або перетягніть файл на сторінку → «Відкрити звіт». Ваша власна гра в цьому браузері буде замінена, тож за потреби спершу збережіть її.</li>
+      <li><b>Підсумковий звіт</b> показує результати, бізнес-план із перевіркою даними, ключові рішення, журнал дій по тижнях і таблицю всіх тижнів. Його можна надрукувати або зберегти в PDF.</li>
+      <li><b>Чесність.</b> Якщо файл змінювали вручну після збереження, симулятор попередить про це і в звіті, і під час відкриття.</li>
+    </ol></section>
     <section class="card"><header class="card-h"><h3>${icon('search')} Словник</h3></header>
       <input class="inp" type="search" placeholder="Знайти термін…" value="${esc(ui.q || '')}" data-in="q" aria-label="Пошук термінів">
       <dl class="gloss">${items.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('') || '<p class="empty">Нічого не знайдено</p>'}</dl></section>
@@ -132,11 +165,12 @@ export function report(S) {
   const s = S.s, I = S.I, h = s.history, last = h.at(-1) || {}, labels = h.map(x => String(x.week + 1));
   const C = s.canvas, chk = S.canvasCheck();
   const totalRev = sum(h.map(x => x.rev)), stake = S.stake(), val = S.valuation();
-  const block = k => { const v = C[k]; const txt = Array.isArray(v) ? v.map(x => k === 'solution' ? S.feature(x)?.t : k === 'channels' ? ({ ads: 'Реклама', bloggers: 'Блогери', social: 'Соцмережі', seo: 'SEO', events: 'Заходи', sales: 'Продажі', referral: 'Рефераль' }[x]) : METRICS[x]).filter(Boolean).join(', ') : k === 'segment' ? S.seg(v)?.t : k === 'advantage' ? ADVANTAGES[v]?.t : v; return `<div class="cv-b ${k}"><b>${CANVAS[k].t}</b><p>${esc(txt || '—')}</p>${chk[k] ? `<span class="chip ${chk[k].s}">${chk[k].s === 'ok' ? 'підтверджено' : chk[k].s === 'warn' ? 'припущення' : 'суперечить даним'}</span>` : ''}</div>`; };
+  const block = k => { const v = C[k]; const txt = Array.isArray(v) ? v.map(x => k === 'solution' ? S.feature(x)?.t : k === 'channels' ? ({ ads: 'Реклама', bloggers: 'Блогери', social: 'Соцмережі', seo: 'SEO', events: 'Заходи', sales: 'Продажі', referral: 'Реферальна програма' }[x]) : METRICS[x]).filter(Boolean).join(', ') : k === 'segment' ? (v && S.I.segments[v] ? S.seg(v).t : '') : k === 'advantage' ? ADVANTAGES[v]?.t : v; return `<div class="cv-b ${k}"><b>${CANVAS[k].t}</b><p>${esc(txt || '—')}</p>${chk[k] ? `<span class="chip ${chk[k].s}">${chk[k].s === 'ok' ? 'підтверджено' : chk[k].s === 'warn' ? 'припущення' : 'суперечить даним'}</span>` : ''}</div>`; };
   const end = s.over ? { bankrupt: 'Компанія закрилася: закінчилися гроші.', sold: `Компанію продано за ${money(s.over.value || 0)}.`, time: 'Минуло два роки.' }[s.over.kind] : `Гра триває: тиждень ${s.week + 1} з ${WEEKS}.`;
   return `<div class="report">
-    <header class="rp-h">${logo(s.company, 56)}<div><h1>${esc(s.company.name)}</h1><p>${esc(I.pitch)}</p><small>Засновник: ${esc(s.founder.name)} (${BACKGROUNDS[s.founder.bg].t.toLowerCase()}) · ${esc(I.t)} · ${dateText(0)} — ${dateText(s.week)}</small></div>
-      <button class="btn no-print" data-act="print">${icon('printer')} Друкувати / PDF</button></header>
+    <header class="rp-h">${logo(s.company, 56)}<div><h1>${esc(s.company.name)}</h1><p>${esc(I.pitch)}</p><div class="rp-who"><span>Учень: <b>${esc(s.founder.name)}</b></span>${s.founder.group ? `<span>Клас або група: <b>${esc(s.founder.group)}</b></span>` : ''}<span>Досвід: ${BACKGROUNDS[s.founder.bg].t.toLowerCase()}</span><span>Ідея: ${esc(I.t)}${I.custom ? ' (власна)' : ''}</span><span>${dateText(0)} — ${dateText(s.week)}</span></div></div>
+      <div class="row gap wrap no-print"><button class="btn" data-act="saveFile">${icon('save')} Зберегти у файл</button><button class="btn" data-act="print">${icon('printer')} Друкувати / PDF</button></div></header>
+    ${s.flags.editedFile ? `<p class="note bad">${icon('alert', 16)} <span>Цей файл змінювали вручну після збереження: результати можуть не відповідати справжній грі.</span></p>` : ''}
     <p class="rp-end">${esc(end)}</p>
     <div class="kpis">
       <div class="kpi"><span class="kpi-l">Виручка за весь час</span><b>${money(totalRev)}</b></div>
@@ -164,6 +198,10 @@ export function report(S) {
       <li>Бренд: впізнаваність ${pct(s.brand.aware)}, відповідність сегменту ${pct(S.brandFit())}.</li>
     </ul></section>
     <section class="card"><header class="card-h"><h3>Досягнення</h3></header><div class="achs">${Object.entries(ACHIEVEMENTS).filter(([k]) => s.ach[k]).map(([k, a]) => `<div class="ach on">${icon('star', 18)}<span><b>${esc(a.t)}</b><small>${esc(a.d)}</small></span></div>`).join('') || '<p class="muted">Поки немає.</p>'}</div></section>
+    <section class="card"><header class="card-h"><h3>Журнал рішень</h3><span class="muted sm">${(s.journal || []).length} ${plural((s.journal || []).length, 'запис', 'записи', 'записів')}</span></header>
+      ${(s.journal || []).length ? `<ol class="journal">${s.journal.map(j => `<li><b>Тиждень ${j.w + 1}</b><span>${esc(j.t)}</span></li>`).join('')}</ol>` : '<p class="muted">Записів поки немає.</p>'}</section>
+    <section class="card"><header class="card-h"><h3>Усі тижні</h3><span class="muted sm">гроші, користувачі, виручка й витрати</span></header>
+      ${h.length ? `<div style="overflow-x:auto"><table class="tbl sm weeks"><thead><tr><th>Тиждень</th><th>Гроші</th><th>Активні</th><th>Платні</th><th>Виручка</th><th>Витрати</th><th>Енергія</th></tr></thead><tbody>${h.map(x => `<tr><td>${x.week + 1}</td><td>${money(x.cash)}</td><td>${num(x.users)}</td><td>${num(x.paid)}</td><td>${money(x.rev)}</td><td>${money(x.cost)}</td><td>${x.energy != null ? x.energy + '%' : '—'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Ще не минуло жодного тижня.</p>'}</section>
   </div>`;
 }
 

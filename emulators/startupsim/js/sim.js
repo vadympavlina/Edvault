@@ -41,7 +41,7 @@ export function rng(state) {
 }
 
 /* ═════════ новий стан ═════════ */
-export function newGame({ idea = 'homework', founder = 'Засновник', bg = 'dev', company = 'Мій стартап', color, sym = 'spark', fff = false, seed, custom } = {}) {
+export function newGame({ idea = 'homework', founder = 'Засновник', group = '', bg = 'dev', company = 'Мій стартап', color, sym = 'spark', fff = false, seed, custom } = {}) {
   seed = (seed ?? Date.now() % 1e6) | 0;
   // власна ідея учня: опис → ідея з прихованою правдою ринку
   const customIdea = custom ? makeCustomIdea(custom, seed * 7 + 13) : null;
@@ -50,7 +50,7 @@ export function newGame({ idea = 'homework', founder = 'Засновник', bg 
   const s = {
     v: 1, rs: seed, seq: 1, week: 0, custom: customIdea,
     idea, target: segIds.find(k => !I.segments[k].b2b) || segIds[0],
-    founder: { name: founder, bg, energy: 100, burnout: 0 },
+    founder: { name: founder, group: String(group || '').trim(), bg, energy: 100, burnout: 0 },
     company: { name: company, color: color || I.color, sym, form: 'none' },
     cash: 150000,
     cap: [{ id: 'founder', t: founder, kind: 'founder', shares: 1000000 }],
@@ -66,7 +66,7 @@ export function newGame({ idea = 'homework', founder = 'Засновник', bg 
     team: [], candidates: [], crunch: false,
     know: {}, interview: null, talks: 0, surveys: [],
     inv: {}, deck: { slides: ['problem', 'solution', 'market', 'traction', 'team', 'ask'], honest: true }, offers: [],
-    inbox: [], history: [], ach: {}, flags: {}, comp: {}, over: null, last: null, dismissed: {},
+    inbox: [], history: [], journal: [], ach: {}, flags: {}, comp: {}, over: null, last: null, dismissed: {},
   };
   for (const k of segIds) {
     const g = I.segments[k];
@@ -74,12 +74,14 @@ export function newGame({ idea = 'homework', founder = 'Засновник', bg 
     s.know[k] = { n: 0, good: 0, bad: 0, pains: [], wtps: [], badWtps: [], likes: 0, ch: {}, feats: {}, sols: [] };
     s.price[k] = I.kind === 'hardware' ? Math.round(g.wtp / (g.units || 1) * .9 / 10) * 10 : Math.round(g.wtp * .8 / 10) * 10;
   }
+  s.flags.start = { price: { ...s.price }, mktPlan: { ...s.mkt } }; // з чим порівнювати зміни першого тижня
   if (fff) {
     const add = Math.round(1000000 * .1 / .9);
     s.cap.push({ id: 'fff', t: 'Родина й друзі', kind: 'fff', shares: add }); s.cash += 300000;
   }
   const sim = new Sim(s);
   sim.refreshCandidates();
+  sim.log(`Засновано компанію «${s.company.name}»: ${I.custom ? 'власна ідея' : 'ідея'} «${I.t}»${fff ? ', залучено 300 тис. ₴ від родини й друзів за 10%' : ''}.`);
   if (customIdea) sim.mail({ from: 'Наставниця Ірина', kind: 'mentor', title: 'Ваша ідея — це поки гіпотеза', body: `Ви описали ідею «${I.t}», своїх клієнтів і функції. Але все це — лише ваші припущення.\n\nРинок може думати інакше: комусь проблема болить менше, ніж здається, а потрібною може виявитися зовсім не та функція, яку ви вважаєте головною. Перевіряйте все в інтерв'ю й опитуваннях. А в підсумковому звіті ви побачите, які з ваших припущень справдилися.` });
   sim.mail({ from: 'Наставниця Ірина', kind: 'mentor', title: 'Ласкаво просимо!', body: `Привіт! Я буду поруч і підказуватиму.\n\nУ вас ${money(s.cash)} і ідея: «${I.pitch}» Не поспішайте писати код. Спершу поговоріть із майбутніми клієнтами — розділ «Клієнти». Дізнайтеся, кому це справді болить і скільки вони вже витрачають на цю проблему.\n\nКожен тиждень плануйте свій час і натискайте «Завершити тиждень». Гроші закінчаться — компанія закриється. Удачі!` });
   return sim;
@@ -208,9 +210,10 @@ export class Sim {
   setTarget(k) {
     if (!this.I.segments[k] || k === this.s.target) return;
     const prev = this.s.target; this.s.target = k; this.s.flags.targetChanged = this.s.week;
+    this.log(`Новий цільовий сегмент: «${this.seg(prev).short}» → «${this.seg(k).short}».`);
     if (this.s.product.launched && this.s.know[prev].n >= 3) this.s.flags.pivotFrom = prev;
   }
-  setModel(m) { if (this.I.models.includes(m) && m !== 'b2b') this.s.model = m; }
+  setModel(m) { if (this.I.models.includes(m) && m !== 'b2b' && m !== this.s.model) { this.s.model = m; this.log(`Модель монетизації: ${MODELS[m]?.t || m}.`); } }
   setPrice(k, v) { this.s.price[k] = Math.max(0, Math.round(v)); }
   setBudget(ch, v) { this.s.mkt[ch] = Math.max(0, Math.round(v)); }
   queue(id) { const p = this.s.product; if (!this.feature(id) || this.has(id) || p.queue.includes(id)) return; p.queue.push(id); p.progress[id] ||= 0; }
@@ -219,7 +222,7 @@ export class Sim {
   canLaunch() { return !this.s.product.launched && this.s.product.built.length > 0; }
   launch() {
     if (!this.canLaunch()) return false;
-    const p = this.s.product; p.launched = true; p.launchWeek = this.s.week; this.award('launch');
+    const p = this.s.product; p.launched = true; p.launchWeek = this.s.week; this.award('launch'); this.log(`Запущено MVP. Готові функції: ${p.built.map(f => this.feature(f).t).join(', ')}.`);
     // лист очікування: частина людей приходить одразу після запуску
     for (const k of this.segIds) { const u = this.s.users[k]; if (u.wait) { this.s.pendingWait = (this.s.pendingWait || 0) + u.wait; } }
     this.mail({ from: 'Наставниця Ірина', kind: 'mentor', title: 'Ви запустилися!', body: 'Перша версія в руках людей. Тепер головне — дивитися, чи вони повертаються (утримання), і що кажуть. Проведіть опитування, коли наберете хоча б 30 активних користувачів.' });
@@ -230,7 +233,7 @@ export class Sim {
     if (form === c.form || !['fop', 'tov'].includes(form)) return false;
     const cost = form === 'tov' ? 12000 : 0;
     if (this.s.cash < cost) return false;
-    this.s.cash -= cost; c.form = form; this.s.flags.registered = this.s.week;
+    this.s.cash -= cost; c.form = form; this.s.flags.registered = this.s.week; this.log(`Зареєстровано ${form === 'tov' ? 'ТОВ' : 'ФОП'}.`);
     this.s.ledgerExtra = (this.s.ledgerExtra || 0) + cost;
     return true;
   }
@@ -239,7 +242,7 @@ export class Sim {
     n = Math.max(I.batchMin, Math.round(n)); const cost = n * this.s.unitCost;
     if (this.s.cash < cost) return false;
     this.s.cash -= cost; this.s.ledgerExtra = (this.s.ledgerExtra || 0) + cost;
-    this.s.stock.orders.push({ due: this.s.week + I.leadTime, n });
+    this.s.stock.orders.push({ due: this.s.week + I.leadTime, n }); this.log(`Замовлено партію: ${n} пристроїв за ${money(cost)}.`);
     return true;
   }
 
@@ -291,6 +294,12 @@ export class Sim {
     const K = this.s.know[iv.p.seg];
     const bad = iv.asked.filter(q => QUESTIONS.find(x => x.id === q)?.bad).length;
     K.n++; if (bad) K.bad++; else K.good++;
+    // інтерв'ю одного тижня — одним рядком журналу, щоб він лишався читабельним
+    const J = this.s.journal ||= [], sn = this.seg(iv.p.seg).short;
+    let je = J.findLast(j => j.w === this.s.week && j.k === 'iv');
+    if (!je) J.push(je = { w: this.s.week, k: 'iv', t: '', n: 0, bad: 0, segs: {} });
+    je.n++; if (bad) je.bad++; je.segs[sn] = (je.segs[sn] || 0) + 1;
+    je.t = `Інтерв'ю з клієнтами: ${je.n} (${Object.entries(je.segs).map(([k, v]) => `${k} — ${v}`).join(', ')}), ${je.bad ? `з підказувальними запитаннями — ${je.bad}` : 'усі лише про факти'}.`;
     this.s.interview = null;
     this.award('firstTalk');
     const all = Object.values(this.s.know); if (sum(all.map(x => x.good)) >= 10 && sum(all.map(x => x.bad)) === 0) this.award('listener');
@@ -315,7 +324,7 @@ export class Sim {
     if (this.modelOf(k) !== 'free' && this.priceF(k) < .4) asks.push('Занадто дорого');
     if (this.s.product.quality < 55) asks.push('Незручний і заплутаний інтерфейс');
     const res = { week: this.s.week, seg: k, n, pmf: seen, nps: Math.round(this.nps(k) + r.norm(0, 6)), asks };
-    this.s.surveys.push(res);
+    this.s.surveys.push(res); this.log(`Опитування (${this.seg(k).short}): ${pct(seen)} дуже засмутилися б, NPS ${res.nps}.`);
     if (seen >= .4 && n >= 30) this.award('pmf');
     return res;
   }
@@ -323,7 +332,7 @@ export class Sim {
   /* ── лендінг і A/B-тест ── */
   landingM() { const i = this.s.landing.cur; return i < 0 ? 1 : this.I.landing[i].m; }
   setLanding(i) { if (this.I.landing[i]) this.s.landing.cur = i; }
-  startAB(a, b) { if (a === b || !this.I.landing[a] || !this.I.landing[b] || this.s.landing.test) return false; this.s.landing.test = { a, b, start: this.s.week }; return true; }
+  startAB(a, b) { if (a === b || !this.I.landing[a] || !this.I.landing[b] || this.s.landing.test) return false; this.s.landing.test = { a, b, start: this.s.week }; this.log(`Запущено A/B-тест лендінгу: «${this.I.landing[a].t}» проти «${this.I.landing[b].t}».`); return true; }
 
   /* ── команда ── */
   refreshCandidates() {
@@ -347,16 +356,16 @@ export class Sim {
     const c = this.s.candidates.find(x => x.id === id); if (!c) return { ok: false };
     const p = this.acceptChance(c, salary, equity);
     this.s.candidates = this.s.candidates.filter(x => x !== c);
-    if (!this.r.chance(p)) return { ok: false, refused: true, name: c.name, fem: c.fem };
+    if (!this.r.chance(p)) { this.log(`Пропозиція роботи: ${c.name} (${money(salary)}/міс) — відмова.`); return { ok: false, refused: true, name: c.name, fem: c.fem }; }
     const m = { id: this.id('m'), name: c.name, fem: c.fem, role: c.role, skill: c.skill, salary: Math.round(salary), morale: 72 + (this.trait(c).morale || 0), trait: c.trait, joined: this.s.week, eq: equity };
     this.s.team.push(m);
     if (equity > 0) this.issue(m.id, m.name, 'team', equity);
-    this.award('hire');
+    this.award('hire'); this.log(`Найнято: ${m.name}, ${ROLES[m.role].t.toLowerCase()}, ${money(m.salary)}/міс${equity ? `, частка ${pct(equity, 1)}` : ''}.`);
     return { ok: true, m };
   }
   fire(id) {
     const m = this.s.team.find(x => x.id === id); if (!m) return false;
-    this.s.team = this.s.team.filter(x => x !== m);
+    this.s.team = this.s.team.filter(x => x !== m); this.log(`Звільнено: ${m.name}.`);
     this.s.cash -= m.salary; this.s.ledgerExtra = (this.s.ledgerExtra || 0) + m.salary; // вихідна допомога — місячна зарплата
     for (const o of this.s.team) o.morale = clamp(o.morale - 10, 0, 100);
     return true;
@@ -403,6 +412,7 @@ export class Sim {
     const used = sum(Object.values(this.s.inv).filter(x => x.status === 'meeting' && x.week === this.s.week).map(() => 6));
     if (this.s.hours.invest - used < 6) return { ok: false, msg: 'Заплануйте щонайменше 6 годин на роботу з інвесторами цього тижня.' };
     this.s.inv[id] = { status: inv.kind === 'grant' ? 'grantWait' : 'meeting', week: this.s.week, honest: this.s.deck.honest, deck: this.deckScore() };
+    this.log(`${inv.kind === 'grant' ? 'Заявка на грант' : 'Пітч інвестору'}: ${inv.t}. Якість пітч-деку ${pct(this.deckScore())}${this.s.deck.honest ? '' : ', цифри прикрашено'}.`);
     return { ok: true };
   }
   resolvePitch(id) {
@@ -450,28 +460,32 @@ export class Sim {
     this.issue(id, inv.t, inv.kind, st.offer.take);
     this.s.cash += st.offer.amount; this.s.ledgerIn = (this.s.ledgerIn || 0) + st.offer.amount;
     st.status = inv.kind === 'accel' ? 'accel' : 'invested'; st.week = this.s.week;
+    this.log(`Прийнято інвестицію: ${inv.t}, ${money(st.offer.amount)} за ${pct(st.offer.take, 1)} компанії.`);
     if (inv.kind === 'accel') this.s.flags.accelUntil = this.s.week + 12;
     this.award('raised'); if (st.honest) this.award('honest');
     return true;
   }
-  declineOffer(id) { const st = this.s.inv[id]; if (st?.status === 'offer') { st.status = 'declined'; st.week = this.s.week; } }
+  declineOffer(id) { const st = this.s.inv[id]; if (st?.status === 'offer') { st.status = 'declined'; st.week = this.s.week; this.log(`Відмова від інвестиції: ${INVESTORS.find(x => x.id === id)?.t}.`); } }
   counter(id) {
     const st = this.s.inv[id]; if (!st || st.status !== 'offer' || st.countered) return null;
     st.countered = true; const r = this.r.next();
-    if (r < .5) { st.offer.take *= .82; st.offer.until = this.s.week + 2; return 'yes'; }
-    if (r < .8) return 'same';
-    st.status = 'declined'; st.week = this.s.week; return 'walk';
+    const who = INVESTORS.find(x => x.id === id)?.t;
+    if (r < .5) { st.offer.take *= .82; st.offer.until = this.s.week + 2; this.log(`Торг з інвестором ${who}: частку знижено до ${pct(st.offer.take, 1)}.`); return 'yes'; }
+    if (r < .8) { this.log(`Торг з інвестором ${who}: пропозиція без змін.`); return 'same'; }
+    st.status = 'declined'; st.week = this.s.week; this.log(`Торг з інвестором ${who}: інвестор пішов.`); return 'walk';
   }
 
   /* ── пошта й події ── */
-  mail(m) { const e = { id: this.id('e'), week: this.s.week, read: false, ...m }; this.s.inbox.unshift(e); if (this.s.inbox.length > 80) this.s.inbox.length = 80; return e; }
+  mail(m) { const e = { id: this.id('e'), week: this.s.week, read: false, ...m }; this.s.inbox.unshift(e); if (this.s.inbox.length > 400) this.s.inbox.length = 400; return e; }
   choose(eid, ci) {
     const e = this.s.inbox.find(x => x.id === eid); if (!e || !e.choices || e.chosen != null) return null;
     const ev = EVENTS[e.ev]; const ch = ev?.choices(this, e)[ci]; if (!ch) return null;
-    e.chosen = ci; e.read = true;
+    e.chosen = ci; e.read = true; this.log(`Рішення «${e.title}»: ${e.choices[ci]}.`);
     const res = ch.do(this, e) || ''; e.result = res;
     return res;
   }
+  // Журнал рішень: що й коли зробив учень (для звіту й викладача)
+  log(t) { (this.s.journal ||= []).push({ w: this.s.week, t }); }
   award(k) { if (!this.s.ach[k] && ACHIEVEMENTS[k]) { this.s.ach[k] = this.s.week + 1; (this.s.newAch ||= []).push(k); } }
 
   /* ═════════ ТИЖДЕНЬ ═════════ */
@@ -680,11 +694,18 @@ export class Sim {
     }
     if (s.flags.accelUntil === s.week + 1) { s.flags.accelDone = true; this.mail({ from: 'Акселератор «Стартовий майданчик»', kind: 'investor', title: 'Демо-день', body: 'Програма завершилась. Інвестори бачили ваш виступ — тепер вони охочіше йдуть на зустрічі.' }); }
 
+    /* що учень змінив за тиждень — у журнал */
+    const prevRec = s.history.at(-1) || s.flags.start;
+    if (prevRec?.price) for (const k of this.segIds) if (prevRec.price[k] !== s.price[k]) this.log(`Ціна для «${this.seg(k).short}»: ${money(prevRec.price[k])} → ${money(s.price[k])}.`);
+    if (prevRec?.mktPlan) { const a = prevRec.mktPlan, b = s.mkt; if (a.ads !== b.ads) this.log(`Бюджет реклами: ${money(a.ads)} → ${money(b.ads)} на тиждень.`); if (a.bloggers !== b.bloggers) this.log(`Дописів у блогерів на тиждень: ${a.bloggers} → ${b.bloggers}.`); if (a.referral !== b.referral) this.log(`Реферальний бонус: ${money(a.referral)} → ${money(b.referral)}.`); }
+
     /* історія */
     const mrr = this.mrr();
     const rec = { week: s.week, cash: Math.round(s.cash), rev: Math.round(revenue), cost: Math.round(cost), mkt: Math.round(mkt), users: this.activeUsers(), paid: this.paidUsers(), mrr: Math.round(mrr),
       visitors: Math.round(sum(Object.values(segRep).map(x => x.visitors))), signups: sum(Object.values(segRep).map(x => x.signups)), newPaid: newPaidAll, churned: churnAll,
-      nps: this.nps(), appeal: this.appeal(), quality: p.quality, port: Math.round(this.portValue()), bugs: Math.round(p.bugs), wait: sum(this.segIds.map(k => s.users[k].wait)), seg: segRep, units: unitsSold };
+      nps: this.nps(), appeal: this.appeal(), quality: p.quality, port: Math.round(this.portValue()), bugs: Math.round(p.bugs), wait: sum(this.segIds.map(k => s.users[k].wait)), seg: segRep, units: unitsSold,
+      // знімок рішень тижня: план годин, ціни, сегмент, модель, маркетинг
+      hours: { ...s.hours }, price: { ...s.price }, target: s.target, model: s.model, mktPlan: { ...s.mkt }, energy: Math.round(s.founder.energy), team: s.team.length };
     s.history.push(rec);
     if (s.history.length > 160) s.history.shift();
     rep.rec = rec; rep.seg = segRep; rep.visits = visits[tg];

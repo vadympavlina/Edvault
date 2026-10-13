@@ -39,6 +39,8 @@ const P = {
   left: '<path d="m15 18-6-6 6-6"/>',
   up: '<path d="m18 15-6-6-6 6"/>',
   down: '<path d="m6 9 6 6 6-6"/>',
+  save: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+  open: '<path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/>',
   arrowUp: '<path d="M12 19V5M5 12l7-7 7 7"/>',
   arrowDown: '<path d="M12 5v14M19 12l-7 7-7-7"/>',
   play: '<path d="M6 4l14 8-14 8z"/>',

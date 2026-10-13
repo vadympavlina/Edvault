@@ -5,6 +5,7 @@ import { newGame, okState, Sim, money, WEEKS } from '../emulators/startupsim/js/
 import { autoplay, smartWeek, recklessWeek } from '../emulators/startupsim/js/bots.js';
 import { IDEAS, INVESTORS } from '../emulators/startupsim/js/data.js';
 import { assumptionsVsReality } from '../emulators/startupsim/js/custom.js';
+import { packGame, unpackGame, fileName, translit, checksum } from '../emulators/startupsim/js/file.js';
 
 const fresh = (o = {}) => newGame({ idea: 'homework', founder: 'Тест', company: 'Тест', seed: 7, ...o });
 const build = (S, ids) => { for (const id of ids) S.s.product.built.push(id); };
@@ -305,6 +306,50 @@ test('аудит: зірване фриланс-замовлення з пере
   const cash = S.s.cash; for (let i = 0; i < 8 && S.s.myGigs.length; i++) S.endWeek();
   assert.ok(S.s.inbox.some(m => /скасовано/.test(m.title) && /повернути/.test(m.body)), 'лист про повернення передоплати');
   assert.ok(got > 0 && cash > 0);
+});
+
+test('файл: зберігається абсолютно все й відновлюється без втрат', () => {
+  const S = newGame({ idea: 'booking', founder: 'Олена Коваль', group: '9-Б', company: 'Записатись', seed: 11 });
+  autoplay(S, 30);
+  S.setCanvas('problem', 'Майстри втрачають клієнтів'); S.setBrand('tone', 'friendly'); S.s.brand.persona = { name: 'Оксана, 38' };
+  const ui = { view: 'finance', flTab: 'earn', q: 'CAC', pick: ['x'] };
+  const file = JSON.parse(JSON.stringify(packGame(S, ui)));
+  assert.equal(file.app, 'edvault-startup'); assert.equal(file.summary['Учень'], 'Олена Коваль'); assert.equal(file.summary['Клас або група'], '9-Б');
+  const r = unpackGame(JSON.stringify(file));
+  assert.ok(r.ok); assert.equal(r.edited, false);
+  assert.deepEqual(r.state, JSON.parse(JSON.stringify(S.s)), 'стан — повністю');
+  assert.deepEqual(r.ui, ui, 'і стан інтерфейсу');
+  // продовження гри після відкриття дає той самий результат, що й без збереження
+  const A = new Sim(r.state), B = new Sim(JSON.parse(JSON.stringify(S.s)));
+  autoplay(A, 10); autoplay(B, 10);
+  assert.deepEqual(A.s, B.s, 'випадковість теж збережено');
+});
+
+test('файл: ручні зміни, чужі й пошкоджені файли розпізнаються', () => {
+  const S = fresh(); autoplay(S, 3);
+  const f = packGame(S, {}); f.state.cash += 1e6;
+  assert.equal(unpackGame(JSON.stringify(f)).edited, true);
+  assert.equal(unpackGame('не json').ok, false);
+  assert.equal(unpackGame('{"a":1}').ok, false);
+  assert.equal(unpackGame(JSON.stringify({ app: 'інше', state: S.s })).ok, false);
+  assert.equal(unpackGame(JSON.stringify({ ...packGame(S, {}), format: 99 })).ok, false);
+  assert.ok(unpackGame('\uFEFF' + JSON.stringify(packGame(S, {}))).ok, 'файл із BOM (після блокнота)');
+  assert.ok(unpackGame(JSON.stringify({ s: S.s, view: 'dash' })).ok, 'старий формат із localStorage');
+  assert.equal(checksum('abc'), checksum('abc')); assert.notEqual(checksum('abc'), checksum('abd'));
+});
+
+test('файл: назва латиницею за офіційною транслітерацією', () => {
+  assert.equal(translit('Олена Коваль'), 'Olena Koval'); assert.equal(translit('Юлія Згорська'), 'Yuliia Zghorska'); assert.equal(translit('Щастя'), 'Shchastia');
+  const S = newGame({ founder: 'Олена Коваль', company: 'КнигоОбмін', seed: 1 }); S.s.week = 11;
+  assert.equal(fileName(S), 'startup_KnyhoObmin_Olena-Koval_tyzhden-12.json');
+});
+
+test('журнал рішень записує дії учня', () => {
+  const S = fresh(); S.register('fop'); S.setTarget('parents'); S.startInterview('parents'); S.ask('how'); S.finishInterview();
+  S.setPrice('parents', 99); S.endWeek();
+  const t = S.s.journal.map(j => j.t).join('\n');
+  for (const re of [/Засновано компанію/, /Зареєстровано ФОП/, /Новий цільовий сегмент/, /Інтерв'ю з клієнтами: 1 \(Батьки — 1\)/, /Ціна для «Батьки»/]) assert.match(t, re);
+  assert.ok(S.s.history[0].hours && S.s.history[0].price, 'тиждень зберігає план годин і ціни');
 });
 
 test('гроші форматуються по-людськи', () => {
