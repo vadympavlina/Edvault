@@ -11,6 +11,7 @@
 // Потрібен Playwright з Chromium (як для браузерних тестів; шляхи — змінні PLAYWRIGHT_MODULE і CHROME).
 // Без доступу до Google Fonts можна вказати теку з файлами Inter (inter-cyrillic-wght-normal.woff2,
 // inter-latin-wght-normal.woff2): OG_FONTS=/шлях/до/теки
+// Лише одна сторінка: OG_ONLY=startup node scripts/make-og.mjs
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -35,6 +36,8 @@ const PAGES = [
     title: 'Емулятор Windows', desc: 'Провідник, командний рядок, Диспетчер завдань, брандмауер, мережа й роутер — пробуйте сміливо, нічого не зламаєте.' },
   { path: 'emulators/blogger.html', url: '/emulators/blogger', slug: 'blogger', icon: 'edvault', accent: '#d62976', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><linearGradient id="bg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#feda75"/><stop offset=".45" stop-color="#d62976"/><stop offset="1" stop-color="#4f5bd5"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#bg)"/><rect x="10" y="5.5" width="12" height="21" rx="2.6" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M14.5 8h3" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><path d="M16 21.2s-3.3-2-4-3.9a2 2 0 0 1 4-1.3 2 2 0 0 1 4 1.3c-.7 1.9-4 3.9-4 3.9z" fill="#fff"/></svg>', kind: 'Навчальний симулятор',
     title: 'Симулятор блогера', desc: 'Навчальний телефон з Instagram, YouTube і Telegram: дописи, коментарі, реклама й безпека в мережі.' },
+  { path: 'emulators/startup.html', url: '/emulators/startup', slug: 'startup', icon: 'edvault', accent: '#6366f1', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><linearGradient id="sg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#0ea5e9"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#sg)"/><g fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" transform="translate(4 4)"><path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2 0-2.8a2 2 0 0 0-3 0z"/><path d="m12 15-3-3a22 22 0 0 1 2-4A13 13 0 0 1 22 2c0 2.7-.8 7.5-6 11a22 22 0 0 1-4 2z"/><path d="M9 12H4s.6-3 2-4c1.6-1 5 0 5 0M12 15v5s3-.6 4-2c1-1.6 0-5 0-5"/></g></svg>', kind: 'Навчальний симулятор',
+    title: 'Симулятор стартапу', desc: 'Від ідеї до компанії: інтерв\'ю з клієнтами, бізнес-план, MVP, бренд, маркетинг, фінанси, команда, фриланс, платежі й інвестори — тиждень за тижнем.' },
   { path: 'materials.html', url: '/materials', slug: 'materials', icon: 'edvault', accent: '#4F6BF4', kind: 'Матеріали',
     title: 'Навчальні матеріали', desc: 'Предмети, уроки й файли Edvault.' },
   { path: 'equipment.html', url: '/equipment', slug: 'equipment', icon: 'equipment', accent: '#475569', kind: 'Техніка',
@@ -102,6 +105,7 @@ if (process.env.OG_FONTS) {
 await mkdir(OUT, { recursive: true });
 const logo = await readFile(join(ROOT, 'icons', 'edvault.svg'), 'utf8');
 for (const p of PAGES) {
+  if (process.env.OG_ONLY && p.slug !== process.env.OG_ONLY) continue; // OG_ONLY=slug — лише одна сторінка
   const file = join(ROOT, p.path);
   if (!existsSync(file)) { console.warn('немає сторінки', p.path); continue; }
   const iconFile = join(ROOT, 'icons', p.icon + '.svg');
