@@ -29,7 +29,7 @@ const DEFAULT_HTML = '<h1><br></h1><p><br></p>';
 const I = {
   back:'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   docs:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M8 13h8M8 17h5"/>',
-  logo:'<path d="M4 6h16M4 10h11M4 14h14M4 18h9"/>',
+  logo:'<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 3v18M12 8h4M12 12h4"/>',
   toc:'<path d="M9 6h12M9 12h12M9 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="3"/>',
   banner:'<rect x="3" y="4" width="18" height="8" rx="2"/><path d="M3 16h18M3 20h11"/>',
   view:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',

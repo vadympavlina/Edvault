@@ -3,21 +3,22 @@
 'use strict';
 
 /* ═══════════════════════════ ШАПКА ДОКУМЕНТА ═══════════════════════════ */
-const HEADER_COLORS = ['#4F6BF4', '#0891b2', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#1a1d23'];
+// кольори шкільного пенала: чорнило, бірюза, зелена ручка, охра, червона ручка, фіолетове чорнило, малина, графіт
+const HEADER_COLORS = ['#2337a8', '#0e7c86', '#1a7a50', '#a86400', '#c8352d', '#6d4bc3', '#b8306f', '#2b2f3a'];
 // вигляд: «Яскравий» — заливка кольором, «Світлий» — легкий відтінок і кольорова смуга зліва
 const HEADER_STYLES = [['solid', 'Яскравий'], ['soft', 'Світлий']];
 const HEADER_PATTERNS = [['none', 'Без'], ['dots', 'Крапки'], ['diagonal', 'Лінії'], ['grid', 'Сітка']];
 // готові шапки: мітка, підзаголовок і вигляд; заголовок і логотип лишаються ті, що є
 function schoolYear() { const d = new Date(), y = d.getFullYear() - (d.getMonth() < 7 ? 1 : 0); return 'Навчальний рік ' + y + '/' + (y + 1); }
 const HEADER_PRESETS = [
-  ['practice', 'Практична робота', { subtitle: 'Виконайте завдання по черзі й збережіть результат', color: '#4F6BF4', style: 'solid', pattern: 'grid' }],
-  ['homework', 'Домашнє завдання', { subtitle: 'Здати до наступного уроку', color: '#f59e0b', style: 'solid', pattern: 'dots' }],
-  ['guide', 'Інструкція', { subtitle: 'Виконуйте кроки по порядку', color: '#0891b2', style: 'soft', pattern: 'none' }],
-  ['program', 'Програма навчання', { subtitle: schoolYear, color: '#16a34a', style: 'solid', pattern: 'diagonal', size: 'tall' }],
-  ['lab', 'Лабораторна робота', { subtitle: 'Мета, обладнання, хід роботи, висновки', color: '#8b5cf6', style: 'solid', pattern: 'grid' }],
-  ['test', 'Контрольна робота', { subtitle: 'Варіант 1 · Час виконання — 45 хв', color: '#ef4444', style: 'soft', pattern: 'none' }],
-  ['lesson', 'Конспект уроку', { subtitle: '', color: '#1a1d23', style: 'soft', pattern: 'dots' }],
-  ['notice', 'Оголошення', { subtitle: '', color: '#ec4899', style: 'solid', pattern: 'diagonal' }],
+  ['practice', 'Практична робота', { subtitle: 'Виконайте завдання по черзі й збережіть результат', color: '#2337a8', style: 'solid', pattern: 'grid' }],
+  ['homework', 'Домашнє завдання', { subtitle: 'Здати до наступного уроку', color: '#a86400', style: 'solid', pattern: 'dots' }],
+  ['guide', 'Інструкція', { subtitle: 'Виконуйте кроки по порядку', color: '#0e7c86', style: 'soft', pattern: 'none' }],
+  ['program', 'Програма навчання', { subtitle: schoolYear, color: '#1a7a50', style: 'solid', pattern: 'diagonal', size: 'tall' }],
+  ['lab', 'Лабораторна робота', { subtitle: 'Мета, обладнання, хід роботи, висновки', color: '#6d4bc3', style: 'solid', pattern: 'grid' }],
+  ['test', 'Контрольна робота', { subtitle: 'Варіант 1, час виконання 45 хв', color: '#c8352d', style: 'soft', pattern: 'none' }],
+  ['lesson', 'Конспект уроку', { subtitle: '', color: '#2b2f3a', style: 'soft', pattern: 'dots' }],
+  ['notice', 'Оголошення', { subtitle: '', color: '#b8306f', style: 'solid', pattern: 'diagonal' }],
 ];
 function applyPreset(id) {
   const p = HEADER_PRESETS.find(x => x[0] === id);
@@ -30,7 +31,7 @@ function applyPreset(id) {
   renderHdrModal();
 }
 function shade(hex, pct) {
-  const n = String(hex || '#4F6BF4').replace('#', '');
+  const n = String(hex || '#2337a8').replace('#', '');
   const full = n.length === 3 ? n.split('').map(c => c + c).join('') : n;
   const num = parseInt(full, 16) || 0;
   let r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
@@ -40,7 +41,7 @@ function shade(hex, pct) {
 }
 function headerMarkup(h, title, extra) {
   const soft = h.style === 'soft';
-  const color = /^#[0-9a-f]{3,8}$/i.test(h.color || '') ? h.color : '#4F6BF4';
+  const color = /^#[0-9a-f]{3,8}$/i.test(h.color || '') ? h.color : '#2337a8';
   const bg = soft ? '' : 'background:linear-gradient(135deg,' + color + ',' + shade(color, -0.3) + ');';
   const cls = 'doc-header ' + (soft ? 'style-soft' : 'style-solid') + ' pattern-' + esc(h.pattern || 'none') +
     (h.size && h.size !== 'normal' ? ' size-' + esc(h.size) : '') + (h.align === 'center' ? ' align-center' : '');

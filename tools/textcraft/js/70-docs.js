@@ -22,6 +22,7 @@ function setViewPref(k, v) {
   try { localStorage.setItem('textcraft3_view', JSON.stringify(p)); } catch (e) { /* ignore */ }
   if (k === 'width') document.documentElement.setAttribute('data-width', v);
   if (k === 'font') document.documentElement.setAttribute('data-font', v);
+  if (k === 'paper') document.documentElement.setAttribute('data-paper', v);
   if (k === 'toc') { if (v === false) document.documentElement.setAttribute('data-toc', 'off'); else document.documentElement.removeAttribute('data-toc'); }
   UI.refreshSoon();
 }
@@ -188,7 +189,7 @@ const Store = {
 
 /* ═══════════════════════════ ДОКУМЕНТИ / ЗБЕРЕЖЕННЯ ═══════════════════════════ */
 const state = { docId: null, createdAt: 0, header: null, version: 0, savedVersion: 0, saving: null, saveTimer: null, error: false };
-function defaultHeader() { return { enabled: false, tag: '', title: '', subtitle: '', color: '#4F6BF4', pattern: 'none', style: 'solid', logo: '', size: 'normal', align: 'left' }; }
+function defaultHeader() { return { enabled: false, tag: '', title: '', subtitle: '', color: '#2337a8', pattern: 'none', style: 'solid', logo: '', size: 'normal', align: 'left' }; }
 function setSaveState(s) {
   const el = $('#saveState');
   if (Tabs.readOnly && s !== 'readonly') s = 'readonly';
@@ -289,6 +290,15 @@ async function createDoc(opts) {
   await Store.put(rec);
   return rec;
 }
+// Дата прописом угорі аркуша — як у шкільному зошиті («Тринадцяте жовтня»). Лише в редакторі, не в експорті.
+const DAY_WORDS = ['Перше', 'Друге', 'Третє', 'Четверте', 'П’яте', 'Шосте', 'Сьоме', 'Восьме', 'Дев’яте', 'Десяте', 'Одинадцяте', 'Дванадцяте', 'Тринадцяте', 'Чотирнадцяте', 'П’ятнадцяте', 'Шістнадцяте', 'Сімнадцяте', 'Вісімнадцяте', 'Дев’ятнадцяте', 'Двадцяте'];
+const MONTHS_GEN = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+function dateInWords(t) {
+  const d = new Date(t), n = d.getDate();
+  const day = n <= 20 ? DAY_WORDS[n - 1] : n === 30 ? 'Тридцяте' : (n < 30 ? 'Двадцять ' : 'Тридцять ') + DAY_WORDS[(n % 10) - 1].toLowerCase();
+  return day + ' ' + MONTHS_GEN[d.getMonth()];
+}
+function renderPageDate() { const el = $('#pageDate'); if (el) { el.textContent = dateInWords(state.createdAt || Date.now()); el.title = 'Дата створення документа'; } }
 function loadDoc(rec) {
   UI.hideTransient();
   Assets.clear();
@@ -301,6 +311,7 @@ function loadDoc(rec) {
   });
   state.docId = rec.id;
   state.createdAt = rec.createdAt || Date.now();
+  renderPageDate();
   state.header = Object.assign(defaultHeader(), rec.header || {});
   $('#docTitle').value = rec.title || '';
   normalize();

@@ -59,25 +59,25 @@ function exportClone() {
 const EXPORT_CSS = `
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Commissioner',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
 .x-layout{display:flex;align-items:flex-start;min-height:100vh}
 .x-toc{width:270px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);padding:20px 12px 28px}
-.x-toc-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 10px 10px}
-.x-toc input{width:100%;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);padding:0 10px;font:13px 'Inter',sans-serif;outline:none;margin-bottom:8px}
+.x-toc-title{font-size:14px;font-weight:700;color:var(--text);padding:0 10px 10px}
+.x-toc input{width:100%;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);padding:0 10px;font:13px 'Commissioner',sans-serif;outline:none;margin-bottom:8px}
 .x-toc input:focus{border-color:var(--accent-border)}
 .x-toc a{display:block;padding:6px 10px;margin-bottom:1px;border-radius:7px;font-size:13px;line-height:1.4;color:var(--text2);text-decoration:none;border-left:2px solid transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .x-toc a:hover{background:var(--surface2);color:var(--text)}
 .x-toc a.l1{font-weight:600;color:var(--text)}
 .x-toc a.l2{padding-left:20px}
 .x-toc a.l3{padding-left:32px;font-size:12.5px}
-.x-toc a.active{background:var(--accent-light);color:var(--accent);border-left-color:var(--accent)}
+.x-toc a.active{color:var(--text);background:linear-gradient(transparent 30%,var(--marker-soft) 30%,var(--marker-soft) 90%,transparent 90%)}
 .x-toc a.hidden{display:none}
 .x-main{flex:1;min-width:0}
 .x-wrap{max-width:var(--page-w,960px);margin:0 auto;padding:40px 24px 120px}
-.x-page{--pad-x:72px;--pad-y:60px;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm);padding:var(--pad-y) var(--pad-x)}
-.x-page .doc-header{margin:calc(-1*var(--pad-y)) calc(-1*var(--pad-x)) 36px;border-radius:13px 13px 0 0}
+.x-page{--pad-x:72px;--pad-y:60px;background:var(--surface);border:1px solid var(--border);border-radius:2px;box-shadow:var(--shadow-md);padding:var(--pad-y) var(--pad-x)}
+.x-page .doc-header{margin:calc(-1*var(--pad-y)) calc(-1*var(--pad-x)) 36px;border-radius:2px 2px 0 0}
 .tc-content .tc-prompt,.tc-content pre.tc-code{position:relative}
-.tc-copy{position:absolute;top:5px;right:8px;z-index:2;height:26px;padding:0 11px;border-radius:7px;cursor:pointer;font:600 11.5px 'Inter',sans-serif;border:1px solid var(--accent-border);background:var(--surface);color:var(--accent);transition:background .12s,color .12s}
+.tc-copy{position:absolute;top:5px;right:8px;z-index:2;height:26px;padding:0 11px;border-radius:7px;cursor:pointer;font:600 11.5px 'Commissioner',sans-serif;border:1px solid var(--accent-border);background:var(--surface);color:var(--accent);transition:background .12s,color .12s}
 .tc-copy:hover{background:var(--accent);color:var(--on-accent)}
 pre.tc-code .tc-copy{top:4px;border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:var(--code-text)}
 pre.tc-code .tc-copy:hover{background:rgba(255,255,255,.18);color:#fff}
@@ -92,7 +92,7 @@ pre.tc-code .tc-copy:hover{background:rgba(255,255,255,.18);color:#fff}
 .x-lightbox img{max-width:94vw;max-height:90vh;border-radius:8px}
 .x-foot{text-align:center;font-size:12px;color:var(--muted);margin-top:18px}
 @media(max-width:900px){.x-layout{display:block}.x-toc{position:static;width:auto;height:auto;max-height:280px;border-right:0;border-bottom:1px solid var(--border)}.x-page{--pad-x:36px;--pad-y:36px}}
-@media(max-width:640px){.x-page{--pad-x:20px;--pad-y:26px;border-radius:12px}.x-wrap{padding:12px 8px 60px}}
+@media(max-width:640px){.x-page{--pad-x:20px;--pad-y:26px}.x-wrap{padding:12px 8px 60px}}
 @media print{.x-toc,.x-progress,.x-top,.tc-copy,.x-foot{display:none!important}body{background:#fff}.x-wrap{padding:0;max-width:none}.x-page{border:0;box-shadow:none;padding:0}.x-page .doc-header{margin:0 0 28px;border-radius:12px}.tc-content .tc-block,.tc-content pre.tc-code,.tc-content figure,.tc-content table{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 `;
 const EXPORT_JS = `
@@ -141,7 +141,7 @@ async function exportHtml() {
   const html = '<!DOCTYPE html>\n<html lang="uk" data-theme="light" data-font="' + esc(viewPrefs().font || 'serif') + '">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
     '<meta name="generator" content="TextCraft · Edvault">\n<title>' + esc(title) + '</title>\n' +
     '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
-    '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">\n' +
+    '<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400..800&family=JetBrains+Mono:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400..800;1,7..72,400..600&display=swap" rel="stylesheet">\n' +
     '<style>' + tokensCss + '</style>\n<style>' + contentCss + '</style>\n<style>:root{--page-w:' + width + '}' + EXPORT_CSS + '</style>\n</head>\n<body>\n' +
     '<div class="x-progress" id="xProgress"></div>\n<div class="x-layout">' + toc + '<main class="x-main"><div class="x-wrap"><article class="x-page">' +
     (h.enabled ? headerMarkup(h, headerTitle(h)) : '') + '\n' + content.outerHTML + '\n</article><div class="x-foot">Створено в TextCraft · Edvault</div></div></main></div>\n' +
