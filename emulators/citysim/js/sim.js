@@ -100,6 +100,13 @@ export class City {
   recompute() { computeMaps(this); this.dirty = false; return this.m; }
   emit(e) { this.events.push(e); }
   log(t) { this.s.journal.push({ m: this.s.month, t }); }
+  // дрібні дії (дороги, зони, дерева) за місяць зводяться в один рядок журналу
+  tally(k, n, cost) {
+    if (!n) return;
+    const J = this.s.journal, L = J.at(-1), W = { road: ['Прокладено дорогу', 'клітинку', 'клітинки', 'клітинок'], avenue: ['Прокладено проспект', 'клітинку', 'клітинки', 'клітинок'], z1: ['Позначено житлову зону', 'ділянку', 'ділянки', 'ділянок'], z2: ['Позначено зону магазинів і офісів', 'ділянку', 'ділянки', 'ділянок'], z3: ['Позначено промислову зону', 'ділянку', 'ділянки', 'ділянок'], z0: ['Знято зону з', 'ділянки', 'ділянок', 'ділянок'], trees: ['Посаджено дерев:', '', '', ''], bulldoze: ['Знесено', 'об’єкт', 'об’єкти', 'об’єктів'] }[k];
+    const e = L && L.m === this.s.month && L.k === k ? L : (J.push({ m: this.s.month, t: '', k, n: 0, c: 0 }), J.at(-1));
+    e.n += n; e.c += cost; e.t = `${W[0]} ${num(e.n)}${W[1] ? ' ' + plural(e.n, W[1], W[2], W[3]) : ''}${e.c ? ` (${money(e.c)})` : ''}.`;
+  }
   news(n) { this.s.news.unshift({ id: this.id('n'), m: this.s.month, ...n }); if (this.s.news.length > 120) this.s.news.length = 120; this.emit({ k: 'news', n: this.s.news[0] }); }
   mail(m) { const e = { id: this.id('e'), m: this.s.month, read: false, ...m }; this.s.inbox.unshift(e); if (this.s.inbox.length > 200) this.s.inbox.length = 200; this.emit({ k: 'mail', e }); return e; }
   award(k, t) { if (this.s.ach[k]) return; this.s.ach[k] = this.s.month + 1; this.emit({ k: 'ach', id: k, t }); }
@@ -158,7 +165,7 @@ export class City {
       if (s.ter[i] === T.TREE) s.ter[i] = T.GRASS;
     }
     s.money -= cost; this.dirty = true;
-    s.flags.roads = (s.flags.roads || 0) + n;
+    s.flags.roads = (s.flags.roads || 0) + n; this.tally(kind, n, cost);
     return { ok: true, cost, n, blocked };
   }
   zoneCost(list, z) { const s = this.s; let n = 0; for (const i of list) if (z && !s.road[i] && !s.bid[i] && s.ter[i] !== T.WATER && s.zone[i] !== z) n++; return { cost: n * ZONE_COST, n }; }
@@ -174,6 +181,7 @@ export class City {
       s.zone[i] = z; s.lvl[i] = 0; s.aban[i] = 0; s.ht[i] = 0; if (s.ter[i] === T.TREE) s.ter[i] = T.GRASS;
     }
     s.money -= cost; this.dirty = true;
+    this.tally('z' + z, z ? n : cleared, cost);
     if (z) { s.flags.zoned = (s.flags.zoned || 0) + n; s.flags['z' + z] = (s.flags['z' + z] || 0) + n; }
     return { ok: true, cost, n: z ? n : cleared };
   }
@@ -188,7 +196,7 @@ export class City {
       if (s.ter[i] === T.TREE) { s.ter[i] = T.GRASS; n++; }
     }
     if (!n) return { ok: false, msg: 'Тут нічого зносити' };
-    s.money -= cost; this.dirty = true;
+    s.money -= cost; this.dirty = true; this.tally('bulldoze', n, cost);
     return { ok: true, n, cost };
   }
   plantTrees(list) {
@@ -196,7 +204,7 @@ export class City {
     const cost = ok.length * TREE_COST; if (!ok.length) return { ok: false, msg: 'Дерева садять на вільній траві' };
     if (s.money < cost) return { ok: false, msg: 'Не вистачає грошей' };
     for (const i of ok) s.ter[i] = T.TREE; s.money -= cost; this.dirty = true;
-    s.flags.trees = (s.flags.trees || 0) + ok.length; if (s.flags.trees >= 50) this.award('green', 'Зелене місто');
+    this.tally('trees', ok.length, cost); s.flags.trees = (s.flags.trees || 0) + ok.length; if (s.flags.trees >= 50) this.award('green', 'Зелене місто');
     return { ok: true, n: ok.length, cost };
   }
   setTax(k, v) { const old = this.s.taxes[k]; this.s.taxes[k] = clamp(Math.round(v), 0, 20); if (old !== this.s.taxes[k]) this.s.flags.taxChanged = true; }

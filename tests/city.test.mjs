@@ -191,3 +191,19 @@ test('знесення й рівні будинків у межах, пожеж�
   const r = c.bulldoze([any.y * N + any.x]); assert.ok(r.ok); assert.ok(!c.s.bld[any.id]);
   assert.ok(okState(JSON.parse(JSON.stringify(c.s))));
 });
+
+test('журнал: дороги, зони, дерева й знесення за місяць зводяться в один рядок', () => {
+  const c = newCity({ seed: 5 }); c.s.money = 1e6;
+  const [x, y] = spot(c, 12, 4), n0 = c.s.journal.length;
+  c.placeRoad(row(y, x, x + 4)); c.placeRoad(row(y, x + 5, x + 9));
+  c.placeZone(rect(x, y + 1, x + 2, y + 2), Z.R);
+  c.plantTrees(rect(x + 5, y + 1, x + 6, y + 1));
+  c.bulldoze(row(y, x + 8, x + 9));
+  const J = c.s.journal.slice(n0).map(j => j.t);
+  assert.deepEqual(J.slice(0, 1).map(t => t.replace(/ \(.*/, '')), ['Прокладено дорогу 10 клітинок']);
+  assert.ok(J.some(t => /^Позначено житлову зону 6 ділянок/.test(t)));
+  assert.ok(J.some(t => /^Посаджено дерев: 2/.test(t)));
+  assert.ok(J.some(t => /^Знесено 2 об’єкти/.test(t)));
+  months(c, 1); c.placeRoad(row(y + 3, x, x + 1));
+  assert.match(c.s.journal.at(-1).t, /^Прокладено дорогу 2 клітинки/);
+});
