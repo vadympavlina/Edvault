@@ -116,8 +116,8 @@ function product(S, ui) {
 
 /* ═════════ Бренд ═════════ */
 function brand(S) {
-  const s = S.s, b = s.brand, c = s.company, fit = S.brandFit(), tst = taste(s.target), F = FONTS[b.font] || FONTS.modern;
-  const pos = positions(s.idea), myPos = pos.find(x => x.id === b.position);
+  const s = S.s, b = s.brand, c = s.company, fit = S.brandFit(), tst = S.seg().taste || taste(s.target), F = FONTS[b.font] || FONTS.modern;
+  const pos = positions(S.I), myPos = pos.find(x => x.id === b.position);
   return `<div class="grid g2">
     <section class="card brand-prev" style="--bc:${c.color}"><div class="bp-hero">${logo(c, 72)}<div><h2 style="font-family:${F.css};font-weight:${F.w}">${esc(c.name)}</h2><p>${esc(b.tone ? TONES[b.tone].ex : 'Оберіть тон спілкування')}</p></div></div>
       <p class="bp-pos">${esc(myPos ? myPos.t : 'Позиціонування ще не обрано')}</p>

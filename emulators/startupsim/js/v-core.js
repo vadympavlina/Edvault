@@ -2,6 +2,7 @@
 import { IDEAS, BACKGROUNDS, ACHIEVEMENTS, GLOSSARY, MODELS } from './data.js';
 import { money, num, pct, plural, dateText, sum, HOURS, MAX_HOURS, WEEKS, W2M } from './sim.js';
 import { CANVAS, METRICS, ADVANTAGES } from './mods.js';
+import { assumptionsVsReality } from './custom.js';
 import { icon } from './icons.js';
 import { esc, nl2br, term, lineChart, meter, delta, logo } from './ui.js';
 
@@ -149,6 +150,10 @@ export function report(S) {
       <section class="card"><header class="card-h"><h3>Гроші</h3></header>${lineChart([{ v: h.map(x => x.cash), color: 'var(--acc)', label: 'Гроші', area: true }], { labels, fmt: x => money(x).replace(' ₴', '') })}</section>
       <section class="card"><header class="card-h"><h3>Користувачі</h3></header>${lineChart([{ v: h.map(x => x.users), color: '#0ea5e9', label: 'Активні' }, { v: h.map(x => x.paid), color: '#16a34a', label: 'Платні' }], { labels, fmt: num })}</section>
     </div>
+    ${I.custom ? (() => { const av = assumptionsVsReality(I), segs = Object.values(I.segments).map(g => g.short); let hit = 0, all = 0; av.forEach(f => f.rows.forEach(x => { all++; if (x.guess === x.real) hit++; }));
+      return `<section class="card"><header class="card-h"><h3>Ваші припущення ↔ реальність</h3><span class="chip ${hit / all >= .7 ? 'ok' : 'warn'}">вгадано ${hit} з ${all}</span></header><p class="sm muted">Кому, на вашу думку, потрібна кожна функція, і як було насправді. Справжню картину можна було дізнатися з інтерв'ю й опитувань.</p>
+      <div style="overflow-x:auto"><table class="tbl guess"><thead><tr><th>Функція</th>${segs.map(t => `<th>${esc(t)}</th>`).join('')}</tr></thead><tbody>${av.map(f => `<tr><td>${esc(f.t)}</td>${f.rows.map(x => `<td class="${x.guess !== x.real ? 'miss' : ''}"><span class="${x.guess ? 'y' : 'n'}">ви: ${x.guess ? 'так' : 'ні'}</span> · <span class="${x.real ? 'y' : 'n'}">ринок: ${x.real ? 'так' : 'ні'}</span></td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <p class="sm muted">Наскільки болить проблема насправді: ${Object.values(I.segments).map(g => `${esc(g.short)} — ${Math.round(g.pain * 10)}/10`).join(', ')}.</p></section>`; })() : ''}
     <section class="card"><header class="card-h"><h3>Ключові рішення</h3></header><ul class="facts">
       <li>Цільовий сегмент: <b>${esc(S.seg().t)}</b>. Модель: ${esc(MODELS[S.modelOf(s.target)].t)}, ціна ${money(s.price[s.target])}${S.I.kind === 'hardware' ? ' за пристрій' : ' на місяць'}.</li>
       <li>Інтерв'ю: ${sum(Object.values(s.know).map(k => k.n))}, з них без підказувальних запитань — ${sum(Object.values(s.know).map(k => k.good))}.</li>

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { newGame, okState, Sim, money, WEEKS } from '../emulators/startupsim/js/sim.js';
 import { autoplay, smartWeek, recklessWeek } from '../emulators/startupsim/js/bots.js';
 import { IDEAS, INVESTORS } from '../emulators/startupsim/js/data.js';
+import { assumptionsVsReality } from '../emulators/startupsim/js/custom.js';
 
 const fresh = (o = {}) => newGame({ idea: 'homework', founder: 'Тест', company: 'Тест', seed: 7, ...o });
 const build = (S, ids) => { for (const id of ids) S.s.product.built.push(id); };
@@ -226,6 +227,42 @@ test('баланс: розважливий засновник виживає, б
     assert.equal(R.s.over?.kind, 'bankrupt', `безрозсудний на «${idea}» мав прогоріти`);
   }
   assert.ok(alive >= 10, `розважливий засновник вижив лише в ${alive} з 12 ігор`);
+});
+
+const CUSTOM = { name: 'Обмін книжками', kind: 'app', pitch: 'Застосунок для обміну підручниками між школярами поруч.', problem: 'пошук підручників',
+  segments: [{ name: 'Школярі', arch: 'teens' }, { name: 'Шкільні бібліотеки', arch: 'schools' }],
+  features: [{ name: 'Каталог книжок', size: 'm', core: true, segs: [0] }, { name: 'Чат обміну', size: 's', segs: [0] }, { name: 'Облік фонду', size: 'l', segs: [1] }],
+  competitors: [{ name: 'Групи у Viber', segs: [0] }] };
+
+test('власна ідея: опис учня стає грою з прихованою правдою ринку', () => {
+  const S = newGame({ custom: CUSTOM, seed: 3 });
+  assert.equal(S.s.idea, 'custom'); assert.ok(okState(S.s));
+  assert.equal(S.I.t, 'Обмін книжками');
+  assert.deepEqual(Object.keys(S.I.segments), ['s1', 's2']);
+  assert.ok(S.I.segments.s2.b2b && S.I.segments.s2.requires.includes('security'), 'для організацій потрібен захист даних');
+  for (const id of ['pay', 'stats', 'scale', 'onboard', 'security']) assert.ok(S.feature(id), `стандартна функція ${id}`);
+  assert.ok(S.I.features.f1.core && S.I.features.f1.mine);
+  assert.equal(S.I.competitors[0].t, 'Групи у Viber');
+  assert.ok(S.s.inbox.some(m => /гіпотеза/.test(m.title)));
+  // інтерв'ю працюють і підставляють проблему учня
+  S.startInterview('s1'); S.ask('how'); S.ask('last'); S.ask('where'); S.finishInterview();
+  assert.equal(S.s.know.s1.good, 1);
+  assert.ok(S.qText({ t: 'Як ви зараз розв\'язуєте {problem}?' }).includes('пошук підручників'));
+  // збережена гра відновлюється
+  const T = new Sim(JSON.parse(JSON.stringify(S.s))); assert.equal(T.I.t, 'Обмін книжками');
+  // повна гра ботом без помилок
+  autoplay(T, WEEKS);
+  assert.ok(T.s.over);
+  const av = assumptionsVsReality(T.I); assert.equal(av.length, 3); assert.equal(av[0].rows.length, 2);
+});
+
+test('власна ідея: різне зерно — різний ринок, однакове — однаковий', () => {
+  const a = newGame({ custom: CUSTOM, seed: 1 }), b = newGame({ custom: CUSTOM, seed: 1 }), c = newGame({ custom: CUSTOM, seed: 2 });
+  assert.deepEqual(a.I.segments.s1.pain, b.I.segments.s1.pain);
+  assert.notDeepEqual([a.I.segments.s1.pain, a.I.segments.s2.wtp], [c.I.segments.s1.pain, c.I.segments.s2.wtp]);
+  const P = newGame({ custom: { ...CUSTOM, kind: 'hardware', unitCost: 350 }, seed: 4 });
+  assert.equal(P.modelOf('s1'), 'device'); assert.equal(P.s.unitCost, 350);
+  const N = newGame({ idea: 'plant', seed: 1 }); assert.equal(N.s.idea, 'plant', 'заготовлені ідеї працюють і далі');
 });
 
 test('гроші форматуються по-людськи', () => {

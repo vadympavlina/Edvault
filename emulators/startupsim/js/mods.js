@@ -33,7 +33,7 @@ const TASTE = {
 export const taste = k => TASTE[k] || { tone: ['friendly'], font: ['modern'] };
 // Позиціонування: «Для кого — яка проблема — чим ми кращі»
 export function positions(idea) {
-  const I = IDEAS[idea], out = [];
+  const I = typeof idea === 'string' ? IDEAS[idea] : idea, out = [];
   for (const [k, g] of Object.entries(I.segments)) {
     const comp = I.competitors.find(c => c.seg[k])?.t.toLowerCase() || 'звичних способів';
     out.push({ id: k, t: `Для сегмента «${g.short.toLowerCase()}», яким важливо ${I.problem}: ${I.pitch.replace(/\.$/, '').toLowerCase()} — на відміну від: ${comp}.` });
@@ -124,7 +124,7 @@ const M = {
 
   /* ── бренд ── */
   brandFit(k = this.s.target) {
-    const b = this.s.brand, t = taste(k);
+    const b = this.s.brand, t = this.seg(k).taste || taste(k);
     const tone = !b.tone ? .3 : t.tone[0] === b.tone ? 1 : t.tone.includes(b.tone) ? .75 : .15;
     const font = !b.font ? .3 : t.font[0] === b.font ? 1 : t.font.includes(b.font) ? .75 : .2;
     const pos = !b.position ? .3 : b.position === k ? 1 : b.position === 'vague' ? 0 : .35;

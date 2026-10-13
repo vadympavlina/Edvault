@@ -3,6 +3,7 @@
 // «Завершити тиждень» — і рушій рахує воронку, гроші, команду, інвесторів, події.
 import { IDEAS, CHANNELS, MODELS, BACKGROUNDS, ROLES, FIRST, LAST, FEM, TRAITS, INVESTORS, SLIDES, ACHIEVEMENTS } from './data.js';
 import { applyMods, PROMOS, LOYALTY } from './mods.js';
+import { makeCustomIdea } from './custom.js';
 
 export const WEEKS = 104;
 export const HOURS = 50;            // нормальний робочий тиждень засновника
@@ -40,10 +41,14 @@ export function rng(state) {
 }
 
 /* ═════════ новий стан ═════════ */
-export function newGame({ idea = 'homework', founder = 'Засновник', bg = 'dev', company = 'Мій стартап', color, sym = 'spark', fff = false, seed } = {}) {
-  const I = IDEAS[idea], segIds = Object.keys(I.segments);
+export function newGame({ idea = 'homework', founder = 'Засновник', bg = 'dev', company = 'Мій стартап', color, sym = 'spark', fff = false, seed, custom } = {}) {
+  seed = (seed ?? Date.now() % 1e6) | 0;
+  // власна ідея учня: опис → ідея з прихованою правдою ринку
+  const customIdea = custom ? makeCustomIdea(custom, seed * 7 + 13) : null;
+  if (customIdea) idea = 'custom';
+  const I = customIdea || IDEAS[idea], segIds = Object.keys(I.segments);
   const s = {
-    v: 1, rs: (seed ?? Date.now() % 1e6) | 0, seq: 1, week: 0,
+    v: 1, rs: seed, seq: 1, week: 0, custom: customIdea,
     idea, target: segIds.find(k => !I.segments[k].b2b) || segIds[0],
     founder: { name: founder, bg, energy: 100, burnout: 0 },
     company: { name: company, color: color || I.color, sym, form: 'none' },
@@ -75,11 +80,12 @@ export function newGame({ idea = 'homework', founder = 'Засновник', bg 
   }
   const sim = new Sim(s);
   sim.refreshCandidates();
+  if (customIdea) sim.mail({ from: 'Наставниця Ірина', kind: 'mentor', title: 'Ваша ідея — це поки гіпотеза', body: `Ви описали ідею «${I.t}», своїх клієнтів і функції. Але все це — лише ваші припущення.\n\nРинок може думати інакше: комусь проблема болить менше, ніж здається, а потрібною може виявитися зовсім не та функція, яку ви вважаєте головною. Перевіряйте все в інтерв'ю й опитуваннях. А в підсумковому звіті ви побачите, які з ваших припущень справдилися.` });
   sim.mail({ from: 'Наставниця Ірина', kind: 'mentor', title: 'Ласкаво просимо!', body: `Привіт! Я буду поруч і підказуватиму.\n\nУ вас ${money(s.cash)} і ідея: «${I.pitch}» Не поспішайте писати код. Спершу поговоріть із майбутніми клієнтами — розділ «Клієнти». Дізнайтеся, кому це справді болить і скільки вони вже витрачають на цю проблему.\n\nКожен тиждень плануйте свій час і натискайте «Завершити тиждень». Гроші закінчаться — компанія закриється. Удачі!` });
   return sim;
 }
 
-export const okState = s => !!s && s.v === 1 && Number.isFinite(s.week) && Number.isFinite(s.cash) && !!IDEAS[s.idea] && Array.isArray(s.cap) && typeof s.users === 'object';
+export const okState = s => !!s && s.v === 1 && Number.isFinite(s.week) && Number.isFinite(s.cash) && (s.idea === 'custom' ? !!s.custom?.segments : !!IDEAS[s.idea]) && Array.isArray(s.cap) && typeof s.users === 'object';
 
 /* ═════════ рушій ═════════ */
 const CUSTOM = { t: 'Розробка на замовлення', cost: 14, custom: true, desc: 'Окрема версія для клієнта.' };
@@ -90,7 +96,7 @@ export class Sim {
     this.r = rng(this.s);
     this.initMods();
   }
-  get I() { return IDEAS[this.s.idea]; }
+  get I() { return this.s.idea === 'custom' ? this.s.custom : IDEAS[this.s.idea]; }
   seg(k = this.s.target) { return this.I.segments[k]; }
   get segIds() { return Object.keys(this.I.segments); }
   id(p = 'x') { return p + (this.s.seq++); }

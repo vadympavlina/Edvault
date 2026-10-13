@@ -198,6 +198,49 @@ await step('телефон: меню відкривається кнопкою',
   assert.equal(await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, 'без горизонтальної прокрутки');
 });
 
+await step('власна ідея: конструктор у майстрі, перевірка полів, гра з власними сегментами', async () => {
+  const q = await newPage(await browser.newContext({ viewport: { width: 1366, height: 900 } }), errors);
+  q.setDefaultTimeout(10000);
+  await q.goto(server.url + '/emulators/startup'); await q.evaluate(() => localStorage.clear()); await q.reload();
+  await q.click('[data-w="next"]'); await q.click('[data-w="idea"][data-v="custom"]'); await q.click('[data-w="next"]');
+  await q.click('[data-w="next"]');
+  assert.match(await q.locator('#toast').innerText(), /назву ідеї/);
+  await q.fill('[data-c="name"]', 'Обмін книжками');
+  await q.click('[data-w="kind"][data-v="app"]');
+  await q.fill('[data-c="problem"]', 'пошук підручників');
+  await q.fill('[data-c="pitch"]', 'Застосунок для обміну підручниками між школярами, які живуть поруч.');
+  await q.click('[data-w="next"]');
+  await q.fill('[data-c="segments.0.name"]', 'Школярі');
+  await q.fill('[data-c="segments.1.name"]', 'Шкільні бібліотеки');
+  await q.selectOption('[data-c="segments.1.arch"]', 'schools');
+  await q.click('[data-w="next"]');
+  await q.fill('[data-c="features.0.name"]', 'Каталог книжок');
+  await q.fill('[data-c="features.1.name"]', 'Чат обміну');
+  await q.click('[data-w="next"]');
+  assert.match(await q.locator('#toast').innerText(), /три функції/);
+  await q.fill('[data-c="features.2.name"]', 'Облік фонду');
+  await q.check('[data-c="features.2.segs"][value="1"]');
+  await q.uncheck('[data-c="features.2.segs"][value="0"]');
+  await q.click('[data-w="next"]');
+  await q.fill('[data-c="competitors.0.name"]', 'Групи у Viber');
+  await q.click('[data-w="next"]');
+  await q.fill('[data-w="name"]', 'Остап'); await q.click('[data-w="next"]');
+  await q.fill('[data-w="company"]', 'КнигоОбмін'); await q.click('[data-w="next"]');
+  await q.click('[data-w="next"]');
+  await q.waitForSelector('#main .kpis');
+  const s = await q.evaluate(() => JSON.parse(JSON.stringify(window.Startup.sim.s)));
+  assert.equal(s.idea, 'custom'); assert.equal(s.custom.t, 'Обмін книжками');
+  assert.deepEqual(Object.values(s.custom.segments).map(g => g.t), ['Школярі', 'Шкільні бібліотеки']);
+  assert.deepEqual(s.custom.features.f3.assumed, { s1: false, s2: true });
+  assert.match(await q.locator('.side').innerText(), /Обмін книжками/);
+  await q.evaluate(() => window.Startup.C.go('customers'));
+  assert.match(await q.locator('#main').innerText(), /Школярі[\s\S]*Шкільні бібліотеки/);
+  await q.evaluate(() => window.Startup.C.go('report'));
+  assert.match(await q.locator('.report').innerText(), /Ваші припущення ↔ реальність[\s\S]*Каталог книжок/);
+  await q.reload(); await q.waitForSelector('#main .pg-h');
+  assert.equal(await q.evaluate(() => window.Startup.sim.I.t), 'Обмін книжками');
+});
+
 await step('жодної помилки в консолі', async () => { assert.deepEqual(errors, []); });
 
 await browser.close(); server.close();
