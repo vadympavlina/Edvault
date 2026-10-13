@@ -497,6 +497,55 @@ await step('усе зберігається після перезавантаж�
   await p.waitForFunction(() => { const i = document.querySelectorAll('.pg .art.own img'); return i.length === 4 && [...i].every(x => x.complete && x.naturalWidth > 0); });
 });
 
+await step('збереження у файл: ZIP із грою й власними фото та відео, відкриття в іншому браузері', async () => {
+  const fs = await import('node:fs');
+  const { readZip } = await import('../emulators/bloggeremu/js/zip.js');
+  await home(); await p.click('[data-app="settings"]');
+  await p.click('[data-act="ph.saveFile"]');
+  await p.waitForSelector('.sheet.student');
+  await p.fill('[data-st="name"]', 'Олена Коваль'); await p.fill('[data-st="group"]', '7-А');
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.click('[data-st-ok]')]);
+  assert.match(dl.suggestedFilename(), /^blogger_kotyk-art_Olena-Koval_den-\d+\.zip$/);
+  const path = await dl.path(), zip = await readZip(new Blob([fs.readFileSync(path)]));
+  const game = JSON.parse(await zip.get('game.json').text()), cur = await S();
+  assert.equal(game.app, 'edvault-blogger');
+  assert.deepEqual(game.state, cur, 'у файлі повний стан гри');
+  assert.equal(game.summary['Учень'], 'Олена Коваль'); assert.equal(game.summary['Клас або група'], '7-А');
+  const mids = cur.gallery.filter(g => g.own).map(g => g.mid);
+  assert.equal(Object.keys(game.media).length, mids.length, 'усі власні файли в архіві');
+  for (const mid of mids) { const m = game.media[mid]; assert.ok(zip.get(m.blob.path) && (await (await zip.get(m.blob.path).blob()).size) > 1000, `файл ${m.blob.path}`); }
+  assert.ok([...zip.keys()].some(k => /original\.webm$/.test(k)), 'відео теж збережено'); assert.ok(zip.get('README.txt'));
+  assert.match(await p.locator('.pn-file').innerText(), /Олена Коваль[\s\S]*Збережено у файл: день/);
+  // інший браузер: порожній телефон → відкрити файл
+  const q = await newPage(await browser.newContext({ viewport: { width: 1366, height: 860 } }), errors);
+  await q.goto(server.url + '/emulators/blogger'); await q.waitForFunction(() => window.Blogger); await q.click('[data-speed="0"]');
+  const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.click('[data-pf="open"]')]);
+  await fc.setFiles(path);
+  await q.waitForSelector('.sheet.file-open');
+  assert.match(await q.locator('.sheet.file-open').innerText(), /Олена Коваль[\s\S]*@kotyk\.art[\s\S]*Файл цілий/);
+  await q.click('.sheet.file-open [data-f="open"]');
+  await q.waitForFunction(() => Blogger.sim.s.me?.nick === 'kotyk.art');
+  const back = await q.evaluate(() => JSON.parse(JSON.stringify(Blogger.sim.s)));
+  assert.deepEqual(back, cur, 'гра відновилась повністю');
+  await q.evaluate(() => Blogger.phone.open('gallery', { f: 'own' }));
+  await q.waitForFunction(n => { const i = document.querySelectorAll('.pg .art.own img'); return i.length === n && [...i].every(x => x.complete && x.naturalWidth > 0); }, mids.length);
+  assert.equal(await q.evaluate(() => JSON.parse(localStorage.getItem('edvault-blogger')).s.me.nick), 'kotyk.art', 'і збереглась у браузері');
+  // файл, змінений вручну, — попередження
+  const forged = { ...game, state: { ...game.state, followers: 999999 } }, fpath = path + '-forged.json';
+  fs.writeFileSync(fpath, JSON.stringify(forged));
+  const [fc2] = await Promise.all([q.waitForEvent('filechooser'), q.click('[data-pf="open"]')]);
+  await fc2.setFiles(fpath);
+  await q.waitForSelector('.sheet.file-open');
+  assert.match(await q.locator('.sheet.file-open').innerText(), /змінювали вручну/);
+  await q.click('.sheet.file-open [data-sh-close]');
+  // збереження іншого симулятора — зрозуміла помилка
+  const other = path + '-startup.json'; fs.writeFileSync(other, JSON.stringify({ app: 'edvault-startup', format: 1, state: {} }));
+  const [fc3] = await Promise.all([q.waitForEvent('filechooser'), q.click('[data-pf="open"]')]);
+  await fc3.setFiles(other);
+  await q.waitForFunction(() => /симулятора стартапу/.test(document.querySelector('.toast')?.textContent || ''));
+  assert.equal(await q.evaluate(() => Blogger.sim.s.followers), cur.followers);
+});
+
 await step('час іде сам, пульт перемотує до вечора', async () => {
   await p.click('[data-speed="10"]');
   const t0 = (await S()).t; await p.waitForTimeout(2100);

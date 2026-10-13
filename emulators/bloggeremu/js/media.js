@@ -56,6 +56,31 @@ export async function clearMedia() {
   try { await req('readwrite', st => st.clear()); } catch { /* немає сховища */ }
 }
 
+/* ═════════ збереження у файл ═════════ */
+// Усі власні файли з браузера: [{ mid, rec: { kind, blob, thumb, frames, size, name } }]
+export async function exportMedia() {
+  const out = [];
+  try {
+    await req('readonly', st => {
+      const c = st.openCursor();
+      c.onsuccess = () => { const cur = c.result; if (!cur) return; out.push({ mid: cur.key, rec: cur.value }); cur.continue(); };
+      return c;
+    });
+  } catch { /* сховища немає — файлів теж немає */ }
+  return out;
+}
+// Замінити всі власні файли тими, що прийшли з файлу збереження
+export async function replaceMedia(list) {
+  await clearMedia();
+  let failed = 0;
+  for (const { mid, rec } of list) {
+    try { await req('readwrite', st => st.put(rec, mid)); }
+    catch (e) { if (/quota/i.test(String(e?.name || e))) throw new Error('У браузері не вистачає місця для всіх фото й відео з цього файлу.'); failed++; }
+    register(mid, rec);
+  }
+  return failed;
+}
+
 /* ═════════ додавання файлів ═════════ */
 const newMid = () => 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const MAX_VIDEO = 400 * 1024 * 1024;

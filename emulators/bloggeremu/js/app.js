@@ -4,7 +4,9 @@ import { icon } from './icons.js';
 import { photo, video, avatar, resetIds } from './art.js';
 import { esc, h, setHost, banner, toast, hideToast, confirm, sheet, sw, morph } from './ui.js';
 import { SCENES, CLIPS, NICHES, nicheOf } from './data.js';
-import { loadMedia, importFile, removeMedia, clearMedia, mediaUsage, mediaUrl } from './media.js';
+import { loadMedia, importFile, removeMedia, clearMedia, mediaUsage, mediaUrl, exportMedia, replaceMedia } from './media.js';
+import { packBlogger, unpackBlogger, fileName } from './save.js';
+import { download, pickFile } from '../../shared/savefile.js';
 import { checks, fmtDur } from './quality.js';
 import { fileBtn, galTitle, thumb, topicOptions } from './gal.js';
 import { Likeer, logo, carIdx } from './likeer.js';
@@ -165,6 +167,8 @@ class Phone {
     const mb = x => (x / 1048576).toFixed(x > 1048576 * 10 ? 0 : 1).replace('.', ',');
     return `<div class="notes"><header class="ah"><button class="ib" data-act="ph.home" aria-label="Додому">${icon('back', 24)}</button><b class="ah-t">Налаштування</b></header><div class="scroll pad">
       <h3 class="sec">Шпалери головного екрана</h3><div class="walls">${Object.keys(WALLS).map(k => `<button class="wall${s.phone.wall === k ? ' on' : ''}" style="background:${WALLS[k]}" data-act="ph.wall" data-k="${k}" aria-label="Шпалери"></button>`).join('')}${photos.map(g => `<button class="wall${s.phone.wall === g.mid ? ' on' : ''}" data-act="ph.wall" data-k="${g.mid}" aria-label="Ваше фото">${photo(g, { thumb: true })}</button>`).join('')}${fileBtn('wall', 'Фото', 'wall add', 'image/*')}</div>
+      <h3 class="sec">Збереження гри</h3><div class="check"><p>${icon('user', 18)}<span>${s.student?.name ? `${esc(s.student.name)}${s.student.group ? `, ${esc(s.student.group)}` : ''}` : 'Ім\'я ще не вказано'} <button class="link" data-act="ph.student">змінити</button></span></p><p>${icon('save', 18)}<span>${s.flags.fileDay != null ? `Останнє збереження у файл: день ${s.flags.fileDay + 1}` : 'Гру ще не зберігали у файл'}. У файлі все: профілі, дописи, коментарі, розмови, канали, реклама й ваші фото та відео.</span></p></div>
+      <div class="file-btns"><button class="btn primary big" data-act="ph.saveFile">${icon('save', 18)}Зберегти у файл</button><button class="btn big" data-act="ph.openFile">${icon('open', 18)}Відкрити файл</button></div>
       <h3 class="sec">Мої файли</h3><div class="check"><p>${icon('image', 18)}<span>${own.filter(g => g.type === 'photo').length} фото й ${own.filter(g => g.type === 'video').length} відео · ${mb(u.bytes)} МБ</span></p><p>${icon('lock', 18)}<span>Файли зберігаються лише в цьому браузері на цьому пристрої. Їх ніхто не бачить і вони нікуди не надсилаються.</span></p></div>
       ${u.n ? `<button class="btn danger big" data-act="ph.clearOwn" style="margin-top:14px">${icon('trash', 18)}Видалити всі мої файли</button>` : ''}</div></div>`;
   }
@@ -232,7 +236,8 @@ class Phone {
     const q = (t, b) => `<details class="faq"><summary>${t}</summary><p>${b}</p></details>`;
     return `<div class="notes"><header class="ah"><button class="ib" data-act="ph.home" aria-label="Додому">${icon('back', 24)}</button><b class="ah-t">Довідка</b></header><div class="scroll pad">
       <p>Це навчальний телефон із соцмережею <b>Instagram</b>, відеоплатформою <b>YouTube</b> і месенджером <b>Telegram</b> — це навчальна імітація: справжні застосунки тут не використовуються, а ваші дані нікуди не надсилаються. Усі люди, коментарі й повідомлення вигадані — сміливо пробуйте.</p>
-      ${q('Як додати свої фото й відео?', 'Галерея → «Додати» (або «З телефону» під час створення допису). Файли зберігаються лише в цьому браузері й нікуди не надсилаються. Симулятор вимірює світло, чіткість, кольори, а у відео — чи щось відбувається з перших секунд, і на основі цього «глядачі» реагують на ваш допис.')}
+      ${q('Як зберегти гру й здати її викладачеві?', 'Налаштування → «Зберегти у файл» (на комп’ютері — також кнопка праворуч від телефона або Ctrl+S). Вийде один файл .zip: у ньому все — профілі, дописи, коментарі, розмови, канали, реклама й ваші фото та відео. Цей файл і здають викладачеві. Щоб продовжити гру на іншому комп’ютері, натисніть «Відкрити файл» або просто перетягніть файл на сторінку. Розпаковувати архів не треба.')}
+      ${q('Як додати свої фото й відео?', 'Галерея → «Додати» (або «З телефону» під час створення допису). Файли зберігаються лише в цьому браузері й нікуди не надсилаються (а ще — у файлі збереження, якщо ви його створите). Симулятор вимірює світло, чіткість, кольори, а у відео — чи щось відбувається з перших секунд, і на основі цього «глядачі» реагують на ваш допис.')}
       ${q('Як зробити карусель?', 'Під час створення фото натисніть «Кілька» й вибирайте фото по черзі (до 10). Перше фото побачать у стрічці, тож ставте найкраще першим. Карусель довше розглядають і частіше зберігають.')}
       ${q('Як запустити рекламу (таргет)?', 'Відкрийте свій допис → «Просувати допис» або Профіль → значок гучномовця. Майстер проведе через усі кроки: мета, аудиторія (місто, вік, інтереси), розміщення, бюджет із прогнозом ціни, перевірка правил і демо-оплата. Гроші умовні; у справжніх соцмережах рекламу запускають лише дорослі.')}
       ${q('Як вести канал в Telegram?', 'Telegram → значок олівця або «Створіть свій канал». Придумайте назву, фото й опис, виберіть публічний (його знайдуть у пошуку) чи приватний (лише за посиланням) канал і запросіть друзів посиланням. Пишіть регулярно, але не частіше кількох дописів на день; уночі надсилайте без звуку; фото й опитування підвищують залученість. У «Статистиці» видно ERR — яку частку підписників бачить допис.')}
@@ -381,6 +386,9 @@ class Phone {
         if (s.me) s.me.avatar.img = ''; if (s.tube) { s.tube.avatar.img = ''; s.tube.banner.img = ''; }
         await clearMedia(); this.render(true); this.save(); toast('Усі ваші файли видалено');
       },
+      saveFile: () => this.saveFile(),
+      openFile: () => this.openFile(),
+      student: () => this.askStudent(true),
       reset: async () => { if (await confirm('Почати все заново?', 'Почати заново', true, 'Профіль, дописи й галерея повернуться до початкового стану.')) this.resetAll(); },
     };
     A[name]?.();
@@ -417,7 +425,75 @@ class Phone {
     if (ctx === 'gallery') { this.args.f = 'own'; this.render(true); }
     if (errs.length) report(); else if (ctx === 'gallery') toast(items.length === 1 ? 'Додано в Галерею' : `Додано ${items.length} ${plural(items.length, 'файл', 'файли', 'файлів')}`);
   }
-  resetAll() { clearMedia(); try { localStorage.removeItem(KEY); } catch { /* ігноруємо */ } sim.s = newState(); sim.r = rng(sim.s); sim.refreshFeed(); sim.seedGallery(); this.apps.likeer = new Likeer(this); this.apps.likeer.v_create = top => renderCreate(this.apps.likeer, top); this.apps.tube = new Tube(this); sim.s.tg = newTg(sim); this.apps.tg = new Tg(this); this.home(); this.save(); }
+  /* ═════════ збереження у файл ═════════ */
+  // Ім'я учня й клас — щоб викладач знав, чий файл
+  askStudent(force = false) {
+    const s = sim.s;
+    if (s.student?.name && !force) return Promise.resolve(true);
+    return new Promise(res => {
+      let done = false;
+      const fin = v => { if (!done) { done = true; res(v); } };
+      sheet({ title: 'Хто грає?', cls: 'student', onClose: () => fin(false),
+        html: `<p class="muted sm">Ім'я потрапить у файл збереження — так викладач знатиме, чия це гра.</p>
+          <label class="fld"><span>Ім'я та прізвище</span><input class="inp" data-st="name" maxlength="40" value="${esc(s.student?.name || '')}" placeholder="Наприклад, Олена Коваль"></label>
+          <label class="fld"><span>Клас або група (необов'язково)</span><input class="inp" data-st="group" maxlength="20" value="${esc(s.student?.group || '')}" placeholder="Наприклад, 7-А"></label>
+          <button class="btn primary big" data-st-ok>Готово</button>`,
+        onOpen: api => {
+          const go = () => { const n = api.$('[data-st="name"]').value.trim(), g = api.$('[data-st="group"]').value.trim(); if (!n) { api.$('[data-st="name"]').focus(); toast('Введіть ім\'я'); return; } s.student = { name: n, group: g }; this.saveNow(); fin(true); api.close(); this.render(); renderPanel(); };
+          api.el.addEventListener('click', e => { if (e.target.closest('[data-st-ok]')) go(); });
+          api.el.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+          setTimeout(() => api.$('[data-st="name"]').focus(), 50);
+        } });
+    });
+  }
+  async saveFile() {
+    if (this.busy) return;
+    if (!(await this.askStudent())) return;
+    this.busy = true;
+    try {
+      const s = sim.s; s.flags.fileDay = dayOf(s.t); s.flags.fileSaves = (s.flags.fileSaves || 0) + 1; s.flags.fileSavedAt = new Date().toISOString();
+      toast('Готую файл…');
+      const media = await exportMedia(), used = media.filter(x => sim.mediaInUse(x.mid));
+      const blob = await packBlogger(s, { speed: ui.speed, app: this.app }, used);
+      const name = fileName(s);
+      download(blob, name); this.saveNow(); this.render(); renderPanel();
+      const sz = blob.size < 1048576 ? `${Math.max(1, Math.round(blob.size / 1024))} КБ` : `${(blob.size / 1048576).toFixed(1).replace('.', ',')} МБ`;
+      toast(`Збережено у файл ${name} (${sz})`);
+    } catch (e) { toast(e?.message || 'Не вдалося зберегти файл'); }
+    finally { this.busy = false; }
+  }
+  async openFile() { const f = await pickFile('.zip,.json,application/zip,application/json'); if (f) this.loadFile(f); }
+  async loadFile(f) {
+    if (this.busy) return;
+    toast('Відкриваю файл…');
+    const res = await unpackBlogger(f);
+    hideToast();
+    if (!res.ok) { toast(res.error); return; }
+    const st = res.state, me = st.me, row = (k, v) => `<tr><td>${esc(k)}</td><td><b>${esc(v)}</b></td></tr>`;
+    sheet({ title: 'Відкрити гру з файлу', cls: 'file-open',
+      html: `<table class="kv">${row('Учень', st.student?.name || '—')}${row('Клас або група', st.student?.group || '—')}${row('Instagram', me ? '@' + me.nick : '—')}${row('Підписники', num(st.followers || 0))}${row('YouTube', st.tube ? st.tube.name : '—')}${row('Віртуальний час', `день ${dayOf(st.t) + 1}, ${clock(st.t)}`)}${row('Власні фото й відео', String(res.media.length))}${row('Збережено', res.savedAt ? new Date(res.savedAt).toLocaleString('uk-UA') : '—')}</table>
+        ${res.edited || st.flags?.editedFile ? `<p class="warn-box">${icon('alert', 18)}<span>Файл змінювали вручну після збереження. Результати можуть не відповідати справжній грі.</span></p>` : `<p class="ok-box">${icon('lock', 18)}<span>Файл цілий: його не змінювали після збереження.</span></p>`}
+        ${res.missing ? `<p class="warn-box">${icon('alert', 18)}<span>Не вдалося відновити файлів: ${res.missing}. Замість них буде заглушка.</span></p>` : ''}
+        <p class="muted sm">Поточна гра в цьому браузері буде замінена${sim.s.me || sim.s.tube ? '. Якщо вона потрібна — <button class="link" data-f="save">спершу збережіть її</button>' : ''}.</p>
+        <button class="btn primary big" data-f="open">Відкрити гру</button>`,
+      onOpen: api => api.el.addEventListener('click', async e => {
+        const b = e.target.closest('[data-f]'); if (!b) return;
+        if (b.dataset.f === 'save') { api.close(); this.saveFile(); return; }
+        api.close(); this.busy = true;
+        try {
+          await replaceMedia(res.media);
+          if (res.edited) (st.flags ||= {}).editedFile = true;
+          const T = new Sim(st); sim.s = T.s; sim.r = T.r;
+          if (Number.isFinite(res.ui?.speed)) { ui.speed = res.ui.speed; document.querySelectorAll('.pn-speed [data-speed]').forEach(x => x.setAttribute('aria-pressed', +x.dataset.speed === ui.speed)); }
+          this.rebuild(); this.saveNow(); renderPanel();
+          toast(st.me ? `Гру @${st.me.nick} відкрито` : 'Гру відкрито');
+        } catch (err) { toast(err?.message || 'Не вдалося відкрити гру'); }
+        finally { this.busy = false; }
+      }) });
+  }
+  // нові екземпляри застосунків для нового стану
+  rebuild() { this.apps.likeer = new Likeer(this); this.apps.likeer.v_create = top => renderCreate(this.apps.likeer, top); this.apps.tube = new Tube(this); this.apps.tg = new Tg(this); this.home(); }
+  resetAll() { clearMedia(); try { localStorage.removeItem(KEY); } catch { /* ігноруємо */ } sim.s = newState(); sim.r = rng(sim.s); sim.refreshFeed(); sim.seedGallery(); sim.s.tg = newTg(sim); this.rebuild(); this.save(); renderPanel(); }
   save() { clearTimeout(this.saveT); this.saveT = setTimeout(() => this.saveNow(), 600); }
   saveNow() { clearTimeout(this.saveT); try { localStorage.setItem(KEY, JSON.stringify({ s: sim.s, speed: ui.speed })); } catch { /* сховище недоступне */ } }
 }
@@ -460,11 +536,40 @@ sim.on(w => {
 
 /* ═════════ віртуальний час і пульт ═════════ */
 const panel = document.querySelector('.panel');
+function renderPanel() {
+  const el = panel.querySelector('.pn-file'); if (!el) return;
+  const s = sim.s;
+  el.innerHTML = `<p class="pn-l">Збереження гри</p>
+    ${s.student?.name ? `<p class="pn-who">${icon('user', 15)}<span>${esc(s.student.name)}${s.student.group ? `, ${esc(s.student.group)}` : ''}</span><button class="link" data-pf="student">змінити</button></p>` : ''}
+    <div class="pn-fbtn"><button class="pn-save" data-pf="save">${icon('save', 16)}Зберегти у файл</button><button data-pf="open">${icon('open', 16)}Відкрити файл</button></div>
+    <small class="pn-saved${s.flags.fileDay == null ? ' warn' : ''}">${s.flags.fileDay != null ? `Збережено у файл: день ${s.flags.fileDay + 1}` : 'Гру ще не зберігали у файл'}${s.flags.editedFile ? ' · файл змінювали вручну' : ''}</small>`;
+}
+renderPanel();
 panel.querySelector('.pn-speed').innerHTML = SPEEDS.map(([v, t]) => `<button data-speed="${v}" aria-pressed="${ui.speed === v}">${v ? icon(v >= 60 ? 'fire' : 'play', 14, true) : icon('pause', 14, true)}${t}</button>`).join('');
 panel.addEventListener('click', e => {
   const b = e.target.closest('[data-speed]'); if (b) { ui.speed = +b.dataset.speed; panel.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', x === b)); phone.save(); return; }
   const j = e.target.closest('[data-jump]'); if (j) { jump(j.dataset.jump); return; }
   if (e.target.closest('[data-reset]')) phone.act('reset', e.target);
+  const f = e.target.closest("[data-pf]"); if (f) { if (f.dataset.pf === "save") phone.saveFile(); else if (f.dataset.pf === "open") phone.openFile(); else phone.askStudent(true); }
+});
+// Ctrl+S — зберегти у файл, Ctrl+O — відкрити; файл можна перетягнути на сторінку
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey)) return;
+  const k = e.key.toLowerCase();
+  if (k === 's') { e.preventDefault(); phone.saveFile(); } else if (k === 'o') { e.preventDefault(); phone.openFile(); }
+});
+document.addEventListener('dragover', e => {
+  if (![...(e.dataTransfer?.types || [])].includes('Files')) return;
+  // власні фото й відео в Галереї теж перетягують — файл гри впізнаємо лише під час «скидання»
+  e.preventDefault(); document.body.classList.add('drop-on');
+});
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drop-on'); });
+document.addEventListener('drop', e => {
+  document.body.classList.remove('drop-on');
+  const f = e.dataTransfer?.files?.[0]; if (!f) return;
+  e.preventDefault();
+  if (/\.(zip|json)$/i.test(f.name)) phone.loadFile(f);
+  else toast('Щоб додати фото чи відео, відкрийте Галерею. Сюди можна перетягнути лише файл збереженої гри (.zip).');
 });
 function jump(k) {
   const t = sim.s.t, h = hourOf(t);

@@ -2,16 +2,11 @@
 // Файл містить повний стан гри (усі рішення, історію тижнів, пошту, журнал, бізнес-план, бренд, команду…),
 // стан інтерфейсу й короткий підсумок, який викладач може прочитати навіть у блокноті.
 import { okState, money, num, pct, dateText, WEEKS } from './sim.js';
+import { checksum, translit, slug } from '../../shared/savefile.js';
+export { checksum, translit };
 
 export const FILE_APP = 'edvault-startup';
 export const FILE_FORMAT = 1;
-
-// Контрольна сума (FNV-1a): показує, чи файл змінювали вручну після збереження
-export function checksum(str) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-  return (h >>> 0).toString(16).padStart(8, '0');
-}
 
 const STATUS = { bankrupt: 'компанія закрилася (закінчилися гроші)', sold: 'компанію продано', time: 'гру завершено: минуло 2 роки' };
 
@@ -36,21 +31,9 @@ export function summaryOf(S) {
   };
 }
 
-// Транслітерація за офіційними правилами (постанова КМУ № 55): назва файлу латиницею
-// відкривається однаково в усіх браузерах і системах
-const TR = { а: 'a', б: 'b', в: 'v', г: 'h', ґ: 'g', д: 'd', е: 'e', є: 'ie', ж: 'zh', з: 'z', и: 'y', і: 'i', ї: 'i', й: 'i', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch', ь: '', ю: 'iu', я: 'ia', ы: 'y', э: 'e', ё: 'io', ъ: '' };
-const FIRST = { є: 'ye', ї: 'yi', й: 'y', ю: 'yu', я: 'ya' };
-export function translit(str) {
-  return String(str || '').replace(/[зЗ][гГ]/g, m => m[0] === 'З' ? 'Zgh' : 'zgh').replace(/[\u0400-\u04FF]/g, (ch, i, all) => {
-    const lo = ch.toLowerCase(), start = i === 0 || !/[\u0400-\u04FF']/.test(all[i - 1]);
-    const t = (start && FIRST[lo]) || TR[lo] || '';
-    return ch !== lo && t ? t[0].toUpperCase() + t.slice(1) : t;
-  }).replace(/['’ʼ`]/g, '');
-}
 // Безпечна назва файлу: startup_Kompaniia_Imia-Prizvyshche_tyzhden-12.json
 export function fileName(S) {
-  const clean = x => translit(x).replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
-  return ['startup', clean(S.s.company.name) || 'kompaniia', clean(S.s.founder.name), `tyzhden-${S.s.week + 1}`].filter(Boolean).join('_') + '.json';
+  return ['startup', slug(S.s.company.name) || 'kompaniia', slug(S.s.founder.name), `tyzhden-${S.s.week + 1}`].filter(Boolean).join('_') + '.json';
 }
 
 export function packGame(S, ui = {}) {
