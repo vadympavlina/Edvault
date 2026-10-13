@@ -265,6 +265,48 @@ test('власна ідея: різне зерно — різний ринок, 
   const N = newGame({ idea: 'plant', seed: 1 }); assert.equal(N.s.idea, 'plant', 'заготовлені ідеї працюють і далі');
 });
 
+test('аудит: витік даних не дублює функції в черзі розробки', () => {
+  for (const idea of ['homework', 'english', 'plant']) {
+    const S = newGame({ idea, seed: 3 }); S.s.product.launched = true;
+    const ids = Object.keys(S.I.features); S.queue(ids[0]); S.queue(ids[1]);
+    S.trigger('leak'); const e = S.s.inbox.find(m => m.ev === 'leak'); S.choose(e.id, 0);
+    const q = S.s.product.queue; assert.equal(new Set(q).size, q.length, `${idea}: черга без дублікатів`);
+    for (let i = 0; i < 12; i++) S.endWeek();
+    assert.equal(new Set(S.s.product.built).size, S.s.product.built.length, `${idea}: кожна функція збудована один раз`);
+  }
+});
+
+test('аудит: ринок насичується — клієнтів не більше, ніж є на ринку', () => {
+  const S = fresh(); S.s.target = 'schools'; S.s.product.launched = true;
+  S.s.users.schools.paid = Math.round(S.seg('schools').size * .4);
+  assert.equal(S.saturation('schools'), 0, 'понад 35% ринку — нових клієнтів немає');
+  assert.ok(S.tips().some(t => t.id === 'saturation'), 'наставниця радить розширюватися');
+  S.s.hours.sales = 20; S.s.mkt.ads = 50000; S.endWeek();
+  assert.equal(S.s.last.rec.seg.schools.visitors, 0);
+});
+
+test('аудит: разові справи забирають години лише одного тижня', () => {
+  const S = fresh({ bg: 'design' }); S.s.hours.product = 20;
+  const before = S.caps().dev; assert.ok(S.drawLogo() != null);
+  assert.equal(S.s.hours.product, 20, 'план тижня не змінюється назавжди');
+  assert.ok(S.caps().dev < before, 'але цього тижня на розробку менше часу');
+  S.endWeek(); assert.equal(S.hoursNow().product, 20);
+});
+
+test('аудит: співзасновник і стажист без зарплати не втрачають мотивацію через зарплату', () => {
+  const S = fresh(); S.s.team.push({ id: 'm1', name: 'Дмитро Савчук', role: 'dev', skill: 4, salary: 0, morale: 90, trait: 4, joined: 0, cofounder: true });
+  S.s.cash = 5e6; for (let i = 0; i < 30; i++) S.endWeek();
+  assert.ok(S.s.team.find(m => m.id === 'm1')?.morale >= 60);
+});
+
+test('аудит: зірване фриланс-замовлення з передоплатою — передоплату повертають', () => {
+  const S = fresh(); S.refreshGigs(); const g = S.s.gigs[0]; S.takeGig(g.id, 'prepay');
+  const got = S.s.myGigs[0].got; S.s.hours.freelance = 0;
+  const cash = S.s.cash; for (let i = 0; i < 8 && S.s.myGigs.length; i++) S.endWeek();
+  assert.ok(S.s.inbox.some(m => /скасовано/.test(m.title) && /повернути/.test(m.body)), 'лист про повернення передоплати');
+  assert.ok(got > 0 && cash > 0);
+});
+
 test('гроші форматуються по-людськи', () => {
   assert.equal(money(1500), '1 500 ₴'); assert.equal(money(45000), '45 тис. ₴'); assert.equal(money(2500000), '2,5 млн ₴'); assert.equal(money(-3000), '−3 000 ₴');
 });

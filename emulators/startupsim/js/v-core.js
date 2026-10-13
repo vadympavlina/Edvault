@@ -34,7 +34,8 @@ function weekPlan(S) {
   const s = S.s, used = hoursUsed(S), over = used > HOURS;
   const rows = HOUR_ROWS.map(([k, t, ic, d]) => {
     const v = s.hours[k] || 0;
-    const extra = k === 'customers' ? ` · інтерв'ю: ${S.talksLeft()}` : k === 'freelance' ? ` · замовлень: ${s.myGigs.length}` : '';
+    const busy = s.busy?.week === s.week ? s.busy[k] : 0;
+    const extra = (k === 'customers' ? ` · інтерв'ю: ${S.talksLeft()}` : k === 'freelance' ? ` · замовлень: ${s.myGigs.length}` : '') + (busy ? ` · ${busy} год уже зайнято (${k === 'product' ? 'логотип' : 'інтерв\'ю для преси'})` : '');
     return `<div class="hr-row"><span class="hr-l">${icon(ic, 16)}<span><b>${t}</b><small>${d}${extra}</small></span></span>
       <input type="range" min="0" max="40" step="1" value="${v}" data-in="hours" data-k="${k}" aria-label="${t}, годин"><output data-out="h-${k}">${v} год</output></div>`;
   }).join('');
@@ -151,7 +152,7 @@ export function report(S) {
       <section class="card"><header class="card-h"><h3>Користувачі</h3></header>${lineChart([{ v: h.map(x => x.users), color: '#0ea5e9', label: 'Активні' }, { v: h.map(x => x.paid), color: '#16a34a', label: 'Платні' }], { labels, fmt: num })}</section>
     </div>
     ${I.custom ? (() => { const av = assumptionsVsReality(I), segs = Object.values(I.segments).map(g => g.short); let hit = 0, all = 0; av.forEach(f => f.rows.forEach(x => { all++; if (x.guess === x.real) hit++; }));
-      return `<section class="card"><header class="card-h"><h3>Ваші припущення ↔ реальність</h3><span class="chip ${hit / all >= .7 ? 'ok' : 'warn'}">вгадано ${hit} з ${all}</span></header><p class="sm muted">Кому, на вашу думку, потрібна кожна функція, і як було насправді. Справжню картину можна було дізнатися з інтерв'ю й опитувань.</p>
+      return `<section class="card"><header class="card-h"><h3>Ваші припущення ↔ реальність</h3><span class="chip ${hit / Math.max(1, all) >= .7 ? 'ok' : 'warn'}">вгадано ${hit} з ${all}</span></header><p class="sm muted">Кому, на вашу думку, потрібна кожна функція, і як було насправді. Справжню картину можна було дізнатися з інтерв'ю й опитувань.</p>
       <div style="overflow-x:auto"><table class="tbl guess"><thead><tr><th>Функція</th>${segs.map(t => `<th>${esc(t)}</th>`).join('')}</tr></thead><tbody>${av.map(f => `<tr><td>${esc(f.t)}</td>${f.rows.map(x => `<td class="${x.guess !== x.real ? 'miss' : ''}"><span class="${x.guess ? 'y' : 'n'}">ви: ${x.guess ? 'так' : 'ні'}</span> · <span class="${x.real ? 'y' : 'n'}">ринок: ${x.real ? 'так' : 'ні'}</span></td>`).join('')}</tr>`).join('')}</tbody></table></div>
       <p class="sm muted">Наскільки болить проблема насправді: ${Object.values(I.segments).map(g => `${esc(g.short)} — ${Math.round(g.pain * 10)}/10`).join(', ')}.</p></section>`; })() : ''}
     <section class="card"><header class="card-h"><h3>Ключові рішення</h3></header><ul class="facts">
@@ -159,7 +160,7 @@ export function report(S) {
       <li>Інтерв'ю: ${sum(Object.values(s.know).map(k => k.n))}, з них без підказувальних запитань — ${sum(Object.values(s.know).map(k => k.good))}.</li>
       <li>Функцій у продукті: ${s.product.built.length}. Якість ${Math.round(s.product.quality)}%, багів ${Math.round(s.product.bugs)}.</li>
       <li>Опитувань: ${s.surveys.length}${s.surveys.length ? `, останнє: PMF ${pct(s.surveys.at(-1).pmf)}, NPS ${s.surveys.at(-1).nps}` : ''}.</li>
-      <li>Залучено інвестицій: ${Object.entries(s.inv).filter(([, v]) => ['invested', 'accel'].includes(v.status)).length ? Object.entries(s.inv).filter(([, v]) => ['invested', 'accel'].includes(v.status)).map(([k]) => k).length + ' раунд(и)' : 'ні'}${s.loan ? `, кредит ${money(s.loan.amt)}` : ''}${s.crowd?.status === 'won' ? `, краудфандинг ${money(s.crowd.raised)}` : ''}.</li>
+      <li>Залучено інвестицій: ${(n => n ? `${n} ${plural(n, 'раунд', 'раунди', 'раундів')}` : 'ні')(Object.values(s.inv).filter(v => ['invested', 'accel'].includes(v.status)).length)}${s.loan ? `, кредит ${money(s.loan.amt)}` : ''}${s.crowd?.status === 'won' ? `, краудфандинг ${money(s.crowd.raised)}` : ''}.</li>
       <li>Бренд: впізнаваність ${pct(s.brand.aware)}, відповідність сегменту ${pct(S.brandFit())}.</li>
     </ul></section>
     <section class="card"><header class="card-h"><h3>Досягнення</h3></header><div class="achs">${Object.entries(ACHIEVEMENTS).filter(([k]) => s.ach[k]).map(([k, a]) => `<div class="ach on">${icon('star', 18)}<span><b>${esc(a.t)}</b><small>${esc(a.d)}</small></span></div>`).join('') || '<p class="muted">Поки немає.</p>'}</div></section>

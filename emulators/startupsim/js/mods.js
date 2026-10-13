@@ -135,9 +135,9 @@ const M = {
   setBrand(key, v) { this.s.brand[key] = v; },
   drawLogo() {
     // логотип своїми силами: забирає 6 годин із розробки цього тижня
-    if (this.s.hours.product < 6) return null;
+    if (this.hoursNow().product < 6) return null;
     const q = clamp(.25 + .2 * this.fSkill().design + this.r.range(-.05, .1), .2, .95);
-    this.s.hours.product -= 6; this.s.brand.logo = { q, by: 'self' };
+    this.addBusy(this.s.week, 'product', 6); this.s.brand.logo = { q, by: 'self' };
     return q;
   },
 
@@ -251,7 +251,7 @@ const M = {
 
   /* ── кредит і краудфандинг ── */
   loanLimit() {
-    if (this.s.company.form === 'none' || this.s.loan) return 0;
+    if (this.s.company.form === 'none' || (this.s.loan && !this.s.loan.closed)) return 0;
     const h = this.s.history.slice(-8); if (h.length < 8 || !h.some(x => x.rev > 0)) return 0;
     return Math.round(sum(h.map(x => x.rev)) / 8 * W2M * 4 / 10000) * 10000;
   },
@@ -274,12 +274,12 @@ const M = {
   canvasFilled() { const c = this.s.canvas; return Object.keys(CANVAS).filter(k => { const v = c[k]; return Array.isArray(v) ? v.length > 0 : !!(v && String(v).trim().length >= 3); }).length; },
   // Перевірка блоків даними: ok — підтверджено, warn — припущення, bad — суперечить даним
   canvasCheck() {
-    const c = this.s.canvas, out = {}, K = this.insight(c.segment || this.s.target);
+    const c = this.s.canvas, out = {}, seg = this.I.segments[c.segment] ? c.segment : this.s.target, K = this.insight(seg);
     out.problem = !c.problem ? null : (K.pain != null && K.pain >= .5 ? { s: 'ok', m: `Інтерв'ю підтверджують: біль ${Math.round(K.pain * 10)}/10.` } : K.pain != null ? { s: 'bad', m: 'Інтерв\'ю показують, що для цього сегмента проблема не дуже болюча.' } : { s: 'warn', m: 'Поки що припущення: проведіть інтерв\'ю.' });
-    out.segment = !c.segment ? null : c.segment === this.s.target ? { s: 'ok', m: 'Збігається з цільовим сегментом.' } : { s: 'warn', m: 'Ваш маркетинг зараз націлений на інший сегмент.' };
+    out.segment = !this.I.segments[c.segment] ? null : c.segment === this.s.target ? { s: 'ok', m: 'Збігається з цільовим сегментом.' } : { s: 'warn', m: 'Ваш маркетинг зараз націлений на інший сегмент.' };
     out.uvp = !c.uvp ? null : c.uvp.length > 140 ? { s: 'warn', m: 'Задовго: цінність має вміщатися в одне коротке речення.' } : { s: 'ok', m: 'Коротко й зрозуміло.' };
     const sol = c.solution || [];
-    out.solution = !sol.length ? null : sol.every(f => (this.feature(f)?.v?.[c.segment || this.s.target] || 0) > 0 || this.feature(f)?.pay) ? { s: 'ok', m: 'Ці функції цінні для сегмента.' } : { s: 'warn', m: 'Деякі функції не дуже потрібні цьому сегменту.' };
+    out.solution = !sol.length ? null : sol.every(f => (this.feature(f)?.v?.[seg] || 0) > 0 || this.feature(f)?.pay) ? { s: 'ok', m: 'Ці функції цінні для сегмента.' } : { s: 'warn', m: 'Деякі функції не дуже потрібні цьому сегменту.' };
     const ch = c.channels || [];
     out.channels = !ch.length ? null : (K.ch.length && ch.some(x => K.ch.slice(0, 2).some(([y]) => y === x)) ? { s: 'ok', m: 'Клієнти в інтерв\'ю називали ці канали.' } : K.ch.length ? { s: 'bad', m: `Клієнти частіше згадують: ${K.ch.slice(0, 2).map(([y]) => CHANNELS[y]?.t.toLowerCase()).join(', ')}.` } : { s: 'warn', m: 'Запитайте в інтерв\'ю, де клієнти шукають рішення.' });
     out.revenue = !c.revenue ? null : { s: 'ok', m: 'Модель описано.' };
@@ -307,9 +307,9 @@ const M = {
     const fixed = this.fixedCosts() * W2M + this.s.mkt.ads * W2M;
     const m = this.modelOf(k), g = this.seg(k);
     const cogs = sum(this.s.product.built.map(f => this.feature(f)?.cogs || 0));
-    if (m === 'device') { const margin = this.s.price[k] - this.s.unitCost; return { fixed, margin, need: margin > 0 ? Math.ceil(fixed / margin) : Infinity, unit: 'пристроїв на місяць' }; }
+    if (m === 'device') { const margin = this.s.price[k] - this.s.unitCost; return { fixed, margin, need: margin > 0 ? Math.ceil(fixed / margin) : Infinity, unit: ['пристрій на місяць', 'пристрої на місяць', 'пристроїв на місяць'] }; }
     const margin = this.s.price[k] * (1 - this.payFee(k)) - cogs - (g.b2b ? 0 : .65 * W2M);
-    return { fixed, margin, need: margin > 0 ? Math.ceil(fixed / margin) : Infinity, unit: g.b2b ? 'організацій-клієнтів' : 'платних клієнтів' };
+    return { fixed, margin, need: margin > 0 ? Math.ceil(fixed / margin) : Infinity, unit: g.b2b ? ['організація-клієнт', 'організації-клієнти', 'організацій-клієнтів'] : ['платний клієнт', 'платні клієнти', 'платних клієнтів'] };
   },
 
   /* ── спринти ── */
@@ -370,7 +370,8 @@ const M = {
         this.mail({ from: g.client, kind: 'freelance', title: got ? `Оплата за «${g.t}»` : `Клієнт не заплатив за «${g.t}»`, body: got ? `Дякую за роботу${late ? ', хоч і з запізненням' : ''}! Отримано ${fmt(got)}. Оцінка: ${stars.toFixed(1).replace('.', ',')}.` : 'Клієнт отримав роботу й зник. Без передоплати чи безпечної угоди ризик завжди на вас.' });
       } else if (s.week > g.deadline + 2) {
         s.myGigs = s.myGigs.filter(x => x !== g); s.gigsDone++; s.rating = s.gigsDone === 1 ? 2 : (s.rating * (s.gigsDone - 1) + 2) / s.gigsDone;
-        this.mail({ from: g.client, kind: 'freelance', title: 'Замовлення скасовано', body: 'Ви зірвали всі терміни. Я знайшов іншого виконавця й поставив вам низьку оцінку.' });
+        if (g.got) { s.cash -= g.got; s.ledgerExtra = (s.ledgerExtra || 0) + g.got; }
+        this.mail({ from: g.client, kind: 'freelance', title: 'Замовлення скасовано', body: `Ви зірвали всі терміни. Я знайшов іншого виконавця й поставив вам низьку оцінку.${g.got ? ` Передоплату ${fmt(g.got)} довелося повернути.` : ''}` });
       }
     }
     if (s.week - (s.flags.gigWeek ?? -9) >= 2) this.refreshGigs();

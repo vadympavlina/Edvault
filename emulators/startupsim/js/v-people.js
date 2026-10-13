@@ -46,7 +46,7 @@ function offerModal(C, id) {
   modal({ title: 'Пропозиція роботи', html: '', onOpen: api => {
     draw(api);
     api.el.addEventListener('input', e => { const k = e.target.dataset.o; if (k === 'sal') sal = +e.target.value; if (k === 'eq') eq = +e.target.value; draw(api); api.el.querySelector(`[data-o="${k}"]`)?.focus(); });
-    api.el.addEventListener('click', e => { if (e.target.closest('[data-o="go"]')) { const r = S.hire(id, sal, eq / 100); api.close(); C.toast(r.ok ? `${r.m.name} у команді!` : `${r.name} відмовився: умови не влаштували`, r.ok ? 'good' : 'bad'); C.render(); C.topbar(); } });
+    api.el.addEventListener('click', e => { if (e.target.closest('[data-o="go"]')) { const r = S.hire(id, sal, eq / 100); api.close(); C.toast(r.ok ? `${r.m.name} у команді!` : `${r.name} ${r.fem ? 'відмовилася' : 'відмовився'}: умови не влаштували`, r.ok ? 'good' : 'bad'); C.render(); C.topbar(); } });
   } });
 }
 

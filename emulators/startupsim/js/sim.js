@@ -138,8 +138,11 @@ export class Sim {
   out(role) {
     return sum(this.s.team.filter(m => m.role === role && !m.leaving).map(m => m.skill * this.moraleF(m) * (this.s.crunch ? 1.25 : 1) * (this.trait(m).speed || 1)));
   }
+  // години цього тижня з урахуванням разових справ (логотип, інтерв'ю для преси)
+  hoursNow() { const h = { ...this.s.hours }, b = this.s.busy; if (b && b.week === this.s.week) for (const [k, v] of Object.entries(b)) if (k !== 'week') h[k] = Math.max(0, (h[k] || 0) - v); return h; }
+  addBusy(week, k, v) { const b = this.s.busy?.week === week ? this.s.busy : (this.s.busy = { week }); b[k] = (b[k] || 0) + v; }
   caps() {
-    const h = this.s.hours, sk = this.fSkill(), e = this.energyF();
+    const h = this.hoursNow(), sk = this.fSkill(), e = this.energyF();
     const debt = 1 - clamp(this.s.product.debt / 160, 0, .6);
     const dev = (h.product / 10 * sk.dev * (this.s.founder.bg === 'design' ? .6 : 1) * e + this.out('dev') * 2.3) * debt * this.retroSpeed();
     const design = h.product / 10 * (this.s.founder.bg === 'design' ? 2.2 : .4) * e + this.out('design') * 2;
@@ -151,17 +154,20 @@ export class Sim {
   supportBoost() { const u = this.activeUsers(); if (!u) return .1; return clamp(this.caps().support * 1500 / Math.max(u, 300), 0, .3); }
   salary(m) { return m.salary; }
   marketSalary(role, skill) { const r = ROLES[role]; return r.base + r.step * (skill - 1); }
-  burnWeekly() { return this.lastCost() - this.lastRev(); }
+  // середній чистий відтік грошей за останні 4 тижні (той самий, з якого рахується runway)
+  burnWeekly() { const h = this.s.history.slice(-4); return h.length ? sum(h.map(x => x.cost - x.rev)) / h.length : this.fixedCosts(); }
   lastRev() { return this.s.history.at(-1)?.rev || 0; }
   lastCost() { return this.s.history.at(-1)?.cost || this.fixedCosts(); }
   fixedCosts() { return sum(this.s.team.map(m => m.salary)) / W2M + 900 + (this.s.company.form === 'fop' ? 1300 / W2M : this.s.company.form === 'tov' ? 6000 / W2M : 0); }
   runwayWeeks() {
-    const h = this.s.history.slice(-4);
-    const burn = h.length ? sum(h.map(x => x.cost - x.rev)) / h.length : this.fixedCosts();
+    const burn = this.burnWeekly();
     return burn <= 0 ? Infinity : this.s.cash / burn;
   }
 
   /* ── користувачі й гроші ── */
+  // Насичення ринку: що більшу частку сегмента вже охоплено, то менше нових людей приходить (реально досяжно ≈ 35%)
+  reach(k) { const u = this.s.users[k]; return (u.free + u.trial + u.paid + u.wait + sum(u.pipe.map(x => x.n))) / Math.max(1, this.seg(k).size); }
+  saturation(k) { return clamp(1 - this.reach(k) / .35, 0, 1); }
   activeUsers(k) { const ks = k ? [k] : this.segIds; return sum(ks.map(x => { const u = this.s.users[x]; return u.free + u.trial + u.paid; })); }
   paidUsers(k) { const ks = k ? [k] : this.segIds; return sum(ks.map(x => this.s.users[x].paid)); }
   mrr() {
@@ -208,7 +214,7 @@ export class Sim {
   setPrice(k, v) { this.s.price[k] = Math.max(0, Math.round(v)); }
   setBudget(ch, v) { this.s.mkt[ch] = Math.max(0, Math.round(v)); }
   queue(id) { const p = this.s.product; if (!this.feature(id) || this.has(id) || p.queue.includes(id)) return; p.queue.push(id); p.progress[id] ||= 0; }
-  unqueue(id) { const p = this.s.product; p.queue = p.queue.filter(x => x !== id); }
+  unqueue(id) { const p = this.s.product; if (id === '_custom') return; p.queue = p.queue.filter(x => x !== id); }
   moveQueue(id, d) { const q = this.s.product.queue, i = q.indexOf(id), j = i + d; if (i < 0 || j < 0 || j >= q.length) return; [q[i], q[j]] = [q[j], q[i]]; }
   canLaunch() { return !this.s.product.launched && this.s.product.built.length > 0; }
   launch() {
@@ -267,7 +273,7 @@ export class Sim {
       case 'spend': {
         if (p.pain < .3) { a = 'Та майже нічого не витрачаю на це, чесно.'; K.wtps.push(Math.round(p.wtp * .3)); break; }
         const x = Math.round(p.wtp * r.range(.75, 1.05) / 10) * 10;
-        a = g.b2b ? `Зараз це обходиться приблизно в ${money(x)} на ${I.kind === 'hardware' ? 'сезон' : 'місяць'}, якщо порахувати час людей.` : I.kind === 'hardware' ? `На рослини й заміну загиблих іде десь ${money(x)} на рік.` : `${g.spendWord ? `Із ${g.spendWord} ` : ''}десь ${money(x)} на місяць іде на це${g.spendWord ? '' : ', якщо чесно'}.`;
+        a = g.b2b ? `Зараз це обходиться приблизно в ${money(x)} на ${I.kind === 'hardware' ? 'сезон' : 'місяць'}, якщо порахувати час людей.` : I.kind === 'hardware' ? (I.custom ? `На це в мене йде десь ${money(x)} на рік.` : `На рослини й заміну загиблих іде десь ${money(x)} на рік.`) : `${g.spendWord ? `Із ${g.spendWord} ` : ''}десь ${money(x)} на місяць іде на це${g.spendWord ? '' : ', якщо чесно'}.`;
         K.wtps.push(x); break;
       }
       case 'worst': { const f = this.feature(p.feat); a = f ? `Найбільше бракує, щоб було щось таке: ${f.desc.charAt(0).toLowerCase() + f.desc.slice(1)}` : 'Та навіть не знаю.'; if (f) K.feats[p.feat] = (K.feats[p.feat] || 0) + 1; break; }
@@ -341,7 +347,7 @@ export class Sim {
     const c = this.s.candidates.find(x => x.id === id); if (!c) return { ok: false };
     const p = this.acceptChance(c, salary, equity);
     this.s.candidates = this.s.candidates.filter(x => x !== c);
-    if (!this.r.chance(p)) return { ok: false, refused: true, name: c.name };
+    if (!this.r.chance(p)) return { ok: false, refused: true, name: c.name, fem: c.fem };
     const m = { id: this.id('m'), name: c.name, fem: c.fem, role: c.role, skill: c.skill, salary: Math.round(salary), morale: 72 + (this.trait(c).morale || 0), trait: c.trait, joined: this.s.week, eq: equity };
     this.s.team.push(m);
     if (equity > 0) this.issue(m.id, m.name, 'team', equity);
@@ -400,7 +406,7 @@ export class Sim {
     return { ok: true };
   }
   resolvePitch(id) {
-    const inv = INVESTORS.find(x => x.id === id), st = this.s.inv[id], r = this.r;
+    const inv = INVESTORS.find(x => x.id === id), st = this.s.inv[id], r = this.r, I = this.I;
     const unmet = this.needsOf(inv);
     if (inv.kind === 'grant') {
       const ok = !unmet.length && st.honest && (this.s.product.launched || sum(this.segIds.map(k => this.s.users[k].wait)) >= 50);
@@ -421,7 +427,7 @@ export class Sim {
       this.mail({ from: inv.t, kind: 'investor', title: 'Ми перевірили ваші цифри', body: 'Під час перевірки (due diligence) з\'ясувалося, що цифри в презентації прикрашені. Ми не інвестуємо в тих, хто вводить в оману. І, повірте, інвестори між собою спілкуються.' });
       return;
     }
-    const like = inv.likes?.includes(this.s.idea) ? .12 : 0, rep = (this.s.flags.reputation || 0) * .12;
+    const like = inv.likes?.includes(this.s.idea) || (I.custom && inv.likesKind?.includes(I.kind)) ? .12 : 0, rep = (this.s.flags.reputation || 0) * .12;
     const score = .35 + st.deck * .4 + like + r.range(0, .25) - rep + (this.s.flags.accelDone ? .1 : 0);
     if (score < .55 && inv.kind !== 'accel') {
       st.status = 'rejected'; st.week = this.s.week;
@@ -529,7 +535,8 @@ export class Sim {
     for (const k of this.segIds) {
       const g = this.seg(k), u = s.users[k], m = this.modelOf(k), a = this.appeal(k), pF = this.priceF(k);
       const store = this.payOf(k).visits && s.product.launched ? this.payOf(k).visits : 1;
-      const V = sum(Object.values(visits[k])) * sea * accel * (k === tg ? this.promoVisits() : 1) * store;
+      const sat = this.saturation(k);
+      const V = sum(Object.values(visits[k])) * sea * accel * (k === tg ? this.promoVisits() : 1) * store * sat;
       const boost = this.trustM(k) * this.flSignup(), pc = this.promoConv() * this.payOk(k);
       // A/B-тест лендінгу ділить цільовий трафік навпіл
       let lm = this.landingM();
@@ -544,7 +551,7 @@ export class Sim {
       const sr = { visitors: Math.round(V), signups, active: 0, newPaid: 0, churned: 0, lostStock: 0 };
       // B2B: заявки йдуть у воронку продажів і закриваються через кілька тижнів
       if (g.b2b) {
-        const leads = signups + (k === tg ? caps.sales * .32 * g.fit.sales : 0);
+        const leads = signups + (k === tg ? caps.sales * .32 * g.fit.sales * sat : 0);
         sr.signups = Math.round(leads);
         if (s.product.launched) u.pipe.push({ due: s.week + (g.cycle || 4), n: leads, a });
         else u.wait += leads;
@@ -646,19 +653,19 @@ export class Sim {
     /* команда */
     const growing = this.growth(4) > .05;
     for (const m of [...s.team]) {
-      m.morale += (70 - m.morale) * .08 + (s.crunch ? -6 : 0) + (m.salary < this.marketSalary(m.role, m.skill) * .85 ? -2 : 0) + (growing ? 1 : 0) + (s.cash < salaries * 2 ? -4 : 0);
+      m.morale += (70 - m.morale) * .08 + (s.crunch ? -6 : 0) + (!m.cofounder && !m.intern && m.salary < this.marketSalary(m.role, m.skill) * .85 ? -2 : 0) + (growing ? 1 : 0) + (s.cash < salaries * 2 ? -4 : 0);
       m.morale = clamp(Math.round(m.morale), 0, 100);
       if (m.morale < 32 && r.chance(.18)) {
         s.team = s.team.filter(x => x !== m);
         this.mail({ from: m.name, kind: 'team', title: 'Я йду', body: `Вибачте, але я звільняюся. ${s.crunch ? 'Постійні переробки мене виснажили.' : 'Не бачу тут для себе перспектив.'} Дякую за досвід.` });
-        rep.events.push({ t: `${m.name} звільнився`, d: 'Низька мораль: переробки, низька зарплата або відчуття, що компанія тоне.' });
+        rep.events.push({ t: `${m.name} ${m.fem ? 'звільнилася' : 'звільнився'}`, d: 'Низька мораль: переробки, низька зарплата або відчуття, що компанія тоне.' });
       }
     }
     const team = sum(s.team.map(m => this.trait(m).team || 0)); if (team) for (const m of s.team) m.morale = clamp(m.morale + team * .3, 0, 100);
 
     /* засновник: енергія */
     const f = s.founder, worked = this.totalHours();
-    f.energy = clamp(f.energy + (s.hours.rest - 8) * 1.6 - Math.max(0, worked - HOURS) * .9 - (s.crunch ? 2 : 0), 0, 100);
+    f.energy = clamp(f.energy + (this.hoursNow().rest - 8) * 1.6 - Math.max(0, worked - HOURS) * .9 - (s.crunch ? 2 : 0), 0, 100);
     if (f.energy < 8 && !s.flags.burnoutWeek) { s.flags.burnoutWeek = s.week; this.trigger('burnout', rep); }
     if (f.energy > 40) s.flags.burnoutWeek = 0;
 
@@ -726,7 +733,7 @@ export class Sim {
   }
   trigger(id, rep) {
     const e = EVENTS[id]; if (!e) return;
-    this.s.flags.evSeen[id] = this.s.week;
+    (this.s.flags.evSeen ||= {})[id] = this.s.week;
     const m = e.make(this);
     const msg = this.mail({ ev: id, kind: e.kind || 'event', from: m.from, title: m.title, body: m.body, choices: e.choices ? e.choices(this).map(c => c.t) : null, until: e.choices ? this.s.week + 1 : null, data: m.data });
     rep?.events.push({ t: m.title, d: 'Новий лист у пошті', mail: msg.id });
@@ -753,6 +760,7 @@ export class Sim {
     if (g.b2b && !this.reqOk(t)) out.push({ id: 'req', text: `${g.short} не купують без: ${this.missingReq(t).map(f => this.feature(f).t).join(', ')}.`, go: 'product' });
     if (g.b2b && s.hours.sales < 5 && !s.team.some(m => m.role === 'sales')) out.push({ id: 'sales', text: 'Організації рідко купують самі. Для B2B потрібні прямі продажі: години засновника на «Продажі» або менеджер у команді.', go: 'dash', term: 'B2B' });
     if (this.I.kind === 'hardware' && s.product.launched && s.stock.units < 20 && !s.stock.orders.length) out.push({ id: 'stock', text: 'Склад майже порожній, а нова партія їде кілька тижнів. Замовте виробництво заздалегідь.', go: 'finance', term: 'Собівартість' });
+    if (s.product.launched && this.saturation(t) < .5) out.push({ id: 'saturation', text: `Ви вже охопили ${pct(this.reach(t))} сегмента «${g.short}» — нових клієнтів там дедалі менше. Час розширюватися: оберіть інший сегмент у розділі «Клієнти».`, go: 'customers' });
     if (s.founder.energy < 30) out.push({ id: 'rest', text: 'Ви на межі вигорання. Додайте годин відпочинку — виснажений засновник працює гірше.', go: 'dash', urgent: true });
     if (s.crunch && s.team.some(m => m.morale < 45)) out.push({ id: 'crunch', text: 'Переробки виснажують команду. Ще кілька тижнів — і хтось звільниться.', go: 'team' });
     if (s.landing.cur < 0 && s.week >= 3) out.push({ id: 'landing', text: 'Оберіть заголовок лендінгу й перевірте його A/B-тестом — це безкоштовно підвищує кількість реєстрацій.', go: 'marketing', term: 'A/B-тест' });
@@ -789,13 +797,13 @@ export const EVENTS = {
     choices: () => [{ t: 'Знизити ціну на 20%', do: S => { S.s.comp[S.s.target] = (S.s.comp[S.s.target] || 0) + .12; for (const k of S.segIds) S.s.price[k] = Math.round(S.s.price[k] * .8); return 'Ціни знижено. Клієнтам дешевше, але й ви заробляєте менше з кожного.'; } }, { t: 'Зосередитися на тому, що цінують наші клієнти', do: S => { S.s.comp[S.s.target] = (S.s.comp[S.s.target] || 0) + .08; return 'Правильно: великі гравці рідко розуміють нішу так глибоко, як ви. Тиск конкурента трохи відчутний.'; } }, { t: 'Ігнорувати', do: S => { S.s.comp[S.s.target] = (S.s.comp[S.s.target] || 0) + .15; return 'Конкурент забирає частину клієнтів.'; } }] },
   press: { p: .2, when: S => S.s.product.launched && S.activeUsers() > 150,
     make: () => ({ from: 'Журналістка Олена Ткаченко', title: 'Інтерв\'ю для онлайн-видання', body: 'Добрий день! Пишу статтю про молоді українські стартапи й хочу розповісти про вас. Знадобиться приблизно 5 годин вашого часу наступного тижня.' }),
-    choices: () => [{ t: 'Погоджуюся', do: S => { S.s.flags.pressWeek = S.s.week + 1; S.s.hours.rest = Math.max(0, S.s.hours.rest - 5); return 'Стаття вийде наступного тижня — чекайте наплив відвідувачів. 5 годин відпочинку пішло на інтерв\'ю.'; } }, { t: 'Немає часу', do: () => 'Гаразд, можливо наступного разу.' }] },
+    choices: () => [{ t: 'Погоджуюся', do: S => { S.s.flags.pressWeek = S.s.week + 1; S.addBusy(S.s.week + 1, 'rest', 5); return 'Стаття вийде наступного тижня — чекайте наплив відвідувачів. 5 годин відпочинку пішло на інтерв\'ю.'; } }, { t: 'Немає часу', do: () => 'Гаразд, можливо наступного разу.' }] },
   viral: { p: .12, repeat: 20, when: S => S.s.product.launched && S.nps() > 35 && S.activeUsers() > 100,
     make: () => ({ from: 'Аналітика', title: 'Про вас заговорили!', body: 'Користувач виклав відео про ваш продукт, і воно стало вірусним. Наступного тижня чекайте багато нових людей. Чи витримають сервери?' }),
     choices: () => [{ t: 'Супер!', do: S => { S.s.flags.viralWeek = S.s.week + 1; return 'Тримаємося!'; } }] },
   leak: { p: .15, when: S => S.s.product.launched && S.activeUsers() > 250 && !S.hasFlag('security') && S.s.week > 10,
     make: () => ({ from: 'Розробка', title: 'Витік даних користувачів', body: 'Ми знайшли вразливість: дані частини користувачів (імена й пошти) могли потрапити до сторонніх. Що робимо?' }),
-    choices: () => [{ t: 'Чесно повідомити всіх і виправити', do: S => { for (const k of S.segIds) { const u = S.s.users[k]; u.free = Math.round(u.free * .94); u.paid = Math.round(u.paid * .97); } S.s.product.queue.unshift(S.has('security') ? S.s.product.queue[0] : Object.keys(S.I.features).find(f => S.feature(f).security) || S.s.product.queue[0]); S.s.product.queue = S.s.product.queue.filter(Boolean); return 'Частина користувачів пішла, але більшість оцінила чесність. Захист даних додано на початок розробки.'; } }, { t: 'Тихо виправити й нікому не казати', do: S => { if (S.r.chance(.6)) { for (const k of S.segIds) { const u = S.s.users[k]; u.free = Math.round(u.free * .75); u.paid = Math.round(u.paid * .8); } S.s.cash -= 80000; S.s.ledgerExtra = (S.s.ledgerExtra || 0) + 80000; return 'Через місяць журналісти дізналися про витік. Скандал: чверть користувачів пішла, а ще штраф 80 000 ₴. Приховувати — гірше, ніж визнати.'; } return 'Цього разу пронесло. Але ризик був величезний.'; } }] },
+    choices: () => [{ t: 'Чесно повідомити всіх і виправити', do: S => { for (const k of S.segIds) { const u = S.s.users[k]; u.free = Math.round(u.free * .94); u.paid = Math.round(u.paid * .97); } const sec = Object.keys(S.I.features).find(f => S.feature(f).security && !S.has(f)); if (sec) { S.unqueue(sec); S.s.product.queue.unshift(sec); S.s.product.progress[sec] ||= 0; } else S.s.product.debt += 6; return sec ? 'Частина користувачів пішла, але більшість оцінила чесність. Захист даних додано на початок розробки.' : 'Частина користувачів пішла, але більшість оцінила чесність. Розробники закрили вразливість — це забрало трохи часу.'; } }, { t: 'Тихо виправити й нікому не казати', do: S => { if (S.r.chance(.6)) { for (const k of S.segIds) { const u = S.s.users[k]; u.free = Math.round(u.free * .75); u.paid = Math.round(u.paid * .8); } S.s.cash -= 80000; S.s.ledgerExtra = (S.s.ledgerExtra || 0) + 80000; return 'Через місяць журналісти дізналися про витік. Скандал: чверть користувачів пішла, а ще штраф 80 000 ₴. Приховувати — гірше, ніж визнати.'; } return 'Цього разу пронесло. Але ризик був величезний.'; } }] },
   acquire: { p: .3, when: S => S.mrr() > 120000 || S.activeUsers() > 6000,
     make: S => { const v = Math.round(S.valuation() * 1.4 / 100000) * 100000; return { from: 'Корпорація «Велика ІТ»', title: 'Пропозиція купити вашу компанію', data: { v }, body: `Ми хочемо придбати вашу компанію за ${money(v)}. Ваша частка — ${pct(S.stake(), 1)}, тобто ви особисто отримаєте ${money(v * S.stake())}. Гра закінчиться, але це успішний фінал.` }; },
     choices: () => [{ t: 'Продати компанію', do: (S, e) => { S.s.over = { kind: 'sold', week: S.s.week, value: e.data.v }; return 'Угоду підписано!'; } }, { t: 'Ні, будуємо далі', do: () => 'Ви вірите, що компанія коштуватиме більше. Ризиковано, але сміливо.' }] },

@@ -14,7 +14,7 @@ function customers(S) {
     const g = S.seg(k), K = S.insight(k), u = s.users[k], tg = k === s.target;
     const painTxt = K.pain == null ? '—' : `${Math.round(K.pain * 10)}/10`;
     return `<article class="seg-card ${tg ? 'target' : ''}">
-      <header><div><h3>${esc(g.t)}</h3><small>${g.b2b ? 'Організації · ' : ''}ринок ≈ ${num(g.size)} ${g.b2b ? 'організацій' : 'людей'}</small></div>${tg ? `<span class="chip acc">${icon('target', 14)} Цільовий</span>` : `<button class="btn sm" data-act="target" data-k="${k}">Зробити цільовим</button>`}</header>
+      <header><div><h3>${esc(g.t)}</h3><small>${g.b2b ? 'Організації · ' : ''}ринок ≈ ${num(g.size)} ${g.b2b ? 'організацій' : 'людей'}${S.reach(k) >= .005 ? ` · охоплено ${pct(S.reach(k), 1)}` : ''}</small></div>${tg ? `<span class="chip acc">${icon('target', 14)} Цільовий</span>` : `<button class="btn sm" data-act="target" data-k="${k}">Зробити цільовим</button>`}</header>
       <div class="ins">
         <div><span>Інтерв'ю</span><b>${K.n}</b>${K.bad ? `<small class="warn-t">${K.bad} з підказувальними питаннями</small>` : ''}</div>
         <div><span>Наскільки болить</span><b>${painTxt}</b><small>довіра: ${K.painConf}</small></div>
@@ -82,7 +82,7 @@ function product(S, ui) {
   const flag = f => [f.core && '<span class="chip sm">основа</span>', f.pay && '<span class="chip sm acc">оплата</span>', f.security && '<span class="chip sm">безпека</span>', f.infra && '<span class="chip sm">сервери</span>', f.analytics && '<span class="chip sm">аналітика</span>', f.cogs && `<span class="chip sm warn">+${f.cogs} ₴/клієнт</span>`, (S.seg().requires || []).includes(Object.keys(S.I.features).find(k => S.I.features[k] === f)) && '<span class="chip sm bad">обов\'язкова</span>'].filter(Boolean).join('');
   const card = (id, f, where) => `<div class="kb-card">
     <div class="kb-t"><b>${esc(f.t)}</b>${f.v ? dots(f.v[t] || 0) : ''}</div><p>${esc(f.desc)}</p><div class="kb-f">${flag(f)}<span class="pts" title="Скільки очок розробки">${f.cost} оч.</span></div>
-    ${where === 'q' ? `<div class="prog">${meter((p.progress[id] || 0) / f.cost)}<small>${Math.round(p.progress[id] || 0)} / ${f.cost}</small></div><div class="kb-a"><button class="ib" data-act="qUp" data-id="${id}" aria-label="Вище">${icon('up', 16)}</button><button class="ib" data-act="qDown" data-id="${id}" aria-label="Нижче">${icon('down', 16)}</button><button class="ib" data-act="unqueue" data-id="${id}" aria-label="Прибрати">${icon('x', 16)}</button></div>` : ''}
+    ${where === 'q' ? `<div class="prog">${meter((p.progress[id] || 0) / f.cost)}<small>${Math.round(p.progress[id] || 0)} / ${f.cost}</small></div><div class="kb-a"><button class="ib" data-act="qUp" data-id="${id}" aria-label="Вище">${icon('up', 16)}</button><button class="ib" data-act="qDown" data-id="${id}" aria-label="Нижче">${icon('down', 16)}</button>${id === '_custom' ? '' : `<button class="ib" data-act="unqueue" data-id="${id}" aria-label="Прибрати">${icon('x', 16)}</button>`}</div>` : ''}
     ${where === 'b' ? `<button class="btn sm" data-act="queue" data-id="${id}">${icon('plus', 14)} У роботу</button>` : ''}</div>`;
   const qWeeks = (() => { let acc = 0; return p.queue.map(id => { acc += S.feature(id).cost - (p.progress[id] || 0); return caps.dev > 0 ? Math.ceil(acc / (caps.dev * (1 - p.fix) * ({ fast: 1.3, balanced: 1, clean: .8 })[p.mode])) : Infinity; }); })();
   const sp = s.sprint, last = s.sprints.at(-1);

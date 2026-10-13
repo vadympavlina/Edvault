@@ -155,7 +155,7 @@ function startWizard() {
     const st = steps(), key = st[w.step];
     el.innerHTML = `<div class="wz-card"><div class="wz-steps">${st.map((k, i) => `<span class="${i === w.step ? 'on' : i < w.step ? 'done' : ''}">${i < w.step ? icon('check', 14) : i + 1}<small>${TITLES[k]}</small></span>`).join('')}</div>
       <div class="wz-body">${VIEW[key]()}</div>
-      <div class="wz-nav">${w.step ? `<button class="btn" data-w="back">${icon('left', 16)} Назад</button>` : '<span></span>'}<button class="btn primary lg" data-w="next">${w.step === st.length - 1 ? `${icon('rocket', 18)} Заснувати компанію` : `Далі ${icon('right', 16)}`}</button></div></div>`;
+      <div class="wz-nav">${w.step ? `<button class="btn" data-w="back">${icon('left', 16)} Назад</button>` : S ? `<button class="btn ghost" data-w="cancel">Скасувати</button>` : '<span></span>'}<button class="btn primary lg" data-w="next">${w.step === st.length - 1 ? `${icon('rocket', 18)} Заснувати компанію` : `Далі ${icon('right', 16)}`}</button></div></div>`;
     el.querySelector('[autofocus]')?.focus();
   };
   const setPath = (path, v) => { const ks = path.split('.'); let o = c; for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]]; o[ks.at(-1)] = v; };
@@ -175,11 +175,14 @@ function startWizard() {
     else if (k === 'sym') w.sym = b.dataset.v;
     else if (k === 'fff') w.fff = !w.fff;
     else if (k === 'back') w.step--;
+    else if (k === 'cancel') { el.remove(); document.body.classList.remove('wz-on'); return; }
     else if (k === 'next') {
       const err = check[st[w.step]]?.();
       if (err) { toast(err[0], 'bad'); (el.querySelector(err[1] ? `[data-c="${err[1]}"]` : '[data-w="name"], [data-w="company"]'))?.focus(); return; }
       if (w.step === st.length - 1) {
-        const custom = w.idea === 'custom' ? { ...c, segments: c.segments.filter(x => x.name.trim()), features: c.features.filter(f => f.name.trim()), competitors: c.competitors.filter(x => x.name.trim()) } : null;
+        // порожні групи клієнтів відкидаємо, а посилання функцій і конкурентів на групи перенумеровуємо
+        const keep = c.segments.map((x, i) => x.name.trim() ? i : -1).filter(i => i >= 0), remap = a => a.map(i => keep.indexOf(i)).filter(i => i >= 0);
+        const custom = w.idea === 'custom' ? { ...c, segments: keep.map(i => c.segments[i]), features: c.features.filter(f => f.name.trim()).map(f => ({ ...f, segs: remap(f.segs) })), competitors: c.competitors.filter(x => x.name.trim()).map(x => ({ ...x, segs: remap(x.segs) })) } : null;
         S = newGame({ idea: w.idea === 'custom' ? 'homework' : w.idea, founder: w.name.trim(), bg: w.bg, company: w.company.trim(), color: w.color, sym: w.sym, fff: w.fff, custom });
         el.remove(); document.body.classList.remove('wz-on'); ui.view = 'dash'; render(); window.Startup.S = S;
         return;

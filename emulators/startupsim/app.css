@@ -467,3 +467,9 @@ body.wz-on .app { filter: blur(3px); }
   .wz-row { grid-template-columns: 1fr auto; } .wz-row select.inp { grid-column: 1 / -1; grid-row: 2; }
   .wz-body { max-height: none; }
 }
+/* таблиці на телефоні: компактніше й з горизонтальною прокруткою, а не за межі екрана */
+.ab-res { overflow-x: auto; }
+@media (max-width: 640px) { .tbl th, .tbl td { padding: 7px 6px; } .tbl th { letter-spacing: 0; font-size: 11px; } }
+.season { grid-template-columns: repeat(12, minmax(0, 1fr)); } .season small { overflow: hidden; max-width: 100%; }
+.report .rp-h > div { min-width: 0; }
+@media (max-width: 480px) { .season { gap: 2px; } .season small { font-size: 10px; } .report .rp-h { flex-wrap: wrap; } }

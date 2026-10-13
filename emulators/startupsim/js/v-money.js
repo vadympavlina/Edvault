@@ -11,7 +11,8 @@ function pricing(S) {
   s.flags.breakEvenSeen = true;
   const cac = S.cac(), ltv = S.ltv(), ratio = cac > 0 && Number.isFinite(cac) ? ltv / cac : null;
   const be = S.breakEven(), paid = S.paidUsers(t);
-  const c = S.seg().b2b ? null : S.I.models.filter(m => m !== 'b2b' && m !== 'device');
+  // модель для звичайних людей можна обрати, якщо серед сегментів є хоч один B2C
+  const c = hw || S.segIds.every(k => S.seg(k).b2b) ? null : S.I.models.filter(m => m !== 'b2b' && m !== 'device');
   const priceRow = k => {
     const G = S.seg(k), K = S.insight(k), max = Math.round(G.wtp / (G.units || 1) * 2.5 / 10) * 10, pf = S.priceF(k), m = S.modelOf(k);
     return `<div class="price-row ${k === t ? 'target' : ''}"><div><b>${esc(G.short)}</b><small>${MODELS[m].t}${G.units ? ` · ${G.units} пристроїв у замовленні` : ''}</small></div>
@@ -35,7 +36,7 @@ function pricing(S) {
     <section class="card"><header class="card-h"><h3>${icon('target')} Точка беззбитковості</h3></header>
       <p>Постійні витрати на місяць: <b>${money(be.fixed)}</b> (зарплати, сервери, бухгалтерія, реклама).</p>
       <p>Заробіток з одного клієнта після комісій і собівартості: <b class="${be.margin > 0 ? 'pos' : 'neg'}">${money(be.margin)}</b>${hw ? '' : ' на місяць'}.</p>
-      ${be.margin > 0 ? `<p class="big">Потрібно <b>${num(be.need)}</b> ${be.unit}</p>${hw ? '' : `${meter(paid / be.need, { color: paid >= be.need ? 'var(--ok)' : 'var(--acc)' })}<small class="muted">Зараз: ${num(paid)} (${pct(Math.min(1, paid / be.need))})</small>`}` : '<p class="note bad">Ціна не покриває навіть змінних витрат — беззбитковість недосяжна. Підніміть ціну або зменшіть собівартість.</p>'}
+      ${be.margin > 0 ? `<p class="big">Потрібно <b>${num(be.need)}</b> ${plural(be.need, ...be.unit)}</p>${hw ? '' : `${meter(paid / be.need, { color: paid >= be.need ? 'var(--ok)' : 'var(--acc)' })}<small class="muted">Зараз: ${num(paid)} (${pct(Math.min(1, paid / be.need))})</small>`}` : '<p class="note bad">Ціна не покриває навіть змінних витрат — беззбитковість недосяжна. Підніміть ціну або зменшіть собівартість.</p>'}
     </section>
   </div>`;
 }
@@ -49,8 +50,8 @@ function finance(S, ui) {
   const L = s.loan, lim = S.loanLimit(), Cr = s.crowd;
   return `<div class="kpis">
     <div class="kpi"><span class="kpi-l">Гроші</span><b>${money(s.cash)}</b></div>
-    <div class="kpi"><span class="kpi-l">${term('Burn rate')} за тиждень</span><b class="${S.burnWeekly() > 0 ? 'neg' : 'pos'}">${money(Math.max(0, S.burnWeekly()))}</b><small>${S.burnWeekly() <= 0 ? 'виручка більша за витрати' : 'витрати мінус виручка'}</small></div>
-    <div class="kpi"><span class="kpi-l">${term('Runway')}</span><b>${S.runwayWeeks() === Infinity ? '∞' : Math.max(0, Math.floor(S.runwayWeeks())) + ' тиж.'}</b></div>
+    <div class="kpi"><span class="kpi-l">${term('Burn rate')} за тиждень</span><b class="${S.burnWeekly() > 0 ? 'neg' : 'pos'}">${money(Math.max(0, S.burnWeekly()))}</b><small>${S.burnWeekly() <= 0 ? 'виручка більша за витрати' : 'витрати мінус виручка, середнє за 4 тиж.'}</small></div>
+    <div class="kpi"><span class="kpi-l">${term('Runway')}</span><b>${S.runwayWeeks() === Infinity ? '∞' : S.runwayWeeks() > 104 ? '2+ роки' : Math.max(0, Math.floor(S.runwayWeeks())) + ' тиж.'}</b></div>
     <div class="kpi"><span class="kpi-l">${term('Оцінка компанії')}</span><b>${money(val)}</b><small>ваша частка ≈ ${money(val * S.stake())}</small></div>
   </div>
   <section class="card"><header class="card-h"><h3>${icon('building')} Форма компанії</h3>${term('ФОП і ТОВ')}</header>
@@ -71,7 +72,7 @@ function finance(S, ui) {
   <div class="grid g2">
     <section class="card"><header class="card-h"><h3>${icon('bank')} Банківський кредит</h3></header>
       ${L && !L.closed ? `<p>Кредит ${money(L.amt)} під ${pct(L.rate)} річних. Щотижневий платіж: <b>${money(L.pay)}</b>. Лишилось ${L.left} ${plural(L.left, 'платіж', 'платежі', 'платежів')}, борг ${money(L.owed)}.</p>${meter(1 - L.left / L.n)}<p class="sm muted">Загалом поверните ≈ ${money(L.pay * L.n)} — це на ${money(L.pay * L.n - L.amt)} більше, ніж узяли.</p>`
-        : lim > 0 ? `<p class="sm">Банк дає кредит під 26% річних на рік, якщо у вас є стабільна виручка. Ліміт: <b>${money(lim)}</b>.</p><div class="sl"><input type="range" min="${Math.min(50000, lim)}" max="${lim}" step="10000" value="${Math.round(lim / 2 / 10000) * 10000}" data-in="loanAmt" aria-label="Сума кредиту"><output data-out="loan">${money(Math.round(lim / 2 / 10000) * 10000)}</output></div><button class="btn" data-act="loan">Взяти кредит</button>`
+        : lim > 0 ? `<p class="sm">Банк дає кредит під 26% річних на рік, якщо у вас є стабільна виручка. Ліміт: <b>${money(lim)}</b>.</p><div class="sl"><input type="range" min="10000" max="${lim}" step="10000" value="${Math.max(10000, Math.round(lim / 2 / 10000) * 10000)}" data-in="loanAmt" aria-label="Сума кредиту"><output data-out="loan">${money(Math.max(10000, Math.round(lim / 2 / 10000) * 10000))}</output></div><button class="btn" data-act="loan">Взяти кредит</button>`
         : `<p class="muted sm">Банк дає кредит лише зареєстрованій компанії з виручкою щонайменше 8 тижнів поспіль.${L?.closed ? ' Попередній кредит погашено.' : ''}</p>`}</section>
     <section class="card"><header class="card-h"><h3>${icon('users')} Краудфандинг</h3></header>
       ${Cr && Cr.status === 'live' ? `<p>Кампанія триває до тижня ${Cr.end}. Зібрано <b>${money(Cr.raised)}</b> з ${money(Cr.goal)} від ${Cr.backers} ${plural(Cr.backers, 'людини', 'людей', 'людей')}.</p>${meter(Cr.raised / Cr.goal, { color: 'var(--ok)' })}<p class="sm muted">Правило «все або нічого»: якщо не зберете мету, гроші повернуться людям.</p>`
@@ -114,11 +115,12 @@ function investors(S) {
     const st = s.inv[I.id], need = S.needsOf(I), amount = I.amount[0] === I.amount[1] ? money(I.amount[0]) : `${money(I.amount[0])} — ${money(I.amount[1])}`;
     const take = I.take === 0 ? 'без частки' : Array.isArray(I.take) ? `${pct(I.take[0])}–${pct(I.take[1])}` : pct(I.take);
     let action = '';
-    if (!st || st.status === 'declined' || (st.status === 'rejected' && s.week - st.week >= 8)) action = `<button class="btn primary sm" data-act="pitch" data-k="${I.id}">${I.kind === 'grant' ? 'Подати заявку' : 'Запросити на зустріч'}</button>`;
+    if (I.kind === 'grant' && st?.status === 'rejected') action = '<span class="chip bad">Відмова · подати можна лише раз</span>';
+    else if (!st || st.status === 'declined' || (st.status === 'rejected' && s.week - st.week >= 8)) action = `<button class="btn primary sm" data-act="pitch" data-k="${I.id}">${I.kind === 'grant' ? 'Подати заявку' : 'Запросити на зустріч'}</button>`;
     else if (st.status === 'meeting') action = '<span class="chip">Зустріч цього тижня</span>';
     else if (st.status === 'grantWait') action = `<span class="chip">Розгляд заявки, рішення через ${Math.max(1, st.week + 3 - s.week)} тиж.</span>`;
-    else if (st.status === 'rejected') action = `<span class="chip bad">Відмова${st.reason ? '' : ''}</span>`;
-    else if (st.status === 'invested' || st.status === 'accel') action = '<span class="chip ok">Інвестував</span>';
+    else if (st.status === 'rejected') action = `<span class="chip bad">Відмова · знову можна з тижня ${st.week + 9}</span>`;
+    else if (st.status === 'invested' || st.status === 'accel') action = `<span class="chip ok">${I.kind === 'grant' ? 'Грант отримано' : 'Інвестував'}</span>`;
     else if (st.status === 'offer') action = `<div class="offer"><b>Пропозиція: ${money(st.offer.amount)} за ${pct(st.offer.take, 1)}</b><small>Оцінка після інвестиції: ${money(st.offer.amount / st.offer.take)}. Ваша частка стане ${pct(S.stake() * (1 - st.offer.take), 1)}. Діє до тижня ${st.offer.until + 1}.</small><div class="row gap wrap"><button class="btn primary sm" data-act="accept" data-k="${I.id}">Прийняти</button>${st.countered ? '' : `<button class="btn sm" data-act="counter" data-k="${I.id}">Торгуватися</button>`}<button class="btn sm ghost" data-act="decline" data-k="${I.id}">Відмовитися</button></div></div>`;
     return `<article class="card inv ${st?.status === 'offer' ? 'hot' : ''}"><header class="card-h"><h3>${icon(I.icon)} ${esc(I.t)}</h3><span class="chip sm">${{ grant: 'грант', accel: 'акселератор', angel: 'бізнес-ангел', vc: 'венчурний фонд' }[I.kind]}</span></header>
       <small class="muted">${esc(I.who)}</small><p class="sm">${esc(I.about)}</p><div class="ins"><div><span>Сума</span><b>${amount}</b></div><div><span>Хоче</span><b>${take}</b></div></div>
@@ -140,7 +142,7 @@ function invest(S, ui) {
   const s = S.s, port = s.port, total = S.portValue(), risky = S.riskyShare();
   const assets = Object.entries(ASSETS).filter(([k, a]) => !a.hidden || s.flags.memeOffered);
   return `<p class="lead">Якщо грошей більше, ніж потрібно на найближчі місяці, їх можна вкласти. Головне правило: гроші, які знадобляться на зарплати й рахунки, не мають лежати в ризикових активах.</p>
-  <div class="kpis"><div class="kpi"><span class="kpi-l">Вільні гроші</span><b>${money(s.cash)}</b></div><div class="kpi"><span class="kpi-l">У вкладеннях</span><b>${money(total)}</b><small>${total ? delta2(total - sum(Object.values(port).map(p => p.in))) : ''}</small></div><div class="kpi ${risky > .1 ? 'warn' : ''}"><span class="kpi-l">Частка ризикових активів</span><b>${pct(risky)}</b><small>розумно — до 10%</small></div><div class="kpi"><span class="kpi-l">Runway без вкладень</span><b>${S.runwayWeeks() === Infinity ? '∞' : Math.floor(S.runwayWeeks()) + ' тиж.'}</b></div></div>
+  <div class="kpis"><div class="kpi"><span class="kpi-l">Вільні гроші</span><b>${money(s.cash)}</b></div><div class="kpi"><span class="kpi-l">У вкладеннях</span><b>${money(total)}</b><small>${total ? delta2(total - sum(Object.values(port).map(p => p.in))) : ''}</small></div><div class="kpi ${risky > .1 ? 'warn' : ''}"><span class="kpi-l">Частка ризикових активів</span><b>${pct(risky)}</b><small>розумно — до 10%</small></div><div class="kpi"><span class="kpi-l">Runway без вкладень</span><b>${S.runwayWeeks() === Infinity ? '∞' : S.runwayWeeks() > 104 ? '2+ роки' : Math.max(0, Math.floor(S.runwayWeeks())) + ' тиж.'}</b></div></div>
   <div class="grid g2">${assets.map(([k, A]) => { const p = port[k]; const gain = p ? p.v - p.in : 0; return `<article class="card asset ${A.hidden ? 'scam' : ''}"><header class="card-h"><h3>${icon(k === 'crypto' || k === 'meme' ? 'bitcoin' : k === 'deposit' ? 'bank' : k === 'ovdp' ? 'shield' : 'trend')} ${esc(A.t)}</h3><span class="chip ${A.risk === 'Шахрайство' ? 'bad' : A.risk.includes('високий') ? 'warn' : 'ok'}">Ризик: ${A.risk.toLowerCase()}</span></header>
     <p class="sm">${esc(A.desc)}</p>${A.hidden ? '' : `<div class="ins"><div><span>Очікувана дохідність</span><b>${pct(A.y)} на рік</b></div><div><span>Коливання</span><b>${A.vol ? '±' + pct(A.vol) : 'немає'}</b></div><div><span>Комісія</span><b>${pct(A.fee, 1)}</b></div></div>`}
     ${p ? `<p>Вкладено ${money(p.in)} → зараз <b class="${gain >= 0 ? 'pos' : 'neg'}">${money(p.v)}</b> (${gain >= 0 ? '+' : ''}${pct(gain / Math.max(1, p.in), 1)})</p>` : ''}
@@ -161,7 +163,7 @@ export const moneyActs = {
   register: async (C, el) => { const k = el.dataset.k; if (!await confirmBox(k === 'tov' ? 'Зареєструвати ТОВ за 12 000 ₴?' : 'Зареєструвати ФОП?', 'Зареєструвати')) return; if (C.S.register(k)) C.toast(k === 'tov' ? 'ТОВ зареєстровано' : 'ФОП зареєстровано', 'good'); else C.toast('Не вистачає грошей', 'bad'); C.render(); C.topbar(); },
   newPlan: C => { C.ui.newPlan = true; C.render(); },
   savePlan: C => { const v = k => +(document.querySelector(`[data-plan="${k}"]`)?.value || 0); C.S.setPlan([0, 1, 2].map(i => ({ rev: v('rev' + i), cost: v('cost' + i) }))); C.ui.newPlan = false; C.toast('Фінплан збережено. Порівнюйте з фактом щомісяця.', 'good'); C.render(); },
-  loan: async C => { const v = +(document.querySelector('[data-in="loanAmt"]')?.value || 0); if (!await confirmBox(`Взяти кредит ${money(v)} під 26% річних?`, 'Взяти', { sub: 'Платити доведеться щотижня, навіть якщо виручка впаде.' })) return; if (C.S.takeLoan(v)) C.toast('Кредит отримано', 'good'); C.render(); C.topbar(); },
+  loan: async C => { const v = +(document.querySelector('[data-in="loanAmt"]')?.value || 0); if (!await confirmBox(`Взяти кредит ${money(v)} під 26% річних?`, 'Взяти', { sub: 'Платити доведеться щотижня, навіть якщо виручка впаде.' })) return; if (C.S.takeLoan(v)) C.toast('Кредит отримано', 'good'); else C.toast('Банк відмовив: сума більша за ліміт', 'bad'); C.render(); C.topbar(); },
   crowd: C => { const g = +(document.querySelector('[data-cr="goal"]')?.value || 0), r = +(document.querySelector('[data-cr="reward"]')?.value || 0); if (g < 20000 || r < 50) { C.toast('Перевірте мету й ціну винагороди', 'bad'); return; } if (C.S.startCrowd(g, r)) C.toast('Кампанію запущено', 'good'); C.render(); },
   order: C => { const n = C.ui.batch || 500; if (C.S.orderBatch(n)) C.toast(`Замовлено ${n} пристроїв`, 'good'); else C.toast('Не вистачає грошей на партію', 'bad'); C.render(); C.topbar(); },
   payMain: (C, el) => { if (C.S.setPay(el.dataset.k, 'main')) C.toast(`Підключено: ${PAYMENTS[el.dataset.k].t}`, 'good'); else C.toast('Не вдалося підключити', 'bad'); C.render(); C.topbar(); },
