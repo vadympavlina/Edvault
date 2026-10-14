@@ -10,7 +10,7 @@ export function setSize(w, h) { W = w; H = h; }
 const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
 
 export class Cell {
-  constructor() { this.canvas = null; this.blob = null; this.empty = true; this.rev = 0; this.used = 0; this.loading = null; }
+  constructor() { this.canvas = null; this.blob = null; this.empty = true; this.rev = 0; this.used = 0; this.loading = null; this.cache = null; }
   // canvas для малювання (створює порожній, якщо клітинки ще не було)
   draw() { if (!this.canvas) { if (this.blob) throw new Error('спершу load()'); this.canvas = mk(); } this.touch(); this.empty = false; this.blob = null; this.rev++; return this.canvas; }
   touch() { this.used = ++tick; live.add(this); }
@@ -21,7 +21,7 @@ export class Cell {
     if (this.canvas || !this.blob) return this.canvas;
     if (!this.loading) this.loading = (async () => {
       const bmp = await createImageBitmap(this.blob);
-      if (!this.canvas) { const c = mk(); c.getContext('2d').drawImage(bmp, 0, 0); this.canvas = c; }
+      if (!this.canvas) { const c = mk(); c.getContext('2d').drawImage(bmp, 0, 0); this.canvas = c; this.cache = { blob: this.blob, rev: this.rev }; this.blob = null; }
       bmp.close && bmp.close();
       this.touch(); this.loading = null;
       return this.canvas;
@@ -31,6 +31,7 @@ export class Cell {
   // PNG клітинки (для файлу й автозбереження)
   async png() {
     if (this.blob && !this.canvas) return this.blob;
+    if (this.cache && this.cache.rev === this.rev) return this.cache.blob;
     if (!this.canvas) return null;
     return new Promise(r => this.canvas.toBlob(r, 'image/png'));
   }
@@ -54,9 +55,11 @@ export async function trim(keep = new Set()) {
   if (live.size <= LIMIT) return;
   const list = [...live].filter(c => c.canvas && !keep.has(c)).sort((a, b) => a.used - b.used);
   for (const c of list.slice(0, live.size - LIMIT)) {
+    // клітинку не міняли після завантаження — PNG уже є, стискати вдруге не треба
+    if (c.cache && c.cache.rev === c.rev) { c.blob = c.cache.blob; c.canvas = null; live.delete(c); continue; }
     const rev = c.rev, blob = await new Promise(r => c.canvas.toBlob(r, 'image/png'));
-    if (!blob || c.rev !== rev || keep.has(c)) continue; // поки стискали, клітинку змінили — лишаємо
-    c.blob = blob; c.canvas = null; live.delete(c);
+    if (!blob || c.rev !== rev || keep.has(c) || !c.canvas) continue; // поки стискали, клітинку змінили — лишаємо
+    c.blob = blob; c.cache = { blob, rev }; c.canvas = null; live.delete(c);
   }
 }
 export function forgetAll() { live.clear(); }

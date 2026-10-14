@@ -20,7 +20,7 @@ async function* frames(stage, scale, onProgress) {
     const cv = await renderFrame(stage, i, scale);
     yield { i, cv, ms: P.frames[i].hold * 1000 / P.fps };
     if (onProgress) onProgress((i + 1) / P.frames.length);
-    if (i % 8 === 7) { await trim(); await nextTick(); }
+    if (i % 8 === 7) { await trim(stage.keepCells()); await nextTick(); }
   }
 }
 
@@ -108,7 +108,7 @@ export async function exportSprite(stage, { maxW = 4096, transparent = true, onP
     const cv = await renderFrame(stage, i, scale, { transparent });
     g.drawImage(cv, (i % cols) * fw, Math.floor(i / cols) * fh);
     onProgress && onProgress((i + 1) / n);
-    if (i % 8 === 7) { await trim(); await nextTick(); }
+    if (i % 8 === 7) { await trim(stage.keepCells()); await nextTick(); }
   }
   const png = await new Promise(r => sheet.toBlob(r, 'image/png'));
   const json = { image: 'sprite.png', frameWidth: fw, frameHeight: fh, columns: cols, rows, frames: P.frames.map((f, i) => ({ x: (i % cols) * fw, y: Math.floor(i / cols) * fh, w: fw, h: fh, durationMs: Math.round(f.hold * 1000 / P.fps) })) };

@@ -35,10 +35,10 @@ export class Stage {
   }
   fit() {
     // inset — місце під картку уроку, щоб вона не затуляла аркуш
-    const pad = this.W < 640 ? 16 : 48, { w, h } = this.P, l = this.inset?.l || 0, b = this.inset?.b || 0;
-    const W = this.W - l, H = this.H - b;
-    this.view.z = Math.min((W - pad * 2) / w, (H - pad * 2) / h, 2);
-    this.view.x = l + (W - w * this.view.z) / 2; this.view.y = (H - h * this.view.z) / 2;
+    const pad = this.W < 640 ? 16 : 48, { w, h } = this.P, l = this.inset?.l || 0, b = this.inset?.b || 0, t = this.inset?.t || 0;
+    const W = Math.max(80, this.W - l), H = Math.max(80, this.H - b - t);
+    this.view.z = Math.max(0.05, Math.min((W - pad * 2) / w, (H - pad * 2) / h, 2));
+    this.view.x = l + (W - w * this.view.z) / 2; this.view.y = t + (H - h * this.view.z) / 2;
     this.render(); this.app.changed('zoom');
   }
   zoomAt(f, sx = this.W / 2, sy = this.H / 2) {
@@ -51,6 +51,13 @@ export class Stage {
   /* ── поточні шар, кадр, клітинка ── */
   get frame() { return this.P.frames[this.S.fi]; }
   get layer() { return this.P.layers[this.S.li]; }
+  // клітинки, які зараз на екрані (поточний кадр і калька) — їх не можна згортати
+  keepCells() {
+    const keep = new Set(), add = fi => { if (fi >= 0 && fi < this.P.frames.length) for (const c of this.frameCells(fi)) if (c) keep.add(c); };
+    add(this.S.fi); for (let k = 1; k <= (this.S.onionN || 1); k++) { add(this.S.fi - k); add(this.S.fi + k); }
+    if (this.float) keep.add(this.float.cell);
+    return keep;
+  }
   frameCells(fi) { const f = this.P.frames[fi]; return this.P.layers.map(l => l.cells.get(f.id) || null); }
   // завантажити згорнуті клітинки, потрібні для показу
   async prepare() {
@@ -507,8 +514,8 @@ export class Stage {
     else { const m = Math.max(Math.abs(dx), Math.abs(dy)); s.x2 = s.x1 + m * Math.sign(dx || 1); s.y2 = s.y1 + m * Math.sign(dy || 1); }
   }
   shapeOpts() { return { color: this.S.color, size: this.S.size, fill: this.S.shapeFill }; }
-  preview() {
-    const op = this.op, g = this.tmp.getContext('2d');
+  preview(op = this.op) {
+    const g = this.tmp.getContext('2d');
     g.clearRect(0, 0, this.tmp.width, this.tmp.height);
     drawShape(g, op.s, this.shapeOpts());
     if (this.S.symmetry) drawShape(g, { ...op.s, x1: this.P.w - op.s.x1, x2: this.P.w - op.s.x2 }, this.shapeOpts());
@@ -517,7 +524,7 @@ export class Stage {
   endShape(op) {
     const s = op.s;
     if (Math.hypot(s.x2 - s.x1, s.y2 - s.y1) < 2) { this.cancel(); return; }
-    this.preview();
+    this.preview(op);
     const pad = this.S.size + 4, box = { x0: Math.min(s.x1, s.x2) - pad, y0: Math.min(s.y1, s.y2) - pad, x1: Math.max(s.x1, s.x2) + pad, y1: Math.max(s.y1, s.y2) + pad };
     if (this.S.symmetry) { box.x0 = Math.min(box.x0, this.P.w - Math.max(s.x1, s.x2) - pad); box.x1 = Math.max(box.x1, this.P.w - Math.min(s.x1, s.x2) + pad); }
     this.commit(op, box);

@@ -60,9 +60,10 @@ function begin(project, extras = {}) {
   stage.resetBuffers();
   stage.resize(); stage.fit();
   P.frames.forEach(f => stale.add(f.id));
-  $('#lessonCard').classList.toggle('mini', !!P.lesson && innerWidth < 860);
+  $('#lessonCard').classList.toggle('mini', !!P.lesson && innerWidth < 860); delete $('#lessonCard').dataset.user;
   goFrame(S.fi, true);
   renderAll();
+  scheduleThumbs();
   saveSoon();
 }
 async function setRef(blob) {
@@ -135,12 +136,23 @@ function redo() { if (S.playing) stop(); hist.redo(applyStep); renderTop(); }
 let saveT = 0;
 function touched() { $('#saveDot').classList.add('dirty'); saveSoon(); scheduleThumbs(); renderTop(); }
 function saveSoon() { clearTimeout(saveT); saveT = setTimeout(saveNow, 1200); }
+let saving = null, saveAgain = false, saveWarned = false;
 async function saveNow() {
   if (!P) return;
-  try {
-    await autosave(P, { audio: audio.blob, ref: app.refBlob, ui: { fi: S.fi, li: S.li } });
-    $('#saveDot').classList.remove('dirty');
-  } catch (e) { console.warn('Аніматор: автозбереження не вдалося', e); }
+  // одне збереження за раз; зміни під час запису — ще одне коло
+  if (saving) { saveAgain = true; return saving; }
+  saving = (async () => {
+    try {
+      const ok = await autosave(P, { audio: audio.blob, ref: app.refBlob, ui: { fi: S.fi, li: S.li } });
+      if (ok) { $('#saveDot').classList.remove('dirty'); saveWarned = false; }
+      else if (!saveWarned) { saveWarned = true; toast('Браузер не дає зберігати тут (приватне вікно?). Збережіть мультфільм у файл: Файл → Зберегти', 'bad', { ms: 7000 }); }
+    } catch (e) {
+      console.warn('Аніматор: автозбереження не вдалося', e);
+      if (!saveWarned) { saveWarned = true; toast('Не вдалося зберегти в браузері — забракло місця. Збережіть мультфільм у файл (Ctrl+S)', 'bad', { ms: 8000, action: 'Зберегти', onAction: saveFile }); }
+    }
+  })();
+  await saving; saving = null;
+  if (saveAgain) { saveAgain = false; saveNow(); }
 }
 function changed(kind) {
   if (kind === 'zoom') $('#zoomVal').textContent = Math.round(stage.view.z * 100) + '%';
@@ -154,7 +166,9 @@ let thumbT = 0;
 function scheduleThumbs() { clearTimeout(thumbT); thumbT = setTimeout(updateThumbs, 160); }
 async function updateThumbs() {
   if (!P) return;
+  let n = 0;
   for (const id of [...stale]) {
+    if (++n % 12 === 0) await trim(stage.keepCells()); // довгий мультфільм не повинен розгорнутися в пам'ять цілком
     const fi = P.frameIndex(id); stale.delete(id);
     if (fi < 0) { thumbs.delete(id); continue; }
     const f = P.frames[fi];
@@ -165,6 +179,7 @@ async function updateThumbs() {
     if (t.width !== tw || t.height !== th) { t.width = tw; t.height = th; }
     stage.composeFrame(fi, t, { withBg: true });
   }
+  if (n > 12) await trim(stage.keepCells());
   renderFilm(); renderLayerThumbs();
 }
 
@@ -178,8 +193,7 @@ async function goFrame(i, force) {
   stage.rebuild();
   renderTransport(); markFilm(); renderLayerThumbs(); renderLesson();
   await stage.prepare(); stage.rebuild();
-  const keep = new Set(); for (let k = -S.onionN; k <= S.onionN; k++) { const f = P.frames[i + k]; if (f) P.layers.forEach(l => { const c = l.cells.get(f.id); if (c) keep.add(c); }); }
-  trim(keep);
+  trim(stage.keepCells());
 }
 function selectLayer(i) { stage.commitFloat(); S.li = i; stage.rebuild(); renderSide(); }
 const addFrame = (empty = true) => struct(() => { const f = empty ? P.addFrame(S.fi + 1) : P.duplicateFrame(S.fi); if (!f) { toast('Досягнуто ліміту кадрів', 'bad'); return false; } S.fi += 1; stale.add(f.id); });
@@ -204,7 +218,8 @@ async function play() {
       const cv = document.createElement('canvas'); cv.width = Math.round(P.w * scale); cv.height = Math.round(P.h * scale);
       stage.composeFrame(i, cv);
       out.push(await createImageBitmap(cv));
-      if (i % 10 === 9) await trim();
+      if (i % 10 === 9) await trim(stage.keepCells());
+      if (busyToast && i % 15 === 14) toast(`Готуємо перегляд… ${Math.round((i + 1) / P.frames.length * 100)}%`, '');
     }
     if (playList) playList.forEach(b => b.close && b.close());
     playList = out; playSig = sig;
@@ -404,17 +419,28 @@ function renderLesson() {
   const card = $('#lessonCard'), L = P && P.lesson && LESSONS[P.lesson];
   if (!L) { card.hidden = true; fitInset(); return; }
   card.hidden = false;
+  renderLessonInner();
+  fitInset();
+}
+function renderLessonInner() {
+  const card = $('#lessonCard'), L = P && P.lesson && LESSONS[P.lesson]; if (!L) return;
   const step = Math.min(L.steps.length - 1, S.fi === 0 ? 0 : S.fi < 2 ? 1 : S.fi < P.frames.length / 2 ? 2 : 3);
   card.innerHTML = `<h3>${esc(L.title)}</h3><p class="goal">${esc(L.goal)}</p><ol>${L.steps.map((s, i) => `<li class="${i === step ? 'now' : ''}">${esc(s)}</li>`).join('')}</ol>
     <div class="row"><button class="tg" data-act="lessonMin">${card.classList.contains('mini') ? 'Показати кроки' : 'Згорнути'}</button><button class="tg" data-act="lessonEnd" data-tip="Сховати напрямні й картку уроку">Завершити урок</button></div>`;
-  fitInset();
 }
 // картка уроку не повинна затуляти аркуш: на широкому екрані — місце ліворуч, на вузькому — знизу
 function fitInset() {
-  const card = $('#lessonCard'), wide = stage.W >= 860;
-  const inset = card.hidden ? { l: 0, b: 0 } : wide ? { l: card.offsetWidth + 14, b: 0 } : { l: 0, b: card.offsetHeight + 10 };
-  const old = stage.inset || { l: 0, b: 0 };
-  if (old.l === inset.l && old.b === inset.b) return;
+  const card = $('#lessonCard');
+  let inset = { l: 0, b: 0, t: 0 };
+  if (!card.hidden) {
+    const bottom = innerWidth <= 640; // на телефоні картка внизу
+    // збоку — лише якщо аркушу лишається досить місця; інакше картка згортається над аркушем
+    if (!bottom && !card.dataset.user && !card.classList.contains('mini') && stage.W - card.offsetWidth - 14 < 460) { card.classList.add('mini'); renderLessonInner(); }
+    const mini = card.classList.contains('mini');
+    inset = bottom ? { l: 0, b: card.offsetHeight + 10, t: 0 } : mini ? { l: 0, b: 0, t: card.offsetHeight + 14 } : { l: card.offsetWidth + 14, b: 0, t: 0 };
+  }
+  const old = stage.inset || { l: 0, b: 0, t: 0 };
+  if (old.l === inset.l && old.b === inset.b && old.t === inset.t) return;
   stage.inset = inset; stage.fit();
 }
 function renderAll() { renderTop(); renderRail(); renderProp(); renderSide(); renderTransport(); renderFilm(); renderLesson(); }
@@ -582,7 +608,7 @@ function exportDialog() {
       toast('Експорт готовий', 'good');
     } catch (err) { state.textContent = 'Не вдалося: ' + (err.message || err); toast('Експорт не вдався', 'bad'); }
     delete api.el.dataset.busy; api.el.querySelectorAll('.ex').forEach(x => x.disabled = x.dataset.ex === 'video' && !vt);
-    stage.rebuild();
+    await stage.prepare(); stage.rebuild();
   });
 }
 
@@ -708,7 +734,7 @@ const ACTS = {
   refDel: () => { setRef(null); touched(); },
   audioAdd: addAudio, audioRec: recAudio,
   audioDel: () => { audio.set(null); P.audio = null; renderSide(); renderFilm(); touched(); },
-  lessonMin: () => { $('#lessonCard').classList.toggle('mini'); renderLesson(); },
+  lessonMin: () => { const c = $('#lessonCard'); c.classList.toggle('mini'); c.dataset.user = 1; renderLesson(); },
   lessonEnd: () => { P.lesson = null; app.guides = null; renderLesson(); renderTransport(); stage.render(); touched(); },
 };
 function renameLayer(i) {

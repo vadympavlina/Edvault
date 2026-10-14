@@ -197,6 +197,7 @@ await step('автозбереження: після перезавантаже�
   const s = await st();
   assert.equal(s.frames, before.frames); assert.equal(s.title, before.title); assert.deepEqual(s.holds, before.holds);
   assert.equal(await p.locator('.md-wrap').count(), 0, 'стартове вікно не відкривається');
+  await p.waitForFunction(n => document.querySelectorAll('.fr canvas').length === n, s.frames, { timeout: 5000 });
 });
 
 await step('урок «М’яч»: напрямні й картка з кроками', async () => {
@@ -316,6 +317,23 @@ await step('виділення: поворот на 90° і ласо-виділ�
   await p.click('[data-set="selMode"][data-v="rect"]');
 });
 
+await step('фігури: лінія, прямокутник із заливкою, еліпс-контур лягають на шар', async () => {
+  const fi = await fresh();
+  await setS({ size: 6, opacity: 1, color: '#2337a8', alphaLock: false });
+  await p.keyboard.press('l'); await drag([[100, 100], [300, 100]]);
+  assert.ok((await px(1, fi, 200, 100))[3] > 200, 'лінія');
+  await p.keyboard.press('r'); await p.click('[data-set="shapeFill"][data-v="fill"]');
+  await drag([[100, 200], [200, 300]]);
+  assert.deepEqual((await px(1, fi, 150, 250)).slice(0, 4), [35, 55, 168, 255], 'прямокутник');
+  await p.keyboard.press('o'); await p.click('[data-set="shapeFill"][data-v="stroke"]');
+  await drag([[400, 200], [600, 400]]);
+  assert.ok((await px(1, fi, 500, 200))[3] > 200, 'контур еліпса');
+  assert.equal((await px(1, fi, 500, 300))[3], 0, 'еліпс порожній усередині');
+  await p.keyboard.press('Control+z'); await p.waitForTimeout(100);
+  assert.equal((await px(1, fi, 500, 200))[3], 0, 'Ctrl+Z прибрав еліпс');
+  await p.keyboard.press('b');
+});
+
 await step('плавність: панель з повзунком і готовими рівнями, кнопка «Грати» по центру', async () => {
   await p.keyboard.press('b');
   await p.click('[data-act="stabPick"]');
@@ -343,6 +361,22 @@ await step('планшет: дотик двома пальцями — скас�
   assert.equal(await ink(1, fi), 0, 'скасовано');
   await tap(3); await p.waitForTimeout(150);
   assert.equal(await ink(1, fi), n, 'повторено');
+});
+
+await step('довгий мультфільм: 120 кадрів не розгортаються в пам’ять цілком, після експорту кадр на місці', async () => {
+  await p.evaluate(() => {
+    const { P } = window.Animator;
+    while (P.frames.length < 120) P.addFrame();
+    P.frames.forEach((f, i) => { const c = P.ensureCell(P.layers[1], f), g = c.draw().getContext('2d'); g.fillStyle = '#e5484d'; g.fillRect(10 + i * 5, 50, 30, 30); });
+  });
+  await p.keyboard.press('n'); await p.keyboard.press('Control+z'); // плівка перебудовує мініатюри
+  await p.waitForFunction(() => document.querySelectorAll('.fr canvas').length >= 120, null, { timeout: 30000 });
+  const live = await p.evaluate(async () => (await import('/tools/animator-app/js/cells.js')).liveCount());
+  assert.ok(live <= 60, 'розгорнуто клітинок: ' + live);
+  await p.click('[data-act="export"]'); await p.click('[data-set="gifScale"][data-v="0.5"]');
+  await Promise.all([p.waitForEvent('download', { timeout: 120000 }), p.click('[data-ex="gif"]')]);
+  await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+  assert.ok(await p.evaluate(() => { const { P, S } = window.Animator, f = P.frames[S.fi]; return P.layers.every(l => { const c = l.cells.get(f.id); return !c || !!c.canvas || c.empty; }); }), 'поточний кадр розгорнутий і видимий');
 });
 
 await step('телефон: без горизонтальної прокрутки, аркуш видно, панель шарів висувається', async () => {
