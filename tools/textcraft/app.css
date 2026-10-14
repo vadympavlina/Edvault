@@ -144,31 +144,19 @@ svg{flex-shrink:0}
 [data-width="narrow"] .page-wrap{--page-w:780px}
 [data-width="wide"] .page-wrap{--page-w:1320px}
 .page{
-  --pad-x:84px;--pad-y:60px;--cell:20px;
-  background-color:var(--surface);border-radius:2px;
-  box-shadow:0 1px 0 var(--border2),0 2px 0 var(--surface),0 3px 0 var(--border2),0 4px 0 var(--surface),0 5px 0 var(--border2),var(--shadow-md);
+  --pad-x:72px;--pad-y:60px;
+  background:var(--surface);border:1px solid var(--border);border-radius:4px;box-shadow:var(--shadow-md);
   padding:var(--pad-y) var(--pad-x);min-height:70vh;position:relative;
 }
-/* аркуш у клітинку з полями, як у шкільному зошиті */
-[data-paper="grid"] .page{
-  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
-  background-size:var(--cell) var(--cell);background-position:-1px -1px;
-}
-[data-paper="grid"] .page::before{content:'';position:absolute;top:0;bottom:0;left:calc(var(--pad-x) - 26px);width:1.5px;background:var(--margin);pointer-events:none}
-.page-date{
-  font-family:'Caveat',cursive;font-size:27px;font-weight:600;line-height:1;color:var(--accent);
-  text-align:center;margin:-22px 0 22px;opacity:.92;user-select:none;-webkit-user-select:none;transform:rotate(-1deg);
-}
-[data-paper="plain"] .page-date,.page:has(.doc-header) .page-date{display:none}
-.page .doc-header{margin:calc(-1 * var(--pad-y)) calc(-1 * var(--pad-x)) 36px;border-radius:2px 2px 0 0;cursor:pointer}
+.page .doc-header{margin:calc(-1 * var(--pad-y)) calc(-1 * var(--pad-x)) 36px;border-radius:3px 3px 0 0;cursor:pointer}
 .page .doc-header:hover .doc-header-edit{opacity:1}
 .doc-header-edit{
   position:absolute;z-index:2;right:14px;bottom:44px;opacity:0;transition:opacity .15s;
   display:flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;
   background:rgba(0,0,0,.28);color:#fff;font-size:12px;font-weight:600;backdrop-filter:blur(6px);
 }
-@media(max-width:900px){.page{--pad-x:52px;--pad-y:40px}.page-wrap{padding:24px 16px 45vh}}
-@media(max-width:640px){.page{--pad-x:20px;--pad-y:28px}.page-wrap{padding:12px 8px 45vh}[data-paper="grid"] .page::before{display:none}.page-date{font-size:23px;margin:-12px 0 16px}}
+@media(max-width:900px){.page{--pad-x:40px;--pad-y:40px}.page-wrap{padding:24px 16px 45vh}}
+@media(max-width:640px){.page{--pad-x:20px;--pad-y:28px}.page-wrap{padding:12px 8px 45vh}}
 
 /* ═══════════ EDITOR ═══════════ */
 .editor{outline:none;min-height:50vh;caret-color:var(--accent);position:relative}
@@ -500,8 +488,6 @@ body.fig-dragging,body.fig-dragging *{cursor:grabbing!important;user-select:none
 
 /* ═══════════ ДРУК / PDF ═══════════ */
 @media print{
-  .page-date,.page::before{display:none !important}
-  .page{background-image:none !important}
   .editor .tc-toggle[data-collapsed]>*{display:revert!important}
   @page{margin:16mm 14mm}
   html,body{height:auto;overflow:visible;background:#fff !important;display:block}

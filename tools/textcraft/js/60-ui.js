@@ -930,8 +930,7 @@ function openViewPop(anchor) {
   const seg = (name, opts, cur) => '<div class="seg">' + opts.map(o => '<button data-v="' + name + ':' + o[0] + '" class="' + (o[0] === cur ? 'on' : '') + '">' + (o[2] ? icon(o[2]) : '') + esc(o[1]) + '</button>').join('') + '</div>';
   const html = '<div class="menu-label">Тема</div>' + seg('theme', [['light', 'Світла', 'sun'], ['dark', 'Темна', 'moon'], ['auto', 'Авто', 'monitor']], theme) +
     '<div class="menu-label">Ширина сторінки</div>' + seg('width', [['narrow', 'Вузька'], ['normal', 'Звичайна'], ['wide', 'Широка']], v.width || 'normal') +
-    '<div class="menu-label">Шрифт тексту</div>' + seg('font', [['serif', 'З засічками'], ['sans', 'Без засічок']], v.font || 'serif') +
-    '<div class="menu-label">Аркуш</div>' + seg('paper', [['grid', 'У клітинку'], ['plain', 'Чистий']], v.paper || 'grid');
+    '<div class="menu-label">Шрифт тексту</div>' + seg('font', [['serif', 'З засічками'], ['sans', 'Без засічок']], v.font || 'serif');
   Pop.open(anchor, html, val => {
     const [k, x] = val.split(':');
     if (k === 'theme') applyTheme(x);

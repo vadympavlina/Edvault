@@ -229,23 +229,6 @@ await step('друга вкладка з тим самим документом 
   await page.waitForFunction(() => document.getElementById('editor').isContentEditable, null, { timeout: 5000 });
 });
 
-await step('стиль «Зошит»: дата прописом, аркуш у клітинку й чистий', async () => {
-  await page.evaluate(() => document.querySelector('.tc-lockbar') && !document.querySelector('.tc-lockbar').hidden && document.querySelector('.tc-lockbar-btn')?.click());
-  const t = await page.evaluate(() => document.getElementById('pageDate').textContent);
-  assert.match(t, /^(Перше|Друге|Третє|Четверте|П’яте|Шосте|Сьоме|Восьме|Дев’яте|Десяте|\S+надцяте|Двадцяте|Двадцять \S+|Тридцяте|Тридцять перше) (січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)$/);
-  assert.equal(await page.evaluate(() => [1, 2, 3, 11, 21, 22, 30, 31].map(d => dateInWords(new Date(2026, 0, d).getTime())).join('|')),
-    'Перше січня|Друге січня|Третє січня|Одинадцяте січня|Двадцять перше січня|Двадцять друге січня|Тридцяте січня|Тридцять перше січня');
-  assert.equal(await page.getAttribute('html', 'data-paper'), 'grid');
-  await page.click('[data-act="view"]');
-  await page.click('#pop [data-v="paper:plain"]');
-  assert.equal(await page.getAttribute('html', 'data-paper'), 'plain');
-  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('pageDate')).display), 'none');
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('textcraft3_view')).paper), 'plain');
-  await page.click('#pop [data-v="paper:grid"]');
-  assert.equal(await page.getAttribute('html', 'data-paper'), 'grid');
-  await page.keyboard.press('Escape');
-});
-
 await step('жодної помилки в консолі сторінки', async () => assert.deepEqual(errors, []));
 
 await browser.close(); server.close();

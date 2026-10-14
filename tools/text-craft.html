@@ -19,19 +19,17 @@
       var v = JSON.parse(localStorage.getItem('textcraft3_view') || '{}');
       root.setAttribute('data-width', v.width || 'normal');
       root.setAttribute('data-font', v.font || 'serif');
-      root.setAttribute('data-paper', v.paper || 'grid');
       if (v.toc === false) root.setAttribute('data-toc', 'off');
     } catch (e) {
       root.setAttribute('data-theme', 'light');
       root.setAttribute('data-width', 'normal');
       root.setAttribute('data-font', 'serif');
-      root.setAttribute('data-paper', 'grid');
     }
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400..800&family=Literata:ital,opsz,wght@0,7..72,400..800;1,7..72,400..600&family=Caveat:wght@500..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400..800&family=Literata:ital,opsz,wght@0,7..72,400..800;1,7..72,400..600&display=swap" rel="stylesheet">
 <!-- шрифт для коду потрібен не одразу — вантажимо його у фоні, щоб не затримувати показ сторінки -->
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 
@@ -133,7 +131,6 @@
   <main class="scroll-area" id="scrollArea">
     <div class="page-wrap">
       <div class="page" id="page">
-        <div class="page-date" id="pageDate" aria-hidden="true"></div>
         <div id="docHeaderSlot"></div>
         <div class="editor tc-content" id="editor" contenteditable="true" spellcheck="true" lang="uk" role="textbox" aria-multiline="true" aria-label="Текст документа"></div>
       </div>

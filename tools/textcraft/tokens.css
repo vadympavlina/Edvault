@@ -1,6 +1,5 @@
 /* TextCraft · Edvault — кольори, тіні, шрифти (спільні для редактора й експортованого HTML).
-   Стиль «Зошит»: аркуш у клітинку, синє чорнило кулькової ручки, червона ручка вчителя, жовтий маркер.
-   Світла тема — день за партою, темна — нічний зошит у тьмяному світлі лампи. */
+   Синє чорнило кулькової ручки, червона ручка вчителя, жовтий маркер для виділення. */
 :root{
   color-scheme:light;
   /* парта (тло застосунку) і аркуш */
@@ -9,9 +8,9 @@
   --text:#1d2236;--text2:#454c63;--muted:#5d6478;
   /* синє чорнило — головний колір дій */
   --accent:#2337a8;--accent-hover:#1a2a8a;--accent-light:#e8ecfb;--accent-border:#b9c3ef;--on-accent:#ffffff;
-  /* обкладинка зошита (верхня панель), клітинка, поля, маркер */
+  /* обкладинка (верхня панель) і маркер */
   --cover:#1c2869;--cover-2:#26347f;--on-cover:#eef1ff;--on-cover-2:#b8c1ea;
-  --grid:#e1e9f2;--margin:#e26b62;--marker:#ffe34d;--marker-soft:rgba(255,227,77,.55);
+  --marker:#ffe34d;--marker-soft:rgba(255,227,77,.55);
   --danger:#c8352d;--danger-light:#fbeceb;--success:#1a7a50;--warn:#c98a00;
   --shadow-sm:0 1px 2px rgba(28,40,105,.08);
   --shadow-md:0 6px 18px rgba(28,40,105,.12),0 1px 3px rgba(28,40,105,.08);
@@ -34,7 +33,7 @@
   --text:#e4e7f5;--text2:#b6bcd8;--muted:#8d93b4;
   --accent:#9aabff;--accent-hover:#b3c0ff;--accent-light:rgba(154,171,255,.14);--accent-border:rgba(154,171,255,.38);--on-accent:#10153a;
   --cover:#0a0e22;--cover-2:#151b3d;--on-cover:#e4e7f5;--on-cover-2:#9aa2c8;
-  --grid:rgba(140,158,230,.085);--margin:rgba(232,110,100,.55);--marker:#e8c93a;--marker-soft:rgba(232,201,58,.32);
+  --marker:#e8c93a;--marker-soft:rgba(232,201,58,.32);
   --danger:#f08a82;--danger-light:rgba(240,138,130,.12);--success:#5fd39b;--warn:#e8c93a;
   --shadow-sm:0 1px 2px rgba(0,0,0,.4);
   --shadow-md:0 8px 22px rgba(0,0,0,.45);
