@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Аніматор · Edvault</title>
+<meta name="theme-color" content="#1c2869">
+<link rel="icon" href="/icons/animator.svg" type="image/svg+xml">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('edvault-theme') || 'auto';
+      var dark = t === 'dark' || (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400..800&family=Literata:opsz,wght@7..72,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="animator-app/app.css">
+<meta name="description" content="Покадрова анімація в браузері: шари, калька, пензлі з натиском, звук, уроки для початківців. Збереження в GIF, відео й файл проєкту.">
+<!-- og -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Edvault">
+<meta property="og:locale" content="uk_UA">
+<meta property="og:title" content="Аніматор · Edvault">
+<meta property="og:description" content="Покадрові мультфільми: шари, калька, пензлі з натиском, звук і голос, уроки з напрямними. Експорт у GIF, відео й спрайт-лист.">
+<meta property="og:url" content="https://www.edvault.online/tools/animator">
+<meta property="og:image" content="https://www.edvault.online/assets/og/tool-animator.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Аніматор — Edvault">
+<meta name="twitter:card" content="summary_large_image">
+<!-- /og -->
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark" data-icon="logo"></span><span class="hide-sm">Аніматор</span></div>
+  <input class="title-in" id="title" maxlength="60" aria-label="Назва мультфільму" spellcheck="false">
+  <span class="save-dot" id="saveDot" data-tip="Мультфільм зберігається в цьому браузері автоматично"></span>
+  <div class="grp">
+    <button class="btn ib" data-act="undo" id="bUndo" data-tip="Скасувати" data-kbd="Ctrl+Z" aria-label="Скасувати"><span data-icon="undo"></span></button>
+    <button class="btn ib" data-act="redo" id="bRedo" data-tip="Повторити" data-kbd="Ctrl+Shift+Z" aria-label="Повторити"><span data-icon="redo"></span></button>
+  </div>
+  <span class="sep hide-sm"></span>
+  <button class="btn" data-act="fileMenu" aria-haspopup="menu"><span data-icon="file"></span><span class="hide-md">Файл</span></button>
+  <button class="btn" data-act="lessons"><span data-icon="lesson"></span><span class="hide-md">Уроки</span></button>
+  <span class="grow"></span>
+  <button class="btn ib hide-sm" data-act="theme" data-tip="Світла чи темна тема" aria-label="Тема"><span data-icon="moon" id="themeIco"></span></button>
+  <button class="btn ib hide-sm" data-act="help" data-tip="Як користуватися і гарячі клавіші" aria-label="Довідка"><span data-icon="help"></span></button>
+  <button class="btn ib show-sm" data-act="side" aria-label="Шари й налаштування"><span data-icon="layers"></span></button>
+  <button class="btn primary" data-act="export"><span data-icon="download"></span><span class="hide-sm">Експорт</span></button>
+</header>
+
+<div class="prop" id="prop" role="toolbar" aria-label="Налаштування інструмента"></div>
+
+<div class="main">
+  <nav class="rail" id="rail" aria-label="Інструменти"></nav>
+  <section class="stage" id="stageWrap">
+    <canvas id="view" aria-label="Полотно кадру"></canvas>
+    <div class="zoom" id="zoomBox">
+      <button class="ib" data-act="zoomOut" aria-label="Зменшити" data-tip="Зменшити"><span data-icon="minus" data-size="16"></span></button>
+      <button class="zval" data-act="fit" id="zoomVal" data-tip="Вписати в екран" data-kbd="F">100%</button>
+      <button class="ib" data-act="zoomIn" aria-label="Збільшити" data-tip="Збільшити"><span data-icon="plus" data-size="16"></span></button>
+    </div>
+    <div class="lesson-card" id="lessonCard" hidden></div>
+  </section>
+  <aside class="side" id="side" aria-label="Шари й налаштування"></aside>
+</div>
+
+<div class="transport" id="transport"></div>
+<div class="film" id="film" aria-label="Кадри мультфільму"></div>
+
+<div class="pop" id="pop" role="menu"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="tip" id="tip"></div>
+<script type="module" src="animator-app/js/app.js"></script>
+</body>
+</html>

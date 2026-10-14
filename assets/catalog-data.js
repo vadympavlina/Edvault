@@ -48,6 +48,9 @@ export const TOOLS = [
   { id: 'pixel-editor', file: 'pixel-editor.html', cat: 'design', name: 'Спрайт-редактор', accent: '#65a30d',
     desc: 'Піксельна графіка й анімація: кадри, калька, дзеркальне малювання, створення спрайта з картинки.',
     tags: ['Пікселі', 'Анімація'], icon: '<rect x="3" y="3" width="6" height="6"/><rect x="15" y="3" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/><rect x="3" y="15" width="6" height="6"/><rect x="15" y="15" width="6" height="6"/>' },
+  { id: 'animator', file: 'animator.html', cat: 'design', name: 'Аніматор', accent: '#2337a8',
+    desc: 'Покадрові мультфільми: шари, калька, пензлі з натиском, звук і голос, уроки з напрямними. Експорт у GIF, відео й спрайт-лист.',
+    tags: ['GIF', 'Відео', 'Уроки'], icon: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20M2 16h20M6 4v4M10 4v4M14 4v4M18 4v4M6 16v4M10 16v4M14 16v4M18 16v4"/><circle cx="12" cy="12" r="2" fill="currentColor"/>' },
 ];
 
 export const TRAINER_CATEGORIES = [

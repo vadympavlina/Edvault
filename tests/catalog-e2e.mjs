@@ -39,10 +39,10 @@ await step('пошук і вкладки категорій', async () => {
   assert.equal(await p.isVisible('#empty'), true);
   await p.click('#emptyReset');
   await p.click('.tab[data-f="design"]');
-  assert.equal(await p.locator('.card').count(), 2);
+  assert.equal(await p.locator('.card').count(), 3);
   assert.match(p.url(), /#design$/);
   await p.reload(); await p.waitForSelector('.card');
-  assert.equal(await p.locator('.card').count(), 2, 'категорія з адреси');
+  assert.equal(await p.locator('.card').count(), 3, 'категорія з адреси');
   await p.click('.tab[data-f="all"]');
 });
 
