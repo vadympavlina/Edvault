@@ -81,6 +81,7 @@ const BLOCK_ITEMS = [
   { id: 'table', label: 'Таблиця', sub: '3 × 3', icon: 'table', kw: 'table таблиця' },
   { id: 'image', label: 'Зображення', icon: 'image', kw: 'image img картинка зображення фото' },
   { id: 'hr', label: 'Розділювач', icon: 'hr', kw: 'hr divider розділювач лінія' },
+  { id: 'header', label: 'Шапка документа', sub: 'Кольоровий заголовок на початку', icon: 'banner', kw: 'шапка банер обкладинка header title заголовок документа' },
 ];
 function applyItem(id) {
   if (id === 'p' || /^h[1-3]$/.test(id)) return doSetBlockTag(id);
@@ -92,6 +93,7 @@ function applyItem(id) {
   if (id === 'codeblock') return doInsertNewBlock('code');
   if (id === 'table') return doInsertTable(3, 3);
   if (id === 'hr') return doInsertHr();
+  if (id === 'header') return openHeaderModal();
 }
 const Slash = {
   open: false, block: null, items: [], idx: 0,

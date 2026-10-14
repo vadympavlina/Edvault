@@ -148,13 +148,33 @@ svg{flex-shrink:0}
   background:var(--surface);border:1px solid var(--border);border-radius:4px;box-shadow:var(--shadow-md);
   padding:var(--pad-y) var(--pad-x);min-height:70vh;position:relative;
 }
-.page .doc-header{margin:calc(-1 * var(--pad-y)) calc(-1 * var(--pad-x)) 36px;border-radius:3px 3px 0 0;cursor:pointer}
-.page .doc-header:hover .doc-header-edit{opacity:1}
+.page .doc-header{margin:calc(-1 * var(--pad-y)) calc(-1 * var(--pad-x)) 36px;border-radius:3px 3px 0 0;cursor:text}
+.page .doc-header:has(+ .doc-student){margin-bottom:0}
+.page .doc-student{margin:0 calc(-1 * var(--pad-x)) 32px;padding:16px var(--pad-x) 14px;border-bottom:1px solid var(--border)}
+/* правка шапки просто на сторінці */
+.doc-header [data-hf]{outline:none;border-radius:3px;cursor:text;transition:box-shadow .12s}
+.doc-header [data-hf]:hover{box-shadow:0 0 0 4px rgba(255,255,255,.14)}
+.doc-header [data-hf]:focus{box-shadow:0 0 0 4px rgba(255,255,255,.24)}
+.doc-header.style-soft [data-hf]:hover{box-shadow:0 0 0 4px color-mix(in srgb,var(--hc) 10%,transparent)}
+.doc-header.style-soft [data-hf]:focus{box-shadow:0 0 0 4px color-mix(in srgb,var(--hc) 18%,transparent)}
+.doc-header [data-hf]::selection{background:rgba(255,227,77,.6);color:#1d2236}
+.doc-header .is-empty::before{content:attr(data-ph);opacity:.62;pointer-events:none}
+/* порожні мітка й підзаголовок видно лише при наведенні — щоб їх легко було дописати */
+.doc-header .doc-header-tag.is-empty,.doc-header .doc-header-subtitle.is-empty{display:none}
+.doc-header:hover .doc-header-tag.is-empty,.doc-header:focus-within .doc-header-tag.is-empty{display:inline-flex}
+.doc-header:hover .doc-header-subtitle.is-empty,.doc-header:focus-within .doc-header-subtitle.is-empty{display:block}
+.doc-header .doc-header-tag.is-empty{background:transparent;box-shadow:inset 0 0 0 1px currentColor;opacity:.75}
 .doc-header-edit{
-  position:absolute;z-index:2;right:14px;bottom:44px;opacity:0;transition:opacity .15s;
-  display:flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;
-  background:rgba(0,0,0,.28);color:#fff;font-size:12px;font-weight:600;backdrop-filter:blur(6px);
+  position:absolute;z-index:2;right:14px;top:14px;opacity:0;transition:opacity .15s;
+  display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:5px;border:0;cursor:pointer;
+  background:rgba(0,0,0,.32);color:#fff;font:600 12.5px 'Commissioner',sans-serif;
 }
+.doc-header-edit .ico{width:14px;height:14px}
+.doc-header-edit:hover{background:rgba(0,0,0,.48)}
+.doc-header.style-soft .doc-header-edit{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm);border:1px solid var(--border2)}
+.page .doc-header:hover .doc-header-edit,.page .doc-header:focus-within .doc-header-edit,.doc-header-edit:focus-visible{opacity:1}
+@media(pointer:coarse){.doc-header-edit{opacity:1}}
+.doc-header:has(.doc-header-logo) .doc-header-edit{top:auto;bottom:12px}
 @media(max-width:900px){.page{--pad-x:40px;--pad-y:40px}.page-wrap{padding:24px 16px 45vh}}
 @media(max-width:640px){.page{--pad-x:20px;--pad-y:28px}.page-wrap{padding:12px 8px 45vh}}
 
@@ -496,7 +516,10 @@ body.fig-dragging,body.fig-dragging *{cursor:grabbing!important;user-select:none
   .scroll-area{overflow:visible;background:#fff}
   .page-wrap{max-width:none;padding:0}
   .page{border:0;box-shadow:none;padding:0;min-height:0;border-radius:0}
-  .page .doc-header{margin:0 0 28px;border-radius:12px}
+  .page .doc-header{margin:0 0 28px;border-radius:4px}
+  .page .doc-header:has(+ .doc-student){margin-bottom:0}
+  .page .doc-student{margin:0 0 24px;padding:18px 0 10px}
+  .doc-header .is-empty{display:none !important}
   .editor>h1:first-child:has(>br:only-child),.editor>p:last-child:has(>br:only-child){display:none}
   .tc-content .tc-block,.tc-content pre.tc-code,.tc-content figure,.tc-content table{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .tc-content h1,.tc-content h2,.tc-content h3{break-after:avoid}
@@ -531,6 +554,7 @@ body.tc-readonly #editor{cursor:default}
 .hdr-preview .doc-header-subtitle{font-size:13px;max-width:100%}
 .hdr-preview .doc-header-tag{font-size:11px;padding:3px 10px;margin-bottom:10px}
 .hdr-preview .doc-header-logo{height:28px;right:18px}
+.hdr-preview .doc-student{padding:12px 26px 10px;font-size:12px;gap:8px 18px}
 .hdr-fields .field-label{display:block;margin:14px 0 6px;font-size:12.5px;font-weight:600;color:var(--text2)}
 .hdr-fields > .field-label:first-child{margin-top:0}
 .hdr-fields .field-label .opt{font-weight:400;color:var(--muted)}
@@ -556,7 +580,16 @@ body.tc-readonly #editor{cursor:default}
 .hdr-more .logo-zone{margin-bottom:8px}
 .hdr-actions{margin:0;padding:12px 16px 14px 22px;border-top:1px solid var(--border)}
 #hdrRemove[hidden]{display:none}
-@media(max-width:560px){.hdr-row{grid-template-columns:1fr}}
+@media(max-width:560px){.hdr-row{grid-template-columns:1fr}.hdr-presets{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.hdr-switch{display:flex;align-items:flex-start;gap:11px;margin:14px 0 2px;cursor:pointer;user-select:none}
+.hdr-switch input{position:absolute;opacity:0;width:0;height:0}
+.hdr-switch .sw{flex:none;width:38px;height:22px;margin-top:1px;border-radius:999px;background:var(--border2);position:relative;transition:background .15s}
+.hdr-switch .sw::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.hdr-switch input:checked+.sw{background:var(--accent)}
+.hdr-switch input:checked+.sw::after{transform:translateX(16px)}
+.hdr-switch input:focus-visible+.sw{outline:2px solid var(--accent);outline-offset:2px}
+.hdr-switch .hs-txt{font-size:12.5px;line-height:1.45;color:var(--muted)}
+.hdr-switch .hs-txt b{display:block;font-size:13px;font-weight:600;color:var(--text)}
 
 /* ── Підсвітка коду в редакторі (CSS Custom Highlight API) ── */
 ::highlight(tc-kw){color:#c792ea}

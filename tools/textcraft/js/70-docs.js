@@ -42,6 +42,8 @@ const Toc = {
   build() {
     const list = $('#tocList');
     const hs = $$('h1,h2,h3', editor).filter(h => !h.closest('.tc-block,td,th,li,blockquote'));
+    const ht = state.header && state.header.enabled && $('#docHeaderSlot .doc-header-title');
+    if (ht) hs.unshift(ht); // заголовок шапки — перший пункт змісту
     this.items = [];
     if (!hs.length) {
       list.innerHTML = '<div class="toc-empty">Тут з’являться заголовки документа. Використовуйте «Заголовок 1–3», щоб створити зміст.</div>';
@@ -188,7 +190,7 @@ const Store = {
 
 /* ═══════════════════════════ ДОКУМЕНТИ / ЗБЕРЕЖЕННЯ ═══════════════════════════ */
 const state = { docId: null, createdAt: 0, header: null, version: 0, savedVersion: 0, saving: null, saveTimer: null, error: false };
-function defaultHeader() { return { enabled: false, tag: '', title: '', subtitle: '', color: '#2337a8', pattern: 'none', style: 'solid', logo: '', size: 'normal', align: 'left' }; }
+function defaultHeader() { return { enabled: false, tag: '', title: '', subtitle: '', color: '#2337a8', pattern: 'none', style: 'solid', logo: '', size: 'normal', align: 'left', student: false }; }
 function setSaveState(s) {
   const el = $('#saveState');
   if (Tabs.readOnly && s !== 'readonly') s = 'readonly';
@@ -219,6 +221,7 @@ function scheduleSave() {
 }
 // Назва з тексту: перший заголовок, інакше перший рядок
 function autoLabel() {
+  if (state.header && state.header.enabled && state.header.title) return state.header.title.slice(0, 80);
   const clean = el => (el.textContent || '').replace(ZW, '').replace(/\s+/g, ' ').trim();
   const h = $$('h1,h2', editor).find(x => !x.closest('.tc-block,td,th,li,blockquote') && clean(x));
   if (h) return clean(h).slice(0, 80);
@@ -451,6 +454,7 @@ function parseHeaderEl(el) {
   const bg = el.getAttribute('style') || '';
   const cm = bg.match(/(#[0-9a-fA-F]{3,6}|rgba?\([^)]+\))/);
   if (cm) h.color = rgbToHex(cm[1]) || h.color;
+  h.student = !!(el.ownerDocument && el.ownerDocument.querySelector('.doc-student'));
   const logo = el.querySelector('.doc-header-logo');
   if (logo && /^data:image\//.test(logo.getAttribute('src') || '')) h.logo = logo.getAttribute('src');
   return h;

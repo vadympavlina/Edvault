@@ -76,6 +76,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:'Commissioner',
 .x-wrap{max-width:var(--page-w,960px);margin:0 auto;padding:40px 24px 120px}
 .x-page{--pad-x:72px;--pad-y:60px;background:var(--surface);border:1px solid var(--border);border-radius:2px;box-shadow:var(--shadow-md);padding:var(--pad-y) var(--pad-x)}
 .x-page .doc-header{margin:calc(-1*var(--pad-y)) calc(-1*var(--pad-x)) 36px;border-radius:2px 2px 0 0}
+.x-page .doc-header:has(+ .doc-student){margin-bottom:0}
+.x-page .doc-student{margin:0 calc(-1*var(--pad-x)) 32px;padding:16px var(--pad-x) 14px;border-bottom:1px solid var(--border)}
 .tc-content .tc-prompt,.tc-content pre.tc-code{position:relative}
 .tc-copy{position:absolute;top:5px;right:8px;z-index:2;height:26px;padding:0 11px;border-radius:7px;cursor:pointer;font:600 11.5px 'Commissioner',sans-serif;border:1px solid var(--accent-border);background:var(--surface);color:var(--accent);transition:background .12s,color .12s}
 .tc-copy:hover{background:var(--accent);color:var(--on-accent)}
@@ -93,7 +95,7 @@ pre.tc-code .tc-copy:hover{background:rgba(255,255,255,.18);color:#fff}
 .x-foot{text-align:center;font-size:12px;color:var(--muted);margin-top:18px}
 @media(max-width:900px){.x-layout{display:block}.x-toc{position:static;width:auto;height:auto;max-height:280px;border-right:0;border-bottom:1px solid var(--border)}.x-page{--pad-x:36px;--pad-y:36px}}
 @media(max-width:640px){.x-page{--pad-x:20px;--pad-y:26px}.x-wrap{padding:12px 8px 60px}}
-@media print{.x-toc,.x-progress,.x-top,.tc-copy,.x-foot{display:none!important}body{background:#fff}.x-wrap{padding:0;max-width:none}.x-page{border:0;box-shadow:none;padding:0}.x-page .doc-header{margin:0 0 28px;border-radius:12px}.tc-content .tc-block,.tc-content pre.tc-code,.tc-content figure,.tc-content table{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@media print{.x-toc,.x-progress,.x-top,.tc-copy,.x-foot{display:none!important}body{background:#fff}.x-wrap{padding:0;max-width:none}.x-page{border:0;box-shadow:none;padding:0}.x-page .doc-header{margin:0 0 28px;border-radius:4px}.x-page .doc-header:has(+ .doc-student){margin-bottom:0}.x-page .doc-student{margin:0 0 24px;padding:18px 0 10px}.tc-content .tc-block,.tc-content pre.tc-code,.tc-content figure,.tc-content table{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 `;
 const EXPORT_JS = `
 (function(){
@@ -134,6 +136,8 @@ async function exportHtml() {
   const [tokensCss, contentCss] = await Promise.all([cssText('tcTokens'), cssText('tcContentCss')]);
   const content = exportClone();
   const heads = $$('h1,h2,h3', content).filter(h => !h.closest('.tc-block,td,th,li,blockquote'));
+  const hd = state.header || defaultHeader();
+  if (hd.enabled) heads.unshift({ id: 'doc-title', tagName: 'H1', textContent: headerTitle(hd) });
   const toc = heads.length ? '<aside class="x-toc"><div class="x-toc-title">Зміст</div>' + (heads.length > 8 ? '<input type="text" id="xTocFilter" placeholder="Пошук у змісті…">' : '') +
     heads.map(h => '<a class="l' + h.tagName[1] + '" href="#' + h.id + '">' + esc(h.textContent.trim() || '(без назви)') + '</a>').join('') + '</aside>' : '';
   const h = state.header || defaultHeader();

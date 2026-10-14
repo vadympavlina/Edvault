@@ -11,12 +11,12 @@ const HEADER_PATTERNS = [['none', 'Без'], ['dots', 'Крапки'], ['diagona
 // готові шапки: мітка, підзаголовок і вигляд; заголовок і логотип лишаються ті, що є
 function schoolYear() { const d = new Date(), y = d.getFullYear() - (d.getMonth() < 7 ? 1 : 0); return 'Навчальний рік ' + y + '/' + (y + 1); }
 const HEADER_PRESETS = [
-  ['practice', 'Практична робота', { subtitle: 'Виконайте завдання по черзі й збережіть результат', color: '#2337a8', style: 'solid', pattern: 'grid' }],
-  ['homework', 'Домашнє завдання', { subtitle: 'Здати до наступного уроку', color: '#a86400', style: 'solid', pattern: 'dots' }],
+  ['practice', 'Практична робота', { subtitle: 'Виконайте завдання по черзі й збережіть результат', color: '#2337a8', style: 'solid', pattern: 'grid', student: true }],
+  ['homework', 'Домашнє завдання', { subtitle: 'Здати до наступного уроку', color: '#a86400', style: 'solid', pattern: 'dots', student: true }],
   ['guide', 'Інструкція', { subtitle: 'Виконуйте кроки по порядку', color: '#0e7c86', style: 'soft', pattern: 'none' }],
   ['program', 'Програма навчання', { subtitle: schoolYear, color: '#1a7a50', style: 'solid', pattern: 'diagonal', size: 'tall' }],
-  ['lab', 'Лабораторна робота', { subtitle: 'Мета, обладнання, хід роботи, висновки', color: '#6d4bc3', style: 'solid', pattern: 'grid' }],
-  ['test', 'Контрольна робота', { subtitle: 'Варіант 1, час виконання 45 хв', color: '#c8352d', style: 'soft', pattern: 'none' }],
+  ['lab', 'Лабораторна робота', { subtitle: 'Мета, обладнання, хід роботи, висновки', color: '#6d4bc3', style: 'solid', pattern: 'grid', student: true }],
+  ['test', 'Контрольна робота', { subtitle: 'Варіант 1, час виконання 45 хв', color: '#c8352d', style: 'soft', pattern: 'none', student: true }],
   ['lesson', 'Конспект уроку', { subtitle: '', color: '#2b2f3a', style: 'soft', pattern: 'dots' }],
   ['notice', 'Оголошення', { subtitle: '', color: '#b8306f', style: 'solid', pattern: 'diagonal' }],
 ];
@@ -25,7 +25,8 @@ function applyPreset(id) {
   if (!p) return;
   const v = p[2];
   Object.assign(hdrDraft, { preset: id, tag: p[1], subtitle: typeof v.subtitle === 'function' ? v.subtitle() : v.subtitle,
-    color: v.color, style: v.style, pattern: v.pattern, size: v.size || 'normal', align: v.align || 'left' });
+    color: v.color, style: v.style, pattern: v.pattern, size: v.size || 'normal', align: v.align || 'left', student: !!v.student });
+  $('#hdrStudent').checked = hdrDraft.student;
   $('#hdrTag').value = hdrDraft.tag;
   $('#hdrSubtitle').value = hdrDraft.subtitle;
   renderHdrModal();
@@ -39,27 +40,74 @@ function shade(hex, pct) {
   r = Math.round((t - r) * p) + r; g = Math.round((t - g) * p) + g; b = Math.round((t - b) * p) + b;
   return '#' + [r, g, b].map(v => clamp(v, 0, 255).toString(16).padStart(2, '0')).join('');
 }
-function headerMarkup(h, title, extra) {
+// Розмітка шапки. editable — у редакторі: мітку, заголовок і підзаголовок можна правити просто на шапці,
+// порожні поля показуються підказками при наведенні. В експорті порожніх полів немає.
+function headerMarkup(h, title, extra, editable) {
   const soft = h.style === 'soft';
   const color = /^#[0-9a-f]{3,8}$/i.test(h.color || '') ? h.color : '#2337a8';
   const bg = soft ? '' : 'background:linear-gradient(135deg,' + color + ',' + shade(color, -0.3) + ');';
   const cls = 'doc-header ' + (soft ? 'style-soft' : 'style-solid') + ' pattern-' + esc(h.pattern || 'none') +
     (h.size && h.size !== 'normal' ? ' size-' + esc(h.size) : '') + (h.align === 'center' ? ' align-center' : '');
+  const field = (tag, k, cls, text, ph) => {
+    if (!editable) return text ? '<' + tag + ' class="' + cls + '"' + (k === 'title' ? ' id="doc-title"' : '') + '>' + esc(text) + '</' + tag + '>' : '';
+    return '<' + tag + ' class="' + cls + (text ? '' : ' is-empty') + '" data-hf="' + k + '" data-ph="' + ph + '" contenteditable="plaintext-only" spellcheck="true" role="textbox" aria-label="' + ph + '">' + esc(text) + '</' + tag + '>';
+  };
   return '<div class="' + cls + '" style="--hc:' + color + ';' + bg + '">' +
     (h.logo ? '<img class="doc-header-logo" src="' + esc(h.logo) + '" alt="">' : '') +
-    '<div class="doc-header-bg">' + (h.tag ? '<div class="doc-header-tag">' + esc(h.tag) + '</div>' : '') +
-    (title ? '<h1 class="doc-header-title">' + esc(title) + '</h1>' : '') +
-    (h.subtitle ? '<p class="doc-header-subtitle">' + esc(h.subtitle) + '</p>' : '') + '</div>' +
-    (extra || '') + '</div>';
+    '<div class="doc-header-bg">' + field('div', 'tag', 'doc-header-tag', h.tag, 'Мітка, напр. «Урок 3»') +
+    field('h1', 'title', 'doc-header-title', title, 'Заголовок') +
+    field('p', 'subtitle', 'doc-header-subtitle', h.subtitle, 'Підзаголовок, напр. «Здати до п’ятниці»') + '</div>' +
+    (extra || '') + '</div>' + (h.student ? studentLine() : '');
+}
+// рядок для учня під шапкою: на роздруківці учень вписує ім’я, клас і дату
+function studentLine() {
+  return '<div class="doc-student" aria-label="Поля для учня"><span class="ds-f ds-name">Прізвище та ім’я<i></i></span><span class="ds-f">Клас<i></i></span><span class="ds-f">Дата<i></i></span></div>';
 }
 function headerTitle(h) { return (h.title || $('#docTitle').value.trim() || docLabel()).trim(); }
 function renderHeader() {
   const slot = $('#docHeaderSlot');
   const h = state.header || defaultHeader();
-  if (!h.enabled) { slot.innerHTML = ''; return; }
-  slot.innerHTML = headerMarkup(h, headerTitle(h), '<span class="doc-header-edit">' + icon('edit') + 'Змінити шапку</span>');
+  if (!h.enabled) { slot.innerHTML = ''; Toc.schedule(); return; }
+  slot.innerHTML = headerMarkup(h, headerTitle(h), '<button type="button" class="doc-header-edit" data-hdr-act="style">' + icon('edit') + 'Оформлення</button>', true);
+  Toc.schedule();
 }
-$('#docHeaderSlot').addEventListener('click', () => openHeaderModal());
+/* ── правка шапки просто на сторінці ── */
+const hdrSlot = $('#docHeaderSlot');
+hdrSlot.addEventListener('click', e => {
+  if (e.target.closest('[data-hdr-act="style"]')) { openHeaderModal(); return; }
+  if (e.target.closest('[data-hf]')) return;
+  // клік по тлу шапки — курсор у заголовок
+  const t = hdrSlot.querySelector('[data-hf="title"]');
+  if (t && e.target.closest('.doc-header')) placeCaretEnd(t);
+});
+function placeCaretEnd(el) { el.focus(); const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); setSel(r); }
+hdrSlot.addEventListener('input', e => {
+  const f = e.target.closest('[data-hf]'); if (!f || !state.header) return;
+  const v = f.textContent.replace(/\s+/g, ' ');
+  state.header[f.dataset.hf] = v.trim();
+  f.classList.toggle('is-empty', !v.trim());
+  state.version++; markDirty(); updateDocTitle(); Toc.schedule();
+});
+hdrSlot.addEventListener('keydown', e => {
+  const f = e.target.closest('[data-hf]'); if (!f) return;
+  e.stopPropagation();
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const order = ['tag', 'title', 'subtitle'], next = hdrSlot.querySelector('[data-hf="' + order[order.indexOf(f.dataset.hf) + 1] + '"]');
+    if (next) placeCaretEnd(next); else { f.blur(); placeCaretInBlock(editor.firstElementChild, 'start'); }
+  } else if (e.key === 'Escape') { e.preventDefault(); f.blur(); }
+});
+hdrSlot.addEventListener('paste', e => {
+  if (!e.target.closest('[data-hf]')) return;
+  e.preventDefault();
+  const t = (e.clipboardData.getData('text/plain') || '').replace(/\s+/g, ' ');
+  document.execCommand('insertText', false, t);
+});
+hdrSlot.addEventListener('focusout', e => {
+  const f = e.target.closest && e.target.closest('[data-hf]'); if (!f) return;
+  // порожній заголовок знову показує назву документа
+  setTimeout(() => { if (!hdrSlot.contains(document.activeElement)) renderHeader(); }, 0);
+});
 
 // перший заголовок документа, якщо він збігається з назвою в шапці (щоб не було двох однакових заголовків)
 function duplicateH1(title) {
@@ -81,6 +129,7 @@ function openHeaderModal() {
   $('#hdrRemove').hidden = !had;
   $('#hdrApply').textContent = had ? 'Зберегти' : 'Додати шапку';
   $('#hdrDup').checked = true;
+  $('#hdrStudent').checked = !!hdrDraft.student;
   renderHdrModal();
   Modal.open('headerModal');
 }
@@ -117,6 +166,7 @@ $('#headerModal').addEventListener('input', e => {
   else if (id === 'hdrTitle') hdrDraft.title = e.target.value;
   else if (id === 'hdrSubtitle') hdrDraft.subtitle = e.target.value;
   else if (id === 'hdrCustom') { hdrDraft.color = e.target.value; renderHdrModal(); return; }
+  else if (id === 'hdrStudent') hdrDraft.student = e.target.checked;
   else return;
   renderHdrPreview();
 });

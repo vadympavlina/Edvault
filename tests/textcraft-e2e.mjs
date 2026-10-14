@@ -201,6 +201,49 @@ await step('готові шаблони шапки: «Домашнє завда�
   assert.equal(await page.evaluate(() => document.querySelector('#docHeaderSlot .doc-header-tag').textContent), 'Домашнє завдання');
 });
 
+await step('шапка правиться просто на сторінці; рядок для учня; назва й зміст беруться з шапки', async () => {
+  // «Домашнє завдання» вмикає рядок для учня
+  assert.equal(await page.locator('#docHeaderSlot .doc-student').count(), 1);
+  assert.match(await page.locator('#docHeaderSlot .doc-student').innerText(), /Прізвище та ім’я[\s\S]*Клас[\s\S]*Дата/);
+  // правка підзаголовка й заголовка на шапці
+  await page.click('#docHeaderSlot [data-hf="subtitle"]');
+  await page.keyboard.press('Control+A'); await page.keyboard.type('Здати до п’ятниці');
+  await page.keyboard.press('Enter'); // Enter переводить курсор у текст документа
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'editor');
+  await page.click('#docHeaderSlot [data-hf="title"]');
+  await page.keyboard.press('Control+A'); await page.keyboard.type('Тема уроку з шапки');
+  await page.keyboard.press('Escape');
+  const h = await page.evaluate(() => window.TextCraft.state.header);
+  assert.equal(h.subtitle, 'Здати до п’ятниці'); assert.equal(h.title, 'Тема уроку з шапки'); assert.equal(h.student, true);
+  await page.fill('#docTitle', '');
+  await page.waitForTimeout(450);
+  assert.equal(await page.getAttribute('#docTitle', 'placeholder'), 'Тема уроку з шапки', 'назва документа — із шапки');
+  assert.equal(await page.evaluate(() => document.querySelector('#tocList .toc-item .lbl').textContent), 'Тема уроку з шапки', 'шапка — перший пункт змісту');
+  // порожня мітка показує підказку, в експорті порожніх полів і правки немає
+  await page.click('#docHeaderSlot [data-hf="tag"]');
+  await page.keyboard.press('Control+A'); await page.keyboard.press('Backspace');
+  assert.equal(await page.evaluate(() => document.querySelector('#docHeaderSlot [data-hf="tag"]').classList.contains('is-empty')), true);
+  const x = await page.evaluate(() => headerMarkup(window.TextCraft.state.header, headerTitle(window.TextCraft.state.header)));
+  assert.ok(!/contenteditable|doc-header-tag|Оформлення/.test(x)); assert.match(x, /doc-student/); assert.match(x, /id="doc-title"/);
+  // імпорт експортованого HTML повертає шапку з рядком для учня
+  const back = await page.evaluate(html => { const d = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html'); return parseHeaderEl(d.querySelector('.doc-header')); }, x);
+  assert.equal(back.title, 'Тема уроку з шапки'); assert.equal(back.student, true); assert.equal(back.subtitle, 'Здати до п’ятниці');
+  // кнопка «Оформлення» відкриває вікно, перемикач прибирає рядок для учня
+  await page.hover('#docHeaderSlot .doc-header');
+  await page.click('#docHeaderSlot [data-hdr-act="style"]');
+  await page.waitForSelector('#headerModal.open');
+  assert.equal(await page.isChecked('#hdrStudent'), true);
+  await page.click('.hdr-switch');
+  assert.equal(await page.locator('#hdrPreview .doc-student').count(), 0);
+  await page.click('#hdrApply');
+  assert.equal(await page.locator('#docHeaderSlot .doc-student').count(), 0);
+  // слеш-меню вміє відкрити шапку
+  assert.ok(await page.evaluate(() => typeof applyItem === 'function'));
+  await page.evaluate(() => applyItem('header'));
+  await page.waitForSelector('#headerModal.open');
+  await page.keyboard.press('Escape');
+});
+
 await step('друга вкладка з тим самим документом — лише перегляд, зміни не перезаписуються', async () => {
   const p2 = await open(ctx);
   assert.equal(await p2.evaluate(() => window.TextCraft.state.docId), await page.evaluate(() => window.TextCraft.state.docId));
