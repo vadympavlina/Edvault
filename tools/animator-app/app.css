@@ -273,3 +273,25 @@ table.tbl td:last-child{text-align:right}
   .md .row.end .grow{display:none}
   .md .row.end .btn{justify-content:center}
 }
+
+/* вибір пензля */
+.brush-btn{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px 0 4px;border:1px solid var(--border2);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px}
+.brush-btn:hover{border-color:var(--accent)}
+.brush-btn canvas{width:56px;height:18px;background:var(--paper,#fff);border-radius:3px}
+.brush-btn b{font-weight:600;min-width:74px;text-align:left}
+.brush-list{display:grid;gap:2px;width:330px}
+.brush-mi{min-height:52px}
+.brush-mi canvas{width:120px;height:32px;flex-shrink:0;background:#fff;border:1px solid var(--border);border-radius:4px}
+.brush-mi.on{background:var(--surface2);box-shadow:inset 3px 0 0 var(--accent)}
+/* свій колір */
+.hsv{width:232px;display:grid;gap:10px;padding:4px}
+.sv-wrap{position:relative;height:150px;border-radius:6px;overflow:hidden;touch-action:none}
+.sv{width:100%;height:100%;display:block;cursor:crosshair}
+.sv-dot{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.45);pointer-events:none}
+.hue{-webkit-appearance:none;appearance:none;width:100%;height:14px;border-radius:7px;background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);outline-offset:3px}
+.hue::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #1c2869;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.hue::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #1c2869}
+.hsv .row{display:flex;gap:8px;align-items:center}
+.hsv-prev{width:32px;height:32px;border-radius:6px;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
+.hsv .hex{flex:1;min-width:0;font-variant-numeric:tabular-nums;text-transform:lowercase}
+#stageWrap canvas{touch-action:none}

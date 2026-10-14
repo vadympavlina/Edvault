@@ -3,7 +3,7 @@
 import { Project, History, SIZES } from './model.js';
 import { store, setSize, trim, forgetAll, isBlank, Cell } from './cells.js';
 import { Stage } from './stage.js';
-import { BRUSHES } from './paint.js';
+import { BRUSHES, sampleStroke } from './paint.js';
 import { LESSONS } from './lessons.js';
 import { packProject, unpackProject, fileName, FILE_EXT, autosave, restore, clearAutosave, Audio, recordMic } from './io.js';
 import { exportGif, exportVideo, exportPng, exportPngZip, exportSprite, videoType } from './export.js';
@@ -16,7 +16,7 @@ const COLOR_NAMES = { '#1d2236': 'Чорний', '#ffffff': 'Білий', '#e548
 const BGS = [['#ffffff', 'Білий'], ['#f4efe4', 'Папір'], ['#dff1ff', 'Небо'], ['#e3f6dc', 'Трава'], ['#fff1c2', 'Сонце'], ['#1c2869', 'Ніч'], ['#111111', 'Чорний']];
 const TOOLS = [
   ['brush', 'Пензель', 'brush', 'B'], ['eraser', 'Гумка', 'eraser', 'E'], ['fill', 'Заливка', 'fill', 'G'], null,
-  ['line', 'Лінія', 'line', 'L'], ['rect', 'Прямокутник', 'rect', 'R'], ['ellipse', 'Еліпс', 'ellipse', 'O'], null,
+  ['line', 'Лінія', 'line', 'L'], ['rect', 'Прямокутник', 'rect', 'R'], ['ellipse', 'Еліпс', 'ellipse', 'O'], ['lasso', 'Ласо-заливка — обведіть, і область заллється кольором', 'lasso', 'A'], null,
   ['select', 'Виділення — вирізати й перемістити частину малюнка', 'select', 'S'], ['picker', 'Піпетка — взяти колір з малюнка', 'picker', 'I'], ['hand', 'Рука — рухати аркуш', 'hand', 'H'],
 ];
 const TOOL_NAMES = Object.fromEntries(TOOLS.filter(Boolean).map(t => [t[0], t[1].split(' — ')[0]]));
@@ -25,11 +25,13 @@ const UI_KEY = 'edvault-animator-ui';
 /* ═════════ стан ═════════ */
 const S = Object.assign({
   tool: 'brush', brush: 'pen', size: 6, opacity: 1, color: '#1d2236', recent: [], stabilizer: 0.3, symmetry: false,
-  shapeFill: 'stroke', fillAll: true, fillTol: 40, eraserSize: 18,
+  shapeFill: 'stroke', fillAll: true, fillTol: 40, fillGap: 0, eraserSoft: false, alphaLock: false, selMode: 'rect',
   onion: true, onionN: 1, onionAlpha: 0.5, loop: true,
 }, loadUi(), { fi: 0, li: 1, playing: false, guides: true, refShow: true, refOpacity: 0.4 });
+if (!BRUSHES[S.brush]) S.brush = 'pen';
 function loadUi() { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {}; } catch { return {}; } }
-function saveUi() { const { tool, brush, size, opacity, color, recent, stabilizer, symmetry, shapeFill, fillAll, fillTol, onion, onionN, onionAlpha, loop } = S; try { localStorage.setItem(UI_KEY, JSON.stringify({ tool, brush, size, opacity, color, recent, stabilizer, symmetry, shapeFill, fillAll, fillTol, onion, onionN, onionAlpha, loop })); } catch { /* приватний режим */ } }
+const UI_KEYS = ['tool', 'brush', 'size', 'opacity', 'color', 'recent', 'stabilizer', 'symmetry', 'shapeFill', 'fillAll', 'fillTol', 'fillGap', 'eraserSoft', 'selMode', 'onion', 'onionN', 'onionAlpha', 'loop'];
+function saveUi() { try { localStorage.setItem(UI_KEY, JSON.stringify(Object.fromEntries(UI_KEYS.map(k => [k, S[k]])))); } catch { /* приватний режим */ } }
 
 let P = null;
 const hist = new History(80);
@@ -38,6 +40,7 @@ const app = {
   get P() { return P; }, S,
   refImg: null, refBlob: null, guides: null, playFrame: null,
   toast, pushPixels, changed, pickColor,
+  undo: () => undo(), redo: () => redo(),
 };
 const stage = new Stage($('#view'), app);
 window.Animator = { get P() { return P; }, S, stage, hist, app, audio };
@@ -248,39 +251,53 @@ const seg = (k, items, cur) => `<span class="seg" role="group">${items.map(([v, 
 const range = (k, min, max, step, val, fmt = v => v) => `<span class="rng"><input type="range" data-range="${k}" min="${min}" max="${max}" step="${step}" value="${val}" aria-label="${k}"><b data-out="${k}">${fmt(val)}</b></span>`;
 function colors() {
   const custom = !PALETTE.includes(S.color);
-  return `<span class="pg"><span class="sws">${PALETTE.map(c => `<button class="sw ${S.color === c ? 'on' : ''}" data-color="${c}" style="background:${c}" aria-label="${COLOR_NAMES[c]}" data-tip="${COLOR_NAMES[c]}"></button>`).join('')}<label class="sw sw-custom ${custom ? 'on' : ''}" ${custom ? `style="background:${S.color}"` : ''} data-tip="Свій колір"><input type="color" data-custom value="${S.color}" aria-label="Свій колір"></label></span>${S.recent.filter(c => !PALETTE.includes(c)).length ? `<span class="sws" aria-label="Нещодавні кольори">${S.recent.filter(c => !PALETTE.includes(c)).slice(0, 4).map(c => `<button class="sw ${S.color === c ? 'on' : ''}" data-color="${c}" style="background:${c}" aria-label="Нещодавній колір ${c}"></button>`).join('')}</span>` : ''}</span>`;
+  return `<span class="pg"><span class="sws">${PALETTE.map(c => `<button class="sw ${S.color === c ? 'on' : ''}" data-color="${c}" style="background:${c}" aria-label="${COLOR_NAMES[c]}" data-tip="${COLOR_NAMES[c]}"></button>`).join('')}<button class="sw sw-custom ${custom ? 'on' : ''}" ${custom ? `style="background:${S.color}"` : ''} data-act="colorPick" data-tip="Свій колір" aria-label="Свій колір"></button></span>${S.recent.filter(c => !PALETTE.includes(c)).length ? `<span class="sws" aria-label="Нещодавні кольори">${S.recent.filter(c => !PALETTE.includes(c)).slice(0, 4).map(c => `<button class="sw ${S.color === c ? 'on' : ''}" data-color="${c}" style="background:${c}" aria-label="Нещодавній колір ${c}"></button>`).join('')}</span>` : ''}</span>`;
 }
 function renderProp() {
   const t = S.tool, el = $('#prop'), toolIco = (TOOLS.find(x => x && x[0] === t) || [])[2];
   let h = `<span class="ttl">${icon(toolIco || 'brush', 16)}<span>${esc(TOOL_NAMES[t] || '')}</span></span>`;
   const pct = v => Math.round(v * 100) + '%';
+  const lockBtn = `<button class="tg ${S.alphaLock ? 'on' : ''}" data-toggle="alphaLock" data-tip="Фарба лягає лише там, де на шарі вже намальовано, — для тіней, відблисків і візерунків">${icon('drop', 15)}Лише по малюнку</button>`;
   if (t === 'brush') {
-    h += `<span class="pg">${seg('brush', Object.entries(BRUSHES).map(([k, b]) => [k, b.t, b.desc]), S.brush)}</span>`;
+    const B = BRUSHES[S.brush];
+    h += `<span class="pg"><button class="brush-btn" id="brushBtn" data-act="brushPick" aria-haspopup="menu" data-tip="${esc(B.desc)}"><canvas width="112" height="36" aria-hidden="true"></canvas><b>${esc(B.t)}</b>${icon('down', 14)}</button></span>`;
     h += `<span class="pg"><span class="pl">Розмір</span>${range('size', 1, 80, 1, S.size)}</span>`;
     h += `<span class="pg"><span class="pl">Прозорість</span>${range('opacity', 0.1, 1, 0.05, S.opacity, pct)}</span>`;
     h += colors();
-    h += `<span class="pg"><button class="tg ${S.stabilizer > 0 ? 'on' : ''}" data-toggle="stabilizer" data-tip="Згладжує тремтіння руки — лінії рівніші">${icon('line', 15)}Плавно</button><button class="tg ${S.symmetry ? 'on' : ''}" data-toggle="symmetry" data-tip="Дзеркальне малювання: ліва половина повторює праву">${icon('sym', 15)}Дзеркало</button></span>`;
+    h += `<span class="pg"><button class="tg ${S.stabilizer > 0 ? 'on' : ''}" data-toggle="stabilizer" data-tip="Пензель іде за курсором «на нитці» — лінії рівні, без тремтіння руки">${icon('wave', 15)}Плавно</button><button class="tg ${S.symmetry ? 'on' : ''}" data-toggle="symmetry" data-tip="Дзеркальне малювання: ліва половина повторює праву">${icon('sym', 15)}Дзеркало</button>${lockBtn}</span>`;
   } else if (t === 'eraser') {
     h += `<span class="pg"><span class="pl">Розмір</span>${range('size', 2, 120, 1, S.size)}</span>`;
+    h += `<span class="pg">${seg('eraserSoft', [[false, 'Тверда'], [true, 'М’яка', 'Стирає м’яко, з розмитим краєм']], S.eraserSoft)}</span>`;
     h += `<span class="hint">Стирає лише на вибраному шарі</span>`;
   } else if (t === 'fill') {
     h += colors();
     h += `<span class="pg"><span class="pl">Межі</span>${seg('fillAll', [[true, 'Усі шари', 'Заливає область, обведену на будь-якому видимому шарі'], [false, 'Цей шар']], S.fillAll)}</span>`;
+    h += `<span class="pg"><span class="pl">Щілини</span>${seg('fillGap', [[0, 'Ні'], [3, 'Малі', 'Не витікає крізь маленькі щілини в контурі'], [7, 'Великі', 'Не витікає навіть крізь помітні розриви в контурі']], S.fillGap)}</span>`;
     h += `<span class="pg"><span class="pl">Точність</span>${seg('fillTol', [[16, 'Точно'], [40, 'Звичайно'], [90, 'Широко']], S.fillTol)}</span>`;
-    h += `<span class="hint">Порада: контур на шарі «Малюнок», а фарбуйте на шарі під ним</span>`;
+    h += `<span class="pg">${lockBtn}</span>`;
   } else if (['line', 'rect', 'ellipse'].includes(t)) {
     h += `<span class="pg"><span class="pl">Товщина</span>${range('size', 1, 60, 1, S.size)}</span>`;
     if (t !== 'line') h += `<span class="pg">${seg('shapeFill', [['stroke', 'Контур'], ['fill', 'Заливка']], S.shapeFill)}</span>`;
     h += colors();
-    h += `<span class="hint">Shift — рівна лінія, квадрат або коло</span>`;
+    h += `<span class="hint">Shift — ${t === 'line' ? 'кут кратний 15°' : t === 'rect' ? 'квадрат' : 'коло'}</span>`;
+  } else if (t === 'lasso') {
+    h += colors();
+    h += `<span class="pg"><span class="pl">Прозорість</span>${range('opacity', 0.1, 1, 0.05, S.opacity, pct)}</span>`;
+    h += `<span class="pg">${lockBtn}</span>`;
+    h += `<span class="hint">Обведіть область — вона заллється кольором. Зручно для тіней і плям</span>`;
   } else if (t === 'select') {
     if (stage.float) {
-      h += `<span class="pg"><button class="tg" data-float="flip">${icon('flip', 15)}Віддзеркалити</button><button class="tg" data-float="copy">${icon('copy', 15)}Копіювати</button><button class="tg" data-float="del">${icon('trash', 15)}Видалити</button><button class="tg on" data-float="done">${icon('check', 15)}Готово</button></span>`;
-      h += `<span class="hint">Тягніть шматок, кут — змінити розмір (Shift — без пропорцій). Стрілки — посунути на 1 px</span>`;
-    } else h += `<span class="hint">Обведіть рамкою частину малюнка на вибраному шарі, щоб перемістити, збільшити чи скопіювати її на інший кадр. Ctrl+V — вставити скопійоване</span>`;
+      h += `<span class="pg"><button class="tg" data-float="flip" data-tip="Віддзеркалити зліва направо">${icon('flip', 15)}Дзеркально</button><button class="tg" data-float="flipV" data-tip="Перевернути догори дриґом">${icon('flipV', 15)}Догори</button><button class="tg" data-float="rot90" data-tip="Повернути на 90°">${icon('rotate', 15)}90°</button></span>`;
+      h += `<span class="pg"><button class="tg" data-float="copy">${icon('copy', 15)}Копіювати</button><button class="tg" data-float="del">${icon('trash', 15)}Видалити</button><button class="tg on" data-float="done">${icon('check', 15)}Готово</button></span>`;
+      h += `<span class="hint">Кружечок угорі — повернути (Shift — по 15°), квадратик — розмір</span>`;
+    } else {
+      h += `<span class="pg">${seg('selMode', [['rect', 'Рамка'], ['lasso', 'Ласо', 'Обвести довільну форму — наприклад, лише руку героя']], S.selMode)}</span>`;
+      h += `<span class="hint">Обведіть частину малюнка, щоб перемістити, повернути чи скопіювати її на інший кадр. Ctrl+V — вставити</span>`;
+    }
   } else if (t === 'picker') h += `<span class="hint">Клацніть на малюнку — колір стане поточним</span>`;
   else if (t === 'hand') h += `<span class="hint">Тягніть аркуш. Коліщатко — масштаб, F — вписати в екран</span>`;
   el.innerHTML = h;
+  const bb = $('#brushBtn canvas'); if (bb) { bb.width = 224; bb.height = 72; sampleStroke(bb, BRUSHES[S.brush], S.color, 26); }
 }
 
 /* ═════════ бокова панель ═════════ */
@@ -407,6 +424,7 @@ function renderAll() { renderTop(); renderRail(); renderProp(); renderSide(); re
 const pop = $('#pop'); let popAnchor = null, popPick = null;
 function openPop(anchor, html, pick, at) {
   if (popAnchor === anchor && pop.classList.contains('on')) { closePop(); return; }
+  if (pop.classList.contains('on')) closePop();
   popAnchor = anchor; popPick = pick;
   pop.innerHTML = html; pop.classList.add('on');
   const r = at || anchor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
@@ -414,7 +432,8 @@ function openPop(anchor, html, pick, at) {
   pop.style.top = Math.max(8, y) + 'px'; pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left ?? r.x)) + 'px';
   pop.querySelector('button')?.focus();
 }
-function closePop() { pop.classList.remove('on'); popAnchor = null; }
+let popClose = null;
+function closePop() { pop.classList.remove('on'); popAnchor = null; const f = popClose; popClose = null; if (f) f(); }
 pop.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b && popPick) { const f = popPick; closePop(); f(b.dataset.v); } });
 document.addEventListener('mousedown', e => { if (pop.classList.contains('on') && !pop.contains(e.target) && !(popAnchor && popAnchor.contains && popAnchor.contains(e.target))) closePop(); });
 const mi = (v, ic, t, sub, k, cls = '') => `<button class="mi ${cls}" data-v="${v}" role="menuitem">${icon(ic, 16)}<span>${esc(t)}${sub ? `<small>${esc(sub)}</small>` : ''}</span>${k ? `<span class="k">${k}</span>` : ''}</button>`;
@@ -436,6 +455,39 @@ function frameMenu(i, at) {
     else if (v === 'right' && i < P.frames.length - 1) struct(() => { P.moveFrame(i, i + 1); S.fi = i + 1; });
     else if (v === 'del') delFrame(i);
   }, at);
+}
+
+function brushMenu(el) {
+  openPop(el, `<div class="brush-list">${Object.entries(BRUSHES).map(([k, B]) => `<button class="mi brush-mi ${S.brush === k ? 'on' : ''}" data-v="${k}" role="menuitem"><canvas data-bs="${k}" width="240" height="64" aria-hidden="true"></canvas><span>${esc(B.t)}<small>${esc(B.desc)}</small></span></button>`).join('')}</div>`, v => { S.brush = v; saveUi(); renderProp(); stage.render(); });
+  $$('[data-bs]', pop).forEach(cv => sampleStroke(cv, BRUSHES[cv.dataset.bs], S.color === '#ffffff' ? '#1d2236' : S.color, 22));
+}
+// Свій колір: квадрат насиченості й яскравості, смуга відтінку, HEX
+const hex2hsv = hex => { const n = parseInt(hex.slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0; if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [(h * 60 + 360) % 360, mx ? d / mx : 0, mx]; };
+const hsv2hex = (h, s, v) => { const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); }; return '#' + [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join(''); };
+function colorMenu(el) {
+  let [h, sat, val] = hex2hsv(S.color);
+  openPop(el, `<div class="hsv"><div class="sv-wrap"><canvas class="sv" width="232" height="150" aria-label="Насиченість і яскравість"></canvas><i class="sv-dot"></i></div>
+    <input type="range" class="hue" min="0" max="359" step="1" aria-label="Відтінок">
+    <div class="row"><span class="hsv-prev"></span><input class="inp hex" maxlength="7" aria-label="Колір HEX" spellcheck="false"><button class="btn primary" data-v="ok">Готово</button></div></div>`, () => {});
+  const cv = $('.sv', pop), dot = $('.sv-dot', pop), hue = $('.hue', pop), hex = $('.hex', pop), prev = $('.hsv-prev', pop), g = cv.getContext('2d');
+  const paint = () => {
+    g.fillStyle = hsv2hex(h, 1, 1); g.fillRect(0, 0, cv.width, cv.height);
+    const wg = g.createLinearGradient(0, 0, cv.width, 0); wg.addColorStop(0, '#fff'); wg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = wg; g.fillRect(0, 0, cv.width, cv.height);
+    const bg = g.createLinearGradient(0, 0, 0, cv.height); bg.addColorStop(0, 'rgba(0,0,0,0)'); bg.addColorStop(1, '#000'); g.fillStyle = bg; g.fillRect(0, 0, cv.width, cv.height);
+  };
+  const sync = (fromHex) => {
+    S.color = hsv2hex(h, sat, val);
+    dot.style.left = sat * 100 + '%'; dot.style.top = (1 - val) * 100 + '%'; dot.style.background = S.color;
+    prev.style.background = S.color; if (!fromHex) hex.value = S.color; hue.value = Math.round(h);
+    const sw = $('.sw-custom'); if (sw) sw.style.background = PALETTE.includes(S.color) ? '' : S.color;
+  };
+  paint(); sync();
+  const at = e => { const r = cv.getBoundingClientRect(); sat = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); val = Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / r.height)); sync(); };
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); at(e); cv.onpointermove = at; });
+  cv.addEventListener('pointerup', () => { cv.onpointermove = null; });
+  hue.addEventListener('input', () => { h = +hue.value; paint(); sync(); });
+  hex.addEventListener('input', () => { const v = hex.value.trim(); if (/^#?[0-9a-f]{6}$/i.test(v)) { [h, sat, val] = hex2hsv('#' + v.replace('#', '').toLowerCase()); paint(); sync(true); } });
+  popClose = () => { saveUi(); if (!S.recent.includes(S.color)) S.recent = [S.color, ...S.recent].slice(0, 6); renderProp(); stage.render(); };
 }
 
 /* ═════════ файл ═════════ */
@@ -564,9 +616,16 @@ function helpDialog() {
     <div class="kgrid">
       <div class="grp">Інструменти</div>
       <span>Пензель, гумка, заливка</span><span>${k('B E G')}</span>
-      <span>Лінія, прямокутник, еліпс</span><span>${k('L R O')}</span>
+      <span>Лінія, прямокутник, еліпс, ласо-заливка</span><span>${k('L R O A')}</span>
       <span>Виділення, піпетка, рука</span><span>${k('S I H')}</span>
       <span>Менший або більший пензель</span><span>${k('[ ]')}</span>
+      <span>Узяти колір з малюнка, не міняючи інструмент</span><span>${k('Alt+клік')}</span>
+      <span>Пряма лінія від кінця попередньої</span><span>${k('Shift+клік')}</span>
+      <span>Вирівняти лінію чи коло: затримайте пензель у кінці</span><span>утримати</span>
+      <div class="grp">Планшет і телефон</div>
+      <span>Скасувати й повторити</span><span>дотик двома / трьома пальцями</span>
+      <span>Масштаб і рух аркуша</span><span>два пальці</span>
+      <span>Долоня, коли малюєте стилусом</span><span>не малює, лише рухає аркуш</span>
       <div class="grp">Кадри</div>
       <span>Попередній і наступний кадр</span><span>${k(', .')}</span>
       <span>Новий порожній кадр, копія кадру</span><span>${k('N D')}</span>
@@ -610,7 +669,7 @@ function setTool(t) {
   saveUi(); renderRail(); renderProp(); stage.cursor(); stage.render();
 }
 const ACTS = {
-  undo, redo, fileMenu: el => fileMenu(el), lessons: () => lessonsDialog(), help: helpDialog, export: exportDialog,
+  undo, redo, fileMenu: el => fileMenu(el), brushPick: el => brushMenu(el), colorPick: el => colorMenu(el), lessons: () => lessonsDialog(), help: helpDialog, export: exportDialog,
   theme: () => { const d = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = d; try { localStorage.setItem('edvault-theme', d); } catch { /* */ } renderTop(); },
   side: () => $('#side').classList.toggle('open'),
   zoomIn: () => stage.zoomAt(1.25), zoomOut: () => stage.zoomAt(0.8), fit: () => stage.fit(),
@@ -664,6 +723,8 @@ document.addEventListener('click', e => {
   if (fl) {
     const k = fl.dataset.float;
     if (k === 'flip' && stage.float) { stage.float.flip = !stage.float.flip; stage.render(); }
+    if (k === 'flipV' && stage.float) { stage.float.flipV = !stage.float.flipV; stage.render(); }
+    if (k === 'rot90' && stage.float) { stage.float.angle = ((stage.float.angle || 0) + Math.PI / 2) % (Math.PI * 2); stage.render(); }
     if (k === 'copy') { clip = stage.floatCanvas(); toast('Скопійовано. Перейдіть на інший кадр і натисніть Ctrl+V', 'good'); }
     if (k === 'del') stage.deleteFloat();
     if (k === 'done') stage.commitFloat();
@@ -682,18 +743,17 @@ document.addEventListener('input', e => {
     const v = +e.target.value, out = e.target.parentElement.querySelector(`[data-out="${r}"]`);
     if (r === 'layerOpacity') { P.layers[S.li].opacity = v; stage.rebuild(); if (out) out.textContent = Math.round(v * 100) + '%'; return; }
     S[r] = v; if (out) out.textContent = ['opacity', 'onionAlpha', 'refOpacity'].includes(r) ? Math.round(v * 100) + '%' : v;
+    if (r === 'size') stage.flashSize();
     if (r === 'onionAlpha') { stage.buildOnion(); stage.render(); }
     if (r === 'refOpacity') stage.render();
     return;
   }
-  if (e.target.matches('[data-custom]')) { S.color = e.target.value; e.target.parentElement.style.background = S.color; return; }
   if (e.target.matches('[data-bgcustom]')) { P.bg = e.target.value; stage.render(); return; }
   const m = e.target.dataset.meta; if (m) { P[m] = e.target.value; touched(); }
 });
 document.addEventListener('change', e => {
   if (e.target.dataset.range === 'layerOpacity') { const v = +e.target.value; const L = P.layers[S.li]; L.opacity = 1; struct(() => { L.opacity = v; P.frames.forEach(f => stale.add(f.id)); }); return; }
   if (e.target.dataset.range) { saveUi(); return; }
-  if (e.target.matches('[data-custom]')) { S.color = e.target.value; saveUi(); renderProp(); }
   if (e.target.matches('[data-bgcustom]')) { const v = e.target.value; struct(() => { P.bg = v; P.frames.forEach(f => stale.add(f.id)); }); }
   if (e.target.matches('[data-fps]')) { const v = +e.target.value; struct(() => { P.fps = v; }); }
 });
@@ -729,7 +789,7 @@ $('#film').addEventListener('keydown', e => { const fr = e.target.closest('.fr')
 
 /* клавіатура */
 let clip = null;
-const KEYS = { KeyB: 'brush', KeyE: 'eraser', KeyG: 'fill', KeyL: 'line', KeyR: 'rect', KeyO: 'ellipse', KeyS: 'select', KeyI: 'picker', KeyH: 'hand' };
+const KEYS = { KeyB: 'brush', KeyE: 'eraser', KeyG: 'fill', KeyL: 'line', KeyR: 'rect', KeyO: 'ellipse', KeyA: 'lasso', KeyS: 'select', KeyI: 'picker', KeyH: 'hand' };
 document.addEventListener('keydown', e => {
   if (!P || document.querySelector('.md-wrap')) return;
   if (e.target.closest('input, textarea, select')) return;
@@ -753,8 +813,8 @@ document.addEventListener('keydown', e => {
   if (e.key === '.' || e.key === 'ArrowRight') { e.preventDefault(); goFrame(S.fi + 1); return; }
   if (e.key === 'Home') { goFrame(0); return; }
   if (e.key === 'End') { goFrame(P.frames.length - 1); return; }
-  if (e.key === '[') { S.size = Math.max(1, Math.round(S.size / 1.25)); renderProp(); stage.render(); return; }
-  if (e.key === ']') { S.size = Math.min(120, Math.round(S.size * 1.25) + 1); renderProp(); stage.render(); return; }
+  if (e.key === '[') { S.size = Math.max(1, Math.round(S.size / 1.25)); renderProp(); stage.flashSize(); return; }
+  if (e.key === ']') { S.size = Math.min(120, Math.round(S.size * 1.25) + 1); renderProp(); stage.flashSize(); return; }
   if (c === 'KeyN') { addFrame(true); return; }
   if (c === 'KeyD') { addFrame(false); return; }
   if (c === 'KeyK') { S.onion = !S.onion; saveUi(); stage.rebuild(); stage.prepare(); renderTransport(); renderSide(); return; }

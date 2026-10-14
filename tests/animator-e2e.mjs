@@ -124,7 +124,7 @@ await step('шари: новий, сховати, вище й нижче, про
 await step('заливка на шарі «Фон» зупиняється на контурі з шару «Персонаж»', async () => {
   await p.click('.fr[data-frame="0"]');
   await p.keyboard.press('b');
-  await p.click('[data-set="brush"][data-v="pen"]');
+  await p.click('#brushBtn'); await p.click('#pop [data-v="pen"]');
   await drag([[100, 100], [300, 100], [300, 300], [100, 300], [100, 100]], 10);
   await p.click('[data-layer="0"]');
   await p.keyboard.press('g');
@@ -207,6 +207,129 @@ await step('урок «М’яч»: напрямні й картка з крок
   const s = await st(); assert.equal(s.frames, 16);
   await p.locator('#lessonCard:not([hidden])').waitFor();
   assert.ok(await p.evaluate(() => Array.isArray(window.Animator.app.guides) && window.Animator.app.guides.length === 16));
+});
+
+// далі — інструменти малювання, кожен на новому порожньому кадрі
+const fresh = async () => { await p.keyboard.press('Escape'); await p.keyboard.press('n'); await p.waitForTimeout(80); return (await st()).fi; };
+const setS = o => p.evaluate(o => Object.assign(window.Animator.S, o), o);
+
+await step('усі шість пензлів малюють, у туші кінці тонші за середину', async () => {
+  const fi = await fresh();
+  await p.keyboard.press('b');
+  for (const [i, br] of ['pencil', 'pen', 'marker', 'calli', 'chalk', 'air'].entries()) {
+    await setS({ brush: br, size: 12, stabilizer: 0, color: '#1d2236', opacity: 1 });
+    const y = 60 + i * 60, before = await ink(1, fi);
+    await drag([[60, y], [200, y], [340, y]], 12);
+    assert.ok(await ink(1, fi) > before + 50, 'пензель ' + br);
+  }
+  // туш: товщина посередині більша, ніж біля кінця
+  const col = x => p.evaluate(([fi, x]) => { const { P } = window.Animator, c = P.layers[1].cells.get(P.frames[fi].id).canvas, d = c.getContext('2d').getImageData(x, 90, 1, 60).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 128) n++; return n; }, [fi, x]);
+  assert.ok(await col(200) > await col(64), 'звуження на кінці');
+});
+
+await step('заливка: щілина в контурі — без закриття витікає, з «Великі» лишається всередині', async () => {
+  const fi = await fresh();
+  await setS({ brush: 'pen', size: 4, stabilizer: 0, color: '#1d2236', alphaLock: false });
+  await p.keyboard.press('b');
+  // квадрат із розривом 5 px у верхній стороні
+  await drag([[205, 100], [300, 100], [300, 300], [100, 300], [100, 100], [195, 100]], 10);
+  await p.keyboard.press('g');
+  await p.click('[data-set="fillAll"][data-v="false"]');
+  await p.click('[data-set="fillGap"][data-v="0"]');
+  await p.click('[data-color="#22c55e"]');
+  await p.mouse.click(...await D(200, 200)); await p.waitForTimeout(150);
+  assert.ok((await px(1, fi, 400, 400))[3] > 0, 'без закриття щілин фарба витекла');
+  await p.keyboard.press('Control+z'); await p.waitForTimeout(150);
+  assert.equal((await px(1, fi, 400, 400))[3], 0);
+  await p.click('[data-set="fillGap"][data-v="7"]');
+  await p.mouse.click(...await D(200, 200)); await p.waitForTimeout(150);
+  assert.deepEqual((await px(1, fi, 200, 200)).slice(0, 3), [34, 197, 94]);
+  assert.equal((await px(1, fi, 400, 400))[3], 0, 'назовні не витекло');
+  await p.click('[data-set="fillGap"][data-v="0"]'); await p.click('[data-set="fillAll"][data-v="true"]');
+});
+
+await step('ласо-заливка (A): обведена область зафарбована', async () => {
+  const fi = await fresh();
+  await p.keyboard.press('a');
+  assert.equal((await st()).tool, 'lasso');
+  await p.click('[data-color="#e5484d"]');
+  await drag([[100, 100], [300, 100], [200, 280], [100, 100]], 10);
+  assert.deepEqual((await px(1, fi, 200, 160)).slice(0, 4), [229, 72, 77, 255]);
+  assert.equal((await px(1, fi, 120, 260))[3], 0, 'поза ласо порожньо');
+});
+
+await step('«Лише по малюнку»: фарба лягає тільки на намальоване', async () => {
+  const fi = await fresh();
+  await p.keyboard.press('a'); await p.click('[data-color="#1d2236"]');
+  await drag([[100, 100], [200, 100], [200, 200], [100, 200], [100, 100]], 6);
+  await p.keyboard.press('b');
+  await setS({ brush: 'marker', size: 30, opacity: 1 });
+  await p.click('[data-toggle="alphaLock"]');
+  await p.click('[data-color="#facc15"]');
+  await drag([[50, 150], [250, 150]], 10);
+  const inside = await px(1, fi, 150, 150), outside = await px(1, fi, 60, 150);
+  assert.equal(outside[3], 0, 'поза малюнком не з’явилось');
+  assert.ok(inside[0] > 100 && inside[1] > 100, 'на малюнку жовтіє: ' + inside);
+  await p.click('[data-toggle="alphaLock"]');
+});
+
+await step('затримати пензель у кінці — лінія стає прямою', async () => {
+  const fi = await fresh();
+  await setS({ brush: 'pen', size: 6, stabilizer: 0, color: '#1d2236' });
+  await p.mouse.move(...await D(100, 400)); await p.mouse.down();
+  for (let k = 1; k <= 20; k++) await p.mouse.move(...await D(100 + k * 15, 400 + (k % 2 ? 25 : -25)), { steps: 2 });
+  await p.mouse.move(...await D(420, 400), { steps: 2 });
+  await p.waitForTimeout(800);
+  await p.mouse.up(); await p.waitForTimeout(100);
+  assert.ok((await px(1, fi, 250, 400))[3] > 200, 'середина прямої');
+  assert.equal((await px(1, fi, 250, 425))[3], 0, 'зигзагу немає');
+});
+
+await step('Shift+клік — пряма від кінця попередньої лінії', async () => {
+  const fi = await fresh();
+  await drag([[100, 100], [104, 100]]);
+  await p.keyboard.down('Shift'); await p.mouse.click(...await D(400, 100)); await p.keyboard.up('Shift');
+  await p.waitForTimeout(80);
+  assert.ok((await px(1, fi, 250, 100))[3] > 200);
+});
+
+await step('виділення: поворот на 90° і ласо-виділення', async () => {
+  const fi = await fresh();
+  await setS({ brush: 'marker', size: 10, opacity: 1 });
+  await drag([[100, 200], [300, 200]], 10); // горизонтальна смуга
+  await p.keyboard.press('s');
+  await p.click('[data-set="selMode"][data-v="rect"]');
+  await drag([[80, 180], [320, 220]]);
+  await p.waitForFunction(() => !!window.Animator.stage.float);
+  await p.click('[data-float="rot90"]');
+  await p.click('[data-float="done"]');
+  assert.ok((await px(1, fi, 200, 120))[3] > 0, 'після повороту смуга вертикальна');
+  assert.equal((await px(1, fi, 120, 200))[3], 0, 'горизонтальної вже немає');
+  // ласо: обвести лише верхню половину й посунути праворуч
+  await p.click('[data-set="selMode"][data-v="lasso"]');
+  await drag([[170, 90], [230, 90], [230, 195], [170, 195], [170, 90]], 8);
+  await p.waitForFunction(() => !!window.Animator.stage.float);
+  await drag([[200, 140], [500, 140]], 8);
+  await p.click('[data-float="done"]');
+  assert.ok((await px(1, fi, 500, 140))[3] > 0, 'верхня частина переїхала');
+  assert.ok((await px(1, fi, 200, 260))[3] > 0, 'нижня лишилась на місці');
+  await p.click('[data-set="selMode"][data-v="rect"]');
+});
+
+await step('планшет: дотик двома пальцями — скасувати, трьома — повторити', async () => {
+  await p.keyboard.press('b');
+  const fi = await fresh();
+  await drag([[100, 100], [300, 120]]);
+  const n = await ink(1, fi);
+  const tap = k => p.evaluate(k => {
+    const cv = document.querySelector('#view'), r = cv.getBoundingClientRect(), ev = (t, id, i) => cv.dispatchEvent(new PointerEvent(t, { pointerId: 50 + id, pointerType: 'touch', clientX: r.left + 200 + i * 40, clientY: r.top + 200, bubbles: true, isPrimary: id === 0 }));
+    for (let i = 0; i < k; i++) ev('pointerdown', i, i);
+    for (let i = 0; i < k; i++) ev('pointerup', i, i);
+  }, k);
+  await tap(2); await p.waitForTimeout(150);
+  assert.equal(await ink(1, fi), 0, 'скасовано');
+  await tap(3); await p.waitForTimeout(150);
+  assert.equal(await ink(1, fi), n, 'повторено');
 });
 
 await step('телефон: без горизонтальної прокрутки, аркуш видно, панель шарів висувається', async () => {
