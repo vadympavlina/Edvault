@@ -36,15 +36,15 @@ let box;
 const D = (x, y) => p.evaluate(([x, y]) => { const { stage } = window.Animator, r = stage.cv.getBoundingClientRect(); return [r.left + stage.view.x + x * stage.view.z, r.top + stage.view.y + y * stage.view.z]; }, [x, y]);
 const drag = async (pts, steps = 6) => { await p.mouse.move(...await D(...pts[0])); await p.mouse.down(); for (const q of pts.slice(1)) await p.mouse.move(...await D(...q), { steps }); await p.mouse.up(); await p.waitForTimeout(60); };
 
-await step('стартове вікно: розмір аркуша, назва, автор', async () => {
+await step('стартове вікно: розмір аркуша й назва, без полів автора й класу', async () => {
   await p.locator('.md-wrap').waitFor();
   await p.click('[data-size="square"]');
   await p.fill('[data-st="title"]', 'Стрибок м’яча');
-  await p.fill('[data-st="author"]', 'Олена Коваль');
   await p.click('[data-go]');
   await p.waitForSelector('.md-wrap', { state: 'detached' });
   const s = await st();
-  assert.equal(s.title, 'Стрибок м’яча'); assert.equal(s.author, 'Олена Коваль');
+  assert.equal(s.title, 'Стрибок м’яча');
+  assert.equal(await p.locator('[data-st="author"], [data-meta="author"], [data-meta="group"]').count(), 0, 'полів автора й класу немає');
   assert.deepEqual(await p.evaluate(() => [window.Animator.P.w, window.Animator.P.h]), [720, 720]);
   assert.deepEqual(s.layers, ['Фон', 'Персонаж']); assert.equal(s.li, 1);
   box = await p.locator('#view').boundingBox();

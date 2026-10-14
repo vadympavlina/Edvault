@@ -341,8 +341,6 @@ function renderSide() {
        <p class="sm">Звук грає під час перегляду й потрапляє у відео.</p>`}
   </section>
   <section class="sec"><h3>${icon('film', 16)}Про мультфільм</h3>
-    <label class="field"><span>Автор</span><input class="inp" data-meta="author" value="${esc(P.author)}" placeholder="Ім’я та прізвище" maxlength="40"></label>
-    <label class="field"><span>Клас або група</span><input class="inp" data-meta="group" value="${esc(P.group)}" placeholder="Напр. 5-Б" maxlength="20"></label>
     <p class="sm">Аркуш ${P.w} × ${P.h}. ${P.frames.length} ${plural(P.frames.length, 'кадр', 'кадри', 'кадрів')}, тривалість ${fmtTime(P.duration)}.</p>
   </section>`;
   renderLayerThumbs();
@@ -495,29 +493,11 @@ function colorMenu(el) {
 async function saveFile() {
   if (!P) return;
   stage.commitFloat();
-  if (!P.author) {
-    const name = await askAuthor(); if (name === null) return;
-  }
   toast('Зберігаємо…', '');
   const blob = await packProject(P, { audio: audio.blob, ref: app.refBlob, refShow: S.refShow, refOpacity: S.refOpacity });
   const name = fileName(P) + FILE_EXT;
   download(blob, name);
   toast(`Збережено у файл ${name}`, 'good');
-}
-function askAuthor() {
-  return new Promise(res => {
-    let done = false;
-    modal({ title: 'Хто автор мультфільму?', html: `<p class="muted">Ім’я потрапить у файл — так вчитель знатиме, чия це робота.</p>
-      <label class="field"><span>Ім’я та прізвище</span><input class="inp" id="au" maxlength="40" autofocus></label>
-      <label class="field"><span>Клас або група <span class="muted">(необов’язково)</span></span><input class="inp" id="gr" maxlength="20"></label>
-      <div class="row end"><button class="btn" data-skip>Без імені</button><button class="btn primary" data-ok>Зберегти</button></div>`,
-      onClose: () => { if (!done) res(null); },
-      onOpen: api => {
-        const ok = skip => { done = true; if (!skip) { P.author = api.el.querySelector('#au').value.trim(); P.group = api.el.querySelector('#gr').value.trim(); renderSide(); } api.close(); res(P.author); };
-        api.el.addEventListener('click', e => { if (e.target.closest('[data-ok]')) ok(false); if (e.target.closest('[data-skip]')) ok(true); });
-        api.el.addEventListener('keydown', e => { if (e.key === 'Enter') ok(false); });
-      } });
-  });
 }
 async function openFile() { const f = await pickFile(FILE_EXT + ',application/zip'); if (f) loadFile(f); }
 async function loadFile(f) {
@@ -525,7 +505,7 @@ async function loadFile(f) {
   const r = await unpackProject(f);
   if (!r.ok) { toast(r.error, 'bad', { ms: 5000 }); return; }
   const go = () => { begin(r.P, { audio: r.audio, ref: r.ref, refMeta: r.refMeta }); toast(`Відкрито «${r.P.title}»`, 'good'); };
-  modal({ title: 'Відкрити мультфільм', html: `<table class="tbl"><tr><td>Назва</td><td><b>${esc(r.P.title)}</b></td></tr><tr><td>Автор</td><td><b>${esc(r.P.author || '—')}</b></td></tr><tr><td>Клас</td><td><b>${esc(r.P.group || '—')}</b></td></tr><tr><td>Кадрів</td><td><b>${r.P.frames.length}</b></td></tr><tr><td>Тривалість</td><td><b>${fmtTime(r.P.duration)}</b></td></tr>${r.savedAt ? `<tr><td>Збережено</td><td><b>${esc(new Date(r.savedAt).toLocaleString('uk-UA'))}</b></td></tr>` : ''}</table>
+  modal({ title: 'Відкрити мультфільм', html: `<table class="tbl"><tr><td>Назва</td><td><b>${esc(r.P.title)}</b></td></tr><tr><td>Кадрів</td><td><b>${r.P.frames.length}</b></td></tr><tr><td>Тривалість</td><td><b>${fmtTime(r.P.duration)}</b></td></tr>${r.savedAt ? `<tr><td>Збережено</td><td><b>${esc(new Date(r.savedAt).toLocaleString('uk-UA'))}</b></td></tr>` : ''}</table>
     ${r.edited ? '<p class="note bad">Файл змінювали вручну після збереження.</p>' : ''}
     ${hasWork() ? '<p class="muted">Поточний мультфільм у браузері буде замінено. Якщо він потрібен — спершу збережіть його у файл.</p>' : ''}
     <div class="row end"><button class="btn" data-close>Скасувати</button><button class="btn primary" data-go>Відкрити</button></div>`,
@@ -569,14 +549,12 @@ function exportDialog() {
 
 /* ═════════ новий мультфільм і уроки ═════════ */
 function startDialog(first = false) {
-  const st = { size: 'wide', fps: 8, title: '', author: P?.author || '', group: P?.group || '' };
+  const st = { size: 'wide', fps: 8, title: '' };
   const api = modal({ title: first ? 'Аніматор: новий мультфільм' : 'Новий мультфільм', wide: true, html: `
     ${first ? '<p class="muted" style="margin-top:0">Малюйте кадр за кадром — і малюнок оживе. Почніть з уроку, якщо робите мультфільм уперше.</p>' : ''}
     <div class="field"><span>Розмір аркуша</span><div class="cards">${Object.entries(SIZES).map(([k, [w, h, t]]) => `<button class="card ${st.size === k ? 'on' : ''}" data-size="${k}"><span class="shape"><i style="width:${Math.round(w / 20)}px;height:${Math.round(h / 20)}px"></i></span><b>${t}</b><small>${w} × ${h}</small></button>`).join('')}</div></div>
     <div class="row" style="gap:12px;flex-wrap:wrap">
       <label class="field" style="flex:2;min-width:200px"><span>Назва</span><input class="inp" data-st="title" maxlength="60" placeholder="Мій мультфільм"></label>
-      <label class="field" style="flex:2;min-width:200px"><span>Автор</span><input class="inp" data-st="author" maxlength="40" value="${esc(st.author)}" placeholder="Ім’я та прізвище"></label>
-      <label class="field" style="flex:1;min-width:110px"><span>Клас</span><input class="inp" data-st="group" maxlength="20" value="${esc(st.group)}" placeholder="5-Б"></label>
     </div>
     <div class="row end" style="flex-wrap:wrap">${first ? `<button class="btn outline" data-open>${icon('open', 16)}Відкрити файл</button>` : ''}<button class="btn outline" data-lessons>${icon('lesson', 16)}Уроки для початківців</button><span class="grow"></span>${first ? '' : '<button class="btn" data-close>Скасувати</button>'}<button class="btn primary" data-go>Почати малювати</button></div>` });
   api.el.addEventListener('input', e => { const k = e.target.dataset.st; if (k) st[k] = e.target.value; });
@@ -588,7 +566,7 @@ function startDialog(first = false) {
       if (!first && hasWork() && !(await confirmBox('Почати новий мультфільм?', 'Поточний буде замінено. Якщо він потрібен — спершу збережіть його у файл.', 'Почати новий', true))) return;
       api.close();
       const [w, h] = SIZES[st.size];
-      begin(newProject({ w, h, fps: st.fps, title: st.title.trim() || 'Мій мультфільм', author: st.author.trim(), group: st.group.trim() }));
+      begin(newProject({ w, h, fps: st.fps, title: st.title.trim() || 'Мій мультфільм' }));
       toast('Малюйте на першому кадрі. Потім «Копія» на плівці — і змінюйте малюнок трохи', '', { ms: 5000 });
     }
   });
@@ -602,7 +580,7 @@ function lessonsDialog(first = false) {
     const b = e.target.closest('[data-lesson]'); if (!b) return;
     if (!first && hasWork() && !(await confirmBox('Почати урок?', 'Поточний мультфільм буде замінено. Якщо він потрібен — спершу збережіть його у файл.', 'Почати урок', true))) return;
     api.close();
-    begin(newProject({ lesson: b.dataset.lesson, author: P?.author || '', group: P?.group || '' }));
+    begin(newProject({ lesson: b.dataset.lesson }));
     S.guides = true; S.onion = true; setTool('brush'); renderAll();
   });
 }
