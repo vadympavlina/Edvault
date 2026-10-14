@@ -3,6 +3,8 @@
 import { BRUSHES, ERASERS, Stroke, brushRadius, grain, floodMask, paintMask, drawShape, tint, drawGuides } from './paint.js';
 import { isBlank } from './cells.js';
 
+// радіус «нитки» стабілізатора в пікселях екрана: 0 — вимкнено, 1 — 50 px
+export const stabRadius = s => s > 0 ? 4 + 46 * s : 0;
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 
 export class Stage {
@@ -393,7 +395,7 @@ export class Stage {
     const erase = tool === 'eraser', B = this.brushDef();
     const stroke = new Stroke(tg, B, { size: this.S.size, color: erase ? '#000' : this.S.color, mirrorW: this.S.symmetry ? this.P.w : 0 });
     const pt = { x: p.x, y: p.y, p: this.pressure(e, null, p), t: performance.now() };
-    const R = this.S.stabilizer > 0 ? (4 + 20 * this.S.stabilizer) / this.view.z : 0;
+    const R = stabRadius(this.S.stabilizer) / this.view.z;
     this.op = {
       kind: 'paint', cell, before, B, stroke, tmp: true, erase,
       mode: erase ? 'erase' : this.mode(), alpha: erase ? 1 : (B.alpha ?? 1) * this.S.opacity, grain: !erase && B.grain,
@@ -459,7 +461,7 @@ export class Stage {
   endPaint(op, p) {
     if (!op.quick) {
       // кінчик доходить туди, де відпустили, — лінія не коротшає від стабілізатора
-      if (op.R > 0 && p && Math.hypot(p.x - op.last.x, p.y - op.last.y) > 0.5) op.stroke.add({ x: p.x, y: p.y, p: op.last.p });
+      if (op.R > 0 && this.S.stabCatch !== false && p && Math.hypot(p.x - op.last.x, p.y - op.last.y) > 0.5) op.stroke.add({ x: p.x, y: p.y, p: op.last.p });
       op.stroke.end();
     }
     const last = op.quick ? (op.quick.type === 'line' ? { ...op.quick.b, p: op.quick.p } : null) : op.last;

@@ -73,6 +73,7 @@ export function toast(msg, kind = '', opts = {}) {
 
 // Вікно: html, кнопки закриття data-close; повертає { el, close }
 export function modal({ title, html, cls = '', onOpen, onClose, wide = false }) {
+  $('#toast').classList.remove('on'); // підказка не повинна закривати вікно
   const wrap = document.createElement('div');
   wrap.className = 'md-wrap';
   wrap.innerHTML = `<div class="md ${cls} ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><header><h2>${esc(title)}</h2><button class="ib" data-close aria-label="Закрити">${icon('close')}</button></header><div class="md-body">${html}</div></div>`;

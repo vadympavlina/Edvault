@@ -156,7 +156,7 @@ input,select{font:inherit;color:inherit}
   --text:#eef1ff;--text2:var(--film-text);--surface2:rgba(255,255,255,.1);--surface:rgba(255,255,255,.06);--border:rgba(255,255,255,.14);--muted:#9aa2c8}
 .transport::-webkit-scrollbar{display:none}
 .transport .ib{color:var(--film-text)}
-.transport .play{width:40px;height:34px;border-radius:6px;background:var(--marker);color:#1c2869}
+.transport .play{width:40px;height:34px;display:grid;place-items:center;padding:0;flex-shrink:0;border-radius:6px;background:var(--marker);color:#1c2869}
 .transport .play:hover{background:#fff1a0;color:#1c2869}
 .transport .count{font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:150px;text-align:center}
 .transport .seg{background:rgba(255,255,255,.06)}
@@ -297,3 +297,16 @@ table.tbl td:last-child{text-align:right}
 #stageWrap canvas{touch-action:none}
 [data-theme="dark"] .sw,[data-theme="dark"] .bgs button{box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)}
 [data-theme="dark"] .sw.on,[data-theme="dark"] .bgs button.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
+/* плавність */
+.stab-btn b{font-weight:700;font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
+.stab{width:300px;display:grid;gap:10px;padding:6px}
+.stab h4{margin:0;font-size:13.5px}
+.stab .demo{width:100%;height:96px;background:#fff;border:1px solid var(--border);border-radius:6px}
+.stab .legend{display:flex;gap:12px;font-size:11.5px;color:var(--muted)}
+.stab .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.stab .rng input{flex:1;width:auto}
+.stab .rng{display:flex}
+.stab .chk{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text2)}
+.stab .chk input{margin-top:2px;accent-color:var(--accent)}
+.mi.on{background:var(--surface2);font-weight:600}
+.mi.on .ico{color:var(--accent)}

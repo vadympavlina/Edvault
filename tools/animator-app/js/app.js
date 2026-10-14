@@ -2,7 +2,7 @@
 // Плівка кадрів, шари, калька, пензлі з натиском, звук, уроки, експорт у GIF, відео, PNG і спрайт-лист.
 import { Project, History, SIZES } from './model.js';
 import { store, setSize, trim, forgetAll, isBlank, Cell } from './cells.js';
-import { Stage } from './stage.js';
+import { Stage, stabRadius } from './stage.js';
 import { BRUSHES, sampleStroke } from './paint.js';
 import { LESSONS } from './lessons.js';
 import { packProject, unpackProject, fileName, FILE_EXT, autosave, restore, clearAutosave, Audio, recordMic } from './io.js';
@@ -30,7 +30,7 @@ const S = Object.assign({
 }, loadUi(), { fi: 0, li: 1, playing: false, guides: true, refShow: true, refOpacity: 0.4 });
 if (!BRUSHES[S.brush]) S.brush = 'pen';
 function loadUi() { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {}; } catch { return {}; } }
-const UI_KEYS = ['tool', 'brush', 'size', 'sizes', 'opacity', 'color', 'recent', 'stabilizer', 'symmetry', 'shapeFill', 'fillAll', 'fillTol', 'fillGap', 'eraserSoft', 'selMode', 'onion', 'onionN', 'onionAlpha', 'loop'];
+const UI_KEYS = ['tool', 'brush', 'size', 'sizes', 'opacity', 'color', 'recent', 'stabilizer', 'stabCatch', 'symmetry', 'shapeFill', 'fillAll', 'fillTol', 'fillGap', 'eraserSoft', 'selMode', 'onion', 'onionN', 'onionAlpha', 'loop'];
 function saveUi() { try { localStorage.setItem(UI_KEY, JSON.stringify(Object.fromEntries(UI_KEYS.map(k => [k, S[k]])))); } catch { /* приватний режим */ } }
 
 let P = null;
@@ -264,7 +264,7 @@ function renderProp() {
     h += `<span class="pg"><span class="pl">Розмір</span>${range('size', 1, 80, 1, S.size)}</span>`;
     h += `<span class="pg"><span class="pl">Прозорість</span>${range('opacity', 0.1, 1, 0.05, S.opacity, pct)}</span>`;
     h += colors();
-    h += `<span class="pg"><button class="tg ${S.stabilizer > 0 ? 'on' : ''}" data-toggle="stabilizer" data-tip="Пензель іде за курсором «на нитці» — лінії рівні, без тремтіння руки">${icon('wave', 15)}Плавно</button><button class="tg ${S.symmetry ? 'on' : ''}" data-toggle="symmetry" data-tip="Дзеркальне малювання: ліва половина повторює праву">${icon('sym', 15)}Дзеркало</button>${lockBtn}</span>`;
+    h += `<span class="pg"><button class="tg stab-btn ${S.stabilizer > 0 ? 'on' : ''}" data-act="stabPick" aria-haspopup="dialog" data-tip="Згладжування тремтіння руки — налаштувати">${icon('wave', 15)}Плавність <b>${S.stabilizer > 0 ? Math.round(S.stabilizer * 100) + '%' : 'вимк.'}</b></button><button class="tg ${S.symmetry ? 'on' : ''}" data-toggle="symmetry" data-tip="Дзеркальне малювання: ліва половина повторює праву">${icon('sym', 15)}Дзеркало</button>${lockBtn}</span>`;
   } else if (t === 'eraser') {
     h += `<span class="pg"><span class="pl">Розмір</span>${range('size', 2, 120, 1, S.size)}</span>`;
     h += `<span class="pg">${seg('eraserSoft', [[false, 'Тверда'], [true, 'М’яка', 'Стирає м’яко, з розмитим краєм']], S.eraserSoft)}</span>`;
@@ -437,7 +437,7 @@ pop.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if 
 document.addEventListener('mousedown', e => { if (pop.classList.contains('on') && !pop.contains(e.target) && !(popAnchor && popAnchor.contains && popAnchor.contains(e.target))) closePop(); });
 const mi = (v, ic, t, sub, k, cls = '') => `<button class="mi ${cls}" data-v="${v}" role="menuitem">${icon(ic, 16)}<span>${esc(t)}${sub ? `<small>${esc(sub)}</small>` : ''}</span>${k ? `<span class="k">${k}</span>` : ''}</button>`;
 function fileMenu(el) {
-  openPop(el, mi('new', 'plus', 'Новий мультфільм…', 'Розмір аркуша, назва, автор') + mi('open', 'open', 'Відкрити файл…', 'Файл ' + FILE_EXT + ' з комп’ютера', 'Ctrl+O') + mi('save', 'save', 'Зберегти у файл', 'Усе: кадри, шари, звук — щоб продовжити пізніше чи здати вчителю', 'Ctrl+S'), v => {
+  openPop(el, mi('new', 'plus', 'Новий мультфільм…', 'Розмір аркуша й назва') + mi('open', 'open', 'Відкрити файл…', 'Файл ' + FILE_EXT + ' з комп’ютера', 'Ctrl+O') + mi('save', 'save', 'Зберегти у файл', 'Усе: кадри, шари, звук — щоб продовжити пізніше чи здати вчителю', 'Ctrl+S'), v => {
     if (v === 'new') startDialog(); if (v === 'open') openFile(); if (v === 'save') saveFile();
   });
 }
@@ -445,7 +445,7 @@ function frameMenu(i, at) {
   goFrame(i);
   const f = P.frames[i];
   openPop({ getBoundingClientRect: () => at, contains: () => false }, mi('dup', 'dup', 'Дублювати кадр', '', 'D') + mi('empty', 'plus', 'Новий порожній після', '', 'N') +
-    '<div class="msep"></div>' + [1, 2, 3, 4].map(n => mi('hold' + n, 'clock', n === 1 ? 'Звичайна тривалість' : `Довше в ${n} рази`, n === 1 ? '' : `Кадр показується як ${n}`, '', f.hold === n ? 'on' : '')).join('') +
+    '<div class="msep"></div>' + [1, 2, 3, 4].map(n => mi('hold' + n, f.hold === n ? 'check' : 'clock', n === 1 ? 'Звичайна тривалість' : `Довше в ${n} рази`, '', '', f.hold === n ? 'on' : '')).join('') +
     '<div class="msep"></div>' + mi('left', 'prev', 'Посунути ліворуч') + mi('right', 'next', 'Посунути праворуч') + '<div class="msep"></div>' + mi('del', 'trash', 'Видалити кадр', '', '', 'danger'), v => {
     if (v === 'dup') addFrame(false);
     else if (v === 'empty') addFrame(true);
@@ -460,6 +460,45 @@ function brushMenu(el) {
   openPop(el, `<div class="brush-list">${Object.entries(BRUSHES).map(([k, B]) => `<button class="mi brush-mi ${S.brush === k ? 'on' : ''}" data-v="${k}" role="menuitem"><canvas data-bs="${k}" width="240" height="64" aria-hidden="true"></canvas><span>${esc(B.t)}<small>${esc(B.desc)}</small></span></button>`).join('')}</div>`, v => { S.brush = v; saveUi(); renderProp(); stage.render(); });
   $$('[data-bs]', pop).forEach(cv => sampleStroke(cv, BRUSHES[cv.dataset.bs], S.color === '#ffffff' ? '#1d2236' : S.color, 22));
 }
+// Плавність: сила стабілізатора з живим прикладом
+const STAB_PRESETS = [[0, 'Без'], [0.25, 'Трохи'], [0.5, 'Середньо'], [0.85, 'Сильно']];
+function stabMenu(el) {
+  openPop(el, `<div class="stab"><h4>Плавність лінії</h4>
+    <canvas class="demo" width="576" height="192" aria-hidden="true"></canvas>
+    <div class="legend"><span><i style="background:#c3c8d4"></i>рух руки</span><span><i style="background:#2337a8"></i>лінія пензля</span></div>
+    <span class="seg" role="group">${STAB_PRESETS.map(([v, t]) => `<button data-stab="${v}">${t}</button>`).join('')}</span>
+    <label class="rng"><input type="range" min="0" max="1" step="0.05" aria-label="Сила згладжування"><b></b></label>
+    <label class="chk"><input type="checkbox" data-catch><span>Дотягувати кінець лінії туди, де відпустили кнопку</span></label>
+    <p class="sm muted" style="margin:0">Пензель іде за курсором «на нитці»: чим сильніше, тим довша нитка й рівніша лінія, але вона трохи відстає від руки.</p></div>`, () => {});
+  const box = $('.stab', pop), rng = $('input[type=range]', box), out = $('.rng b', box), cv = $('.demo', box), chk = $('[data-catch]', box);
+  const sync = () => {
+    rng.value = S.stabilizer; out.textContent = S.stabilizer > 0 ? Math.round(S.stabilizer * 100) + '%' : 'вимк.';
+    chk.checked = S.stabCatch !== false;
+    box.querySelectorAll('[data-stab]').forEach(b => b.classList.toggle('on', Math.abs(+b.dataset.stab - S.stabilizer) < 0.01));
+    drawStabDemo(cv, S.stabilizer, S.stabCatch !== false);
+    const btn = $('.stab-btn'); if (btn) { btn.classList.toggle('on', S.stabilizer > 0); btn.querySelector('b').textContent = out.textContent; }
+  };
+  rng.addEventListener('input', () => { S.stabilizer = +rng.value; sync(); });
+  chk.addEventListener('change', () => { S.stabCatch = chk.checked; sync(); });
+  box.addEventListener('click', e => { const b = e.target.closest('[data-stab]'); if (b) { S.stabilizer = +b.dataset.stab; sync(); } });
+  sync();
+  popClose = () => { saveUi(); renderProp(); };
+}
+// приклад: тремтлива «рука» і та сама лінія після стабілізатора (той самий алгоритм, що й на полотні)
+function drawStabDemo(cv, s, catchUp) {
+  const g = cv.getContext('2d'), W = cv.width, H = cv.height, k = W / 288;
+  g.clearRect(0, 0, W, H);
+  let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5;
+  const raw = [];
+  for (let i = 0; i <= 140; i++) { const t = i / 140; raw.push({ x: (14 + t * 260) * k, y: (48 + Math.sin(t * Math.PI * 2) * 22 + rnd() * 9) * k }); }
+  const line = (pts, c, w) => { g.strokeStyle = c; g.lineWidth = w; g.lineCap = g.lineJoin = 'round'; g.beginPath(); pts.forEach((q, i) => g[i ? 'lineTo' : 'moveTo'](q.x, q.y)); g.stroke(); };
+  line(raw, '#c3c8d4', 2 * k);
+  const R = stabRadius(s) * k * 0.6, lz = { ...raw[0] }, out = [{ ...lz }];
+  for (const q of raw) { const d = Math.hypot(q.x - lz.x, q.y - lz.y); if (d > R) { const f = (d - R) / d; lz.x += (q.x - lz.x) * f; lz.y += (q.y - lz.y) * f; out.push({ ...lz }); } }
+  if (catchUp && R > 0) out.push(raw[raw.length - 1]);
+  line(out, '#2337a8', 3.5 * k);
+}
+
 // Свій колір: квадрат насиченості й яскравості, смуга відтінку, HEX
 const hex2hsv = hex => { const n = parseInt(hex.slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0; if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [(h * 60 + 360) % 360, mx ? d / mx : 0, mx]; };
 const hsv2hex = (h, s, v) => { const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); }; return '#' + [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join(''); };
@@ -653,7 +692,7 @@ function setTool(t) {
   saveUi(); renderRail(); renderProp(); stage.cursor(); stage.render();
 }
 const ACTS = {
-  undo, redo, fileMenu: el => fileMenu(el), brushPick: el => brushMenu(el), colorPick: el => colorMenu(el), lessons: () => lessonsDialog(), help: helpDialog, export: exportDialog,
+  undo, redo, fileMenu: el => fileMenu(el), brushPick: el => brushMenu(el), stabPick: el => stabMenu(el), colorPick: el => colorMenu(el), lessons: () => lessonsDialog(), help: helpDialog, export: exportDialog,
   theme: () => { const d = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = d; try { localStorage.setItem('edvault-theme', d); } catch { /* */ } renderTop(); },
   side: () => $('#side').classList.toggle('open'),
   zoomIn: () => stage.zoomAt(1.25), zoomOut: () => stage.zoomAt(0.8), fit: () => stage.fit(),

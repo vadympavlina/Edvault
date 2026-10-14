@@ -316,6 +316,19 @@ await step('виділення: поворот на 90° і ласо-виділ�
   await p.click('[data-set="selMode"][data-v="rect"]');
 });
 
+await step('плавність: панель з повзунком і готовими рівнями, кнопка «Грати» по центру', async () => {
+  await p.keyboard.press('b');
+  await p.click('[data-act="stabPick"]');
+  await p.click('#pop [data-stab="0.85"]');
+  assert.equal(await p.evaluate(() => window.Animator.S.stabilizer), 0.85);
+  assert.match(await p.textContent('.stab-btn b'), /85%/);
+  await p.fill('#pop .stab input[type=range]', '0');
+  assert.equal(await p.evaluate(() => window.Animator.S.stabilizer), 0);
+  await p.keyboard.press('Escape'); await p.mouse.click(5, 880);
+  const d = await p.evaluate(() => { const b = document.querySelector('.transport .play').getBoundingClientRect(), s = document.querySelector('.transport .play svg').getBoundingClientRect(); return Math.abs((b.x + b.width / 2) - (s.x + s.width / 2)); });
+  assert.ok(d < 1.5, 'іконка зміщена на ' + d);
+});
+
 await step('планшет: дотик двома пальцями — скасувати, трьома — повторити', async () => {
   await p.keyboard.press('b');
   const fi = await fresh();
