@@ -30,7 +30,7 @@ const S = Object.assign({
 }, loadUi(), { fi: 0, li: 1, playing: false, guides: true, refShow: true, refOpacity: 0.4 });
 if (!BRUSHES[S.brush]) S.brush = 'pen';
 function loadUi() { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {}; } catch { return {}; } }
-const UI_KEYS = ['tool', 'brush', 'size', 'opacity', 'color', 'recent', 'stabilizer', 'symmetry', 'shapeFill', 'fillAll', 'fillTol', 'fillGap', 'eraserSoft', 'selMode', 'onion', 'onionN', 'onionAlpha', 'loop'];
+const UI_KEYS = ['tool', 'brush', 'size', 'sizes', 'opacity', 'color', 'recent', 'stabilizer', 'symmetry', 'shapeFill', 'fillAll', 'fillTol', 'fillGap', 'eraserSoft', 'selMode', 'onion', 'onionN', 'onionAlpha', 'loop'];
 function saveUi() { try { localStorage.setItem(UI_KEY, JSON.stringify(Object.fromEntries(UI_KEYS.map(k => [k, S[k]])))); } catch { /* приватний режим */ } }
 
 let P = null;
@@ -276,15 +276,16 @@ function renderProp() {
     h += `<span class="pg"><span class="pl">Точність</span>${seg('fillTol', [[16, 'Точно'], [40, 'Звичайно'], [90, 'Широко']], S.fillTol)}</span>`;
     h += `<span class="pg">${lockBtn}</span>`;
   } else if (['line', 'rect', 'ellipse'].includes(t)) {
-    h += `<span class="pg"><span class="pl">Товщина</span>${range('size', 1, 60, 1, S.size)}</span>`;
     if (t !== 'line') h += `<span class="pg">${seg('shapeFill', [['stroke', 'Контур'], ['fill', 'Заливка']], S.shapeFill)}</span>`;
+    h += `<span class="pg"><span class="pl">Товщина</span>${range('size', 1, 60, 1, S.size)}</span>`;
+    h += `<span class="pg"><span class="pl">Прозорість</span>${range('opacity', 0.1, 1, 0.05, S.opacity, pct)}</span>`;
     h += colors();
     h += `<span class="hint">Shift — ${t === 'line' ? 'кут кратний 15°' : t === 'rect' ? 'квадрат' : 'коло'}</span>`;
   } else if (t === 'lasso') {
-    h += colors();
     h += `<span class="pg"><span class="pl">Прозорість</span>${range('opacity', 0.1, 1, 0.05, S.opacity, pct)}</span>`;
+    h += colors();
     h += `<span class="pg">${lockBtn}</span>`;
-    h += `<span class="hint">Обведіть область — вона заллється кольором. Зручно для тіней і плям</span>`;
+    h += `<span class="hint">Обведіть область — вона заллється кольором</span>`;
   } else if (t === 'select') {
     if (stage.float) {
       h += `<span class="pg"><button class="tg" data-float="flip" data-tip="Віддзеркалити зліва направо">${icon('flip', 15)}Дзеркально</button><button class="tg" data-float="flipV" data-tip="Перевернути догори дриґом">${icon('flipV', 15)}Догори</button><button class="tg" data-float="rot90" data-tip="Повернути на 90°">${icon('rotate', 15)}90°</button></span>`;
@@ -294,7 +295,7 @@ function renderProp() {
       h += `<span class="pg">${seg('selMode', [['rect', 'Рамка'], ['lasso', 'Ласо', 'Обвести довільну форму — наприклад, лише руку героя']], S.selMode)}</span>`;
       h += `<span class="hint">Обведіть частину малюнка, щоб перемістити, повернути чи скопіювати її на інший кадр. Ctrl+V — вставити</span>`;
     }
-  } else if (t === 'picker') h += `<span class="hint">Клацніть на малюнку — колір стане поточним</span>`;
+  } else if (t === 'picker') h += colors() + `<span class="hint">Клацніть на малюнку — колір стане поточним. З пензлем: Alt+клік</span>`;
   else if (t === 'hand') h += `<span class="hint">Тягніть аркуш. Коліщатко — масштаб, F — вписати в екран</span>`;
   el.innerHTML = h;
   const bb = $('#brushBtn canvas'); if (bb) { bb.width = 224; bb.height = 72; sampleStroke(bb, BRUSHES[S.brush], S.color, 26); }
@@ -317,7 +318,7 @@ function renderSide() {
       <button class="ib" data-act="layerDup" data-tip="Дублювати шар з усіма кадрами" aria-label="Дублювати шар">${icon('dup', 16)}</button>
       <button class="ib" data-act="layerUp" data-tip="Вище" aria-label="Шар вище">${icon('up', 16)}</button>
       <button class="ib" data-act="layerDown" data-tip="Нижче" aria-label="Шар нижче">${icon('down', 16)}</button>
-      <button class="ib" data-act="layerRename" data-tip="Перейменувати" aria-label="Перейменувати шар">${icon('settings', 16)}</button>
+      <button class="ib" data-act="layerRename" data-tip="Перейменувати" aria-label="Перейменувати шар">${icon('rename', 16)}</button>
       <span class="grow"></span>
       <button class="ib" data-act="layerDel" data-tip="Видалити шар" aria-label="Видалити шар">${icon('trash', 16)}</button>
     </div>
@@ -329,7 +330,7 @@ function renderSide() {
     <p class="sm">Попередній кадр — червонуватий, наступний — зеленуватий. Так видно, куди рухається малюнок.</p>
   </section>
   <section class="sec"><h3>${icon('image', 16)}Аркуш</h3>
-    <div class="field"><span>Колір тла</span><div class="bgs">${BGS.map(([c, n]) => `<button class="${P.bg === c ? 'on' : ''}" data-bg="${c}" style="background:${c}" aria-label="${n}" data-tip="${n}"></button>`).join('')}<label class="sw sw-custom" style="width:30px;height:30px;border-radius:5px" data-tip="Свій колір"><input type="color" data-bgcustom value="${P.bg}" aria-label="Свій колір тла"></label></div></div>
+    <div class="field"><span>Колір тла</span><div class="bgs">${BGS.map(([c, n]) => `<button class="${P.bg === c ? 'on' : ''}" data-bg="${c}" style="background:${c}" aria-label="${n}" data-tip="${n}"></button>`).join('')}<label class="sw sw-custom" style="border-radius:5px" data-tip="Свій колір тла"><input type="color" data-bgcustom value="${P.bg}" aria-label="Свій колір тла"></label></div></div>
     <div class="field"><span>Картинка-зразок</span>${app.refImg ? `<div class="row"><button class="tg ${S.refShow ? 'on' : ''}" data-toggle="refShow">${S.refShow ? 'Видно' : 'Сховано'}</button>${range('refOpacity', 0.1, 1, 0.05, S.refOpacity, v => Math.round(v * 100) + '%')}<button class="ib" data-act="refDel" aria-label="Прибрати зразок" data-tip="Прибрати зразок">${icon('trash', 15)}</button></div>` : `<button class="btn outline" data-act="refAdd" style="width:100%">${icon('image', 16)}Додати картинку</button>`}
       <p class="sm">Зразок видно лише під час малювання — у мультфільм він не потрапляє. Зручно обводити фото чи ескіз.</p></div>
   </section>
@@ -339,7 +340,7 @@ function renderSide() {
     : `<div class="btns"><button class="btn outline" data-act="audioAdd">${icon('music', 16)}Музика з файлу</button><button class="btn outline" data-act="audioRec">${icon('mic', 16)}Записати голос</button></div>
        <p class="sm">Звук грає під час перегляду й потрапляє у відео.</p>`}
   </section>
-  <section class="sec"><h3>${icon('settings', 16)}Про мультфільм</h3>
+  <section class="sec"><h3>${icon('film', 16)}Про мультфільм</h3>
     <label class="field"><span>Автор</span><input class="inp" data-meta="author" value="${esc(P.author)}" placeholder="Ім’я та прізвище" maxlength="40"></label>
     <label class="field"><span>Клас або група</span><input class="inp" data-meta="group" value="${esc(P.group)}" placeholder="Напр. 5-Б" maxlength="20"></label>
     <p class="sm">Аркуш ${P.w} × ${P.h}. ${P.frames.length} ${plural(P.frames.length, 'кадр', 'кадри', 'кадрів')}, тривалість ${fmtTime(P.duration)}.</p>
@@ -664,8 +665,13 @@ async function recAudio() {
 function setTool(t) {
   if (t !== 'select') stage.commitFloat();
   if (t === S.tool) return;
+  // свій розмір у пензля, гумки й фігур
+  const grp = x => x === 'eraser' ? 'eraser' : ['line', 'rect', 'ellipse'].includes(x) ? 'shape' : x === 'brush' ? 'brush' : null;
+  const g0 = grp(S.tool), g1 = grp(t);
+  S.sizes = S.sizes || { brush: 6, eraser: 24, shape: 6 };
+  if (g0) S.sizes[g0] = S.size;
+  if (g1) S.size = S.sizes[g1];
   S.tool = t;
-  if (t === 'eraser' && S.size < 8) S.size = 18;
   saveUi(); renderRail(); renderProp(); stage.cursor(); stage.render();
 }
 const ACTS = {

@@ -143,13 +143,13 @@ input,select{font:inherit;color:inherit}
 .field > span{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px}
 .inp{width:100%;height:34px;padding:0 10px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);outline:none}
 .inp:focus{border-color:var(--accent);background:var(--surface)}
-.bgs{display:flex;gap:6px;flex-wrap:wrap}
-.bgs button{width:30px;height:30px;border-radius:5px;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
+.bgs{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
+.bgs button,.bgs .sw{width:100%;height:auto;aspect-ratio:1;border-radius:5px;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
 .bgs button.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
 .audio-box{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--surface2);font-size:12.5px}
 .audio-box b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.btns{display:flex;gap:6px;flex-wrap:wrap}
-.btns .btn{flex:1;min-width:110px}
+.btns{display:grid;gap:6px}
+.btns .btn{justify-content:flex-start}
 
 /* ── керування програванням ── */
 .transport{height:46px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 12px;background:var(--film2);color:var(--film-text);border-top:1px solid rgba(255,255,255,.06);overflow-x:auto;scrollbar-width:none;
@@ -295,3 +295,5 @@ table.tbl td:last-child{text-align:right}
 .hsv-prev{width:32px;height:32px;border-radius:6px;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
 .hsv .hex{flex:1;min-width:0;font-variant-numeric:tabular-nums;text-transform:lowercase}
 #stageWrap canvas{touch-action:none}
+[data-theme="dark"] .sw,[data-theme="dark"] .bgs button{box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)}
+[data-theme="dark"] .sw.on,[data-theme="dark"] .bgs button.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
