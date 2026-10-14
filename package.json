@@ -1,0 +1,12 @@
+{
+  "name": "edvault",
+  "private": true,
+  "description": "Edvault — інструменти для вчителя, тренажери й емулятори для учнів (статичний сайт edvault.online)",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:e2e": "node tests/run-e2e.mjs",
+    "icons": "node scripts/make-favicons.mjs",
+    "og": "node scripts/make-og.mjs"
+  }
+}

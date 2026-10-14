@@ -6,7 +6,7 @@ import { esc, h, setHost, banner, toast, hideToast, confirm, sheet, sw, morph } 
 import { SCENES, CLIPS, NICHES, nicheOf } from './data.js';
 import { loadMedia, importFile, removeMedia, clearMedia, mediaUsage, mediaUrl, exportMedia, replaceMedia } from './media.js';
 import { packBlogger, unpackBlogger, fileName } from './save.js';
-import { download, pickFile } from '../../shared/savefile.js';
+import { download, pickFile } from '../../../shared/savefile.js';
 import { checks, fmtDur } from './quality.js';
 import { fileBtn, galTitle, thumb, topicOptions } from './gal.js';
 import { Likeer, logo, carIdx } from './likeer.js';

@@ -4,9 +4,9 @@ import { readFile } from 'node:fs/promises';
 import { join, extname, resolve } from 'node:path';
 
 export const ROOT = resolve(new URL('..', import.meta.url).pathname);
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8', '.wasm': 'application/wasm', '.woff2': 'font/woff2', '.webp': 'image/webp' };
 
-export async function startServer() {
+export async function startServer(port = 0) {
   // як GitHub Pages: /tools/ → tools/index.html, /tools/vote → tools/vote.html, решта — 404.html зі статусом 404
   const srv = createServer(async (q, r) => {
     const p = decodeURIComponent(q.url.split('?')[0]);
@@ -16,7 +16,7 @@ export async function startServer() {
     }
     r.statusCode = 404;
     try { r.setHeader('content-type', 'text/html'); r.end(await readFile(join(ROOT, '404.html'))); } catch { r.end(); }
-  }).listen(0);
+  }).listen(port);
   await new Promise(r => srv.once('listening', r));
   return { url: `http://localhost:${srv.address().port}`, close: () => srv.close() };
 }

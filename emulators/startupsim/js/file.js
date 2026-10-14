@@ -2,7 +2,7 @@
 // Файл містить повний стан гри (усі рішення, історію тижнів, пошту, журнал, бізнес-план, бренд, команду…),
 // стан інтерфейсу й короткий підсумок, який викладач може прочитати навіть у блокноті.
 import { okState, money, num, pct, dateText, WEEKS } from './sim.js';
-import { checksum, translit, slug } from '../../shared/savefile.js';
+import { checksum, translit, slug } from '../../../shared/savefile.js';
 export { checksum, translit };
 
 export const FILE_APP = 'edvault-startup';

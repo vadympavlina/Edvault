@@ -3,8 +3,8 @@
 // канали, реклама, налаштування…) і папка media з власними фото й відео учня. Викладач може
 // просто розпакувати архів і подивитися файли, а симулятор відновить гру точно з того самого моменту.
 import { okState, dayOf, clock, dayName, num } from './sim.js';
-import { makeZip, readZip } from './zip.js';
-import { checksum, slug } from '../../shared/savefile.js';
+import { makeZip, readZip } from '../../../shared/zip.js';
+import { checksum, slug } from '../../../shared/savefile.js';
 
 export const FILE_APP = 'edvault-blogger';
 export const FILE_FORMAT = 1;

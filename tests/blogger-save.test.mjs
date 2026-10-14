@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Sim, newState } from '../emulators/bloggeremu/js/sim.js';
 import { packBlogger, unpackBlogger, fileName, summaryOf } from '../emulators/bloggeremu/js/save.js';
-import { makeZip, readZip } from '../emulators/bloggeremu/js/zip.js';
+import { makeZip, readZip } from '../shared/zip.js';
 
 const game = () => {
   const S = new Sim(newState(7));

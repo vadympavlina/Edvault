@@ -6,7 +6,7 @@ import { buildingSprite } from './sprites.js';
 import { PANELS, issues, hashStr, meter } from './panels.js';
 import { streetOf, concerns, thought } from './people.js';
 import { packCity, unpackCity, fileName } from './file.js';
-import { download, pickFile } from '../../shared/savefile.js';
+import { download, pickFile } from '../../../shared/savefile.js';
 import { mayorMonth } from './bots.js';
 import { esc, $, $$, h, icon, modal, confirmBox, toast, face } from './ui.js';
 

@@ -7,8 +7,8 @@ import { BRUSHES, sampleStroke } from './paint.js';
 import { LESSONS } from './lessons.js';
 import { packProject, unpackProject, fileName, FILE_EXT, autosave, restore, clearAutosave, Audio, recordMic } from './io.js';
 import { exportGif, exportVideo, exportPng, exportPngZip, exportSprite, videoType } from './export.js';
-import { makeZip } from '../../../emulators/bloggeremu/js/zip.js';
-import { download, pickFile } from '../../../emulators/shared/savefile.js';
+import { makeZip } from '../../../shared/zip.js';
+import { download, pickFile } from '../../../shared/savefile.js';
 import { $, $$, esc, icon, fillIcons, toast, modal, confirmBox, tips } from './ui.js';
 
 const PALETTE = ['#1d2236', '#ffffff', '#e5484d', '#f97316', '#facc15', '#22c55e', '#0ea5e9', '#2337a8', '#8b5cf6', '#ec4899', '#8b5a2b', '#94a3b8'];

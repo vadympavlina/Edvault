@@ -1,5 +1,5 @@
 // Аніматор · експорт: GIF, відео (MP4 або WebM зі звуком), PNG кадру, усі кадри в ZIP, спрайт-лист для ігор.
-import { makeZip } from '../../../emulators/bloggeremu/js/zip.js';
+import { makeZip } from '../../../shared/zip.js';
 import { trim } from './cells.js';
 
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };

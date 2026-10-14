@@ -1,0 +1,9 @@
+# залежності й службові файли
+node_modules/
+package-lock.json
+.DS_Store
+Thumbs.db
+*.log
+# результати тестів і тимчасові знімки
+test-results/
+*.tmp

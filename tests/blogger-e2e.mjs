@@ -499,7 +499,7 @@ await step('усе зберігається після перезавантаж�
 
 await step('збереження у файл: ZIP із грою й власними фото та відео, відкриття в іншому браузері', async () => {
   const fs = await import('node:fs');
-  const { readZip } = await import('../emulators/bloggeremu/js/zip.js');
+  const { readZip } = await import('../shared/zip.js');
   await home(); await p.click('[data-app="settings"]');
   await p.click('[data-act="ph.saveFile"]');
   await p.waitForSelector('.sheet.student');

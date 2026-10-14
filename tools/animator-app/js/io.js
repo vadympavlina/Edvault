@@ -1,6 +1,6 @@
 // Аніматор · файл проєкту (.edanim — ZIP із описом, малюнками кадрів і звуком), автозбереження в браузері, звук.
-import { makeZip, readZip } from '../../../emulators/bloggeremu/js/zip.js';
-import { checksum, slug } from '../../../emulators/shared/savefile.js';
+import { makeZip, readZip } from '../../../shared/zip.js';
+import { checksum, slug } from '../../../shared/savefile.js';
 import { Cell, store } from './cells.js';
 import { okMeta, projectFromMeta, FILE_FORMAT } from './model.js';
 

@@ -1,7 +1,7 @@
 // Симулятор міста · збереження всього міста у файл (.json) і відкриття з файлу.
 import { okState, money, num, pct, monthText, dateText } from './sim.js';
 import { SCENARIOS } from './data.js';
-import { checksum, slug } from '../../shared/savefile.js';
+import { checksum, slug } from '../../../shared/savefile.js';
 
 export const FILE_APP = 'edvault-city';
 export const FILE_FORMAT = 1;
