@@ -56,21 +56,32 @@ app.innerHTML = `<canvas id="map" aria-label="Карта міста"></canvas>
 const cv = $('#map');
 
 /* ═════════ верхня панель ═════════ */
+const topCache = {};
+function topPart(k, html) {
+  if (topCache[k] === html) return;
+  topCache[k] = html;
+  const top = $('#top');
+  let el = top.querySelector(`:scope > [data-part="${k}"]`);
+  if (!el) { el = document.createElement('div'); el.dataset.part = k; el.style.display = 'contents'; top.append(el); }
+  el.innerHTML = html;
+}
 function top() {
   if (!C) return;
   const s = C.s, M = C.m, last = s.history.at(-1), d = s.demand;
   const db = (v, c) => `<i class="dmd" style="--v:${Math.round(Math.max(0, v) * 100)}%;--c:${c}"></i>`;
-  $('#top').innerHTML = `<div class="tp-city"><b>${esc(s.name)}</b><small>${dateText(s.month, s.day)}</small></div>
+  // панель перебудовується частинами й лише тоді, коли частина змінилась: кнопка під курсором
+  // не повинна зникати посеред кліку (інакше клік губиться)
+  topPart('info', `<div class="tp-city"><b>${esc(s.name)}</b><small>${dateText(s.month, s.day)}</small></div>
     <div class="tp-stats">
       <span class="tp ${s.money < 0 ? 'bad' : ''}" title="Гроші в казні">${icon('coins', 16)}<b>${money(s.money)}</b>${last ? `<em class="${last.balance >= 0 ? 'up' : 'down'}">${last.balance >= 0 ? '+' : '−'}${num(Math.abs(last.balance))}/міс</em>` : ''}</span>
       <span class="tp" title="Жителі">${icon('users', 16)}<b>${num(M.P)}</b></span>
       <span class="tp hide-s ${s.approval < 45 ? 'bad' : ''}" title="Підтримка мера">${icon(s.approval >= 50 ? 'smile' : 'frown', 16)}<b>${Math.round(s.approval)}%</b></span>
       <span class="tp hide-m demand" title="Попит: житло, магазини, заводи">${db(d.r, '#22c55e')}${db(d.c, '#3b82f6')}${db(d.i, '#eab308')}</span>
-    </div>
-    <div class="speed" role="group" aria-label="Швидкість часу">${[[0, 'pause', 'Пауза'], [1, 'play', 'Звичайна швидкість'], [2, 'fast', 'Швидко'], [3, 'fast', 'Дуже швидко']].map(([v, ic, t]) => `<button class="${ui.speed === v ? 'on' : ''}" data-act="speed" data-k="${v}" title="${t}" aria-label="${t}">${icon(ic, 15)}${v === 3 ? '<sup>3</sup>' : ''}</button>`).join('')}</div>
-    <button class="btn sm hide-s" data-act="dayNight" title="Освітлення">${icon(R?.alwaysDay ? 'sun' : 'moon', 15)}</button>
+    </div>`);
+  topPart('speed', `<div class="speed" role="group" aria-label="Швидкість часу">${[[0, 'pause', 'Пауза'], [1, 'play', 'Звичайна швидкість'], [2, 'fast', 'Швидко'], [3, 'fast', 'Дуже швидко']].map(([v, ic, t]) => `<button class="${ui.speed === v ? 'on' : ''}" data-act="speed" data-k="${v}" title="${t}" aria-label="${t}">${icon(ic, 15)}${v === 3 ? '<sup>3</sup>' : ''}</button>`).join('')}</div>`);
+  topPart('btns', `<button class="btn sm hide-s" data-act="dayNight" title="Освітлення">${icon(R?.alwaysDay ? 'sun' : 'moon', 15)}</button>
     <button class="btn sm save" data-act="saveFile" title="Зберегти місто у файл (Ctrl+S)">${icon('save', 15)}<span class="hide-m">Зберегти</span></button>
-    <button class="btn sm hide-s" data-act="openFile" title="Відкрити місто з файлу (Ctrl+O)">${icon('open', 15)}</button>`;
+    <button class="btn sm hide-s" data-act="openFile" title="Відкрити місто з файлу (Ctrl+O)">${icon('open', 15)}</button>`);
   // значки на панелях
   const unread = s.inbox.filter(m => (m.choices && m.chosen == null) || !m.read).length;
   const set = (k, v) => { const b = $(`[data-badge="${k}"]`); if (b) { b.textContent = v || ''; b.classList.toggle('on', !!v); } };

@@ -33,8 +33,13 @@ await step('стартовий екран: без імені не пускає, 
   await p.fill('[data-v="mayor"]', 'Олена Коваль');
   await p.fill('[data-v="group"]', '7-А');
   await p.click('.sc[data-s="free"]');
+  // місцевість залежить від seed, а seed — від часу; фіксуємо його, щоб тест щоразу мав ту саму карту
+  await p.evaluate(() => { window.__realNow = Date.now; Date.now = () => 1700000123456; });
   await p.click('[data-s-go]');
   await p.waitForSelector('body:not(.start-on) #top .top-in, body:not(.start-on) #top');
+  await p.waitForFunction(() => window.CitySim?.city?.s);
+  await p.evaluate(() => { Date.now = window.__realNow; });
+  assert.equal(await p.evaluate(() => window.CitySim.city.s.seed), 123456, 'карта з відомим seed');
   await p.waitForFunction(() => !document.querySelector('.start'));
   const s = await S();
   assert.equal(s.name, 'Річкове'); assert.deepEqual(s.mayor, { name: 'Олена Коваль', group: '7-А' }); assert.equal(s.scenario, 'free');
