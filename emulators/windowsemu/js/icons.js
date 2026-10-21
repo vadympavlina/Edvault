@@ -67,6 +67,7 @@ export const winLogo = (s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0
 /* ── контурні іконки інтерфейсу ── */
 const L = {
   back: '<path d="M19 12H5M12 19l-7-7 7-7"/>', forward: '<path d="M5 12h14M12 5l7 7-7 7"/>', up: '<path d="M12 19V5M5 12l7-7 7 7"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>', plus: '<path d="M12 5v14M5 12h14"/>',
   cut: '<circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/>',

@@ -27,9 +27,13 @@ export class Notepad {
   get dirty() { return this.saved === null ? true : this.ta.value !== this.saved; }
   name() { return this.path ? nameOfPath(this.path) : 'Без назви'; }
   title() { this.win.setTitle(`${this.dirty && (this.path || this.ta.value) ? '*' : ''}${this.name()} – Блокнот`); this.status(); }
-  status() {
-    const v = this.ta.value, pos = this.ta.selectionStart, before = v.slice(0, pos);
-    this.$('.np-pos').textContent = `Рядок ${before.split('\n').length}, Стовпець ${pos - before.lastIndexOf('\n')}`;
+  // рядок стану — раз на кадр і без розбиття всього тексту на масив рядків (великий файл не гальмує друк)
+  status() { if (!this.statusRaf) this.statusRaf = requestAnimationFrame(() => { this.statusRaf = 0; this.statusNow(); }); }
+  statusNow() {
+    if (!this.win.el.isConnected) return;
+    const v = this.ta.value, pos = this.ta.selectionStart;
+    let line = 1; for (let i = v.indexOf('\n'); i !== -1 && i < pos; i = v.indexOf('\n', i + 1)) line++;
+    this.$('.np-pos').textContent = `Рядок ${line}, Стовпець ${pos - (pos ? v.lastIndexOf('\n', pos - 1) : -1)}`;
     this.$('.np-len').textContent = `${v.length} ${v.length % 10 === 1 && v.length % 100 !== 11 ? 'символ' : v.length % 10 >= 2 && v.length % 10 <= 4 && (v.length % 100 < 12 || v.length % 100 > 14) ? 'символи' : 'символів'}`;
   }
   load(path) {

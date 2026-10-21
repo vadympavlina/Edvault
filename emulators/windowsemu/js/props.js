@@ -67,7 +67,7 @@ export function installProps(sys) {
       const name = api.$('[data-name]').value.trim();
       if (!locked && name !== n.name) {
         if (!validName(name)) { alertBox(BAD_NAME_HINT, 'Перейменування', 'warn'); return false; }
-        try { fs.rename(p, name); p = parentPath(p).replace(/\\$/, '') + '\\' + name; } catch (e) { alertBox(e.code === 'exists' ? `У цій папці вже є елемент «${name}».` : e.message, 'Перейменування', 'warn'); return false; }
+        try { sys.renamePath(p, name); p = parentPath(p).replace(/\\$/, '') + '\\' + name; } catch (e) { alertBox(e.code === 'exists' ? `У цій папці вже є елемент «${name}».` : e.message, 'Перейменування', 'warn'); return false; }
       }
       try { for (const a of ['r', 'h']) { const c = api.$(`[data-a="${a}"]`); if (!c.disabled && c.checked !== !!fs.node(p).attrs[a]) fs.setAttr(p, a, c.checked); } } catch (e) { alertBox(e.message, 'Властивості', 'warn'); return false; }
       real && (api.real = p);

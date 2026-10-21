@@ -148,11 +148,43 @@ sys.factoryReset = () => {
   let p = 0; const tm = setInterval(() => { p = Math.min(100, p + 9); el.querySelector('b').textContent = p; if (p >= 100) { clearInterval(tm); el.remove(); sys.procs = procState(); sys.trayShield(true); reboot(); } }, 160);
 };
 
+/* ═════════ Скасування файлових дій (Ctrl+Z), як у Провіднику Windows ═════════ */
+const undoStack = [];
+const UNDO_NAME = { recycle: 'видалення', move: 'переміщення', copy: 'копіювання', rename: 'перейменування', new: 'створення' };
+sys.pushUndo = op => { undoStack.push(op); if (undoStack.length > 30) undoStack.shift(); };
+sys.canUndo = () => undoStack.length > 0;
+sys.undoName = () => undoStack.length ? UNDO_NAME[undoStack.at(-1).t] : '';
+sys.undo = () => {
+  const op = undoStack.pop(); if (!op) return false;
+  let fail = 0;
+  const tryIt = f => { try { f(); } catch { fail++; } };
+  if (op.t === 'recycle') op.ids.forEach(id => tryIt(() => { if (!fs.restore(id)) throw 0; }));
+  if (op.t === 'move') op.items.slice().reverse().forEach(m => tryIt(() => fs.move(m.to, m.fromDir)));
+  if (op.t === 'copy') op.paths.forEach(p => tryIt(() => { if (fs.node(p)) fs.recycle(p); }));
+  // щойно створене й порожнє — видаляємо одразу, як Windows; якщо там уже щось є — у Кошик
+  if (op.t === 'new') op.paths.forEach(p => tryIt(() => { const n = fs.node(p); if (!n) return; const empty = n.type === 'dir' ? !n.children.length : !fs.readFile(p); empty ? fs.remove(p, { recursive: true }) : fs.recycle(p); }));
+  if (op.t === 'rename') tryIt(() => fs.rename(op.path, op.old));
+  sys.refreshAll();
+  sys.toast(fail ? `Скасувати ${UNDO_NAME[op.t]} повністю не вдалося: файли вже змінили` : `Скасовано ${UNDO_NAME[op.t]}`);
+  return true;
+};
+// перейменування з будь-якого місця (Провідник, робочий стіл, Властивості) — з записом для Ctrl+Z
+sys.renamePath = (path, name) => {
+  const real = fs.real(path), old = nameOfPath(real);
+  fs.rename(path, name);
+  const np = parentPath(real).replace(/\\$/, '') + '\\' + name;
+  sys.pushUndo({ t: 'rename', path: np, old });
+  return np;
+};
+sys.created = path => sys.pushUndo({ t: 'new', paths: [fs.real(path)] });
+
 /* ═════════ Буфер обміну, вставлення, видалення ═════════ */
 sys.setClip = (mode, paths) => { sys.clip = { mode, paths: paths.map(p => fs.real(p)) }; sys.toast(mode === 'cut' ? `Вирізано: ${paths.length}` : `Скопійовано: ${paths.length}`); sys.refreshAll(); };
 // Перенести або скопіювати список шляхів у папку; питає про заміну
 sys.transfer = async (paths, dest, mode) => {
   let done = 0;
+  const op = mode === 'cut' ? { t: 'move', items: [] } : { t: 'copy', paths: [] };
+  const into = name => dest.replace(/\\$/, '') + '\\' + name;
   for (const src of paths) {
     const n = fs.node(src); if (!n) continue;
     try {
@@ -161,16 +193,19 @@ sys.transfer = async (paths, dest, mode) => {
       if (n.type === 'dir' && isInside(dest, src)) { await alertBox('Кінцева папка є вкладеною папкою вихідної папки.', 'Перерваний процес', 'warn'); continue; }
       const target = fs.node(dest);
       const clash = target.children.find(c => lc(c.name) === lc(n.name));
-      if (mode === 'copy' && sameDir) { fs.copy(src, dest.replace(/\\$/, '') + '\\' + fs.copyName(target, n.name), { recursive: true }); done++; continue; }
+      if (mode === 'copy' && sameDir) { const cp = into(fs.copyName(target, n.name)); fs.copy(src, cp, { recursive: true }); op.paths.push(fs.real(cp)); done++; continue; }
       if (clash) {
         if (clash.type === 'dir' || n.type === 'dir') { await alertBox(`У кінцевій папці вже є «${n.name}».`, 'Заміна або пропуск', 'warn'); continue; }
         const v = await dialog({ title: 'Заміна або пропуск файлів', icon: 'question', html: `<p>У кінцевій папці вже є файл <b>«${esc(n.name)}»</b>.</p>`, buttons: [{ t: 'Замінити файл', v: 'rep', primary: true }, { t: 'Пропустити', v: 'skip', cancel: true }] });
         if (v !== 'rep') continue;
       }
-      if (mode === 'cut') fs.move(src, dest, { overwrite: true }); else fs.copy(src, dest, { overwrite: true, recursive: true });
+      const fromDir = parentPath(fs.real(src));
+      if (mode === 'cut') { fs.move(src, dest, { overwrite: true }); if (!clash) op.items.push({ to: fs.real(into(n.name)), fromDir }); }
+      else { fs.copy(src, dest, { overwrite: true, recursive: true }); if (!clash) op.paths.push(fs.real(into(n.name))); }
       done++;
     } catch (e) { await alertBox(e.code === 'access' ? `Відмовлено в доступі: «${n.name}». Це системний елемент або файл лише для читання.` : e.message, mode === 'cut' ? 'Переміщення' : 'Копіювання', 'warn'); }
   }
+  if ((op.items || op.paths).length) sys.pushUndo(op);
   return done;
 };
 sys.paste = async dest => {
@@ -184,10 +219,12 @@ sys.recycle = async paths => {
   if (!paths.length) return;
   const nodes = paths.map(p => fs.node(p)).filter(Boolean);
   for (const p of paths) if (isProtected(fs.real(p)) || fs.node(p)?.attrs.s) return alertBox('Цей елемент потрібен Windows — видалити його не можна.', 'Відмовлено в доступі', 'warn');
+  const ids = [];
   for (const p of paths) {
-    try { fs.recycle(p); } catch (e) { await alertBox(e.code === 'access' ? `Не вдається видалити «${nameOfPath(p)}»: файл лише для читання. Зніміть атрибут у Властивостях або командою attrib -r.` : e.message, 'Видалення', 'warn'); }
+    try { fs.recycle(p); ids.push(fs.s.bin[0].id); } catch (e) { await alertBox(e.code === 'access' ? `Не вдається видалити «${nameOfPath(p)}»: файл лише для читання. Зніміть атрибут у Властивостях або командою attrib -r.` : e.message, 'Видалення', 'warn'); }
   }
-  if (nodes.length) sys.toast(nodes.length === 1 ? `«${nodes[0].name}» переміщено в Кошик` : `Переміщено в Кошик: ${nodes.length}`);
+  if (ids.length) sys.pushUndo({ t: 'recycle', ids });
+  if (nodes.length) sys.toast(nodes.length === 1 ? `«${nodes[0].name}» переміщено в Кошик (Ctrl+Z — повернути)` : `Переміщено в Кошик: ${nodes.length} (Ctrl+Z — повернути)`);
 };
 sys.purge = async paths => {
   if (!paths.length) return;
@@ -280,6 +317,7 @@ const desktop = {
       const name = fs.freeName(fs.node(DESK), kind === 'dir' ? 'Нова папка' : 'Новий текстовий документ.txt');
       const p = fs.real(DESK) + '\\' + name;
       if (kind === 'dir') fs.mkdir(p); else fs.writeFile(p, '');
+      sys.created(p);
       this.sel = new Set([p]); this.renaming = p; this.render();
     } catch (e) { alertBox(e.message, 'Робочий стіл', 'warn'); }
   },
@@ -289,7 +327,7 @@ const desktop = {
     const n = fs.node(key);
     if (!n || !v || v === n.name) return this.render();
     if (!validName(v)) { this.render(); return alertBox(BAD_NAME_HINT, 'Перейменування', 'warn'); }
-    try { fs.rename(key, v); this.sel = new Set([fs.real(DESK) + '\\' + v]); this.render(); } catch (e) { this.render(); alertBox(e.code === 'exists' ? `На робочому столі вже є «${v}».` : e.message, 'Перейменування', 'warn'); }
+    try { sys.renamePath(key, v); this.sel = new Set([fs.real(DESK) + '\\' + v]); this.render(); } catch (e) { this.render(); alertBox(e.code === 'exists' ? `На робочому столі вже є «${v}».` : e.message, 'Перейменування', 'warn'); }
   },
   bind() {
     const el = this.el = $('#icons');
@@ -312,6 +350,7 @@ const desktop = {
       if (!d) return menu(e.clientX, e.clientY, [
         { t: 'Вигляд', icon: 'view', sub: [{ t: 'Розширення імен файлів', check: sys.settings.ext, on: () => { sys.settings.ext = !sys.settings.ext; persist(); sys.refreshAll(); } }, { t: 'Приховані елементи', check: sys.settings.hidden, on: () => { sys.settings.hidden = !sys.settings.hidden; persist(); sys.refreshAll(); } }] },
         { t: 'Оновити', icon: 'refresh', on: () => this.render() }, '-',
+        ...(sys.canUndo() ? [{ t: `Скасувати ${sys.undoName()}`, icon: 'undo', kbd: 'Ctrl+Z', on: () => sys.undo() }, '-'] : []),
         { t: 'Вставити', icon: 'paste', kbd: 'Ctrl+V', disabled: !sys.clip?.paths.length, on: () => sys.paste(fs.real(DESK)) },
         { t: 'Створити', icon: 'plus', sub: [{ t: 'Папку', icon: folderIcon(16), on: () => this.newItem('dir') }, { t: 'Текстовий документ', icon: nodeIcon({ type: 'file', name: 'a.txt' }, null, 16), on: () => this.newItem('txt') }] }, '-',
         { t: 'Відкрити в терміналі', icon: 'terminal', on: () => sys.open('cmd', fs.real(DESK)) }, { t: 'Відкрити в Провіднику', icon: 'open', on: () => sys.open('explorer', fs.real(DESK)) },
@@ -344,6 +383,7 @@ const desktop = {
       else if (ctrl && e.code === 'KeyX' && ps.length) { e.preventDefault(); sys.setClip('cut', ps); }
       else if (ctrl && e.code === 'KeyV') { e.preventDefault(); sys.paste(fs.real(DESK)); }
       else if (ctrl && e.code === 'KeyA') { e.preventDefault(); this.sel = new Set(this.cur.map(i => i.key)); this.paint(); }
+      else if (ctrl && e.code === 'KeyZ') { e.preventDefault(); sys.undo(); }
       else if (e.key === 'F5') { e.preventDefault(); this.render(); }
     });
     el.addEventListener('input', e => { if (e.target.classList.contains('ren-inp') && /[\\/:*?"<>|]/.test(e.target.value)) { e.target.value = e.target.value.replace(/[\\/:*?"<>|]/g, ''); sys.tip(e.target, BAD_NAME_HINT); } });

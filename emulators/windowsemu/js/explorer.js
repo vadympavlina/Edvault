@@ -290,7 +290,7 @@ export class Explorer {
     if (e.altKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp'].includes(k)) { e.preventDefault(); this.nav({ ArrowLeft: 'back', ArrowRight: 'fwd', ArrowUp: 'up' }[k]); return; }
     if (ctrl && !e.shiftKey) {
       // за фізичною клавішею — працює й з українською розкладкою
-      const m = { KeyA: () => { this.sel = new Set(this.cur.map(i => i.key)); }, KeyC: () => this.cmd('copy'), KeyX: () => this.cmd('cut'), KeyV: () => this.cmd('paste'), KeyF: () => this.$('.ex-search input').focus() }[e.code];
+      const m = { KeyA: () => { this.sel = new Set(this.cur.map(i => i.key)); }, KeyC: () => this.cmd('copy'), KeyX: () => this.cmd('cut'), KeyV: () => this.cmd('paste'), KeyZ: () => this.sys.undo(), KeyF: () => this.$('.ex-search input').focus() }[e.code];
       if (m) { e.preventDefault(); m(); this.paint(); return; }
     }
     if (ctrl && e.shiftKey && e.code === 'KeyN') { e.preventDefault(); this.newItem('dir'); return; }
@@ -352,6 +352,7 @@ export class Explorer {
     return [
       { t: 'Вигляд', icon: 'view', sub: this.viewItems() }, { t: 'Сортувати за', icon: 'sort', sub: [['name', 'Ім’я'], ['date', 'Дата змінення'], ['type', 'Тип'], ['size', 'Розмір']].map(([k, t]) => ({ t, check: this.sys.settings.sort === k, on: () => { this.sys.settings.sort = k; this.sys.saveSettings(); this.sys.refreshAll(); } })) },
       { t: 'Оновити', icon: 'refresh', kbd: 'F5', on: () => this.render() }, '-',
+      ...(this.sys.canUndo() ? [{ t: `Скасувати ${this.sys.undoName()}`, icon: 'undo', kbd: 'Ctrl+Z', on: () => this.sys.undo() }, '-'] : []),
       { t: 'Вставити', icon: 'paste', kbd: 'Ctrl+V', disabled: !this.sys.clip?.paths.length, on: () => this.cmd('paste') },
       { t: 'Створити', icon: 'plus', sub: [{ t: 'Папку', icon: folderIcon(16), on: () => this.newItem('dir') }, { t: 'Текстовий документ', icon: nodeIcon({ type: 'file', name: 'a.txt' }, null, 16), on: () => this.newItem('txt') }] },
       '-', { t: 'Відкрити в терміналі', icon: 'terminal', on: () => this.sys.open('cmd', this.path) }, { t: 'Властивості', icon: 'props', on: () => this.sys.props(this.path) },
@@ -364,6 +365,7 @@ export class Explorer {
       const name = this.fs.freeName(parent, kind === 'dir' ? 'Нова папка' : 'Новий текстовий документ.txt');
       const p = this.path.replace(/\\$/, '') + '\\' + name;
       if (kind === 'dir') this.fs.mkdir(p); else this.fs.writeFile(p, '');
+      this.sys.created(p);
       this.sel = new Set([p]); this.anchor = p; this.renaming = p; this.render();
     } catch (e) { alertBox(e.code === 'access' ? 'Тут не можна створювати файли: це системна папка. Спробуйте «Документи» або «Робочий стіл».' : e.message, 'Провідник', 'warn'); }
   }
@@ -375,7 +377,7 @@ export class Explorer {
     if (!n || !v || v === n.name) { this.render(); return; }
     if (!validName(v)) { this.render(); alertBox(BAD_NAME_HINT, 'Перейменування', 'warn'); return; }
     // зміна розширення — як у Windows, попереджаємо
-    const go = () => { try { this.fs.rename(key, v); const np = parentPath(key).replace(/\\$/, '') + '\\' + v; this.sel = new Set([np]); this.anchor = np; this.render(); } catch (e) { this.render(); alertBox(e.code === 'exists' ? `У цій папці вже є елемент «${v}».` : e.message, 'Перейменування', 'warn'); } };
+    const go = () => { try { this.sys.renamePath(key, v); const np = parentPath(key).replace(/\\$/, '') + '\\' + v; this.sel = new Set([np]); this.anchor = np; this.render(); } catch (e) { this.render(); alertBox(e.code === 'exists' ? `У цій папці вже є елемент «${v}».` : e.message, 'Перейменування', 'warn'); } };
     if (n.type === 'file' && extOf(n.name) !== extOf(v) && this.sys.settings.ext) {
       dialog({ title: 'Перейменування', icon: 'warn', text: 'Якщо змінити розширення імені файлу, файл може стати непридатним для використання. Змінити?', buttons: [{ t: 'Так', v: true, primary: true }, { t: 'Ні', v: false, cancel: true }] }).then(ok => ok ? go() : this.render());
       return;

@@ -30,7 +30,9 @@ export class Console {
     this.win.console = this;
     this.win.cleanup(() => { clearTimeout(this.timer); this.stream = null; });
   }
-  write(lines, cls = '') { const f = document.createDocumentFragment(); for (const l of lines) { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = l + '\n'; f.appendChild(s); } this.out.appendChild(f); this.scroll(); }
+  write(lines, cls = '') { const f = document.createDocumentFragment(); for (const l of lines) { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = l + '\n'; f.appendChild(s); } this.out.appendChild(f); this.trim(); this.scroll(); }
+  // як у справжньому cmd, буфер обмежений — тисячі рядків після dir /s не гальмують вікно
+  trim() { const extra = this.out.childNodes.length - 3000; for (let i = 0; i < extra; i++) this.out.firstChild.remove(); }
   scroll() { const c = this.$('.con'); c.scrollTop = c.scrollHeight; }
   updatePrompt() { this.$('.con-pr').textContent = this.asking ? '' : this.cmd.prompt; this.$('.con-line').classList.toggle('busy', !!this.stream); }
   setColor(c) { const con = this.$('.con'); con.style.background = PALETTE[parseInt(c[0], 16)]; con.style.color = PALETTE[parseInt(c[1], 16)]; con.style.setProperty('--caret', PALETTE[parseInt(c[1], 16)]); }

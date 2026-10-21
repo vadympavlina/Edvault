@@ -45,7 +45,7 @@ export const WM = {
         <button class="wb" data-act="min" title="Згорнути">${ui('min', 14)}</button><button class="wb" data-act="max" title="Розгорнути">${ui('max', 13)}</button><button class="wb close" data-act="close" title="Закрити">${ui('close', 15)}</button></header>
       <div class="win-body"></div>${['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map(d => `<i class="rz rz-${d}" data-rz="${d}"></i>`).join('')}</section>`);
     win.body = win.el.querySelector('.win-body');
-    win.setTitle = t => { win.title = t; win.el.querySelector('.win-name').textContent = t; win.el.setAttribute('aria-label', t); this.emit(); };
+    win.setTitle = t => { if (t === win.title && win.el.isConnected) return; win.title = t; win.el.querySelector('.win-name').textContent = t; win.el.setAttribute('aria-label', t); this.emit(); };
     win.focus = () => this.focus(win);
     win.close = force => this.close(win, force);
     // прибирання (підписки, таймери) — виконується за будь-якого закриття: кнопкою, з панелі завдань, taskkill
