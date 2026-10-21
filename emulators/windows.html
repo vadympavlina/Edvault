@@ -26,6 +26,19 @@
 <!-- /og -->
 </head>
 <body>
+<div class="small-screen" id="smallScreen" role="alertdialog" aria-modal="true" aria-labelledby="ssT" aria-describedby="ssD" hidden>
+  <div class="ss-card">
+    <div class="ss-ico" aria-hidden="true">
+      <svg width="64" height="50" viewBox="0 0 64 50" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="4" width="48" height="32" rx="3"/><path d="M2 44h60l-4-8H6z"/></svg>
+      <svg width="34" height="44" viewBox="0 0 34 44" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="28" height="40" rx="4"/><path d="M14 36h6"/></svg>
+    </div>
+    <h1 id="ssT">Емулятор Windows не працює на телефоні</h1>
+    <p id="ssD">Екран телефона замалий для вікон, панелі завдань і Провідника. Відкрийте цю сторінку на <b>комп’ютері</b> або <b>планшеті</b>.</p>
+    <div class="ss-hint"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span>Ваші файли й налаштування збережуться в тому браузері, де ви працюєте.</span></div>
+    <div class="ss-logo"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="#0067c0" d="M3 3h8.5v8.5H3zM12.5 3H21v8.5h-8.5zM3 12.5h8.5V21H3zM12.5 12.5H21V21h-8.5z"/></svg>Edvault · Емулятор Windows</div>
+  </div>
+</div>
 <main id="desk">
   <div id="icons" tabindex="0" aria-label="Робочий стіл"></div>
 </main>
@@ -51,6 +64,23 @@
 
 <div id="boot" class="on"><svg width="64" height="64" viewBox="0 0 20 20" aria-hidden="true"><rect x="1" y="1" width="8.5" height="8.5" fill="#4cc2ff"/><rect x="10.5" y="1" width="8.5" height="8.5" fill="#4cc2ff"/><rect x="1" y="10.5" width="8.5" height="8.5" fill="#4cc2ff"/><rect x="10.5" y="10.5" width="8.5" height="8.5" fill="#4cc2ff"/></svg><i class="spin"></i><span>Ласкаво просимо</span></div>
 <div id="toast"></div>
-<script type="module" src="windowsemu/js/main.js"></script>
+<script type="module">
+  // На телефоні емулятор не запускається: екран замалий для вікон і панелі завдань — показуємо повідомлення,
+  // яке не можна закрити. Планшет і комп'ютер працюють повноцінно. Якщо на комп'ютері звузити вікно браузера,
+  // повідомлення з'являється, а після розширення — зникає, і робота продовжується.
+  const small = () => innerWidth < 600 || (matchMedia('(pointer: coarse)').matches && Math.min(innerWidth, innerHeight) < 600);
+  const block = document.getElementById('smallScreen');
+  let started = false;
+  const check = () => {
+    const s = small();
+    document.documentElement.classList.toggle('phone', s);
+    block.hidden = !s;
+    for (const el of document.body.children) if (el !== block) el.inert = s;
+    if (!s && !started) { started = true; import('./windowsemu/js/main.js'); }
+  };
+  check();
+  addEventListener('resize', check);
+  addEventListener('orientationchange', check);
+</script>
 </body>
 </html>
