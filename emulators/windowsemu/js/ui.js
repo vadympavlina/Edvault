@@ -5,6 +5,28 @@ export const $ = (sel, root = document) => root.querySelector(sel);
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export function h(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
 
+// Оновити вміст елемента новою розміткою, змінюючи лише те, що відрізняється.
+// На відміну від innerHTML, наявні елементи лишаються тими самими: не губиться клік (натиснули на старий
+// елемент — відпустили на новий), наведення, прокрутка й фокус. Рядки з різним data-key замінюються цілком.
+export function morph(el, html) {
+  const t = document.createElement('template'); t.innerHTML = html;
+  patch(el, t.content);
+}
+function patch(a, b) {
+  const an = [...a.childNodes], bn = [...b.childNodes];
+  for (let i = 0; i < bn.length; i++) {
+    const x = an[i], y = bn[i];
+    if (!x) { a.appendChild(y); continue; }
+    if (x.nodeType !== y.nodeType || x.nodeName !== y.nodeName || (x.nodeType === 1 && x.getAttribute('data-key') !== y.getAttribute('data-key'))) { a.replaceChild(y, x); continue; }
+    if (x.nodeType !== 1) { if (x.nodeValue !== y.nodeValue) x.nodeValue = y.nodeValue; continue; }
+    for (const at of [...x.attributes]) if (!y.hasAttribute(at.name)) x.removeAttribute(at.name);
+    for (const at of y.attributes) if (x.getAttribute(at.name) !== at.value) x.setAttribute(at.name, at.value);
+    if (x.tagName === 'svg') { if (x.innerHTML !== y.innerHTML) x.innerHTML = y.innerHTML; continue; } // значки — цілком, вони дрібні
+    patch(x, y);
+  }
+  for (let i = an.length - 1; i >= bn.length; i--) a.removeChild(an[i]);
+}
+
 /* ═════════ Вікна ═════════ */
 export const WM = {
   wins: [], z: 20, seq: 0, pid: 1236, subs: new Set(),
@@ -38,6 +60,8 @@ export const WM = {
   focus(win) {
     if (win.min) { win.min = false; win.el.classList.remove('min'); }
     win.z = ++this.z; win.el.style.zIndex = win.z;
+    // за довгий урок лічильник росте без меж — час від часу стискаємо його, зберігаючи порядок вікон
+    if (this.z > 5000) { this.z = 20; for (const w of [...this.wins].sort((a, b) => a.z - b.z)) { w.z = ++this.z; w.el.style.zIndex = w.z; } }
     for (const w of this.wins) w.el.classList.toggle('active', w === win);
     win.onFocus?.();
     this.emit();
@@ -75,34 +99,54 @@ export const WM = {
       const title = e.target.closest('.win-title'), rz = e.target.dataset.rz;
       if ((!title || e.target.closest('.wb')) && !rz) return;
       if (e.button !== 0) return;
+      if (win.max && !title) return;
       const A = this.area().getBoundingClientRect();
-      let r = el.getBoundingClientRect();
-      if (win.max && title) { // тягнемо розгорнуте вікно — воно відновлюється під курсором
-        const ratio = (e.clientX - r.left) / r.width;
-        this.toggleMax(win); r = el.getBoundingClientRect();
-        el.style.left = (e.clientX - A.left - r.width * ratio) + 'px'; el.style.top = (e.clientY - A.top - 16) + 'px';
-        r = el.getBoundingClientRect();
-      } else if (win.max) return;
-      const s = { x: e.clientX, y: e.clientY, l: r.left - A.left, t: r.top - A.top, w: r.width, h: r.height };
-      el.setPointerCapture(e.pointerId); el.classList.add('moving');
-      const move = ev => {
+      const r0 = el.getBoundingClientRect();
+      // перетягування починається лише після справжнього руху: простий клік чи подвійний клік по заголовку
+      // не зсуває вікно й не «відклеює» розгорнуте вікно
+      let s = null, started = !!rz, raf = 0, last = null;
+      const begin = ev => {
+        let r = r0;
+        if (win.max) { // тягнемо розгорнуте вікно — воно відновлюється під курсором
+          const ratio = (ev.clientX - r.left) / r.width;
+          this.toggleMax(win); r = el.getBoundingClientRect();
+          el.style.left = (ev.clientX - A.left - r.width * ratio) + 'px'; el.style.top = Math.max(0, ev.clientY - A.top - 16) + 'px';
+          r = el.getBoundingClientRect();
+        }
+        s = { x: ev.clientX, y: ev.clientY, l: r.left - A.left, t: r.top - A.top, w: r.width, h: r.height };
+        el.classList.add('moving');
+        // вказівник захоплюємо лише тепер: інакше клік і подвійний клік по заголовку дістаються вікну, а не заголовку
+        try { el.setPointerCapture(e.pointerId); } catch { /* синтетичний вказівник */ }
+      };
+      if (rz) begin(e);
+      const apply = () => {
+        raf = 0; const ev = last; if (!ev || !s) return;
         const dx = ev.clientX - s.x, dy = ev.clientY - s.y;
         if (!rz) { el.style.left = Math.min(A.width - 80, Math.max(-s.w + 120, s.l + dx)) + 'px'; el.style.top = Math.min(A.height - 34, Math.max(0, s.t + dy)) + 'px'; return; }
         let { l, t, w, h: hh } = s;
-        if (rz.includes('e')) w = Math.max(win.minW, s.w + dx);
-        if (rz.includes('s')) hh = Math.max(win.minH, s.h + dy);
+        if (rz.includes('e')) w = Math.min(A.width - l, Math.max(win.minW, s.w + dx));
+        if (rz.includes('s')) hh = Math.min(A.height - t, Math.max(win.minH, s.h + dy));
         if (rz.includes('w')) { w = Math.max(win.minW, s.w - dx); l = s.l + s.w - w; }
         if (rz.includes('n')) { hh = Math.max(win.minH, s.h - dy); t = Math.max(0, s.t + s.h - hh); }
         Object.assign(el.style, { left: l + 'px', top: t + 'px', width: w + 'px', height: hh + 'px' });
       };
+      const move = ev => {
+        if (ev.pointerId !== e.pointerId) return;
+        if (!started) { if (Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 5) return; started = true; begin(e); }
+        last = ev; if (!raf) raf = requestAnimationFrame(apply); // не частіше, ніж оновлюється екран
+      };
       const up = ev => {
-        try { el.releasePointerCapture(e.pointerId); } catch (x) { /* вже відпущено */ }
+        if (ev.pointerId !== e.pointerId) return;
+        try { el.releasePointerCapture(e.pointerId); } catch { /* вже відпущено */ }
+        removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+        if (raf) { cancelAnimationFrame(raf); apply(); }
+        if (!started) return;
         el.classList.remove('moving');
-        el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
-        if (!rz && ev.clientY - A.top < 4) this.toggleMax(win); // до верхнього краю — розгорнути
+        if (!rz && ev.type === 'pointerup' && ev.clientY - A.top < 4) this.toggleMax(win); // до верхнього краю — розгорнути
         win.onResize?.();
       };
-      el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+      // до початку перетягування слухаємо всю сторінку (вказівник ще не захоплено)
+      addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
       e.preventDefault();
     });
   },

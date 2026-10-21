@@ -21,7 +21,7 @@ svg { flex: none; display: block; }
 code { font: 600 .92em var(--mono); background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; }
 
 /* ── робочий стіл ── */
-#desk { position: fixed; inset: 0 0 48px 0; overflow: hidden; background: #0b4bb8 url(bloom.jpg) center / cover no-repeat; }
+#desk { position: fixed; inset: 0 0 48px 0; overflow: hidden; isolation: isolate; background: #0b4bb8 url(bloom.jpg) center / cover no-repeat; }
 #icons { position: absolute; inset: 0; padding: 8px 4px; display: grid; grid-auto-flow: column; grid-template-rows: repeat(auto-fill, 98px); grid-auto-columns: 86px; gap: 2px 4px; align-content: start; outline: none; }
 .dk { width: 82px; height: 96px; padding: 6px 3px 4px; border-radius: 5px; display: flex; flex-direction: column; align-items: center; gap: 4px; border: 1px solid transparent; }
 .dk .ico { filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
@@ -51,7 +51,8 @@ code { font: 600 .92em var(--mono); background: rgba(0,0,0,.06); padding: 1px 5p
 .wb:hover { background: rgba(0,0,0,.06); }
 .wb.close:hover { background: #c42b1c; color: #fff; }
 .win-body { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
-.rz { position: absolute; z-index: 5; }
+.rz { position: absolute; z-index: 5; touch-action: none; }
+.win-title { touch-action: none; }
 .rz-n, .rz-s { left: 8px; right: 8px; height: 6px; cursor: ns-resize; } .rz-n { top: -2px; } .rz-s { bottom: -2px; }
 .rz-e, .rz-w { top: 8px; bottom: 8px; width: 6px; cursor: ew-resize; } .rz-e { right: -2px; } .rz-w { left: -2px; }
 .rz-ne, .rz-nw, .rz-se, .rz-sw { width: 12px; height: 12px; }

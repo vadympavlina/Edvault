@@ -2,7 +2,7 @@
 import { SYS_PROCS, STARTUP, SERVICES, appInfo } from './procs.js';
 export { appInfo };
 import { appIcon, ui } from './icons.js';
-import { WM, dialog, alertBox, menu, esc, modal } from './ui.js';
+import { WM, dialog, alertBox, menu, esc, modal, morph } from './ui.js';
 import { fmtNum, USER } from './fs.js';
 
 const PAGES = [['proc', 'apps', 'Процеси'], ['perf', 'chart', 'Продуктивність'], ['startup', 'rocket', 'Автозавантаження'], ['users', 'users', 'Користувачі'], ['details', 'list', 'Подробиці'], ['services', 'puzzle', 'Служби']];
@@ -27,7 +27,13 @@ export class TaskManager {
     this.render();
     this.timer = setInterval(() => { if (!this.win.el.isConnected) return clearInterval(this.timer); if (document.hidden) return; this.tick(); if (!this.win.min) this.refresh(); }, 1000);
     this.unsub = sys.fs.on(w => { if (w === 'fwlog') this.netBump += 6; if (w === 'reset') this.render(); });
-    const onWm = () => { if (this.win.el.isConnected && (this.page === 'proc' || this.page === 'details')) this.refresh(); };
+    // список процесів змінюється лише тоді, коли відкрили чи закрили вікно, — фокус і заголовки його не чіпають
+    let sig = '';
+    const onWm = () => {
+      const now = WM.wins.map(w => w.pid).join();
+      if (now === sig) return; sig = now;
+      if (this.win.el.isConnected && !this.win.min && (this.page === 'proc' || this.page === 'details')) this.refresh();
+    };
     WM.on(onWm);
     this.win.cleanup(() => { clearInterval(this.timer); this.unsub(); WM.subs.delete(onWm); });
   }
@@ -79,9 +85,10 @@ export class TaskManager {
   refresh(full) {
     const c = this.$('.tm-c'), top = c.scrollTop;
     const html = this['p_' + this.page]();
-    this.$('.tm-h').innerHTML = this.head();
+    // щосекундне оновлення не перестворює кнопки й рядки — інакше клік, що припав на оновлення, губиться
+    morph(this.$('.tm-h'), this.head());
     if (this.page === 'perf' && !full && c.querySelector('.pf')) { this.perfUpdate(); return; }
-    c.innerHTML = html; c.scrollTop = top;
+    if (full) { c.innerHTML = html; c.scrollTop = top; } else morph(c, html);
   }
   head() {
     const t = PAGES.find(p => p[0] === this.page)[2], sel = this.selected();

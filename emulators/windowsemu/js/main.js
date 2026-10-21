@@ -1,7 +1,7 @@
 // Емулятор Windows · робочий стіл, панель завдань, меню «Пуск», буфер обміну, перетягування, властивості.
 import { FS, HOME, KNOWN, DRIVE_LABEL, DRIVE_SIZE, parentPath, nameOfPath, isInside, typeName, fmtDate, fmtTime, fmtSize, fmtNum, validName, BAD_NAME_HINT, isProtected, extOf, isText, FS_EVENTS, batched } from './fs.js';
 import { nodeIcon, folderIcon, driveIcon, pcIcon, binIcon, appIcon, winLogo, ui } from './icons.js';
-import { WM, dialog, alertBox, menu, closeMenu, esc, h, $ } from './ui.js';
+import { WM, dialog, alertBox, menu, closeMenu, esc, h, $, morph } from './ui.js';
 import { Explorer, PC, BIN, wbr } from './explorer.js';
 import { Console } from './console.js';
 import { Notepad } from './notepad.js';
@@ -361,11 +361,14 @@ const tbIcon = a => appIcon({ wfmsc: 'firewall', firewallcpl: 'firewall' }[a] ||
 function renderTaskbar() {
   const act = WM.active();
   const extra = [...new Set(WM.wins.map(w => w.app))].filter(a => !PINNED.some(p => p[0] === a)).map(a => [a, APP_NAME[a] || a]);
-  $('#tbApps').innerHTML = [...PINNED, ...extra].map(([a, t]) => {
+  const html = [...PINNED, ...extra].map(([a, t]) => {
     const ws = WM.wins.filter(w => w.app === a);
-    return `<button class="tb-app${ws.length ? ' run' : ''}${act && act.app === a ? ' act' : ''}" data-app="${a}" title="${esc(ws.length === 1 ? ws[0].title : t)}">${tbIcon(a)}${ws.length > 1 ? `<i class="cnt">${ws.length}</i>` : ''}</button>`;
+    return `<button class="tb-app${ws.length ? ' run' : ''}${act && act.app === a ? ' act' : ''}" data-app="${a}" data-key="${a}" title="${esc(ws.length === 1 ? ws[0].title : t)}">${tbIcon(a)}${ws.length > 1 ? `<i class="cnt">${ws.length}</i>` : ''}</button>`;
   }).join('');
+  if (html === tbHtml) return; // нічого не змінилось — панель не чіпаємо
+  tbHtml = html; morph($('#tbApps'), html);
 }
+let tbHtml = '';
 WM.on(renderTaskbar);
 $('#tbApps').addEventListener('click', e => {
   const b = e.target.closest('[data-app]'); if (!b) return;
