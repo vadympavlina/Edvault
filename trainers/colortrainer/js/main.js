@@ -49,7 +49,7 @@ const passed = () => LEVELS.filter(l => (best(l.id)?.stars || 0) >= 1).length;
 const hsbCss = h => css(hsbToRgb(h));
 
 /* ═════════ Головна ═════════ */
-const MODE_TAG = { hue: 'H', sb: 'SB', hsb: 'HSB', rgb: 'RGB', hex: 'HEX', harmony: '180°', order: '1→9' };
+const MODE_TAG = { hue: 'H', sb: 'SB', hsb: 'HSB', rgb: 'RGB', pick: 'HEX', harmony: '180°', order: '1→9' };
 const seedOf = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 function thumb(level) {
   const b = best(level.id);
@@ -161,10 +161,11 @@ function startRound() {
   $('feedback').hidden = true;
   $('checkLabel').textContent = 'Перевірити';
   renderRounds();
-  const isOrder = level.mode === 'order';
-  $('swatches').hidden = isOrder; $('controls').hidden = isOrder; $('order').hidden = !isOrder;
+  const isOrder = level.mode === 'order', isPick = level.mode === 'pick';
+  $('swatches').hidden = isOrder || isPick; $('controls').hidden = isOrder; $('order').hidden = !isOrder;
   $('stage').classList.remove('reveal');
   if (isOrder) { order = R.order.slice(); renderOrder(); return; }
+  if (isPick) { user = null; renderPick(); return; }
   user = { ...R.start };
   rgbState = hsbToRgb(user);
   buildControls();
@@ -194,10 +195,8 @@ function renderSwatches() {
   const cover = $('swCover');
   const target = level.mode === 'harmony' ? R.base : R.target;
   $('swTargetFill').style.background = hsbCss(target);
-  $('swTargetLabel').textContent = level.mode === 'harmony' ? 'Базовий колір' : level.mode === 'hex' ? 'Код кольору' : 'Зразок';
-  $('swTarget').classList.toggle('hexcard', level.mode === 'hex');
-  if (level.mode === 'hex') { cover.className = 'sw-cover on'; cover.innerHTML = `<b>${toHex(hsbToRgb(R.target))}</b><small>Зберіть колір із цим кодом</small>`; }
-  else if (!level.memory) cover.className = 'sw-cover';
+  $('swTargetLabel').textContent = level.mode === 'harmony' ? 'Базовий колір' : 'Зразок';
+  if (!level.memory) cover.className = 'sw-cover';
   $('swUserFill').style.background = hsbCss(user);
 }
 function setUser(h) {
@@ -209,12 +208,12 @@ function buildControls() {
   const box = $('controls');
   box.innerHTML = ''; ui = {};
   const m = level.mode;
-  if (m === 'sb' || m === 'hsb' || m === 'hex') {
+  if (m === 'sb' || m === 'hsb') {
     ui.sb = sbSquare((s, b) => { if (checked) return; setUser({ ...user, s, b }); });
     box.appendChild(ui.sb.el);
     ui.sb.setHue(user.h); ui.sb.set(user.s, user.b);
   }
-  if (m === 'hue' || m === 'hsb' || m === 'hex' || m === 'harmony') {
+  if (m === 'hue' || m === 'hsb' || m === 'harmony') {
     ui.hue = bar('hue-bar', v => { if (checked) return; setUser({ ...user, h: v * 360 }); if (ui.sb) ui.sb.setHue(user.h); });
     ui.hue.set(user.h / 360);
     if (m === 'harmony') {
@@ -270,6 +269,26 @@ function drawWheel() {
   w.innerHTML = s;
 }
 
+/* ── коди кольорів: вибір одного з чотирьох ── */
+function renderPick() {
+  const byCode = R.ask === 'code', right = R.options[R.answer];
+  const ask = byCode
+    ? `<div class="pick-ask swatch" style="background:${right}"><span class="sw-label">Який код у цього кольору?</span></div>`
+    : `<div class="pick-ask code"><b>${right}</b><small>Який колір має цей код?</small></div>`;
+  const opts = R.options.map((hex, i) => {
+    const mark = checked ? (i === R.answer ? ' ok' : i === user ? ' bad' : '') : user === i ? ' sel' : '';
+    const label = byCode ? `${hex} — варіант ${i + 1}` : `Варіант ${i + 1}`;
+    return `<button class="pick-opt ${byCode ? 'code' : 'swatch'}${mark}" data-pick="${i}" aria-label="${label}" aria-pressed="${user === i}" ${checked ? 'tabindex="-1"' : ''}${byCode ? '' : ` style="background:${hex}"`}>`
+      + `<kbd>${i + 1}</kbd>${byCode ? `<b>${hex}</b><i style="background:${hex}"></i>` : checked ? `<span>${hex}</span>` : ''}</button>`;
+  }).join('');
+  $('controls').innerHTML = `<div class="pick">${ask}<div class="pick-opts">${opts}</div></div>`;
+}
+function choose(i) {
+  if (checked || level?.mode !== 'pick' || !R.options[i]) return;
+  user = i; renderPick();
+}
+$('controls').addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (b) choose(+b.dataset.pick); });
+
 /* ── по порядку: перетягування плиток ── */
 function renderOrder(marks) {
   const box = $('order');
@@ -303,10 +322,12 @@ function check() {
   if (cur < 0) return;
   if (checked) { next(); return; }
   clearInterval(memTimer);
+  if (level.mode === 'pick' && user == null) { toast('Спершу виберіть один із варіантів'); return; }
   checked = true;
   const res = level.mode === 'order' ? scoreRound(level, R, order) : scoreRound(level, R, user);
   res.color = accColor(res.accuracy);
   if (level.mode === 'order') { res.ramp = R.ramp.map(h => toHex(hsbToRgb(h))); res.order = order.slice(); renderOrder(true); }
+  else if (level.mode === 'pick') { res.pair = [toHex(res.target), toHex(res.user)]; $('stage').classList.add('reveal'); renderPick(); }
   else {
     res.pair = [toHex(res.target), toHex(res.user)];
     // показуємо зразок (для HEX і «по пам'яті» — відкриваємо)
@@ -319,8 +340,9 @@ function check() {
   $('feedback').hidden = false;
   $('fbAcc').textContent = res.accuracy + '%'; $('fbAcc').style.color = res.color;
   $('fbDe').textContent = res.de != null ? `ΔE ${res.de.toFixed(1)}` : '';
-  $('fbPair').innerHTML = res.pair ? `<div style="background:${res.pair[0]}">${level.mode === 'harmony' ? 'потрібно' : 'зразок'} ${res.pair[0]}</div><div style="background:${res.pair[1]}">ваш ${res.pair[1]}</div>` : '';
-  $('fbPair').hidden = !res.pair;
+  if (level.mode === 'pick') $('fbAcc').textContent = res.correct ? 'Правильно' : 'Не та відповідь';
+  $('fbPair').innerHTML = res.pair && level.mode !== 'pick' ? `<div style="background:${res.pair[0]}">${level.mode === 'harmony' ? 'потрібно' : 'зразок'} ${res.pair[0]}</div><div style="background:${res.pair[1]}">ваш ${res.pair[1]}</div>` : '';
+  $('fbPair').hidden = !res.pair || level.mode === 'pick';
   $('fbTips').innerHTML = res.tips.map(t => `<li>${esc(t)}</li>`).join('');
   $('checkLabel').textContent = rIndex + 1 < level.rounds ? 'Наступний раунд' : 'Результат рівня';
   renderRounds();
@@ -375,6 +397,7 @@ document.addEventListener('keydown', e => {
     else if (e.key === 'Enter' && document.activeElement?.tagName !== 'BUTTON') { e.preventDefault(); (!$('resNext').disabled ? $('resNext') : $('resRetry')).click(); }
     return;
   }
+  if (cur >= 0 && level.mode === 'pick' && /^[1-4]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) { choose(+e.key - 1); return; }
   if (cur >= 0 && e.key === 'Enter' && document.activeElement?.tagName !== 'BUTTON') { e.preventDefault(); check(); }
 });
 

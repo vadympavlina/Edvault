@@ -69,11 +69,37 @@ await step('RGB: поле з числом змінює колір', async () => 
   assert.equal(hex, '#FF8000');
 });
 
-await step('HEX: зразка не видно, після перевірки — відкривається', async () => {
+await step('коди кольорів: вибір із чотирьох, без вибору не перевіряє, клавіші 1–4, підсвітка відповіді', async () => {
   await open('hex-1');
-  assert.match(await p.textContent('#swCover'), /^#[0-9A-F]{6}/);
+  assert.equal(await p.locator('.pick-opt').count(), 4);
+  assert.equal(await p.locator('#swatches').isHidden(), true);
+  const code = await p.textContent('.pick-ask b');
+  assert.match(code, /^#[0-9A-F]{6}$/);
   await p.keyboard.press('Enter');
-  assert.equal(await p.evaluate(() => document.getElementById('swCover').classList.contains('on')), false);
+  assert.equal(await p.isHidden('#feedback'), true, 'без вибору не перевіряє');
+  const T = () => p.evaluate(() => window.ColorTrainer.round);
+  const r = await T();
+  const wrong = (r.answer + 1) % 4;
+  await p.keyboard.press(String(wrong + 1));
+  assert.equal(await p.locator('.pick-opt.sel').count(), 1);
+  await p.keyboard.press('Enter');
+  assert.equal(await p.textContent('#fbAcc'), 'Не та відповідь');
+  assert.match(await p.textContent('#fbTips'), /Правильна відповідь — #/);
+  assert.equal(await p.locator('.pick-opt.ok').count(), 1); assert.equal(await p.locator('.pick-opt.bad').count(), 1);
+  await p.keyboard.press('Enter');
+  for (let k = 1; k < 5; k++) {
+    const rr = await T();
+    await p.click(`.pick-opt[data-pick="${rr.answer}"]`);
+    await p.keyboard.press('Enter');
+    assert.equal(await p.textContent('#fbAcc'), 'Правильно');
+    await p.keyboard.press('Enter');
+  }
+  await p.waitForSelector('#result:not([hidden])');
+  assert.equal(await p.textContent('#resAcc'), '80');
+  assert.equal(await p.locator('#resStars svg.on').count(), 2);
+  await p.click('#resNext');
+  assert.ok(await p.isVisible('.pick-ask.swatch'), 'другий рівень: показано колір, вибираємо код');
+  assert.match(await p.textContent('.pick-opt.code b >> nth=0'), /^#[0-9A-F]{6}$/);
 });
 
 await step('гармонія: правильний відтінок на колі — 100%', async () => {
