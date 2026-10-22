@@ -90,7 +90,7 @@ export const TRAINERS = [
     desc: 'Інструмент «Перо» як в Illustrator і Figma: від прямих ліній до літер, оцінка точності й покрокові підказки.',
     levels: 26, progress: 'edvault-pentrainer', icon: '<path d="M12 19 19 12l3 3-7 7z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="m2 2 7.59 7.59"/><circle cx="11" cy="11" r="2"/>' },
   { id: 'color-trainer', file: 'color-trainer.html', cat: 'design', name: 'Колір на око', accent: '#db2777',
-    desc: 'Відтінок, насиченість, RGB і HEX, гармонії й градієнти. Точність рахується за ΔE2000.',
+    desc: 'Відтінок, насиченість, змішування світла, колірне коло й плавні переходи. Від простого «знайдіть такий самий» до тонких відтінків.',
     levels: 28, progress: 'edvault-coloreye', icon: '<path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>' },
 ];
 

@@ -55,6 +55,17 @@ test('рівні й раунди: правильна відповідь — 100%
         assert.equal(r.order[0], 0); assert.equal(r.order[r.order.length - 1], r.ramp.length - 1);
         continue;
       }
+      if (l.mode === 'lights') {
+        assert.equal(scoreRound(l, r, r.want).accuracy, 100, l.id);
+        assert.ok(scoreRound(l, r, r.startLamps).accuracy < 100, l.id + ': старт не збігається');
+        assert.ok(r.want.every(v => v >= 0 && v < r.steps));
+        continue;
+      }
+      if (l.mode === 'wheel') {
+        for (const a of r.answers) assert.equal(scoreRound(l, r, a).accuracy, 100, l.id);
+        assert.equal(scoreRound(l, r, r.base).accuracy, 0, l.id + ': база — не відповідь');
+        continue;
+      }
       if (l.mode === 'pick') {
         assert.equal(r.options.length, l.ask === 'odd' ? l.tiles : 4);
         
@@ -69,6 +80,18 @@ test('рівні й раунди: правильна відповідь — 100%
     }
   }
   assert.ok(LEVELS.length >= 24);
+});
+
+test('лампи: часткова оцінка й підказка про кожну лампу; коло: сусід правильного — «майже»', () => {
+  const lamp = LEVELS.find(l => l.id === 'rgb-4'), r = makeRound(lamp, c.rng(5));
+  const one = r.want.slice(); one[0] = (one[0] + 1) % 3;
+  const res = scoreRound(lamp, r, one);
+  assert.equal(res.accuracy, 67); assert.match(res.tips[0], /^Червоне світло має бути/);
+  assert.deepEqual(scoreRound(LEVELS.find(l => l.id === 'rgb-2'), { want: [1, 1, 0], steps: 2 }, [1, 1, 0]).target, { r: 255, g: 255, b: 0 });
+  const w = LEVELS.find(l => l.id === 'harm-1'), wr = makeRound(w, c.rng(9));
+  assert.deepEqual(wr.answers, [(wr.base + 6) % 12]);
+  assert.equal(scoreRound(w, wr, (wr.answers[0] + 1) % 12).accuracy, 50);
+  assert.equal(scoreRound(w, wr, (wr.answers[0] + 3) % 12).accuracy, 0);
 });
 
 test('знайдіть колір: різниця між варіантами в межах рівня — помітна, але не однакова', () => {

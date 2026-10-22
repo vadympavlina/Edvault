@@ -62,11 +62,17 @@ await step('квадрат насиченості й яскравості: кл�
   assert.ok(Math.abs(u.s - 80) < 2 && Math.abs(u.b - 75) < 2, JSON.stringify(u));
 });
 
-await step('RGB: поле з числом змінює колір', async () => {
-  await open('rgb-1');
-  for (const [k, v] of [['R', '255'], ['G', '128'], ['B', '0']]) await p.fill(`input[aria-label="${k}"]`, v);
-  const hex = await p.evaluate(async () => { const c = await import('./colortrainer/js/color.js'); return c.toHex(c.hsbToRgb(window.ColorTrainer.user)); });
-  assert.equal(hex, '#FF8000');
+await step('лампи: натискання вмикає світло, колір змішується, клавіші 1–3', async () => {
+  await open('rgb-2');
+  assert.equal(await p.locator('.lamp').count(), 3);
+  const want = await p.evaluate(() => window.ColorTrainer.round.want);
+  for (let i = 0; i < 3; i++) if (want[i]) await p.click(`.lamp[data-lamp="${i}"]`);
+  assert.deepEqual(await p.evaluate(() => window.ColorTrainer.user), want);
+  await p.keyboard.press('Enter');
+  assert.equal((await fb()).acc, 100);
+  await p.keyboard.press('Enter');
+  await p.keyboard.press('1');
+  assert.equal(await p.evaluate(() => window.ColorTrainer.user[0]), 1);
 });
 
 await step('знайдіть колір: вибір на око, без вибору не перевіряє, клавіші, підсвітка відповіді; зайва плитка', async () => {
@@ -101,12 +107,18 @@ await step('знайдіть колір: вибір на око, без вибо
   assert.equal(await p.textContent('#fbAcc'), 'Правильно');
 });
 
-await step('гармонія: правильний відтінок на колі — 100%', async () => {
-  await open('harm-2');
-  assert.equal(await p.locator('.wheel').count(), 1);
-  await p.evaluate(() => { const T = window.ColorTrainer; T.setUser(T.round.targets[1]); }); // будь-який із двох у тріаді
+await step('колірне коло: без вибору не перевіряє, база не натискається, правильний сектор — 100%', async () => {
+  await open('harm-3');
+  assert.equal(await p.locator('.wheel12 .sec').count(), 12);
   await p.keyboard.press('Enter');
-  assert.equal((await fb()).acc, 100);
+  assert.equal(await p.isHidden('#feedback'), true);
+  const r = await p.evaluate(() => window.ColorTrainer.round);
+  await p.locator(`.sec[data-sec="${r.base}"]`).dispatchEvent('click');
+  assert.equal(await p.evaluate(() => window.ColorTrainer.user), null);
+  await p.locator(`.sec[data-sec="${r.answers[1]}"]`).click(); // будь-яка з двох вершин трикутника
+  await p.keyboard.press('Enter');
+  assert.equal(await p.textContent('#fbAcc'), 'Правильно');
+  assert.equal(await p.locator('.sec.ok').count(), 2);
 });
 
 await step('по пам’яті: зразок ховається після відліку', async () => {

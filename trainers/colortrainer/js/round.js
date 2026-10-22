@@ -1,5 +1,5 @@
 // Колір на око · раунд: що загадати, з чого почати, як оцінити. Без DOM.
-import { hsbToRgb, rgbToHsb, toHex, fromHex, deltaE, accuracyFromDE, advice, randomHsb, harmonyTargets, orderAccuracy } from './color.js';
+import { hsbToRgb, rgbToHsb, toHex, fromHex, deltaE, accuracyFromDE, advice, randomHsb, orderAccuracy } from './color.js';
 
 const hueDist = (a, b) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); };
 
@@ -8,12 +8,8 @@ export function makeRound(level, r) {
   const g = level.gen || {};
   if (level.mode === 'order') return makeOrder(level, r);
   if (level.mode === 'pick') return makePick(level, r);
-  if (level.mode === 'harmony') {
-    const base = randomHsb(r, g), targets = harmonyTargets(base, level.kind);
-    // старт — не на базовому кольорі й далеко від правильних відповідей
-    let h; do { h = Math.round(r() * 360); } while (hueDist(h, base.h) < 20 || targets.some(t => hueDist(h, t.h) < 45));
-    return { base, targets, start: { h, s: base.s, b: base.b } };
-  }
+  if (level.mode === 'lights') return makeLights(level, r);
+  if (level.mode === 'wheel') return makeWheel(level, r);
   const target = randomHsb(r, g);
   let start;
   if (level.mode === 'hue') {
@@ -25,6 +21,54 @@ export function makeRound(level, r) {
     do { start = randomHsb(r, { s: [0, 100], b: [15, 100] }); } while (deltaE(hsbToRgb(start), hsbToRgb(target)) < 20);
   }
   return { target, targets: [target], start };
+}
+
+// «Змішування світла»: три лампи — червона, зелена, синя. Кожна вимкнена, (на половину) або увімкнена.
+const LAMPS = ['Червоне', 'Зелене', 'Синє'];
+const LIGHT_SETS = {
+  one: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+  two: [[1, 1, 0], [1, 0, 1], [0, 1, 1], [1, 1, 1]],
+  all: [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [1, 0, 1], [0, 1, 1], [1, 1, 1], [0, 0, 0]],
+  // одна лампа на половину, решта вимкнені або увімкнені: помаранчевий, фіолетовий, рожевий…
+  half: [[2, 1, 0], [2, 0, 1], [1, 2, 0], [0, 2, 1], [1, 0, 2], [0, 1, 2], [2, 2, 1], [2, 1, 2], [1, 2, 2]],
+};
+export const lampsRgb = (l, steps) => { const v = x => Math.round(255 * x / (steps - 1)); return { r: v(l[0]), g: v(l[1]), b: v(l[2]) }; };
+function makeLights(level, r) {
+  const set = LIGHT_SETS[level.set], steps = level.set === 'half' ? 3 : 2;
+  const want = set[Math.floor(r() * set.length)];
+  const off = want.every(x => !x), start = off ? [steps - 1, steps - 1, steps - 1] : [0, 0, 0];
+  const target = rgbToHsb(lampsRgb(want, steps));
+  return { want, steps, startLamps: start, target, targets: [target], start: rgbToHsb(lampsRgb(start, steps)) };
+}
+function scoreLights(round, lamps) {
+  const words = round.steps === 3 ? ['вимкнене', 'на половину', 'увімкнене'] : ['вимкнене', 'увімкнене'];
+  const wrong = [0, 1, 2].filter(i => lamps[i] !== round.want[i]);
+  const tips = wrong.length ? wrong.map(i => `${LAMPS[i]} світло має бути ${words[round.want[i]]}.`) : ['Точно! Саме так змішується цей колір.'];
+  return { accuracy: Math.round((3 - wrong.length) / 3 * 100), correct: !wrong.length, target: lampsRgb(round.want, round.steps), user: lampsRgb(lamps, round.steps), tips };
+}
+
+// «Колірне коло»: 12 секторів, натиснути той, що в потрібному місці відносно бази.
+export const SECTORS = 12;
+export const sectorHsb = i => ({ h: ((i % SECTORS) + SECTORS) % SECTORS * 30, s: 85, b: 95 });
+const RULES = {
+  complement: { steps: [6], tip: 'Доповняльний колір — навпроти бази, на іншому боці кола.' },
+  analog: { steps: [1, -1], tip: 'Аналогічний колір — сусід бази, поруч з нею.' },
+  triad: { steps: [4, -4], tip: 'Тріада — три кольори на однаковій відстані, як вершини трикутника.' },
+  split: { steps: [5, -5], tip: 'Роздільно-доповняльний — поруч із протилежним, на один сектор убік.' },
+};
+const secDist = (a, b) => { const d = Math.abs(a - b) % SECTORS; return Math.min(d, SECTORS - d); };
+function makeWheel(level, r) {
+  const base = Math.floor(r() * SECTORS);
+  const answers = RULES[level.kind].steps.map(k => (base + k + SECTORS) % SECTORS);
+  const target = sectorHsb(answers[0]);
+  return { base, answers, target, targets: [target], start: sectorHsb(base) };
+}
+function scoreWheel(level, round, sec) {
+  const d = Math.min(...round.answers.map(a => secDist(a, sec)));
+  const near = round.answers.reduce((x, a) => secDist(a, sec) < secDist(x, sec) ? a : x);
+  const accuracy = d === 0 ? 100 : d === 1 && sec !== round.base ? 50 : 0;
+  const tips = d === 0 ? ['Так, саме тут.'] : [(d === 1 && sec !== round.base ? 'Правильне місце поруч. ' : '') + RULES[level.kind].tip];
+  return { accuracy, correct: d === 0, target: hsbToRgb(sectorHsb(near)), user: hsbToRgb(sectorHsb(sec)), tips };
 }
 
 function makeOrder(level, r) {
@@ -85,7 +129,8 @@ function scorePick(round, choice) {
   return { accuracy: ok ? 100 : 0, correct: ok, target: right, user: mine, tips };
 }
 
-// user — колір учня (HSB), для «по порядку» — масив індексів, для «кодів» — номер варіанта
+// user — колір учня (HSB); для «по порядку» — масив індексів, для «знайдіть колір» — номер варіанта,
+// для ламп — масив [r, g, b] положень, для кола — номер сектора
 export function scoreRound(level, round, user) {
   if (level.mode === 'order') {
     const acc = orderAccuracy(user);
@@ -93,11 +138,13 @@ export function scoreRound(level, round, user) {
     return { accuracy: acc, tips: [wrong ? `Не на своїх місцях: ${wrong} ${wrong === 1 ? 'плитка' : wrong < 5 ? 'плитки' : 'плиток'}.` : 'Усі плитки на своїх місцях!'] };
   }
   if (level.mode === 'pick') return scorePick(round, user);
+  if (level.mode === 'lights') return scoreLights(round, user);
+  if (level.mode === 'wheel') return scoreWheel(level, round, user);
   const u = hsbToRgb(user);
   let best = null;
   for (const t of round.targets) {
     const rgb = hsbToRgb(t), de = deltaE(rgb, u);
     if (!best || de < best.de) best = { de, rgb, hsb: t };
   }
-  return { accuracy: accuracyFromDE(best.de), de: best.de, target: best.rgb, targetHsb: best.hsb, user: u, tips: advice(best.rgb, u, level.mode === 'hue' || level.mode === 'harmony' ? 'hue' : level.mode === 'sb' ? 'sb' : null) };
+  return { accuracy: accuracyFromDE(best.de), de: best.de, target: best.rgb, targetHsb: best.hsb, user: u, tips: advice(best.rgb, u, level.mode === 'hue' ? 'hue' : level.mode === 'sb' ? 'sb' : null) };
 }

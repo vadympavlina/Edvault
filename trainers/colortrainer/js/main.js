@@ -1,11 +1,10 @@
 // Колір на око · Edvault — рівні, керування кольором, раунди, оцінка, прогрес і результати для вчителя.
 import { CHAPTERS, LEVELS } from './levels.js';
-import { hsbToRgb, rgbToHsb, toHex, css, rng, clamp, HARMONY } from './color.js';
-import { makeRound, scoreRound } from './round.js';
+import { hsbToRgb, rgbToHsb, toHex, css, rng, clamp } from './color.js';
+import { makeRound, scoreRound, lampsRgb, sectorHsb, SECTORS } from './round.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const NS = 'http://www.w3.org/2000/svg';
 
 /* ═════════ Іконки ═════════ */
 const P = {
@@ -49,7 +48,7 @@ const passed = () => LEVELS.filter(l => (best(l.id)?.stars || 0) >= 1).length;
 const hsbCss = h => css(hsbToRgb(h));
 
 /* ═════════ Головна ═════════ */
-const MODE_TAG = { hue: 'H', sb: 'SB', hsb: 'HSB', rgb: 'RGB', pick: '=', harmony: '180°', order: '1→9' };
+const MODE_TAG = { hue: 'H', sb: 'SB', hsb: 'HSB', lights: 'RGB', pick: '=', wheel: '180°', order: '1→9' };
 const seedOf = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 function thumb(level) {
   const b = best(level.id);
@@ -58,7 +57,7 @@ function thumb(level) {
     return `<div class="lvl-thumb ramp" style="--n:${ramp.length}">${ramp.map(c => `<i style="background:${c}"></i>`).join('')}<span class="lvl-tag">${MODE_TAG.order}</span></div>`;
   }
   let pair = b?.pairs?.[0];
-  if (!pair) { const r = makeRound(level, rng(seedOf(level.id))); pair = [toHex(hsbToRgb(r.base || r.target)), toHex(hsbToRgb(level.mode === 'harmony' ? r.targets[0] : r.start))]; }
+  if (!pair) { const r = makeRound(level, rng(seedOf(level.id))); pair = [toHex(hsbToRgb(r.base || r.target)), toHex(hsbToRgb(r.start))]; }
   return `<div class="lvl-thumb"><i style="background:${pair[0]}"></i><i style="background:${pair[1]}"></i><span class="lvl-tag">${MODE_TAG[level.mode]}</span></div>`;
 }
 function nextToPlay() {
@@ -133,7 +132,7 @@ function sbSquare(onInput) {
 }
 
 /* ═════════ Гра ═════════ */
-let cur = -1, level = null, R = null, rIndex = 0, results = [], user = null, rgbState = null, checked = false, order = null, memTimer = 0, seed = Date.now();
+let cur = -1, level = null, R = null, rIndex = 0, results = [], user = null, checked = false, order = null, memTimer = 0, seed = Date.now();
 let ui = {};
 
 function openLevel(i) {
@@ -161,13 +160,13 @@ function startRound() {
   $('feedback').hidden = true;
   $('checkLabel').textContent = 'Перевірити';
   renderRounds();
-  const isOrder = level.mode === 'order', isPick = level.mode === 'pick';
+  const isOrder = level.mode === 'order', isPick = level.mode === 'pick' || level.mode === 'wheel';
   $('swatches').hidden = isOrder || isPick; $('controls').hidden = isOrder; $('order').hidden = !isOrder;
   $('stage').classList.remove('reveal');
   if (isOrder) { order = R.order.slice(); renderOrder(); return; }
-  if (isPick) { user = null; renderPick(); return; }
+  if (isPick) { user = null; level.mode === 'wheel' ? renderWheel() : renderPick(); return; }
+  if (level.mode === 'lights') { user = R.startLamps.slice(); renderSwatches(); renderLamps(); return; }
   user = { ...R.start };
-  rgbState = hsbToRgb(user);
   buildControls();
   renderSwatches();
   // по пам'яті: зразок видно кілька секунд
@@ -193,16 +192,13 @@ function renderRounds() {
 }
 function renderSwatches() {
   const cover = $('swCover');
-  const target = level.mode === 'harmony' ? R.base : R.target;
-  $('swTargetFill').style.background = hsbCss(target);
-  $('swTargetLabel').textContent = level.mode === 'harmony' ? 'Базовий колір' : 'Зразок';
+  $('swTargetFill').style.background = hsbCss(R.target);
   if (!level.memory) cover.className = 'sw-cover';
-  $('swUserFill').style.background = hsbCss(user);
+  $('swUserFill').style.background = level.mode === 'lights' ? css(lampsRgb(user, R.steps)) : hsbCss(user);
 }
 function setUser(h) {
   user = { h: ((h.h % 360) + 360) % 360, s: clamp(h.s, 0, 100), b: clamp(h.b, 0, 100) };
   $('swUserFill').style.background = hsbCss(user);
-  if (ui.wheel) drawWheel();
 }
 function buildControls() {
   const box = $('controls');
@@ -213,63 +209,54 @@ function buildControls() {
     box.appendChild(ui.sb.el);
     ui.sb.setHue(user.h); ui.sb.set(user.s, user.b);
   }
-  if (m === 'hue' || m === 'hsb' || m === 'harmony') {
+  if (m === 'hue' || m === 'hsb') {
     ui.hue = bar('hue-bar', v => { if (checked) return; setUser({ ...user, h: v * 360 }); if (ui.sb) ui.sb.setHue(user.h); });
     ui.hue.set(user.h / 360);
-    if (m === 'harmony') {
-      const wrap = document.createElement('div'); wrap.className = 'harmony';
-      ui.wheel = document.createElementNS(NS, 'svg'); ui.wheel.setAttribute('viewBox', '0 0 200 200'); ui.wheel.setAttribute('class', 'wheel');
-      const side = document.createElement('div'); side.className = 'harmony-side';
-      side.innerHTML = `<div class="harmony-task">Знайдіть <b>${HARMONY[level.kind].name}</b> колір до базового.</div>`;
-      side.appendChild(ui.hue.el);
-      wrap.append(ui.wheel, side); box.appendChild(wrap);
-      drawWheel();
-    } else box.appendChild(ui.hue.el);
+    box.appendChild(ui.hue.el);
     if (m === 'hue') { const cap = document.createElement('div'); cap.className = 'ctl-cap'; cap.innerHTML = '<span>червоний</span><span>зелений</span><span>синій</span><span>червоний</span>'; box.appendChild(cap); }
   }
-  if (m === 'rgb') {
-    ui.rgb = {};
-    for (const k of ['r', 'g', 'b']) {
-      const row = document.createElement('div'); row.className = 'ctl-row';
-      const lbl = document.createElement('b'); lbl.className = k; lbl.textContent = k.toUpperCase();
-      const sl = bar('rgb-' + k, v => { if (checked) return; rgbState = { ...rgbState, [k]: Math.round(v * 255) }; syncRgb(); }, 1 / 255);
-      const inp = document.createElement('input'); inp.type = 'number'; inp.min = 0; inp.max = 255; inp.setAttribute('aria-label', k.toUpperCase());
-      inp.addEventListener('input', () => { if (checked) return; rgbState = { ...rgbState, [k]: clamp(Math.round(+inp.value || 0), 0, 255) }; syncRgb(true); });
-      row.append(lbl, sl.el, inp); box.appendChild(row);
-      ui.rgb[k] = { sl, inp };
-    }
-    syncRgb();
-  }
-}
-function syncRgb(fromInput) {
-  const c = rgbState;
-  for (const k of ['r', 'g', 'b']) {
-    const { sl, inp } = ui.rgb[k];
-    sl.set(c[k] / 255);
-    if (!fromInput || document.activeElement !== inp) inp.value = c[k];
-    const lo = { ...c, [k]: 0 }, hi = { ...c, [k]: 255 };
-    sl.el.style.background = `linear-gradient(90deg, ${css(lo)}, ${css(hi)})`;
-  }
-  setUser(rgbToHsb(c));
-}
-// колірне коло для гармоній: базовий колір, ваш вибір і (після перевірки) правильні місця
-function drawWheel() {
-  const w = ui.wheel; if (!w) return;
-  const pos = (h, rr = 80) => { const a = (h - 90) * Math.PI / 180; return [100 + Math.cos(a) * rr, 100 + Math.sin(a) * rr]; };
-  let s = '';
-  for (let h = 0; h < 360; h += 6) {
-    const [x1, y1] = pos(h), [x2, y2] = pos(h + 6.5);
-    s += `<path class="wring" d="M${x1} ${y1} A80 80 0 0 1 ${x2} ${y2}" stroke="${hsbCss({ h, s: R.base.s, b: R.base.b })}"/>`;
-  }
-  if (checked) for (const t of R.targets) { const [x, y] = pos(t.h); s += `<circle class="ans" cx="${x}" cy="${y}" r="17"/>`; }
-  const [bx, by] = pos(R.base.h), [ux, uy] = pos(user.h);
-  s += `<line x1="100" y1="100" x2="${bx}" y2="${by}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="3 3"/><line x1="100" y1="100" x2="${ux}" y2="${uy}" stroke="var(--text)" stroke-width="1.5"/>`;
-  s += `<circle class="mark" cx="${bx}" cy="${by}" r="11" fill="${hsbCss(R.base)}"/><circle class="mark" cx="${ux}" cy="${uy}" r="11" fill="${hsbCss(user)}" style="stroke:var(--text)"/>`;
-  s += `<text x="100" y="96" text-anchor="middle" font-size="11" font-weight="700" fill="var(--muted)">база</text><text x="100" y="112" text-anchor="middle" font-size="11" font-weight="700" fill="var(--text)">${Math.round(((user.h - R.base.h) % 360 + 360) % 360)}°</text>`;
-  w.innerHTML = s;
 }
 
-/* ── коди кольорів: вибір одного з чотирьох ── */
+/* ── змішування світла: три лампи ── */
+const LAMP = [['Червоне', '#ff2d2d'], ['Зелене', '#22c55e'], ['Синє', '#3b82f6']];
+function renderLamps() {
+  const words = R.steps === 3 ? ['вимкнене', 'на половину', 'увімкнене'] : ['вимкнене', 'увімкнене'];
+  $('controls').innerHTML = `<div class="lamps">${LAMP.map(([name, c], i) => {
+    const v = user[i] / (R.steps - 1), mark = checked ? (user[i] === R.want[i] ? ' ok' : ' bad') : '';
+    return `<button class="lamp${v ? ' on' : ''}${mark}" data-lamp="${i}" style="--c:${c};--v:${v}" aria-label="${name} світло: ${words[user[i]]}" ${checked ? 'tabindex="-1"' : ''}><span class="bulb"></span><b>${name}</b><small>${words[user[i]]}</small><kbd>${i + 1}</kbd></button>`;
+  }).join('')}</div>`;
+}
+function toggleLamp(i) {
+  if (checked || level?.mode !== 'lights' || !(i in user)) return;
+  user[i] = (user[i] + 1) % R.steps;
+  $('swUserFill').style.background = css(lampsRgb(user, R.steps));
+  renderLamps();
+}
+
+/* ── колірне коло з 12 секторів ── */
+function renderWheel() {
+  const C = 160, RO = 150, RI = 72, pt = (deg, rr) => { const a = (deg - 90) * Math.PI / 180; return `${(C + Math.cos(a) * rr).toFixed(1)} ${(C + Math.sin(a) * rr).toFixed(1)}`; };
+  let s = '';
+  for (let i = 0; i < SECTORS; i++) {
+    const a0 = i * 30 - 14, a1 = i * 30 + 14;
+    const mark = checked ? (R.answers.includes(i) ? ' ok' : i === user ? ' bad' : '') : i === user ? ' sel' : '';
+    s += `<path class="sec${i === R.base ? ' base' : ''}${mark}" data-sec="${i}" tabindex="${checked || i === R.base ? -1 : 0}" role="button" aria-label="Сектор ${i + 1}${i === R.base ? ', база' : ''}" fill="${hsbCss(sectorHsb(i))}" d="M${pt(a0, RO)} A${RO} ${RO} 0 0 1 ${pt(a1, RO)} L${pt(a1, RI)} A${RI} ${RI} 0 0 0 ${pt(a0, RI)}Z"/>`;
+  }
+  const [bx, by] = pt(R.base * 30, (RO + RI) / 2).split(' ');
+  s += `<circle class="base-dot" cx="${bx}" cy="${by}" r="9"/><circle cx="${C}" cy="${C}" r="${RI - 10}" fill="${hsbCss(sectorHsb(R.base))}"/><text x="${C}" y="${C + 6}" text-anchor="middle" class="wheel-base">база</text>`;
+  $('controls').innerHTML = `<div class="wheel12"><svg viewBox="0 0 320 320">${s}</svg><div class="pick-task">Точка й центр кола — це база. Натисніть сектор, який поєднується з нею.</div></div>`;
+}
+$('controls').addEventListener('click', e => {
+  const l = e.target.closest('[data-lamp]'); if (l) { toggleLamp(+l.dataset.lamp); return; }
+  const sec = e.target.closest('[data-sec]');
+  if (sec && !checked && level?.mode === 'wheel' && +sec.dataset.sec !== R.base) { user = +sec.dataset.sec; renderWheel(); }
+});
+$('controls').addEventListener('keydown', e => {
+  const sec = e.target.closest('[data-sec]');
+  if (sec && e.key === ' ') { e.preventDefault(); sec.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
+});
+
+/* ── знайдіть колір: вибір одного з варіантів ── */
 function renderPick() {
   const odd = R.ask === 'odd';
   const ask = odd
@@ -320,27 +307,28 @@ function check() {
   if (cur < 0) return;
   if (checked) { next(); return; }
   clearInterval(memTimer);
-  if (level.mode === 'pick' && user == null) { toast('Спершу виберіть один із варіантів'); return; }
+  if ((level.mode === 'pick' || level.mode === 'wheel') && user == null) { toast(level.mode === 'wheel' ? 'Спершу натисніть сектор на колі' : 'Спершу виберіть один із варіантів'); return; }
   checked = true;
   const res = level.mode === 'order' ? scoreRound(level, R, order) : scoreRound(level, R, user);
   res.color = accColor(res.accuracy);
   if (level.mode === 'order') { res.ramp = R.ramp.map(h => toHex(hsbToRgb(h))); res.order = order.slice(); renderOrder(true); }
-  else if (level.mode === 'pick') { res.pair = [toHex(res.target), toHex(res.user)]; $('stage').classList.add('reveal'); renderPick(); }
+  else if (level.mode === 'pick' || level.mode === 'wheel') { res.pair = [toHex(res.target), toHex(res.user)]; $('stage').classList.add('reveal'); level.mode === 'wheel' ? renderWheel() : renderPick(); }
   else {
     res.pair = [toHex(res.target), toHex(res.user)];
-    // показуємо зразок (для HEX і «по пам'яті» — відкриваємо)
+    // показуємо зразок (для «по пам'яті» — відкриваємо)
     $('stage').classList.add('reveal');
     $('swCover').className = 'sw-cover';
-    if (level.mode !== 'harmony') $('swTargetFill').style.background = css(res.target);
-    if (ui.wheel) drawWheel();
+    $('swTargetFill').style.background = css(res.target);
+    if (level.mode === 'lights') renderLamps();
   }
   results[rIndex] = res;
   $('feedback').hidden = false;
   $('fbAcc').textContent = res.accuracy + '%'; $('fbAcc').style.color = res.color;
   $('fbDe').textContent = res.de != null ? `ΔE ${res.de.toFixed(1)}` : '';
-  if (level.mode === 'pick') $('fbAcc').textContent = res.correct ? 'Правильно' : 'Не той';
-  $('fbPair').innerHTML = res.pair && level.mode !== 'pick' ? `<div style="background:${res.pair[0]}">${level.mode === 'harmony' ? 'потрібно' : 'зразок'} ${res.pair[0]}</div><div style="background:${res.pair[1]}">ваш ${res.pair[1]}</div>` : '';
-  $('fbPair').hidden = !res.pair || level.mode === 'pick';
+  const simple = ['pick', 'wheel', 'lights'].includes(level.mode);
+  if (level.mode === 'pick' || level.mode === 'wheel') $('fbAcc').textContent = res.correct ? 'Правильно' : res.accuracy ? 'Майже' : 'Не той';
+  $('fbPair').innerHTML = res.pair && !simple ? `<div style="background:${res.pair[0]}">зразок ${res.pair[0]}</div><div style="background:${res.pair[1]}">ваш ${res.pair[1]}</div>` : '';
+  $('fbPair').hidden = !res.pair || simple;
   $('fbTips').innerHTML = res.tips.map(t => `<li>${esc(t)}</li>`).join('');
   $('checkLabel').textContent = rIndex + 1 < level.rounds ? 'Наступний раунд' : 'Результат рівня';
   renderRounds();
@@ -395,6 +383,7 @@ document.addEventListener('keydown', e => {
     else if (e.key === 'Enter' && document.activeElement?.tagName !== 'BUTTON') { e.preventDefault(); (!$('resNext').disabled ? $('resNext') : $('resRetry')).click(); }
     return;
   }
+  if (cur >= 0 && level.mode === 'lights' && /^[1-3]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) { toggleLamp(+e.key - 1); return; }
   if (cur >= 0 && level.mode === 'pick' && /^[1-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) { choose(+e.key - 1); return; }
   if (cur >= 0 && e.key === 'Enter' && document.activeElement?.tagName !== 'BUTTON') { e.preventDefault(); check(); }
 });
