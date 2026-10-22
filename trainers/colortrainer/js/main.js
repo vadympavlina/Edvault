@@ -49,7 +49,7 @@ const passed = () => LEVELS.filter(l => (best(l.id)?.stars || 0) >= 1).length;
 const hsbCss = h => css(hsbToRgb(h));
 
 /* ═════════ Головна ═════════ */
-const MODE_TAG = { hue: 'H', sb: 'SB', hsb: 'HSB', rgb: 'RGB', pick: 'HEX', harmony: '180°', order: '1→9' };
+const MODE_TAG = { hue: 'H', sb: 'SB', hsb: 'HSB', rgb: 'RGB', pick: '=', harmony: '180°', order: '1→9' };
 const seedOf = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 function thumb(level) {
   const b = best(level.id);
@@ -271,17 +271,15 @@ function drawWheel() {
 
 /* ── коди кольорів: вибір одного з чотирьох ── */
 function renderPick() {
-  const byCode = R.ask === 'code', right = R.options[R.answer];
-  const ask = byCode
-    ? `<div class="pick-ask swatch" style="background:${right}"><span class="sw-label">Який код у цього кольору?</span></div>`
-    : `<div class="pick-ask code"><b>${right}</b><small>Який колір має цей код?</small></div>`;
+  const odd = R.ask === 'odd';
+  const ask = odd
+    ? `<div class="pick-task">Одна плитка відрізняється від інших — натисніть її.</div>`
+    : `<div class="pick-ask" style="background:${R.options[R.answer]}"><span class="sw-label">Зразок</span></div><div class="pick-task">Який із варіантів такий самий, як зразок?</div>`;
   const opts = R.options.map((hex, i) => {
     const mark = checked ? (i === R.answer ? ' ok' : i === user ? ' bad' : '') : user === i ? ' sel' : '';
-    const label = byCode ? `${hex} — варіант ${i + 1}` : `Варіант ${i + 1}`;
-    return `<button class="pick-opt ${byCode ? 'code' : 'swatch'}${mark}" data-pick="${i}" aria-label="${label}" aria-pressed="${user === i}" ${checked ? 'tabindex="-1"' : ''}${byCode ? '' : ` style="background:${hex}"`}>`
-      + `<kbd>${i + 1}</kbd>${byCode ? `<b>${hex}</b><i style="background:${hex}"></i>` : checked ? `<span>${hex}</span>` : ''}</button>`;
+    return `<button class="pick-opt${mark}" data-pick="${i}" aria-label="Варіант ${i + 1}" aria-pressed="${user === i}" ${checked ? 'tabindex="-1"' : ''} style="background:${hex}">${odd ? '' : `<kbd>${i + 1}</kbd>`}</button>`;
   }).join('');
-  $('controls').innerHTML = `<div class="pick">${ask}<div class="pick-opts">${opts}</div></div>`;
+  $('controls').innerHTML = `<div class="pick${odd ? ' odd' : ''}">${ask}<div class="pick-opts" style="--cols:${odd ? (R.options.length > 9 ? 4 : 3) : R.options.length}">${opts}</div></div>`;
 }
 function choose(i) {
   if (checked || level?.mode !== 'pick' || !R.options[i]) return;
@@ -340,7 +338,7 @@ function check() {
   $('feedback').hidden = false;
   $('fbAcc').textContent = res.accuracy + '%'; $('fbAcc').style.color = res.color;
   $('fbDe').textContent = res.de != null ? `ΔE ${res.de.toFixed(1)}` : '';
-  if (level.mode === 'pick') $('fbAcc').textContent = res.correct ? 'Правильно' : 'Не та відповідь';
+  if (level.mode === 'pick') $('fbAcc').textContent = res.correct ? 'Правильно' : 'Не той';
   $('fbPair').innerHTML = res.pair && level.mode !== 'pick' ? `<div style="background:${res.pair[0]}">${level.mode === 'harmony' ? 'потрібно' : 'зразок'} ${res.pair[0]}</div><div style="background:${res.pair[1]}">ваш ${res.pair[1]}</div>` : '';
   $('fbPair').hidden = !res.pair || level.mode === 'pick';
   $('fbTips').innerHTML = res.tips.map(t => `<li>${esc(t)}</li>`).join('');
@@ -397,7 +395,7 @@ document.addEventListener('keydown', e => {
     else if (e.key === 'Enter' && document.activeElement?.tagName !== 'BUTTON') { e.preventDefault(); (!$('resNext').disabled ? $('resNext') : $('resRetry')).click(); }
     return;
   }
-  if (cur >= 0 && level.mode === 'pick' && /^[1-4]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) { choose(+e.key - 1); return; }
+  if (cur >= 0 && level.mode === 'pick' && /^[1-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) { choose(+e.key - 1); return; }
   if (cur >= 0 && e.key === 'Enter' && document.activeElement?.tagName !== 'BUTTON') { e.preventDefault(); check(); }
 });
 

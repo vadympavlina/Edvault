@@ -44,41 +44,45 @@ function makeOrder(level, r) {
   return { ramp, order: [0, ...mid, n - 1] };
 }
 
-// «Коди кольорів»: чотири варіанти, один правильний. Коди — з «круглих» чисел, щоб їх можна було прочитати.
-const BASIC = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFFFFF', '#000000'];
-const MASKS = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [1, 0, 1], [0, 1, 1]];
-const STEPS = ['00', '80', 'FF'];
-const MIX = STEPS.flatMap(r => STEPS.flatMap(g => STEPS.map(b => '#' + r + g + b)));
-const pickN = (r, list, n, ok = () => true) => {
-  const a = list.slice();
-  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-  const out = [];
-  for (const x of a) if (out.length < n && out.every(y => ok(x, y))) out.push(x);
-  return out;
-};
-function makePick(level, r) {
-  let options;
-  if (level.pool === 'shade') {
-    const m = MASKS[Math.floor(r() * MASKS.length)];
-    // дуже світлий, чистий, темний, дуже темний
-    options = pickN(r, [['FF', 'CC'], ['FF', '00'], ['99', '00'], ['33', '00']].map(([on, off]) => '#' + m.map(v => v ? on : off).join('')), 4);
-  } else if (level.pool === 'mix') {
-    options = pickN(r, MIX, 4, (a, b) => deltaE(fromHex(a), fromHex(b)) >= 18);
-  } else options = pickN(r, BASIC, 4);
-  const answer = Math.floor(r() * options.length);
-  const ask = level.ask === 'any' ? (r() < 0.5 ? 'swatch' : 'code') : level.ask;
-  const hsb = i => rgbToHsb(fromHex(options[i]));
-  const target = hsb(answer);
-  return { ask, options, answer, target, targets: [target], start: hsb((answer + 1) % options.length) };
+// «Знайдіть колір»: вибір на око, без кодів.
+//   same — зразок і кілька варіантів, один такий самий; odd — сітка однакових плиток, одна інша.
+// diff — наскільки відрізняються «неправильні» кольори (ΔE): більше — легше.
+const hsbHex = h => toHex(hsbToRgb(h));
+function near(r, base, [lo, hi]) {
+  const B = hsbToRgb(base);
+  for (let k = 0; k < 600; k++) {
+    const c = { h: (base.h + (r() * 2 - 1) * 70 + 360) % 360, s: Math.min(100, Math.max(0, base.s + (r() * 2 - 1) * 45)), b: Math.min(100, Math.max(15, base.b + (r() * 2 - 1) * 40)) };
+    const d = deltaE(B, hsbToRgb(c));
+    if (d >= lo && d <= hi) return c;
+  }
+  return { ...base, b: base.b > 55 ? base.b - 35 : base.b + 35 };
 }
-// що означає кожна пара в коді — словами
-const amount = v => v >= 0xE0 ? 'максимум' : v >= 0xA0 ? 'багато' : v >= 0x60 ? 'половина' : v >= 0x20 ? 'трохи' : 'немає';
-export const hexWords = hex => { const c = fromHex(hex); return `${hex}: червоного — ${amount(c.r)}, зеленого — ${amount(c.g)}, синього — ${amount(c.b)}.`; };
+function makePick(level, r) {
+  const diff = level.diff || [20, 40];
+  const base = randomHsb(r, level.gen || { s: [35, 90], b: [45, 95] });
+  if (level.ask === 'odd') {
+    const n = level.tiles || 9, answer = Math.floor(r() * n), odd = near(r, base, diff);
+    const options = Array.from({ length: n }, (_, i) => hsbHex(i === answer ? odd : base));
+    const target = rgbToHsb(fromHex(options[answer]));
+    return { ask: 'odd', options, answer, target, targets: [target], start: rgbToHsb(fromHex(hsbHex(base))) };
+  }
+  const n = level.options || 4, others = [];
+  for (let k = 0; others.length < n - 1 && k < 400; k++) {
+    const c = near(r, base, diff), C = hsbToRgb(c);
+    if (others.every(o => deltaE(hsbToRgb(o), C) >= diff[0] * 0.6)) others.push(c);
+  }
+  const answer = Math.floor(r() * n);
+  others.splice(answer, 0, base);
+  const options = others.map(hsbHex), target = rgbToHsb(fromHex(options[answer]));
+  return { ask: 'same', options, answer, target, targets: [target], start: rgbToHsb(fromHex(options[(answer + 1) % n])) };
+}
 function scorePick(round, choice) {
-  const right = round.options[round.answer], ok = choice === round.answer;
-  const mine = round.options[choice] ?? right;
-  const tips = ok ? [hexWords(right)] : ['Правильна відповідь — ' + hexWords(right), 'Ви вибрали ' + hexWords(mine)];
-  return { accuracy: ok ? 100 : 0, correct: ok, target: fromHex(right), user: fromHex(mine), tips };
+  const right = fromHex(round.options[round.answer]), ok = choice === round.answer;
+  const mine = fromHex(round.options[choice] ?? round.options[round.answer]);
+  let tips;
+  if (round.ask === 'odd') tips = [ok ? 'Так, саме ця плитка відрізняється.' : 'Інша плитка обведена зеленим — порівняйте її з сусідніми.'];
+  else tips = [ok ? 'Так, це той самий колір.' : 'Такий самий колір обведено зеленим — порівняйте його зі зразком.'];
+  return { accuracy: ok ? 100 : 0, correct: ok, target: right, user: mine, tips };
 }
 
 // user — колір учня (HSB), для «по порядку» — масив індексів, для «кодів» — номер варіанта

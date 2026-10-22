@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as c from '../trainers/colortrainer/js/color.js';
-import { makeRound, scoreRound, hexWords } from '../trainers/colortrainer/js/round.js';
+import { makeRound, scoreRound } from '../trainers/colortrainer/js/round.js';
 import { LEVELS, CHAPTERS } from '../trainers/colortrainer/js/levels.js';
 
 test('HSB ↔ RGB ↔ HEX', () => {
@@ -56,7 +56,7 @@ test('рівні й раунди: правильна відповідь — 100%
         continue;
       }
       if (l.mode === 'pick') {
-        assert.equal(r.options.length, 4); assert.equal(new Set(r.options).size, 4, l.id + ': варіанти різні');
+        assert.equal(r.options.length, l.ask === 'odd' ? l.tiles : 4);
         
         assert.equal(scoreRound(l, r, r.answer).accuracy, 100, l.id);
         assert.equal(scoreRound(l, r, (r.answer + 1) % 4).accuracy, 0, l.id);
@@ -71,12 +71,17 @@ test('рівні й раунди: правильна відповідь — 100%
   assert.ok(LEVELS.length >= 24);
 });
 
-test('коди кольорів: лише «круглі» коди, які можна прочитати, і пояснення словами', () => {
-  const ok = new Set(['00', '33', '80', '99', 'CC', 'FF']);
-  for (const l of LEVELS.filter(l => l.mode === 'pick')) for (let k = 0; k < 40; k++) {
-    const r = makeRound(l, c.rng(k * 13 + 1));
-    for (const h of r.options) assert.ok([h.slice(1, 3), h.slice(3, 5), h.slice(5, 7)].every(x => ok.has(x)), l.id + ' ' + h);
-    if (l.pool === 'mix') for (const a of r.options) for (const b of r.options) if (a !== b) assert.ok(c.deltaE(c.fromHex(a), c.fromHex(b)) >= 18, 'варіанти помітно різні');
+test('знайдіть колір: різниця між варіантами в межах рівня — помітна, але не однакова', () => {
+  for (const l of LEVELS.filter(l => l.mode === 'pick')) for (let k = 0; k < 60; k++) {
+    const r = makeRound(l, c.rng(k * 13 + 1)), right = c.fromHex(r.options[r.answer]);
+    const others = r.options.filter((_, i) => i !== r.answer);
+    if (l.ask === 'odd') {
+      assert.equal(new Set(others).size, 1, 'усі інші плитки однакові');
+      const d = c.deltaE(right, c.fromHex(others[0]));
+      assert.ok(d >= l.diff[0] - 0.5 && d <= l.diff[1] + 0.5, `${l.id}: ΔE ${d}`);
+    } else {
+      assert.equal(new Set(r.options).size, r.options.length, 'варіанти різні');
+      for (const o of others) { const d = c.deltaE(right, c.fromHex(o)); assert.ok(d >= l.diff[0] - 0.5 && d <= l.diff[1] + 0.5, `${l.id}: ΔE ${d}`); }
+    }
   }
-  assert.equal(hexWords('#FF8000'), '#FF8000: червоного — максимум, зеленого — половина, синього — немає.');
 });
