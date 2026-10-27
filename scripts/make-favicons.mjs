@@ -3,7 +3,7 @@
 //
 // Щоб змінити іконку: поправте SVG в icons/ і запустіть
 //   node scripts/make-favicons.mjs
-// Потрібен Playwright з Chromium (як для браузерних тестів; шляхи — змінні PLAYWRIGHT_MODULE і CHROME).
+// Потрібен Playwright з Chromium (шляхи — змінні PLAYWRIGHT_MODULE і CHROME).
 import { readdir, readFile, writeFile, copyFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 

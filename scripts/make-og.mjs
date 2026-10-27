@@ -5,13 +5,12 @@
 //   1) малює картинку 1200×630 у assets/og/<назва>.png (значок, назва, опис, адреса сайту);
 //   2) вставляє в <head> теги og:* і twitter:* між позначками <!-- og --> … <!-- /og -->
 //      (повторний запуск лише оновлює цей блок).
-// Назви й описи інструментів і тренажерів беруться з assets/catalog-data.js.
 //
 //   node scripts/make-og.mjs
-// Потрібен Playwright з Chromium (як для браузерних тестів; шляхи — змінні PLAYWRIGHT_MODULE і CHROME).
+// Потрібен Playwright з Chromium (шляхи — змінні PLAYWRIGHT_MODULE і CHROME).
 // Без доступу до Google Fonts можна вказати теку з файлами Inter (inter-cyrillic-wght-normal.woff2,
 // inter-latin-wght-normal.woff2): OG_FONTS=/шлях/до/теки
-// Лише одна сторінка: OG_ONLY=startup node scripts/make-og.mjs
+// Лише одна сторінка: OG_ONLY=materials node scripts/make-og.mjs
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -24,13 +23,6 @@ const OUT = join(ROOT, 'assets', 'og');
 const PAGES = [
   { path: 'index.html', url: '/', slug: 'edvault', icon: 'edvault', accent: '#4F6BF4', kind: 'Навчальна платформа',
     title: 'Edvault', desc: 'Інструменти для вчителя, тренажери й емулятори для учнів — безкоштовно, просто в браузері.' },
-  { path: 'tools/index.html', url: '/tools/', slug: 'tools', icon: 'tools', accent: '#0ea5e9', kind: 'Каталог',
-    title: 'Інструменти для вчителя', desc: 'Вайтборд, голосування, запис екрану, відеоредактор, редактор коду й інші інструменти — без реєстрації, просто в браузері.' },
-  // стара адреса каталогу (переадресація на /tools/): та сама картка, щоб посилання теж мали прев'ю
-  { path: 'tools.html', url: '/tools/', slug: 'tools', icon: 'tools', accent: '#0ea5e9', kind: 'Каталог',
-    title: 'Інструменти для вчителя', desc: 'Вайтборд, голосування, запис екрану, відеоредактор, редактор коду й інші інструменти — без реєстрації, просто в браузері.' },
-  { path: 'trainers/index.html', url: '/trainers/', slug: 'trainers', icon: 'trainers', accent: '#16a34a', kind: 'Каталог',
-    title: 'Тренажери для учнів', desc: 'Мишка, файли й папки, безпека в інтернеті, сліпий друк, алгоритми, мережі — з рівнями й зірками.' },
   { path: 'materials.html', url: '/materials', slug: 'materials', icon: 'edvault', accent: '#4F6BF4', kind: 'Матеріали',
     title: 'Навчальні матеріали', desc: 'Предмети, уроки й файли Edvault.' },
   { path: 'equipment.html', url: '/equipment', slug: 'equipment', icon: 'equipment', accent: '#475569', kind: 'Техніка',

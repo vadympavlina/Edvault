@@ -4,6 +4,5 @@ package-lock.json
 .DS_Store
 Thumbs.db
 *.log
-# результати тестів і тимчасові знімки
-test-results/
+# тимчасові файли
 *.tmp
