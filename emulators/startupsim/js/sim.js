@@ -222,7 +222,7 @@ export class Sim {
   canLaunch() { return !this.s.product.launched && this.s.product.built.length > 0; }
   launch() {
     if (!this.canLaunch()) return false;
-    const p = this.s.product; p.launched = true; p.launchWeek = this.s.week; this.award('launch'); this.log(`Запущено MVP. Готові функції: ${p.built.map(f => this.feature(f).t).join(', ')}.`);
+    const p = this.s.product; p.launched = true; p.launchWeek = this.s.week; this.award('launch'); this.log(`Запущено першу версію. Готові функції: ${p.built.map(f => this.feature(f).t).join(', ')}.`);
     // лист очікування: частина людей приходить одразу після запуску
     for (const k of this.segIds) { const u = this.s.users[k]; if (u.wait) { this.s.pendingWait = (this.s.pendingWait || 0) + u.wait; } }
     this.mail({ from: 'Наставниця Ірина', kind: 'mentor', title: 'Ви запустилися!', body: 'Перша версія в руках людей. Тепер головне — дивитися, чи вони повертаються (утримання), і що кажуть. Проведіть опитування, коли наберете хоча б 30 активних користувачів.' });
@@ -684,7 +684,7 @@ export class Sim {
     if (f.energy > 40) s.flags.burnoutWeek = 0;
 
     /* A/B-тест */
-    if (s.landing.test?.done === s.week) { s.landing.last = { ...s.landing.test }; s.landing.tried.push(s.landing.test.a, s.landing.test.b); s.landing.test = null; this.award('ab'); rep.notes.push('A/B-тест лендінгу завершено — результати в розділі «Маркетинг».'); }
+    if (s.landing.test?.done === s.week) { s.landing.last = { ...s.landing.test }; s.landing.tried.push(s.landing.test.a, s.landing.test.b); s.landing.test = null; this.award('ab'); rep.notes.push('A/B-тест лендінгу завершено — результати в розділі «Реклама».'); }
 
     /* інвестори */
     for (const [id, st] of Object.entries(s.inv)) {
@@ -768,15 +768,15 @@ export class Sim {
     else if (totalTalks < 5 && !s.product.launched) out.push({ id: 'talk2', text: `Ви провели ${totalTalks} ${plural(totalTalks, 'інтерв\'ю', 'інтерв\'ю', 'інтерв\'ю')}. Для впевнених висновків варто хоча б 5–6 на сегмент.`, go: 'customers' });
     if (Object.values(s.know).some(k => k.likes >= 3 && k.good < 2)) out.push({ id: 'mom', text: 'Ви часто питаєте «Вам подобається ідея?». Люди з ввічливості кажуть «так» — це не доказ. Питайте про минуле: як вони розв\'язують проблему зараз і скільки на це витрачають.', go: 'help', term: 'Mom Test' });
     if (s.hours.customers < 3 && totalTalks < 3) out.push({ id: 'hours', text: 'Цього тижня у вас немає годин на клієнтів. Виділіть хоча б 6 годин у плані тижня — це 2 інтерв\'ю.', go: 'dash' });
-    if (!s.product.launched && s.product.built.length === 0 && !s.product.queue.length && totalTalks >= 3) out.push({ id: 'build', text: 'Час будувати MVP: додайте в розробку 2–3 функції, які найбільше цінують клієнти (дивіться «Що бракує» в інсайтах).', go: 'product' });
+    if (!s.product.launched && s.product.built.length === 0 && !s.product.queue.length && totalTalks >= 3) out.push({ id: 'build', text: 'Час робити першу версію: додайте в розробку 2–3 функції, які найбільше цінують клієнти (дивіться «Що бракує» в інсайтах).', go: 'product' });
     if (this.canLaunch() && s.product.built.filter(f => this.feature(f).core).length >= 1 && s.week > 2) out.push({ id: 'launch', text: 'У вас уже є робоча версія. Не чекайте ідеалу — запускайтеся! Справжні користувачі навчать більше, ніж ще місяць розробки.', go: 'product', term: 'MVP' });
     if (s.product.launched && !this.hasFlag('pay') && s.week - s.product.launchWeek > 3 && this.modelOf(t) !== 'free') out.push({ id: 'pay', text: 'Користувачі є, а оплатити вони не можуть — у продукті немає функції оплати. Додайте її в розробку.', go: 'product' });
     if (s.company.form === 'none' && (s.product.launched || s.week >= 6)) out.push({ id: 'form', text: 'Компанію ще не зареєстровано. Без ФОП або ТОВ ви не можете приймати оплату й залучати інвестиції. Це в розділі «Фінанси».', go: 'finance', term: 'ФОП і ТОВ' });
     const rw = this.runwayWeeks(); if (rw < 10 && s.week > 2) out.push({ id: 'runway', text: `Грошей вистачить приблизно на ${Math.max(0, Math.floor(rw))} ${plural(Math.floor(rw), 'тиждень', 'тижні', 'тижнів')}. Скоротіть витрати, підніміть виручку або шукайте інвестиції.`, go: 'finance', term: 'Runway', urgent: true });
     if (s.product.bugs > 15) out.push({ id: 'bugs', text: `${Math.round(s.product.bugs)} багів відганяють користувачів. Збільште частку часу на виправлення в розділі «Продукт» або перейдіть у режим «Якісно».`, go: 'product' });
-    if (s.product.debt > 50) out.push({ id: 'debt', text: 'Технічний борг сповільнює розробку. Режим «Швидко» корисний на старті, але потім борг треба віддавати.', go: 'product', term: 'Технічний борг' });
+    if (s.product.debt > 50) out.push({ id: 'debt', text: 'Недоробки в коді сповільнюють роботу. Режим «Швидко» корисний на старті, але потім їх треба виправляти: додайте часу на виправлення в розділі «Продукт».', go: 'product', term: 'Технічний борг' });
     const cac = this.cac(), ltv = this.ltv(); if (s.mkt.ads > 0 && cac > 0 && Number.isFinite(cac) && ltv < cac && s.history.length > 4) out.push({ id: 'unit', text: `Один платний клієнт обходиться в ${money(cac)} реклами, а приносить за весь час лише ${money(ltv)}. Реклама зараз робить вас біднішими.`, go: 'pricing', term: 'Юніт-економіка' });
-    if (s.product.launched && s.surveys.length === 0 && this.canSurvey()) out.push({ id: 'survey', text: 'Проведіть опитування користувачів — дізнаєтеся, чи є product-market fit і чого їм бракує.', go: 'customers', term: 'PMF' });
+    if (s.product.launched && s.surveys.length === 0 && this.canSurvey()) out.push({ id: 'survey', text: 'Проведіть опитування користувачів — дізнаєтеся, чи справді продукт їм потрібен і чого бракує.', go: 'customers', term: 'PMF' });
     if (s.product.launched && this.fit(t) < .45 && s.week - s.product.launchWeek > 4) out.push({ id: 'fit', text: `Продукт мало дає сегменту «${g.short}». Подивіться, чого бракує, в інсайтах інтерв'ю або подумайте про інший сегмент.`, go: 'customers', term: 'Півот' });
     if (g.b2b && !this.reqOk(t)) out.push({ id: 'req', text: `${g.short} не купують без: ${this.missingReq(t).map(f => this.feature(f).t).join(', ')}.`, go: 'product' });
     if (g.b2b && s.hours.sales < 5 && !s.team.some(m => m.role === 'sales')) out.push({ id: 'sales', text: 'Організації рідко купують самі. Для B2B потрібні прямі продажі: години засновника на «Продажі» або менеджер у команді.', go: 'dash', term: 'B2B' });
@@ -784,7 +784,7 @@ export class Sim {
     if (s.product.launched && this.saturation(t) < .5) out.push({ id: 'saturation', text: `Ви вже охопили ${pct(this.reach(t))} сегмента «${g.short}» — нових клієнтів там дедалі менше. Час розширюватися: оберіть інший сегмент у розділі «Клієнти».`, go: 'customers' });
     if (s.founder.energy < 30) out.push({ id: 'rest', text: 'Ви на межі вигорання. Додайте годин відпочинку — виснажений засновник працює гірше.', go: 'dash', urgent: true });
     if (s.crunch && s.team.some(m => m.morale < 45)) out.push({ id: 'crunch', text: 'Переробки виснажують команду. Ще кілька тижнів — і хтось звільниться.', go: 'team' });
-    if (s.landing.cur < 0 && s.week >= 3) out.push({ id: 'landing', text: 'Оберіть заголовок лендінгу й перевірте його A/B-тестом — це безкоштовно підвищує кількість реєстрацій.', go: 'marketing', term: 'A/B-тест' });
+    if (s.landing.cur < 0 && s.week >= 3) out.push({ id: 'landing', text: 'Оберіть заголовок для сайту й перевірте два варіанти (A/B-тест) — це безкоштовно підвищує кількість реєстрацій.', go: 'marketing', term: 'A/B-тест' });
     return out.filter(x => !s.dismissed[x.id] || x.urgent);
   }
 }

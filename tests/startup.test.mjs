@@ -355,3 +355,33 @@ test('журнал рішень записує дії учня', () => {
 test('гроші форматуються по-людськи', () => {
   assert.equal(money(1500), '1 500 ₴'); assert.equal(money(45000), '45 тис. ₴'); assert.equal(money(2500000), '2,5 млн ₴'); assert.equal(money(-3000), '−3 000 ₴');
 });
+
+test('шлях стартапу: етапи йдуть по черзі, відкривають розділи й не відкочуються назад', async () => {
+  const { STAGES, stageInfo, isOpen, unlock, syncStage, viewStage } = await import('../emulators/startupsim/js/stages.js');
+  const S = fresh();
+  let i = stageInfo(S);
+  assert.equal(i.cur, 0); assert.equal(i.reached, 0);
+  assert.ok(isOpen(S, 'customers') && isOpen(S, 'plan') && isOpen(S, 'dash'));
+  assert.ok(!isOpen(S, 'product') && !isOpen(S, 'investors'));
+  // кожен розділ належить рівно одному етапу
+  const all = STAGES.flatMap(s => s.open);
+  assert.equal(new Set(all).size, all.length);
+  for (const v of ['dash', 'inbox', 'customers', 'plan', 'product', 'brand', 'marketing', 'promo', 'pricing', 'finance', 'payments', 'investors', 'invest', 'team', 'freelance', 'help', 'report']) assert.ok(all.includes(v), v);
+  // етап 1 → 2
+  S.s.know[S.s.target].n = 3; S.s.canvas.problem = 'Учні не розуміють домашку'; S.s.canvas.segment = S.s.target;
+  i = syncStage(S);
+  assert.equal(i.cur, 1); assert.ok(i.list[0].done);
+  assert.ok(isOpen(S, 'product') && isOpen(S, 'brand') && !isOpen(S, 'pricing'));
+  // досягнутий етап лишається, навіть якщо завдання знову не виконане
+  S.s.canvas.problem = '';
+  i = stageInfo(S);
+  assert.equal(i.cur, 0); assert.equal(i.reached, 1);
+  assert.ok(isOpen(S, 'product'));
+  // ручне відкриття розділу наперед
+  assert.ok(!isOpen(S, 'team'));
+  unlock(S, 'team');
+  assert.ok(isOpen(S, 'team'));
+  assert.equal(viewStage('team'), 3);
+  // кожне завдання має кнопку, що веде в існуючий розділ або на збереження файлу
+  for (const st of i.list) for (const t of st.tasks) assert.ok(t.go === 'file' || all.includes(t.go), t.t);
+});

@@ -33,10 +33,10 @@ function customers(S) {
   return `<p class="lead">Інтерв'ю — найдешевший спосіб не зробити продукт, який нікому не потрібен. Кожне забирає 3 години з плану тижня (рядок «Клієнти»). Цього тижня лишилося: <b>${S.talksLeft()}</b>. ${term('Mom Test', 'Як правильно питати?')}</p>
   ${S.talksLeft() === 0 && s.hours.customers < 3 ? `<p class="note warn">${icon('clock', 16)} У плані тижня немає годин на клієнтів. <button class="link" data-act="go" data-to="dash">Додати години</button></p>` : ''}
   <div class="grid g3">${cards}</div>
-  <section class="card"><header class="card-h"><h3>${icon('chart')} Опитування користувачів</h3>${term('PMF', 'Що таке PMF?')}</header>
+  <section class="card"><header class="card-h"><h3>${icon('chart')} Опитування користувачів</h3>${term('PMF', 'Чи потрібен продукт?')}</header>
     ${s.product.launched ? `<p>Опитування показує, чи справді продукт потрібен (тест Шона Елліса: «Як би ви почувалися, якби продукт зник?»), і що просять покращити. Потрібно щонайменше 30 активних користувачів у цільовому сегменті й 2 години на клієнтів.</p>
       <button class="btn primary" data-act="survey" ${S.canSurvey() ? '' : 'disabled'}>Провести опитування</button>
-      ${sv ? `<div class="survey"><div><span>Дуже засмутилися б</span><b class="${sv.pmf >= .4 ? 'pos' : ''}">${pct(sv.pmf)}</b>${meter(sv.pmf / .7, { color: sv.pmf >= .4 ? 'var(--ok)' : 'var(--warn)' })}<small>${sv.pmf >= .4 ? 'Є product-market fit!' : 'Потрібно 40%+'} · відповідей: ${sv.n}</small></div><div><span>NPS</span><b>${sv.nps}</b></div><div><span>Найчастіше просять</span>${sv.asks.length ? `<ul>${sv.asks.map(a => `<li>${esc(a)}</li>`).join('')}</ul>` : '<p class="muted">Нічого особливого</p>'}</div></div>` : ''}`
+      ${sv ? `<div class="survey"><div><span>Дуже засмутилися б</span><b class="${sv.pmf >= .4 ? 'pos' : ''}">${pct(sv.pmf)}</b>${meter(sv.pmf / .7, { color: sv.pmf >= .4 ? 'var(--ok)' : 'var(--warn)' })}<small>${sv.pmf >= .4 ? 'Є product-market fit!' : 'Потрібно 40%+'} · відповідей: ${sv.n}</small></div><div><span>${term('NPS', 'Радять друзям')}</span><b>${sv.nps}</b></div><div><span>Найчастіше просять</span>${sv.asks.length ? `<ul>${sv.asks.map(a => `<li>${esc(a)}</li>`).join('')}</ul>` : '<p class="muted">Нічого особливого</p>'}</div></div>` : ''}`
       : '<p class="muted">Стане доступним після запуску продукту.</p>'}
   </section>`;
 }
@@ -86,18 +86,18 @@ function product(S, ui) {
     ${where === 'b' ? `<button class="btn sm" data-act="queue" data-id="${id}">${icon('plus', 14)} У роботу</button>` : ''}</div>`;
   const qWeeks = (() => { let acc = 0; return p.queue.map(id => { acc += S.feature(id).cost - (p.progress[id] || 0); return caps.dev > 0 ? Math.ceil(acc / (caps.dev * (1 - p.fix) * ({ fast: 1.3, balanced: 1, clean: .8 })[p.mode])) : Infinity; }); })();
   const sp = s.sprint, last = s.sprints.at(-1);
-  return `${!p.launched ? `<section class="launch ${S.canLaunch() ? 'ready' : ''}"><div><h3>${icon('rocket')} ${S.canLaunch() ? 'Можна запускатися' : 'Продукт ще не запущено'}</h3><p>${S.canLaunch() ? `Готово функцій: ${p.built.length}. Люди з листа очікування (${num(Math.round(sum(S.segIds.map(k => s.users[k].wait))))}) отримають запрошення.` : 'Додайте функції в роботу. Коли буде готова хоч одна — можна запустити MVP.'} ${term('MVP', 'Що таке MVP?')}</p></div>${S.canLaunch() ? '<button class="btn primary lg" data-act="launch">Запустити MVP</button>' : ''}</section>` : ''}
+  return `${!p.launched ? `<section class="launch ${S.canLaunch() ? 'ready' : ''}"><div><h3>${icon('rocket')} ${S.canLaunch() ? 'Можна запускатися' : 'Продукт ще не запущено'}</h3><p>${S.canLaunch() ? `Готово функцій: ${p.built.length}. Люди з листа очікування (${num(Math.round(sum(S.segIds.map(k => s.users[k].wait))))}) отримають запрошення.` : 'Додайте функції в роботу. Коли буде готова хоч одна — можна запускати першу версію.'} ${term('MVP', 'Що таке перша версія (MVP)?')}</p></div>${S.canLaunch() ? '<button class="btn primary lg" data-act="launch">Запустити першу версію</button>' : ''}</section>` : ''}
   <div class="kpis">
-    <div class="kpi"><span class="kpi-l">Швидкість розробки</span><b>${caps.dev.toFixed(1).replace('.', ',')} оч./тиж</b><small>${s.team.filter(m => m.role === 'dev').length ? 'ви + розробники' : 'лише ви'}</small></div>
+    <div class="kpi"><span class="kpi-l">Швидкість роботи</span><b>${caps.dev.toFixed(1).replace('.', ',')} оч. за тиждень</b><small>${s.team.filter(m => m.role === 'dev').length ? 'ви + розробники' : 'лише ви'}</small></div>
     <div class="kpi ${p.quality < 50 ? 'warn' : ''}"><span class="kpi-l">Якість</span><b>${Math.round(p.quality)}%</b>${meter(p.quality / 100, { color: p.quality < 50 ? 'var(--warn)' : 'var(--ok)' })}</div>
     <div class="kpi ${p.bugs > 15 ? 'bad' : ''}"><span class="kpi-l">Баги</span><b>${Math.round(p.bugs)}</b><small>${p.bugs > 15 ? 'відганяють користувачів' : 'під контролем'}</small></div>
-    <div class="kpi ${p.debt > 50 ? 'warn' : ''}"><span class="kpi-l">${term('Технічний борг')}</span><b>${Math.round(p.debt)}</b><small>сповільнює на ${Math.round(Math.min(60, p.debt / 1.6))}%</small></div>
+    <div class="kpi ${p.debt > 50 ? 'warn' : ''}"><span class="kpi-l">${term('Технічний борг', 'Недоробки в коді')}</span><b>${Math.round(p.debt)}</b><small>сповільнює на ${Math.round(Math.min(60, p.debt / 1.6))}%</small></div>
   </div>
   <section class="card"><header class="card-h"><h3>${icon('wrench')} Як працюємо</h3></header>
-    <div class="seg-ctl" role="radiogroup" aria-label="Режим розробки">${[['fast', 'Швидко', '+30% швидкості, багато багів і боргу'], ['balanced', 'Збалансовано', 'золота середина'], ['clean', 'Якісно', '−20% швидкості, майже без багів']].map(([k, t, d]) => `<button role="radio" aria-checked="${p.mode === k}" class="${p.mode === k ? 'on' : ''}" data-act="mode" data-k="${k}"><b>${t}</b><small>${d}</small></button>`).join('')}</div>
-    <div class="sl"><label>Час на виправлення багів і боргу</label><input type="range" min="0" max="60" step="5" value="${Math.round(p.fix * 100)}" data-in="fix" aria-label="Відсоток часу на виправлення"><output data-out="fix">${Math.round(p.fix * 100)}%</output></div>
+    <div class="seg-ctl" role="radiogroup" aria-label="Режим розробки">${[['fast', 'Швидко', '+30% швидкості, але більше помилок і недоробок'], ['balanced', 'Збалансовано', 'золота середина'], ['clean', 'Якісно', '−20% швидкості, майже без багів']].map(([k, t, d]) => `<button role="radio" aria-checked="${p.mode === k}" class="${p.mode === k ? 'on' : ''}" data-act="mode" data-k="${k}"><b>${t}</b><small>${d}</small></button>`).join('')}</div>
+    <div class="sl"><label>Скільки часу на виправлення помилок</label><input type="range" min="0" max="60" step="5" value="${Math.round(p.fix * 100)}" data-in="fix" aria-label="Відсоток часу на виправлення"><output data-out="fix">${Math.round(p.fix * 100)}%</output></div>
   </section>
-  <section class="card"><header class="card-h"><h3>${icon('flag')} Спринти</h3><span class="muted sm">${S.velocity() != null ? `середня швидкість команди: ${S.velocity()} оч. за спринт` : 'плануйте роботу на 2 тижні наперед'}</span></header>
+  <details class="card fold" ${sp || (last && !last.retro) ? 'open' : ''}><summary>${icon('flag')} План на два тижні (спринт) <span class="muted sm">${S.velocity() != null ? `у середньому ${S.velocity()} оч. за спринт` : 'необов’язково: для тих, хто хоче планувати наперед'}</span></summary>
     ${sp ? `<div class="sprint"><div><b>Спринт ${sp.n}</b><small>тиждень ${s.week - sp.start + 1} з ${sp.len} · план ${sp.planned} оч.</small><ul>${sp.plan.map(id => `<li class="${S.has(id) ? 'done' : ''}">${S.has(id) ? icon('check', 14) : icon('clock', 14)} ${esc(S.feature(id).t)}</li>`).join('')}</ul></div>
       <div class="burn"><small>Діаграма згоряння: скільки роботи лишилось</small>${lineChart([{ v: sp.burn, color: 'var(--acc)', label: 'Лишилось' }, { v: Array.from({ length: sp.len + 1 }, (_, i) => sp.planned * (1 - i / sp.len)), color: '#94a3b8', label: 'Ідеально', dash: true }], { h: 120, labels: Array.from({ length: Math.max(sp.burn.length, sp.len + 1) }, (_, i) => `т${i}`) })}</div></div>`
       : `<p>Оберіть функції, які команда зобов'язується зробити за 2 тижні. Ваша швидкість зараз ≈ <b>${Math.round(caps.dev * 2 * (1 - p.fix))}</b> оч. за спринт — не беріть більше, ніж реально встигнете.</p>
@@ -106,10 +106,10 @@ function product(S, ui) {
     ${last && !last.retro ? `<div class="retro"><b>Ретроспектива спринту ${last.n}</b>: виконано ${last.done} з ${last.planned} оч. (${pct(last.done / Math.max(1, last.planned))}). Що змінимо?<div class="row gap wrap">
       <button class="btn sm" data-act="retro" data-k="focus">Менше зустрічей, більше фокусу (+10% швидкості)</button><button class="btn sm" data-act="retro" data-k="tests">Писати тести (−35% нових багів)</button><button class="btn sm" data-act="retro" data-k="pair">Робота в парах (+мораль)</button><button class="btn sm" data-act="retro" data-k="rest">Нормально відпочити (+енергія)</button></div></div>` : ''}
     ${s.sprints.length ? `<table class="tbl sm"><thead><tr><th>Спринт</th><th>План</th><th>Зроблено</th><th>%</th><th>Ретро</th></tr></thead><tbody>${s.sprints.slice(-6).reverse().map(x => `<tr><td>${x.n}</td><td>${x.planned}</td><td>${x.done}</td><td class="${x.done / Math.max(1, x.planned) >= .8 ? 'pos' : 'neg'}">${pct(x.done / Math.max(1, x.planned))}</td><td>${x.retro ? { focus: 'фокус', tests: 'тести', pair: 'пари', rest: 'відпочинок' }[x.retro] : '—'}</td></tr>`).join('')}</tbody></table>` : ''}
-  </section>
+  </details>
   <div class="kanban">
-    <section><header><b>Беклог</b><span>${back.length}</span></header>${back.map(([id, f]) => card(id, f, 'b')).join('') || '<p class="empty">Порожньо</p>'}</section>
-    <section><header><b>У роботі</b><span>${p.queue.length}</span></header>${p.queue.map((id, i) => card(id, S.feature(id), 'q').replace('</div></div>', `</div><small class="eta">≈ ${Number.isFinite(qWeeks[i]) ? qWeeks[i] + ' ' + plural(qWeeks[i], 'тиждень', 'тижні', 'тижнів') : 'нікому робити'}</small></div>`)).join('') || '<p class="empty">Додайте функції з беклогу. Першу в списку роблять першою.</p>'}</section>
+    <section><header><b>Ідеї функцій</b><span>${back.length}</span></header>${back.map(([id, f]) => card(id, f, 'b')).join('') || '<p class="empty">Порожньо</p>'}</section>
+    <section><header><b>У роботі</b><span>${p.queue.length}</span></header>${p.queue.map((id, i) => card(id, S.feature(id), 'q').replace('</div></div>', `</div><small class="eta">≈ ${Number.isFinite(qWeeks[i]) ? qWeeks[i] + ' ' + plural(qWeeks[i], 'тиждень', 'тижні', 'тижнів') : 'нікому робити'}</small></div>`)).join('') || '<p class="empty">Натисніть «У роботу» на функції зліва. Першу в списку роблять першою.</p>'}</section>
     <section><header><b>Готово</b><span>${p.built.length}</span></header>${p.built.map(id => card(id, S.feature(id), 'd')).join('') || '<p class="empty">Ще нічого</p>'}</section>
   </div>`;
 }
@@ -155,8 +155,8 @@ function marketing(S) {
       <button class="btn sm" data-act="landing" data-i="${win}">Застосувати переможця</button></div>`;
   };
   const row = (k, ctl) => { const C = CHANNELS[k]; return `<div class="ch-row"><span class="ch-ic">${icon(C.icon, 20)}</span><div class="ch-t"><b>${C.t}</b><small>${C.desc}</small><small class="fit">Для «${esc(g.short)}»: ${g.fit[k] >= 1.2 ? 'дуже добре' : g.fit[k] >= .9 ? 'добре' : g.fit[k] >= .5 ? 'так собі' : 'майже не працює'}</small></div><div class="ch-ctl">${ctl}</div><div class="ch-v"><b>${num(Math.round((v[k] || 0) * S.season()))}</b><small>відвід./тиж</small></div></div>`; };
-  return `<p class="lead">Маркетинг ведеться на цільовий сегмент «<b>${esc(g.t)}</b>». Сезонність зараз: ×${S.season().toFixed(2).replace('.', ',')}. ${term('Воронка', 'Що таке воронка?')} ${term('CAC', 'Що таке CAC?')}</p>
-  <section class="card"><header class="card-h"><h3>${icon('megaphone')} Канали</h3><span class="muted sm">CAC за місяць: <b>${Number.isFinite(S.cac()) && S.cac() ? money(S.cac()) : '—'}</b></span></header>
+  return `<p class="lead">Реклама ведеться на цільових клієнтів «<b>${esc(g.t)}</b>». Сезонність зараз: ×${S.season().toFixed(2).replace('.', ',')}. ${term('Воронка', 'Що таке воронка?')} ${term('CAC', 'Скільки коштує клієнт?')}</p>
+  <section class="card"><header class="card-h"><h3>${icon('megaphone')} Канали</h3><span class="muted sm">Один клієнт коштує: <b>${Number.isFinite(S.cac()) && S.cac() ? money(S.cac()) : '—'}</b></span></header>
     ${row('ads', `<input type="range" min="0" max="100000" step="2000" value="${m.ads}" data-in="budget" data-k="ads" aria-label="Бюджет реклами"><output data-out="b-ads">${money(m.ads)}/тиж</output>`)}
     ${row('bloggers', `<div class="stepper"><button class="ib" data-act="blog" data-d="-1" aria-label="Менше">${icon('minus', 16)}</button><b>${m.bloggers}</b><button class="ib" data-act="blog" data-d="1" aria-label="Більше">${icon('plus', 16)}</button></div><small>${money(CHANNELS.bloggers.post)} за допис</small>`)}
     ${row('social', `<input type="range" min="0" max="100" step="10" value="${Math.round(m.split * 100)}" data-in="split" aria-label="Частка контенту для соцмереж"><output data-out="split">${Math.round(m.split * 100)}% контенту</output>`)}
@@ -164,7 +164,7 @@ function marketing(S) {
     ${row('events', `<input type="range" min="0" max="20" step="2" value="${m.events}" data-in="budget" data-k="events" aria-label="Години на заходи"><output data-out="b-events">${m.events} год/тиж</output>`)}
     ${g.b2b ? row('sales', `<small>Години засновника на продажі: ${s.hours.sales}${s.team.some(x => x.role === 'sales') ? ' + менеджер' : ''}.</small>`) : ''}
     ${row('referral', `<input type="range" min="0" max="${Math.max(100, Math.round(s.price[s.target] * 1.5 / 10) * 10)}" step="10" value="${m.referral}" data-in="budget" data-k="referral" aria-label="Бонус за запрошеного"><output data-out="b-referral">${m.referral ? money(m.referral) + ' за клієнта' : 'вимкнено'}</output>`)}
-    <div class="ch-row wom"><span class="ch-ic">${icon('users', 20)}</span><div class="ch-t"><b>Сарафанне радіо</b><small>Задоволені користувачі приводять друзів. Залежить від NPS і впізнаваності бренду.</small></div><div class="ch-ctl"></div><div class="ch-v"><b>${num(Math.round((v.wom || 0) * S.season()))}</b><small>відвід./тиж</small></div></div>
+    <div class="ch-row wom"><span class="ch-ic">${icon('users', 20)}</span><div class="ch-t"><b>Сарафанне радіо</b><small>Задоволені користувачі приводять друзів. Залежить від того, чи радять вас друзям, і від впізнаваності бренду.</small></div><div class="ch-ctl"></div><div class="ch-v"><b>${num(Math.round((v.wom || 0) * S.season()))}</b><small>відвід./тиж</small></div></div>
   </section>
   ${L?.rec?.seg?.[s.target] ? (() => { const f = L.rec.seg[s.target]; return `<section class="card"><header class="card-h"><h3>${icon('chart')} Воронка минулого тижня</h3></header>${bars([{ label: 'Відвідувачі', v: f.visitors, color: '#94a3b8' }, { label: g.b2b ? 'Заявки' : 'Реєстрації', v: f.signups, color: '#0ea5e9' }, ...(g.b2b ? [] : [{ label: 'Почали користуватися', v: f.active, color: '#6366f1' }]), { label: 'Стали платними', v: f.newPaid, color: '#16a34a' }], { fmt: num })}
     <p class="sm muted">Конверсія відвідувач → ${g.b2b ? 'заявка' : 'реєстрація'}: ${pct(f.signups / Math.max(1, f.visitors), 1)}.</p></section>`; })() : ''}
@@ -198,7 +198,7 @@ export const marketViews = {
   plan: { t: 'Бізнес-план', icon: 'plan', render: plan },
   product: { t: 'Продукт', icon: 'box', render: product },
   brand: { t: 'Бренд', icon: 'palette', render: brand },
-  marketing: { t: 'Маркетинг', icon: 'megaphone', render: marketing },
+  marketing: { t: 'Реклама', icon: 'megaphone', render: marketing },
   promo: { t: 'Акції', icon: 'tag', render: promo },
 };
 export const marketActs = {

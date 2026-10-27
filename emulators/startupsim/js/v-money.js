@@ -26,12 +26,12 @@ function pricing(S) {
   <section class="card"><header class="card-h"><h3>${icon('tag')} Ціни за сегментами</h3></header>${S.segIds.map(priceRow).join('')}
     ${hw ? `<p class="note">${icon('info', 16)} ${term('Собівартість')} одного пристрою: <b>${money(s.unitCost)}</b>. Ціна нижча — кожен продаж у мінус.</p>` : ''}</section>
   <div class="grid g2">
-    <section class="card"><header class="card-h"><h3>${icon('chart')} ${term('Юніт-економіка')}</h3></header>
+    <section class="card"><header class="card-h"><h3>${icon('chart')} ${term('Юніт-економіка', 'Чи вигідний один клієнт')}</h3></header>
       <div class="ins">
-        <div><span>${term('CAC')}</span><b>${cac && Number.isFinite(cac) ? money(cac) : '—'}</b><small>маркетинг ÷ нові платні (4 тиж.)</small></div>
-        <div><span>${term('LTV')}</span><b>${money(ltv)}</b><small>${hw ? 'маржа з одного продажу' : 'за весь час клієнта'}</small></div>
-        <div><span>LTV / CAC</span><b class="${ratio == null ? '' : ratio >= 3 ? 'pos' : ratio < 1 ? 'neg' : ''}">${ratio == null ? '—' : ratio.toFixed(1).replace('.', ',')}</b><small>${ratio == null ? 'немає платного маркетингу' : ratio >= 3 ? 'здорова модель' : ratio >= 1 ? 'на межі' : 'кожен клієнт у мінус'}</small></div>
-        <div><span>${term('Churn')} платних</span><b>${pct(S.churnRate(t, true), 1)}</b><small>на тиждень · ${pct(1 - Math.pow(1 - S.churnRate(t, true), W2M))} на місяць</small></div>
+        <div><span>${term('CAC', 'Скільки коштує залучити')}</span><b>${cac && Number.isFinite(cac) ? money(cac) : '—'}</b><small>маркетинг ÷ нові платні (4 тиж.)</small></div>
+        <div><span>${term('LTV', 'Скільки приносить за весь час')}</span><b>${money(ltv)}</b><small>${hw ? 'маржа з одного продажу' : 'за весь час клієнта'}</small></div>
+        <div><span>У скільки разів окупається</span><b class="${ratio == null ? '' : ratio >= 3 ? 'pos' : ratio < 1 ? 'neg' : ''}">${ratio == null ? '—' : ratio.toFixed(1).replace('.', ',')}</b><small>${ratio == null ? 'немає платного маркетингу' : ratio >= 3 ? 'здорова модель' : ratio >= 1 ? 'на межі' : 'кожен клієнт у мінус'}</small></div>
+        <div><span>${term('Churn', 'Скільки платних іде')}</span><b>${pct(S.churnRate(t, true), 1)}</b><small>на тиждень · ${pct(1 - Math.pow(1 - S.churnRate(t, true), W2M))} на місяць</small></div>
       </div></section>
     <section class="card"><header class="card-h"><h3>${icon('target')} Точка беззбитковості</h3></header>
       <p>Постійні витрати на місяць: <b>${money(be.fixed)}</b> (зарплати, сервери, бухгалтерія, реклама).</p>
@@ -50,8 +50,8 @@ function finance(S, ui) {
   const L = s.loan, lim = S.loanLimit(), Cr = s.crowd;
   return `<div class="kpis">
     <div class="kpi"><span class="kpi-l">Гроші</span><b>${money(s.cash)}</b></div>
-    <div class="kpi"><span class="kpi-l">${term('Burn rate')} за тиждень</span><b class="${S.burnWeekly() > 0 ? 'neg' : 'pos'}">${money(Math.max(0, S.burnWeekly()))}</b><small>${S.burnWeekly() <= 0 ? 'виручка більша за витрати' : 'витрати мінус виручка, середнє за 4 тиж.'}</small></div>
-    <div class="kpi"><span class="kpi-l">${term('Runway')}</span><b>${S.runwayWeeks() === Infinity ? '∞' : S.runwayWeeks() > 104 ? '2+ роки' : Math.max(0, Math.floor(S.runwayWeeks())) + ' тиж.'}</b></div>
+    <div class="kpi"><span class="kpi-l">${term('Burn rate', 'Витрачаємо за тиждень')}</span><b class="${S.burnWeekly() > 0 ? 'neg' : 'pos'}">${money(Math.max(0, S.burnWeekly()))}</b><small>${S.burnWeekly() <= 0 ? 'виручка більша за витрати' : 'витрати мінус виручка, середнє за 4 тиж.'}</small></div>
+    <div class="kpi"><span class="kpi-l">${term('Runway', 'Вистачить грошей на')}</span><b>${S.runwayWeeks() === Infinity ? '∞' : S.runwayWeeks() > 104 ? '2+ роки' : Math.max(0, Math.floor(S.runwayWeeks())) + ' тиж.'}</b></div>
     <div class="kpi"><span class="kpi-l">${term('Оцінка компанії')}</span><b>${money(val)}</b><small>ваша частка ≈ ${money(val * S.stake())}</small></div>
   </div>
   <section class="card"><header class="card-h"><h3>${icon('building')} Форма компанії</h3>${term('ФОП і ТОВ')}</header>
@@ -142,7 +142,7 @@ function invest(S, ui) {
   const s = S.s, port = s.port, total = S.portValue(), risky = S.riskyShare();
   const assets = Object.entries(ASSETS).filter(([k, a]) => !a.hidden || s.flags.memeOffered);
   return `<p class="lead">Якщо грошей більше, ніж потрібно на найближчі місяці, їх можна вкласти. Головне правило: гроші, які знадобляться на зарплати й рахунки, не мають лежати в ризикових активах.</p>
-  <div class="kpis"><div class="kpi"><span class="kpi-l">Вільні гроші</span><b>${money(s.cash)}</b></div><div class="kpi"><span class="kpi-l">У вкладеннях</span><b>${money(total)}</b><small>${total ? delta2(total - sum(Object.values(port).map(p => p.in))) : ''}</small></div><div class="kpi ${risky > .1 ? 'warn' : ''}"><span class="kpi-l">Частка ризикових активів</span><b>${pct(risky)}</b><small>розумно — до 10%</small></div><div class="kpi"><span class="kpi-l">Runway без вкладень</span><b>${S.runwayWeeks() === Infinity ? '∞' : S.runwayWeeks() > 104 ? '2+ роки' : Math.max(0, Math.floor(S.runwayWeeks())) + ' тиж.'}</b></div></div>
+  <div class="kpis"><div class="kpi"><span class="kpi-l">Вільні гроші</span><b>${money(s.cash)}</b></div><div class="kpi"><span class="kpi-l">У вкладеннях</span><b>${money(total)}</b><small>${total ? delta2(total - sum(Object.values(port).map(p => p.in))) : ''}</small></div><div class="kpi ${risky > .1 ? 'warn' : ''}"><span class="kpi-l">Частка ризикових активів</span><b>${pct(risky)}</b><small>розумно — до 10%</small></div><div class="kpi"><span class="kpi-l">Вистачить грошей на (без вкладень)</span><b>${S.runwayWeeks() === Infinity ? '∞' : S.runwayWeeks() > 104 ? '2+ роки' : Math.max(0, Math.floor(S.runwayWeeks())) + ' тиж.'}</b></div></div>
   <div class="grid g2">${assets.map(([k, A]) => { const p = port[k]; const gain = p ? p.v - p.in : 0; return `<article class="card asset ${A.hidden ? 'scam' : ''}"><header class="card-h"><h3>${icon(k === 'crypto' || k === 'meme' ? 'bitcoin' : k === 'deposit' ? 'bank' : k === 'ovdp' ? 'shield' : 'trend')} ${esc(A.t)}</h3><span class="chip ${A.risk === 'Шахрайство' ? 'bad' : A.risk.includes('високий') ? 'warn' : 'ok'}">Ризик: ${A.risk.toLowerCase()}</span></header>
     <p class="sm">${esc(A.desc)}</p>${A.hidden ? '' : `<div class="ins"><div><span>Очікувана дохідність</span><b>${pct(A.y)} на рік</b></div><div><span>Коливання</span><b>${A.vol ? '±' + pct(A.vol) : 'немає'}</b></div><div><span>Комісія</span><b>${pct(A.fee, 1)}</b></div></div>`}
     ${p ? `<p>Вкладено ${money(p.in)} → зараз <b class="${gain >= 0 ? 'pos' : 'neg'}">${money(p.v)}</b> (${gain >= 0 ? '+' : ''}${pct(gain / Math.max(1, p.in), 1)})</p>` : ''}
@@ -156,7 +156,7 @@ export const moneyViews = {
   finance: { t: 'Фінанси', icon: 'wallet', render: finance },
   payments: { t: 'Платежі', icon: 'card', render: payments },
   investors: { t: 'Інвестори', icon: 'handshake', render: investors },
-  invest: { t: 'Інвестиції', icon: 'trend', render: invest },
+  invest: { t: 'Вкладення', icon: 'trend', render: invest },
 };
 export const moneyActs = {
   model: (C, el) => { C.S.setModel(el.dataset.k); C.render(); },

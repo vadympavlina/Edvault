@@ -356,7 +356,7 @@ const M = {
         continue;
       }
       o.q = clamp(o.q + r.norm(0, .06), .05, 1);
-      if (o.q < .45 && o.escrow && !o.revised) { o.status = 'weak'; this.mail({ from: 'Фриланс-біржа', kind: 'freelance', title: `Результат слабкий: ${TASKS[o.task].t.toLowerCase()}`, body: `${o.who} здав роботу, але якість ${Math.round(o.q * 100)}%. У безпечній угоді можна попросити доопрацювання — розділ «Фриланс».` }); continue; }
+      if (o.q < .45 && o.escrow && !o.revised) { o.status = 'weak'; this.mail({ from: 'Фриланс-біржа', kind: 'freelance', title: `Результат слабкий: ${TASKS[o.task].t.toLowerCase()}`, body: `${o.who} здав роботу, але якість ${Math.round(o.q * 100)}%. У безпечній угоді можна попросити доопрацювання — розділ «Люди» → «Підробіток».` }); continue; }
       o.status = 'done'; this.applyOrder(o);
       this.mail({ from: o.who, kind: 'freelance', title: `Готово: ${TASKS[o.task].t.toLowerCase()}`, body: `Роботу здано. Якість: ${Math.round(o.q * 100)}%.${o.q < .5 ? ' Чесно кажучи, могло бути й краще.' : ''}` });
     }
@@ -389,7 +389,7 @@ const M = {
     }
     if (!s.flags.memeOffered && s.week > 10 && this.portValue() > 0 && r.chance(.25)) {
       s.flags.memeOffered = true;
-      this.mail({ from: 'Невідомий акаунт @crypto_king_ua', kind: 'invest', title: 'СуперКоїн виросте в 100 разів!!!', body: 'Ти ще не купив СуперКоїн? Уже +400% за тиждень! Встигни, поки дешево — завтра буде пізно! Кнопка покупки є в розділі «Інвестиції».' });
+      this.mail({ from: 'Невідомий акаунт @crypto_king_ua', kind: 'invest', title: 'СуперКоїн виросте в 100 разів!!!', body: 'Ти ще не купив СуперКоїн? Уже +400% за тиждень! Встигни, поки дешево — завтра буде пізно! Кнопка покупки є в розділі «Гроші» → «Вкладення».' });
     }
     // кредит
     if (s.loan && s.loan.left > 0) {

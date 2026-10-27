@@ -1,57 +1,58 @@
 // Симулятор стартапу · розділи: Огляд, Пошта, Довідник, Звіт.
 import { IDEAS, BACKGROUNDS, ACHIEVEMENTS, GLOSSARY, MODELS } from './data.js';
-import { money, num, pct, plural, dateText, sum, HOURS, MAX_HOURS, WEEKS, W2M } from './sim.js';
+import { money, num, pct, plural, dateText, sum, HOURS, WEEKS } from './sim.js';
 import { CANVAS, METRICS, ADVANTAGES } from './mods.js';
 import { assumptionsVsReality } from './custom.js';
 import { icon } from './icons.js';
-import { esc, nl2br, term, lineChart, meter, delta, logo } from './ui.js';
+import { esc, nl2br, term, lineChart, delta, logo } from './ui.js';
+import { STAGES, stageInfo } from './stages.js';
 
 const HOUR_ROWS = [
-  ['product', 'Продукт', 'code', 'Розробка й дизайн своїми руками'],
-  ['customers', 'Клієнти', 'users', 'Інтерв\'ю (3 год кожне) й опитування'],
-  ['content', 'Контент', 'heart', 'Соцмережі й статті'],
+  ['product', 'Продукт', 'code', 'Робите продукт своїми руками'],
+  ['customers', 'Клієнти', 'users', 'Розмови з клієнтами: 3 години кожна'],
+  ['content', 'Соцмережі', 'heart', 'Дописи, відео й статті'],
   ['sales', 'Продажі', 'phone', 'Дзвінки й зустрічі з організаціями'],
-  ['invest', 'Інвестори', 'handshake', 'Пітчі й зустрічі (6 год на зустріч)'],
-  ['freelance', 'Фриланс', 'laptop', 'Замовлення, які ви взяли на біржі'],
-  ['rest', 'Відпочинок', 'sun', 'Відновлює енергію'],
+  ['invest', 'Інвестори', 'handshake', 'Зустрічі з інвесторами: 6 годин кожна'],
+  ['freelance', 'Підробіток', 'laptop', 'Замовлення на біржі фрилансу'],
+  ['rest', 'Відпочинок', 'sun', 'Повертає сили'],
 ];
+const STEP = 5, DOTS = 8; // одна крапка — 5 годин, у рядку до 40 годин
 export const hoursUsed = S => S.totalHours() + (S.s.mkt.events || 0);
 
-export function kpis(S) {
-  const s = S.s, h = s.history, prev = h.at(-2), last = h.at(-1), rw = S.runwayWeeks();
-  const card = (label, val, sub = '', cls = '', tip = '') => `<div class="kpi ${cls}"><span class="kpi-l">${tip ? term(tip, label) : esc(label)}</span><b>${val}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
-  return `<div class="kpis">
-    ${card('Гроші', money(s.cash), last && prev ? delta(last.cash - prev.cash, money) : '', s.cash < 30000 ? 'bad' : '')}
-    ${card('Runway', rw === Infinity ? 'прибуток' : rw > 104 ? '2+ роки' : `${Math.max(0, Math.floor(rw))} ${plural(Math.floor(rw), 'тиждень', 'тижні', 'тижнів')}`, rw === Infinity ? 'виручка покриває витрати' : 'на скільки вистачить грошей', rw < 8 ? 'bad' : rw < 16 ? 'warn' : '', 'Runway')}
-    ${card('Активні користувачі', num(S.activeUsers()), last && prev ? delta(last.users - prev.users, num) : s.product.launched ? '' : `${num(last?.wait || 0)} у листі очікування`)}
-    ${card('Платні клієнти', num(S.paidUsers()), last && prev ? delta(last.paid - prev.paid, num) : '')}
-    ${card('MRR', money(S.mrr()), S.I.kind === 'hardware' ? `продажі за тиждень: ${money(last?.rev || 0)}` : 'виручка на місяць', '', 'MRR')}
-    ${card('NPS', s.product.launched ? String(S.nps()) : '—', s.product.launched ? (S.nps() >= 30 ? 'радять друзям' : S.nps() >= 0 ? 'так собі' : 'відраджують') : 'після запуску', '', 'NPS')}
-  </div>`;
+// «Як справи»: головні цифри простими словами
+function status(S) {
+  const s = S.s, h = s.history, prev = h.at(-2), last = h.at(-1), rw = S.runwayWeeks(), e = Math.round(s.founder.energy);
+  const row = (label, val, sub = '', cls = '', tip = '') => `<div class="st-row ${cls}"><span>${tip ? term(tip, label) : esc(label)}</span><b>${val}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
+  return `<section class="card status"><header class="card-h"><h3>${icon('chart')} Як справи</h3></header>
+    ${row('Гроші', money(s.cash), last && prev ? delta(last.cash - prev.cash, money) : '', s.cash < 30000 ? 'bad' : '')}
+    ${row('Вистачить на', rw === Infinity ? 'заробляємо більше, ніж витрачаємо' : rw > 104 ? '2+ роки' : `${Math.max(0, Math.floor(rw))} ${plural(Math.max(0, Math.floor(rw)), 'тиждень', 'тижні', 'тижнів')}`, '', rw < 8 ? 'bad' : rw < 16 ? 'warn' : 'ok', 'Runway')}
+    ${row(s.product.launched ? 'Користуються продуктом' : 'Чекають на запуск', num(s.product.launched ? S.activeUsers() : Math.round(last?.wait || 0)))}
+    ${row('Платять', num(S.paidUsers()))}
+    ${row('Заробляємо за місяць', money(S.mrr()), '', '', 'MRR')}
+    ${s.product.launched ? row('Радять друзям', S.nps() >= 30 ? 'так' : S.nps() >= 0 ? 'так собі' : 'ні', `оцінка ${S.nps()}`, S.nps() >= 30 ? 'ok' : S.nps() < 0 ? 'bad' : '', 'NPS') : ''}
+    ${row('Ваші сили', e + '%', '', e < 30 ? 'bad' : e < 60 ? 'warn' : 'ok')}
+  </section>`;
 }
 
 function weekPlan(S) {
   const s = S.s, used = hoursUsed(S), over = used > HOURS;
   const rows = HOUR_ROWS.map(([k, t, ic, d]) => {
-    const v = s.hours[k] || 0;
+    const v = s.hours[k] || 0, n = Math.round(v / STEP);
     const busy = s.busy?.week === s.week ? s.busy[k] : 0;
-    const extra = (k === 'customers' ? ` · інтерв'ю: ${S.talksLeft()}` : k === 'freelance' ? ` · замовлень: ${s.myGigs.length}` : '') + (busy ? ` · ${busy} год уже зайнято (${k === 'product' ? 'логотип' : 'інтерв\'ю для преси'})` : '');
-    return `<div class="hr-row"><span class="hr-l">${icon(ic, 16)}<span><b>${t}</b><small>${d}${extra}</small></span></span>
-      <input type="range" min="0" max="40" step="1" value="${v}" data-in="hours" data-k="${k}" aria-label="${t}, годин"><output data-out="h-${k}">${v} год</output></div>`;
+    const extra = (k === 'customers' ? ` · цього тижня ще розмов: ${S.talksLeft()}` : k === 'freelance' && s.myGigs.length ? ` · замовлень: ${s.myGigs.length}` : '') + (busy ? ` · ${busy} год уже зайнято (${k === 'product' ? 'логотип' : 'інтерв\'ю для преси'})` : '');
+    return `<div class="hr-row" data-k="${k}"><span class="hr-l">${icon(ic, 18)}<span><b>${t}</b><small>${d}${extra}</small></span></span>
+      <span class="hr-dots" aria-hidden="true">${Array.from({ length: DOTS }, (_, i) => `<button class="dot ${i < n ? 'on' : ''}" data-act="hrsSet" data-k="${k}" data-v="${(i + 1) * STEP === v ? i * STEP : (i + 1) * STEP}" tabindex="-1"></button>`).join('')}</span>
+      <span class="hr-pm"><button class="ib" data-act="hrs" data-k="${k}" data-d="-1" aria-label="${t}: менше" ${v <= 0 ? 'disabled' : ''}>${icon('minus', 16)}</button><output aria-live="polite">${v} год</output><button class="ib" data-act="hrs" data-k="${k}" data-d="1" aria-label="${t}: більше" ${v >= DOTS * STEP ? 'disabled' : ''}>${icon('plus', 16)}</button></span></div>`;
   }).join('');
-  const segs = HOUR_ROWS.filter(r => r[0] !== 'rest').map(([k], i) => `<i style="width:${(s.hours[k] || 0) / MAX_HOURS * 100}%;background:var(--h${i})"></i>`).join('') + `<i style="width:${(s.mkt.events || 0) / MAX_HOURS * 100}%;background:var(--h6)"></i>`;
-  const e = s.founder.energy;
   return `<section class="card" id="weekplan"><header class="card-h"><h3>${icon('clock')} Ваш тиждень</h3><span class="chip ${over ? (used > 62 ? 'bad' : 'warn') : 'ok'}" data-out="h-total">${used} / ${HOURS} год</span></header>
-    <div class="hbar" data-out="h-bar">${segs}<span class="hbar-norm" style="left:${HOURS / MAX_HOURS * 100}%"></span></div>
-    <p class="muted sm">Звичайний тиждень — ${HOURS} годин. Більше можна, але енергія падатиме, а з нею — продуктивність.</p>
+    <p class="muted sm">На що ви витратите час цього тижня. Кожна крапка — ${STEP} годин. Звичайний тиждень — ${HOURS} годин: більше можна, але сили падатимуть.</p>
     ${rows}
-    <div class="energy"><span>${icon('bolt', 16)} Енергія засновника</span>${meter(e / 100, { color: e < 30 ? 'var(--bad)' : e < 60 ? 'var(--warn)' : 'var(--ok)', label: 'Енергія' })}<b>${Math.round(e)}%</b></div>
-    ${s.team.length ? `<label class="switch"><input type="checkbox" data-in="crunch" ${s.crunch ? 'checked' : ''}><span></span>Кранч для команди: +25% швидкості, але мораль падає</label>` : ''}
+    ${s.team.length ? `<label class="switch"><input type="checkbox" data-in="crunch" ${s.crunch ? 'checked' : ''}><span></span>Команда працює понаднормово: на чверть швидше, але настрій падає</label>` : ''}
   </section>`;
 }
 
 function lastWeek(S) {
-  const L = S.s.last; if (!L) return `<section class="card"><header class="card-h"><h3>${icon('flag')} Перший тиждень</h3></header><p>Сплануйте години, поговоріть із клієнтами в розділі «Клієнти» й натисніть «Завершити тиждень» угорі.</p></section>`;
+  const L = S.s.last; if (!L) return '';
   const m = L.money, r = L.rec;
   const out = m.salaries + m.mkt + m.servers + m.tools + m.formFee + m.cogs + m.tax + (m.loyal || 0) + (m.loan || 0) + m.extra;
   return `<section class="card"><header class="card-h"><h3>${icon('chart')} Минулий тиждень</h3><span class="muted sm">тиждень ${L.week + 1}</span></header>
@@ -59,7 +60,7 @@ function lastWeek(S) {
       <div><span>Виручка</span><b class="pos">${money(m.revenue)}</b></div>
       <div><span>Витрати</span><b class="neg">${money(out)}</b></div>
       <div><span>Відвідувачі</span><b>${num(r.visitors)}</b></div>
-      <div><span>Реєстрації</span><b>${num(r.signups)}</b></div>
+      <div><span>${S.s.product.launched ? 'Нові користувачі' : 'Записалися в чергу'}</span><b>${num(r.signups)}</b></div>
       <div><span>Нові платні</span><b>${num(r.newPaid)}</b></div>
       <div><span>Пішли</span><b>${num(r.churned)}</b></div>
     </div>
@@ -69,52 +70,47 @@ function lastWeek(S) {
   </section>`;
 }
 
-// поради, які вже є в «Перших кроках», не дублюємо, поки список видно
-const IN_STEPS = new Set(['talk', 'talk2', 'build', 'launch', 'form', 'pay']);
+/* ═════════ Наставниця: що робити далі ═════════ */
 export function mentorCard(S) {
-  const steps = !!firstSteps(S), t = S.tips().find(x => !steps || x.urgent || !IN_STEPS.has(x.id)); if (!t) return '';
-  return `<section class="mentor ${t.urgent ? 'urgent' : ''}"><span class="avatar">${icon('bulb', 20)}</span><div><b>Наставниця Ірина</b><p>${esc(t.text)}${t.term ? ` ${term(t.term, 'Що це?')}` : ''}</p>
-    <div class="row gap sm">${t.go ? `<button class="btn sm primary" data-act="go" data-to="${t.go}">Перейти</button>` : ''}${t.urgent ? '' : `<button class="btn sm ghost" data-act="dismissTip" data-id="${t.id}">Зрозуміло</button>`}</div></div></section>`;
+  const [t, ...more] = S.tips();
+  const body = t ? `<p>${esc(t.text)}${t.term ? ` ${term(t.term, 'Що це?')}` : ''}</p>
+      <div class="row gap sm">${t.go ? `<button class="btn sm primary" data-act="go" data-to="${t.go}">Перейти</button>` : ''}${t.urgent ? '' : `<button class="btn sm ghost" data-act="dismissTip" data-id="${t.id}">Зрозуміло</button>`}</div>`
+    : '<p>Усе йде добре. Плануйте тиждень і натискайте «Завершити тиждень».</p>';
+  return `<section class="mentor ${t?.urgent ? 'urgent' : ''}"><div class="mt-h"><span class="avatar">${icon('bulb', 20)}</span><div><b>Наставниця Ірина</b><small>підказує, що робити далі</small></div></div><div class="bubble">${body}</div>
+    ${more.length ? `<p class="mt-l">Ще поради</p><ul class="mt-more">${more.slice(0, 2).map(x => `<li>${x.go ? `<button class="link" data-act="go" data-to="${x.go}">${esc(x.text)}</button>` : esc(x.text)}</li>`).join('')}</ul>` : ''}</section>`;
 }
 
-/* ═════════ Перші кроки: простий план для новачка ═════════ */
-export function firstSteps(S) {
-  const s = S.s; if (s.dismissed.firstSteps) return '';
-  const talks = sum(Object.values(s.know).map(k => k.n));
-  const steps = [
-    ['Поговоріть із трьома клієнтами', 'Розділ «Клієнти» → кнопка «Інтерв\'ю». Питайте про факти, а не про свою ідею.', 'customers', talks >= 3],
-    ['Заповніть бізнес-план', 'Хоча б 5 з 9 блоків у розділі «Бізнес-план».', 'plan', S.canvasFilled() >= 5],
-    ['Додайте функції в розробку', 'Розділ «Продукт»: 2–3 функції, яких найбільше бракує клієнтам.', 'product', s.product.built.length > 0 || s.product.queue.length > 0],
-    ['Зареєструйте ФОП або ТОВ', 'Розділ «Фінанси». Без цього клієнти не зможуть вам платити.', 'finance', s.company.form !== 'none'],
-    ['Запустіть першу версію (MVP)', 'Розділ «Продукт» → «Запустити MVP», щойно готова хоч одна функція.', 'product', s.product.launched],
-    ['Отримайте першу оплату', 'Потрібні функція оплати, реєстрація й розумна ціна (розділ «Ціна»).', 'pricing', !!s.ach.firstPay],
-    ['Збережіть гру у файл', 'Кнопка «Зберегти» вгорі сторінки. Файл можна здати викладачеві.', 'file', s.flags.fileWeek != null],
-  ];
-  const done = steps.filter(x => x[3]).length; if (done === steps.length) return '';
-  const next = steps.findIndex(x => !x[3]);
-  return `<section class="card first-steps"><header class="card-h"><h3>${icon('flag')} Перші кроки</h3><span class="chip ${done ? 'acc' : ''}">${done} з ${steps.length}</span></header>
-    <ol>${steps.map(([t, d, go, ok], i) => `<li class="${ok ? 'done' : i === next ? 'next' : ''}"><span class="num">${ok ? icon('check', 14) : i + 1}</span><span><b>${t}</b><small>${d}</small></span>${!ok && i === next ? (go === 'file' ? `<button class="btn sm primary" data-act="saveFile">Зберегти</button>` : `<button class="btn sm primary" data-act="go" data-to="${go}">Перейти</button>`) : ''}</li>`).join('')}</ol>
-    <div class="row end"><button class="btn sm ghost" data-act="dismissTip" data-id="firstSteps">Сховати список</button></div></section>`;
+/* ═════════ Етап: що зробити зараз ═════════ */
+function stageCard(S, ui, info) {
+  const i = ui.stage != null && ui.stage <= info.reached ? ui.stage : info.cur, st = info.list[i];
+  const nextOpen = STAGES[i + 1], first = st.tasks.find(y => !y.ok);
+  const head = info.allDone && i === info.cur
+    ? `<span class="chip ok">Усі етапи пройдено</span><h2>Компанія стала на ноги</h2><p class="muted">Ви пройшли весь шлях від ідеї до інвестицій чи прибутку. Тепер розвивайте компанію далі: усі розділи відкриті.</p>`
+    : `<span class="chip acc">Етап ${i + 1} з ${STAGES.length}${i < info.cur ? ' · пройдено' : ''}</span><h2>${esc(st.long)}</h2><p class="muted">${esc(st.why)}</p>`;
+  return `<section class="card stage-card">${head}
+    <ol class="stage-tasks">${st.tasks.map(x => `<li class="${x.ok ? 'ok' : ''}"><span class="ck">${x.ok ? icon('check', 16) : ''}</span><span class="tk"><b>${esc(x.t)}</b><small>${esc(x.d)}</small></span>${x.ok ? '' : x.go === 'file' ? `<button class="btn sm ${x === first ? 'primary' : ''}" data-act="saveFile">${esc(x.btn)}</button>` : `<button class="btn sm ${x === first ? 'primary' : ''}" data-act="go" data-to="${x.go}">${esc(x.btn)}</button>`}</li>`).join('')}</ol>
+    ${i === info.cur && !info.allDone && nextOpen ? `<p class="sm muted next-open">${icon('lock', 14)} Виконайте всі завдання — відкриється етап ${i + 2} «${esc(nextOpen.t)}».</p>` : ''}
+    ${i !== info.cur ? `<button class="btn sm ghost" data-act="stage" data-i="${info.cur}">До поточного етапу</button>` : ''}</section>`;
 }
 
-/* ═════════ Огляд ═════════ */
-function dash(S) {
+/* ═════════ Головна ═════════ */
+function dash(S, ui, info = stageInfo(S)) {
   const s = S.s, h = s.history, labels = h.map(x => String(x.week + 1));
   const achs = Object.keys(s.ach);
-  return `${mentorCard(S)}${firstSteps(S)}${kpis(S)}
-  <div class="grid g2">
-    <div class="col">${weekPlan(S)}</div>
-    <div class="col">
-      ${lastWeek(S)}
-      <section class="card"><header class="card-h"><h3>${icon('wallet')} Гроші</h3></header>${lineChart([{ v: h.map(x => x.cash), color: 'var(--acc)', label: 'Гроші', area: true }], { labels, fmt: x => money(x).replace(' ₴', '') })}</section>
+  return `${s.over ? `<p class="note bad">${icon('alert', 16)} Гру завершено. <button class="link" data-act="go" data-to="report">Подивитися підсумки</button></p>` : ''}
+  <div class="home">
+    <div class="col">${stageCard(S, ui, info)}${weekPlan(S)}${lastWeek(S)}
+      ${h.length > 1 ? `<details class="card fold"><summary>${icon('chart')} Графіки за всі тижні</summary>
+        <div class="grid g2">
+          <div><h4>Гроші</h4>${lineChart([{ v: h.map(x => x.cash), color: 'var(--acc)', label: 'Гроші', area: true }], { labels, fmt: x => money(x).replace(' ₴', '') })}</div>
+          <div><h4>Клієнти</h4>${lineChart([{ v: h.map(x => x.users), color: '#0ea5e9', label: 'Користуються' }, { v: h.map(x => x.paid), color: '#16a34a', label: 'Платять' }, { v: h.map(x => x.wait), color: '#94a3b8', label: 'Чекають запуску', dash: true }], { labels, fmt: num })}</div>
+          <div><h4>Виручка й витрати за тиждень</h4>${lineChart([{ v: h.map(x => x.rev), color: '#16a34a', label: 'Виручка', area: true }, { v: h.map(x => x.cost), color: '#ef4444', label: 'Витрати' }], { labels, fmt: x => money(x).replace(' ₴', '') })}</div>
+        </div></details>` : ''}
+      <details class="card fold"><summary>${icon('award')} Досягнення <span class="muted sm">${achs.length} з ${Object.keys(ACHIEVEMENTS).length}</span></summary>
+        <div class="achs">${Object.entries(ACHIEVEMENTS).map(([k, a]) => `<div class="ach ${s.ach[k] ? 'on' : ''}" title="${esc(a.d)}">${icon(s.ach[k] ? 'star' : 'lock', 18)}<span><b>${esc(a.t)}</b><small>${s.ach[k] ? `тиждень ${s.ach[k]}` : esc(a.d)}</small></span></div>`).join('')}</div></details>
     </div>
-  </div>
-  <div class="grid g2">
-    <section class="card"><header class="card-h"><h3>${icon('users')} Користувачі</h3></header>${lineChart([{ v: h.map(x => x.users), color: '#0ea5e9', label: 'Активні' }, { v: h.map(x => x.paid), color: '#16a34a', label: 'Платні' }, { v: h.map(x => x.wait), color: '#94a3b8', label: 'Лист очікування', dash: true }], { labels, fmt: num })}</section>
-    <section class="card"><header class="card-h"><h3>${icon('coins')} Виручка й витрати за тиждень</h3></header>${lineChart([{ v: h.map(x => x.rev), color: '#16a34a', label: 'Виручка', area: true }, { v: h.map(x => x.cost), color: '#ef4444', label: 'Витрати' }], { labels, fmt: x => money(x).replace(' ₴', '') })}</section>
-  </div>
-  <section class="card"><header class="card-h"><h3>${icon('award')} Досягнення</h3><span class="muted sm">${achs.length} з ${Object.keys(ACHIEVEMENTS).length}</span></header>
-    <div class="achs">${Object.entries(ACHIEVEMENTS).map(([k, a]) => `<div class="ach ${s.ach[k] ? 'on' : ''}" title="${esc(a.d)}">${icon(s.ach[k] ? 'star' : 'lock', 18)}<span><b>${esc(a.t)}</b><small>${s.ach[k] ? `тиждень ${s.ach[k]}` : esc(a.d)}</small></span></div>`).join('')}</div></section>`;
+    <aside class="col side-col">${mentorCard(S)}${status(S)}</aside>
+  </div>`;
 }
 
 /* ═════════ Пошта ═════════ */
@@ -137,13 +133,14 @@ function help(S, ui) {
     <section class="card"><header class="card-h"><h3>${icon('book')} Як грати</h3></header><ol class="steps">
       <li><b>Говоріть із клієнтами.</b> У розділі «Клієнти» проводьте інтерв'ю. Питайте про минуле й факти, а не про свою ідею.</li>
       <li><b>Оберіть сегмент.</b> Той, кому найбільше болить і хто вже витрачає гроші на проблему.</li>
-      <li><b>Опишіть бізнес-план.</b> Lean Canvas покаже, які з ваших думок підтверджені даними, а які — лише припущення.</li>
-      <li><b>Зробіть MVP і запустіться.</b> Не чекайте ідеалу. Без функції оплати й реєстрації компанії гроші не надходитимуть.</li>
+      <li><b>Опишіть бізнес-план.</b> Він покаже, які з ваших думок підтверджені даними, а які — лише припущення.</li>
+      <li><b>Зробіть першу версію й запустіться.</b> Не чекайте ідеалу. Без функції оплати й реєстрації компанії гроші не надходитимуть.</li>
       <li><b>Створіть бренд і знайдіть канали.</b> Тестуйте лендінг, рахуйте, скільки коштує клієнт.</li>
-      <li><b>Стежте за грошима.</b> Runway — скільки тижнів ви ще протримаєтеся. Інвестори, гранти, кредит, краудфандинг чи фриланс допоможуть дотягнути.</li>
+      <li><b>Стежте за грошима.</b> Угорі видно, на скільки тижнів їх ще вистачить. Інвестори, гранти, кредит, краудфандинг чи фриланс допоможуть дотягнути.</li>
       <li><b>Наймайте вчасно.</b> Команда пришвидшує, але зарплати з'їдають гроші.</li>
     </ol><p class="muted sm">Гра триває ${WEEKS} тижнів (2 роки). Усі люди й компанії вигадані.</p></section>
     <section class="card"><header class="card-h"><h3>${icon('save')} Збереження й файли</h3></header><ul class="facts">
+      <li><b>Шлях стартапу.</b> Згори — п’ять етапів. На кожному є 3 завдання; коли їх виконано, відкривається наступний етап і нові розділи. Розділ наступного етапу можна відкрити й раніше — натисніть на нього.</li>
       <li>Гра автоматично зберігається в цьому браузері. Але на спільному комп'ютері чи в іншому браузері її не буде — тому <b>зберігайте у файл</b>.</li>
       <li><b>Зберегти у файл</b> — кнопка «Зберегти» вгорі сторінки або в меню (Ctrl+S). У файлі є все: кожен тиждень, усі рішення, журнал дій, бізнес-план, бренд, пошта, команда, фінанси.</li>
       <li><b>Відкрити файл</b> — кнопка в меню (або Ctrl+O). Можна також просто перетягнути файл на сторінку. Гра продовжиться з того самого місця.</li>
@@ -174,7 +171,7 @@ export function report(S) {
     <p class="rp-end">${esc(end)}</p>
     <div class="kpis">
       <div class="kpi"><span class="kpi-l">Виручка за весь час</span><b>${money(totalRev)}</b></div>
-      <div class="kpi"><span class="kpi-l">MRR</span><b>${money(S.mrr())}</b></div>
+      <div class="kpi"><span class="kpi-l">${term('MRR', 'Виручка за місяць')}</span><b>${money(S.mrr())}</b></div>
       <div class="kpi"><span class="kpi-l">Активні / платні</span><b>${num(S.activeUsers())} / ${num(S.paidUsers())}</b></div>
       <div class="kpi"><span class="kpi-l">Оцінка компанії</span><b>${money(val)}</b></div>
       <div class="kpi"><span class="kpi-l">Ваша частка</span><b>${pct(stake, 1)}</b><small>≈ ${money(val * stake)}</small></div>
@@ -206,9 +203,9 @@ export function report(S) {
 }
 
 export const coreViews = {
-  dash: { t: 'Огляд', icon: 'home', render: dash },
+  dash: { t: 'Головна', icon: 'home', render: dash },
   inbox: { t: 'Пошта', icon: 'mail', render: inbox },
-  help: { t: 'Довідник', icon: 'book', render: help },
+  help: { t: 'Довідник і словник', icon: 'book', render: help },
   report: { t: 'Підсумковий звіт', icon: 'award', render: S => { S.s.flags.reportMade = true; return report(S); } },
 };
 export const coreActs = {
@@ -217,17 +214,11 @@ export const coreActs = {
   openMail: (C, el) => { C.ui.mail = el.dataset.id; const m = C.S.s.inbox.find(x => x.id === el.dataset.id); if (m && !m.choices) m.read = true; C.render(); },
   choose: (C, el) => { const m = C.S.s.inbox.find(x => x.id === el.dataset.id); const r = C.S.choose(el.dataset.id, +el.dataset.i); if (m) m.read = true; if (r) C.toast(r, 'good'); C.render(); if (C.S.s.over) C.ending(); },
   print: () => print(),
+  // план тижня: крапки по 5 годин і кнопки + / −
+  hrs: (C, el) => { const S = C.S, k = el.dataset.k, v = S.s.hours[k] || 0; S.setHours(k, Math.max(0, Math.min(DOTS * STEP, (Math.round(v / STEP) + +el.dataset.d) * STEP))); C.render(); },
+  hrsSet: (C, el) => { C.S.setHours(el.dataset.k, +el.dataset.v); C.render(); },
 };
 export const coreIns = {
-  hours: (C, el) => {
-    const S = C.S; S.setHours(el.dataset.k, +el.value);
-    C.out(`h-${el.dataset.k}`, `${el.value} год`);
-    const used = hoursUsed(S), tot = document.querySelector('[data-out="h-total"]');
-    if (tot) { tot.textContent = `${used} / ${HOURS} год`; tot.className = `chip ${used > HOURS ? (used > 62 ? 'bad' : 'warn') : 'ok'}`; }
-    const bar = document.querySelector('[data-out="h-bar"]');
-    if (bar) bar.querySelectorAll('i').forEach((i, n) => { const k = HOUR_ROWS.filter(r => r[0] !== 'rest')[n]?.[0]; i.style.width = ((k ? S.s.hours[k] : S.s.mkt.events) || 0) / MAX_HOURS * 100 + '%'; });
-    C.topbar();
-  },
   crunch: (C, el) => { C.S.s.crunch = el.checked; C.save(); },
   q: (C, el) => { C.ui.q = el.value; C.render(); const i = document.querySelector('[data-in="q"]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } },
 };

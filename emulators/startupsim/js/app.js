@@ -10,18 +10,21 @@ import { coreViews, coreActs, coreIns, hoursUsed } from './v-core.js';
 import { marketViews, marketActs, marketIns } from './v-market.js';
 import { moneyViews, moneyActs, moneyIns } from './v-money.js';
 import { peopleViews, peopleActs, peopleIns } from './v-people.js';
+import { STAGES, stageInfo, viewStage, isOpen, unlock, syncStage } from './stages.js';
 
 const KEY = 'edvault-startup';
 const VIEWS = { ...coreViews, ...marketViews, ...moneyViews, ...peopleViews };
 const ACTS = { ...coreActs, ...marketActs, ...moneyActs, ...peopleActs };
 const INS = { ...coreIns, ...marketIns, ...moneyIns, ...peopleIns };
-const NAV = [
-  ['Компанія', ['dash', 'inbox', 'plan', 'report']],
-  ['Продукт і ринок', ['customers', 'product', 'brand', 'marketing', 'promo']],
-  ['Гроші', ['pricing', 'finance', 'payments', 'investors', 'invest']],
-  ['Люди', ['team', 'freelance']],
-  ['', ['help']],
+// чотири вкладки й пошта; розділи всередині вкладки — другим рядком
+const TABS = [
+  ['home', 'Головна', 'home', ['dash']],
+  ['market', 'Продукт і клієнти', 'box', ['customers', 'plan', 'product', 'brand', 'marketing', 'promo']],
+  ['money', 'Гроші', 'wallet', ['pricing', 'finance', 'payments', 'investors', 'invest']],
+  ['people', 'Люди', 'users', ['team', 'freelance']],
+  ['mail', 'Пошта', 'mail', ['inbox']],
 ];
+const tabOf = v => TABS.find(t => t[3].includes(v));
 
 /* ═════════ стан ═════════ */
 let S = null;
@@ -32,7 +35,8 @@ const save = () => { if (!S) return; try { localStorage.setItem(KEY, JSON.string
 /* ═════════ контекст для розділів ═════════ */
 const C = {
   get S() { return S; }, ui,
-  go(v) { if (!VIEWS[v]) return; ui.view = v; closeSide(); render(); $('#main').scrollTo?.(0, 0); scrollTo(0, 0); },
+  // перехід із коду (підказка, лист, кнопка завдання) відкриває розділ навіть до його етапу
+  go(v) { if (!VIEWS[v]) return; if (S && !isOpen(S, v)) unlock(S, v); ui.view = v; const t = tabOf(v); if (t) (ui.tabLast ||= {})[t[0]] = v; if (v !== 'dash') ui.stage = null; closeMore(); render(); $('#main').scrollTo?.(0, 0); scrollTo(0, 0); },
   render: () => render(), save, toast,
   out(k, text) { const el = document.querySelector(`[data-out="${k}"]`); if (el) el.textContent = text; },
   topbar: () => topbar(), theme: () => theme(), ending: () => ending(),
@@ -90,37 +94,55 @@ function loadText(text) {
 
 /* ═════════ малювання ═════════ */
 function theme() { if (!S) return; document.documentElement.style.setProperty('--acc', S.s.company.color); document.documentElement.style.setProperty('--acc-soft', S.s.company.color + '1a'); }
-function side() {
-  const s = S.s, unread = s.inbox.filter(m => !m.read || (m.choices && m.chosen == null)).length;
-  const badge = k => k === 'inbox' && unread ? `<span class="badge">${unread}</span>` : k === 'investors' && Object.values(s.inv).some(x => x.status === 'offer') ? '<span class="badge">!</span>' : k === 'product' && S.canLaunch() ? '<span class="badge dot"></span>' : '';
-  $('#side').innerHTML = `<div class="sd-brand">${logo(s.company, 34)}<div><b>${esc(s.company.name)}</b><small>${esc(S.I.t)}</small></div></div>
-    <nav aria-label="Розділи">${NAV.map(([g, items]) => `${g ? `<p class="sd-g">${g}</p>` : '<hr>'}${items.map(k => `<button class="sd-it ${ui.view === k ? 'on' : ''}" data-act="go" data-to="${k}" ${ui.view === k ? 'aria-current="page"' : ''}>${icon(VIEWS[k].icon, 18)}<span>${VIEWS[k].t}</span>${badge(k)}</button>`).join('')}`).join('')}</nav>
-    <div class="sd-foot"><div class="founder"><span class="av" style="--h:210">${esc(s.founder.name.split(' ').map(x => x[0]).join('').slice(0, 2))}</span><div><b>${esc(s.founder.name)}</b><small>${BACKGROUNDS[s.founder.bg].t} · ${pct(S.stake(), 0)} компанії</small></div></div>
-      <div class="sd-file"><button class="btn sm" data-act="saveFile" title="Зберегти всю гру у файл (Ctrl+S)">${icon('save', 14)} Зберегти у файл</button><button class="btn sm" data-act="openFile" title="Відкрити гру з файлу">${icon('open', 14)} Відкрити файл</button></div>
-      ${s.flags.fileWeek != null ? `<small class="sd-saved">У файл збережено на тижні ${s.flags.fileWeek + 1}</small>` : '<small class="sd-saved warn">Гру ще не зберігали у файл</small>'}
-      <button class="btn sm ghost" data-act="newGame">${icon('refresh', 14)} Нова гра</button></div>`;
-}
+const runwayText = rw => rw === Infinity ? 'прибуток' : rw > 104 ? '2+ роки' : `${Math.max(0, Math.floor(rw))} ${plural(Math.max(0, Math.floor(rw)), 'тиждень', 'тижні', 'тижнів')}`;
 function topbar() {
   if (!S) return;
-  const s = S.s, used = hoursUsed(S), rw = S.runwayWeeks();
-  $('#top').innerHTML = `<button class="ib only-m" data-act="menu" aria-label="Меню">${icon('menu', 22)}</button>
-    <div class="tp-week"><b>Тиждень ${s.week + 1}<small> з ${WEEKS}</small></b><small>${dateText(s.week)}</small></div>
+  const s = S.s, rw = S.runwayWeeks(), e = Math.round(s.founder.energy);
+  $('#top').innerHTML = `<button class="tp-brand" data-act="go" data-to="dash" title="${esc(s.company.name)}: ${esc(S.I.t)}. На головну">${logo(s.company, 36)}<span><b>${esc(s.company.name)}</b><small>Тиждень ${s.week + 1} з ${WEEKS} · ${dateText(s.week)}</small></span></button>
     <div class="tp-stats">
-      <span class="tp-s ${s.cash < 30000 ? 'bad' : ''}" title="Гроші">${icon('wallet', 16)}<b>${money(s.cash)}</b></span>
-      <span class="tp-s ${rw < 8 ? 'bad' : rw < 16 ? 'warn' : ''} hide-s" title="На скільки тижнів вистачить грошей">${icon('clock', 16)}<b>${rw === Infinity ? '∞' : rw > 104 ? '2+ р.' : Math.max(0, Math.floor(rw)) + ' тиж.'}</b></span>
-      <span class="tp-s hide-s" title="Активні користувачі">${icon('users', 16)}<b>${num(S.activeUsers())}</b></span>
-      <span class="tp-s hide-m" title="Щомісячна виручка">${icon('coins', 16)}<b>${money(S.mrr())}</b></span>
-      <span class="tp-s ${used > HOURS ? (used > 62 ? 'bad' : 'warn') : ''} hide-s" title="Години засновника цього тижня">${icon('bolt', 16)}<b>${used}/${HOURS} год</b></span>
+      <span class="tp-s ${s.cash < 30000 ? 'bad' : ''}" title="Гроші компанії">${icon('wallet', 16)}<span><small>Гроші</small><b>${money(s.cash)}</b></span></span>
+      <span class="tp-s ${rw < 8 ? 'bad' : rw < 16 ? 'warn' : ''} hide-t" title="На скільки тижнів вистачить грошей">${icon('clock', 16)}<span><small>Вистачить на</small><b>${runwayText(rw)}</b></span></span>
+      <span class="tp-s hide-m" title="Скільки людей користуються продуктом">${icon('users', 16)}<span><small>Клієнти</small><b>${num(S.activeUsers())}</b></span></span>
+      <span class="tp-s ${e < 30 ? 'bad' : e < 60 ? 'warn' : ''} hide-m" title="Ваші сили. Падають, якщо працювати забагато">${icon('bolt', 16)}<span><small>Сили</small><b>${e}%</b></span></span>
     </div>
     <button class="btn top-save" data-act="saveFile" title="Зберегти всю гру у файл (Ctrl+S)" aria-label="Зберегти гру у файл">${icon('save', 16)}<span>Зберегти</span></button>
+    <div class="more-w"><button class="btn ib-b" data-act="more" aria-label="Ще" aria-expanded="${!!ui.more}" title="Ще">${icon('more', 18)}</button>${ui.more ? morePop() : ''}</div>
     <button class="btn primary end-week" data-act="endWeek" ${s.over ? 'disabled' : ''}>${icon('next', 16)}<span>Завершити тиждень</span></button>`;
+}
+function morePop() {
+  const s = S.s;
+  return `<div class="more-pop" role="menu"><div class="founder"><span class="av">${esc(s.founder.name.split(' ').map(x => x[0]).join('').slice(0, 2))}</span><div><b>${esc(s.founder.name)}</b><small>${BACKGROUNDS[s.founder.bg].t} · ${pct(S.stake(), 0)} компанії</small></div></div>
+    <button role="menuitem" data-act="openFile">${icon('open', 16)} Відкрити гру з файлу</button>
+    <button role="menuitem" data-act="go" data-to="report">${icon('award', 16)} Підсумковий звіт</button>
+    <button role="menuitem" data-act="go" data-to="help">${icon('book', 16)} Довідник і словник</button>
+    <button role="menuitem" data-act="newGame">${icon('refresh', 16)} Нова гра</button>
+    <small class="${s.flags.fileWeek != null ? '' : 'warn'}">${s.flags.fileWeek != null ? `У файл збережено на тижні ${s.flags.fileWeek + 1}` : 'Гру ще не зберігали у файл'}</small></div>`;
+}
+const closeMore = () => { if (ui.more) { ui.more = false; topbar(); } };
+// доріжка етапів: пройдені — зелені, поточний — підсвічений, наступні — сірі
+function road(info) {
+  $('#road').innerHTML = `<ol>${info.list.map((st, i) => {
+    const cls = st.done && i < info.cur ? 'done' : i === info.cur ? 'cur' : i <= info.reached ? 'open' : 'lock';
+    return `<li class="${cls}"><button data-act="stage" data-i="${i}" ${i > info.reached ? 'disabled' : ''} aria-current="${i === info.cur ? 'step' : 'false'}" title="${esc(st.long)}"><span class="c">${cls === 'done' || (info.allDone && i === info.cur) ? icon('check', 16) : i + 1}</span><span class="l">${esc(st.t)}</span></button></li>`;
+  }).join('')}</ol>`;
+}
+function tabs(info) {
+  const s = S.s, unread = s.inbox.filter(m => !m.read || (m.choices && m.chosen == null)).length;
+  const cur = tabOf(ui.view);
+  const badge = k => k === 'mail' && unread ? `<span class="badge">${unread}</span>` : k === 'money' && Object.values(s.inv).some(x => x.status === 'offer') && isOpen(S, 'investors', info) ? '<span class="badge">!</span>' : '';
+  const sub = cur && cur[3].length > 1 ? `<div class="subtabs" role="tablist">${cur[3].map(v => {
+    const open = isOpen(S, v, info), st = viewStage(v);
+    return `<button class="st-it ${ui.view === v ? 'on' : ''} ${open ? '' : 'locked'}" data-act="${open ? 'go' : 'locked'}" data-to="${v}" ${ui.view === v ? 'aria-current="page"' : ''} ${open ? '' : `title="Знадобиться на етапі ${st + 1} «${esc(STAGES[st].t)}»"`}>${icon(open ? VIEWS[v].icon : 'lock', 15)}<span>${VIEWS[v].t}</span>${v === 'product' && S.canLaunch() ? '<span class="badge dot"></span>' : ''}</button>`;
+  }).join('')}</div>` : '';
+  $('#tabs').innerHTML = `<div class="navtabs-in">${TABS.map(([k, t, ic, views]) => `<button class="tab ${cur?.[0] === k ? 'on' : ''}" data-act="tab" data-k="${k}" ${cur?.[0] === k ? 'aria-current="page"' : ''}>${icon(ic, 18)}<span>${t}</span>${badge(k)}</button>`).join('')}</div>${sub}`;
 }
 function render() {
   if (!S) return;
-  theme(); side(); topbar();
+  const info = syncStage(S);
+  theme(); topbar(); road(info); tabs(info);
   const V = VIEWS[ui.view] || VIEWS.dash;
   const main = $('#main');
-  main.innerHTML = `<header class="pg-h"><h1>${icon(V.icon, 24)} ${V.t}</h1>${S.s.over ? `<span class="chip bad">Гру завершено</span>` : ''}</header>${V.render(S, ui)}`;
+  main.innerHTML = `${ui.view === 'dash' ? '' : `<header class="pg-h"><h1>${icon(V.icon, 24)} ${V.t}</h1>${S.s.over ? `<span class="chip bad">Гру завершено</span>` : ''}</header>`}${V.render(S, ui, info)}`;
   save();
 }
 
@@ -139,7 +161,7 @@ function weekModal(rep) {
   const s = S.s, m = rep.money, r = rep.rec, d = rep.cashAfter - rep.cashBefore;
   const out = m.salaries + m.mkt + m.servers + m.tools + m.formFee + m.cogs + m.tax + (m.loyal || 0) + (m.loan || 0) + m.extra;
   const html = `<div class="wk-cash"><div><small>Було</small><b>${money(rep.cashBefore)}</b></div>${icon('right', 22)}<div><small>Стало</small><b>${money(rep.cashAfter)}</b></div><span class="dl ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : '−'}${money(Math.abs(d))}</span></div>
-    <div class="mini-stats"><div><span>Виручка</span><b class="pos">${money(m.revenue)}</b></div><div><span>Витрати</span><b class="neg">${money(out)}</b></div>${m.invest ? `<div><span>Надходження</span><b class="pos">${money(m.invest)}</b></div>` : ''}<div><span>Відвідувачі</span><b>${num(r.visitors)}</b></div><div><span>${s.product.launched ? 'Реєстрації' : 'У лист очікування'}</span><b>${num(r.signups)}</b></div><div><span>Нові платні</span><b>${num(r.newPaid)}</b></div><div><span>Пішли</span><b>${num(r.churned)}</b></div></div>
+    <div class="mini-stats"><div><span>Виручка</span><b class="pos">${money(m.revenue)}</b></div><div><span>Витрати</span><b class="neg">${money(out)}</b></div>${m.invest ? `<div><span>Надходження</span><b class="pos">${money(m.invest)}</b></div>` : ''}<div><span>Відвідувачі</span><b>${num(r.visitors)}</b></div><div><span>${s.product.launched ? 'Нові користувачі' : 'Записалися в чергу'}</span><b>${num(r.signups)}</b></div><div><span>Нові платні</span><b>${num(r.newPaid)}</b></div><div><span>Пішли</span><b>${num(r.churned)}</b></div></div>
     ${rep.built?.length ? `<p class="note ok">${icon('check', 16)} Розробка завершила: ${rep.built.map(f => esc(S.feature(f).t)).join(', ')}</p>` : ''}
     ${rep.notes.map(n => `<p class="note warn">${icon('info', 16)} ${esc(n)}</p>`).join('')}
     ${rep.events.map(e => `<p class="note">${icon('mail', 16)} <b>${esc(e.t)}</b> — ${esc(e.d)}</p>`).join('')}
@@ -172,7 +194,7 @@ function startWizard() {
   const archSel = (i, v) => `<select class="inp" data-c="segments.${i}.arch" aria-label="Тип клієнтів">${Object.entries(ARCH).map(([k, a]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${esc(a.t)}</option>`).join('')}</select>`;
   const segChecks = (path, sel) => `<div class="wz-segs">${segNames().map((n, i) => `<label><input type="checkbox" data-c="${path}" value="${i}" ${sel.includes(i) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}</div>`;
   const VIEW = {
-    hello: () => `<div class="wz-hero">${icon('rocket', 46)}<h1>Симулятор стартапу</h1><p>Ви засновуєте компанію з нуля. Говорите з клієнтами, будуєте продукт, створюєте бренд, шукаєте канали, рахуєте гроші, наймаєте команду й залучаєте інвестиції. Кожне рішення має наслідки.</p><ul class="wz-list"><li>${icon('users', 18)} Інтерв'ю з клієнтами й опитування</li><li>${icon('plan', 18)} Бізнес-план (Lean Canvas) і фінплан</li><li>${icon('palette', 18)} Бренд, маркетинг, акції</li><li>${icon('handshake', 18)} Гранти, інвестори, кредит, краудфандинг</li><li>${icon('laptop', 18)} Команда, спринти, фриланс</li><li>${icon('card', 18)} Платіжні системи, інвестування й криптовалюта</li></ul><p class="muted sm">Один хід — тиждень. Гра триває 2 роки, якщо раніше не закінчаться гроші. Усі люди й компанії вигадані.</p>
+    hello: () => `<div class="wz-hero">${icon('rocket', 46)}<h1>Симулятор стартапу</h1><p>Ви засновуєте компанію з нуля. Говорите з клієнтами, будуєте продукт, створюєте бренд, шукаєте канали, рахуєте гроші, наймаєте команду й залучаєте інвестиції. Кожне рішення має наслідки.</p><ul class="wz-list"><li>${icon('users', 18)} Інтерв'ю з клієнтами й опитування</li><li>${icon('plan', 18)} Бізнес-план (Lean Canvas) і фінплан</li><li>${icon('palette', 18)} Бренд, маркетинг, акції</li><li>${icon('handshake', 18)} Гранти, інвестори, кредит, краудфандинг</li><li>${icon('laptop', 18)} Команда й підробіток</li><li>${icon('card', 18)} Платіжні системи, інвестування й криптовалюта</li></ul><p class="muted sm">Один хід — тиждень. Гра триває 2 роки, якщо раніше не закінчаться гроші. Усі люди й компанії вигадані.</p>
       <div class="wz-open"><button class="btn" data-act="openFile">${icon('open', 16)} Відкрити збережену гру з файлу</button><small class="muted">Або перетягніть файл .json на цю сторінку</small></div></div>`,
     idea: () => `<h2>Оберіть ідею</h2><div class="wz-ideas">${Object.entries(IDEAS).filter(([k]) => k !== 'custom').map(([k, x]) => `<button class="wz-idea ${w.idea === k ? 'on' : ''}" data-w="idea" data-v="${k}" style="--ic:${x.color}"><span class="wz-ic">${icon(x.icon, 26)}</span><b>${esc(x.t)}</b><p>${esc(x.pitch)}</p><small>${{ app: 'Застосунок', hardware: 'Пристрій («залізо»)', saas: 'Сервіс для бізнесу' }[x.kind]} · сегменти: ${Object.values(x.segments).map(g => g.short.toLowerCase()).join(', ')}</small></button>`).join('')}
       <button class="wz-idea own ${w.idea === 'custom' ? 'on' : ''}" data-w="idea" data-v="custom" style="--ic:#111827"><span class="wz-ic">${icon('bulb', 26)}</span><b>Своя ідея</b><p>Опишіть власний стартап: проблему, клієнтів, функції й конкурентів. А ринок покаже, чи праві ви.</p><small>Ваші припущення перевірятимуться інтерв'ю</small></button></div>`,
@@ -264,25 +286,36 @@ function startWizard() {
 }
 
 /* ═════════ події ═════════ */
-const sideEl = () => $('#side');
-function closeSide() { document.body.classList.remove('side-open'); }
+// розділ ще не потрібен на цьому етапі: пояснюємо й даємо відкрити, якщо учень хоче
+function askUnlock(v) {
+  const st = viewStage(v);
+  return confirmBox(`«${VIEWS[v].t}» знадобиться на етапі ${st + 1} «${STAGES[st].t}»`, 'Відкрити зараз', { sub: 'Спершу варто виконати завдання поточного етапу. Але якщо хочете — розділ можна відкрити вже зараз.' }).then(ok => { if (ok) C.go(v); });
+}
 document.addEventListener('click', e => {
   const t = e.target.closest('.term'); if (t) { e.preventDefault(); termPop(t); return; }
+  if (ui.more && !e.target.closest('.more-w')) closeMore();
   const a = e.target.closest('[data-act]'); if (!a || a.disabled) return;
   if (a.dataset.act === 'openFile') return openFile();
   if (!S) return;
   const k = a.dataset.act;
   if (k === 'endWeek') return endWeek();
-  if (k === 'menu') { document.body.classList.toggle('side-open'); return; }
+  if (k === 'more') { ui.more = !ui.more; topbar(); return; }
+  if (k === 'tab') {
+    const tb = TABS.find(x => x[0] === a.dataset.k), info = stageInfo(S), last = ui.tabLast?.[tb[0]];
+    const v = last && isOpen(S, last, info) ? last : tb[3].find(x => isOpen(S, x, info));
+    if (v) C.go(v); else askUnlock(tb[3][0]);
+    return;
+  }
+  if (k === 'stage') { ui.stage = +a.dataset.i; C.go('dash'); return; }
+  if (k === 'locked') return askUnlock(a.dataset.to);
   if (k === 'saveFile') return saveFile();
-  if (k === 'openFile') return openFile();
   if (k === 'newGame') return confirmBox('Почати нову гру?', 'Почати заново', { danger: true, sub: 'Поточна компанія буде втрачена.' }).then(ok => { if (ok) startWizard(); });
   const fn = ACTS[k]; if (fn) { fn(C, a, e); save(); }
 });
 document.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if (!el || !S) return; const fn = INS[el.dataset.in]; if (fn && (el.type === 'range' || el.tagName === 'TEXTAREA' || el.type === 'text' || el.type === 'search' || !el.type || el.type === 'number')) fn(C, el, e); });
 document.addEventListener('change', e => { const el = e.target.closest('[data-in]'); if (!el || !S) return; const fn = INS[el.dataset.in]; if (!fn) return; if (el.type === 'range') { save(); render(); return; } if (el.type === 'checkbox' || el.type === 'radio' || el.tagName === 'SELECT') fn(C, el, e); else if (el.tagName === 'TEXTAREA' || el.type === 'text') { save(); } });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeSide();
+  if (e.key === 'Escape') closeMore();
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (S && !document.querySelector('.wizard')) saveFile(); }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') { e.preventDefault(); openFile(); }
 });
@@ -290,7 +323,6 @@ document.addEventListener('keydown', e => {
 document.addEventListener('dragover', e => { if ([...(e.dataTransfer?.types || [])].includes('Files')) { e.preventDefault(); document.body.classList.add('drop-on'); } });
 document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drop-on'); });
 document.addEventListener('drop', e => { const f = e.dataTransfer?.files?.[0]; document.body.classList.remove('drop-on'); if (!f) return; e.preventDefault(); readFile(f); });
-$('#scrim')?.addEventListener('click', closeSide);
 
 window.Startup = { S, C, get sim() { return S; } };
 if (S) render(); else startWizard();
