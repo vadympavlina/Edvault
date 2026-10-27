@@ -73,9 +73,8 @@ svg{flex-shrink:0}
 .statusbar{height:var(--statusbar);background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;font-size:11.5px;color:var(--subtle);font-weight:500;flex-shrink:0;z-index:60}
 .sb-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:5px}
 .sb-dot.off{background:#f59e0b}
-.sb-right{margin-left:auto}
 
-/* ── Пошук і випадне меню ── */
+/* ── Пошук ── */
 .search-wrap{position:relative;flex:1;min-width:180px;max-width:420px}
 .search-wrap>svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--subtle);pointer-events:none}
 .search-inp{width:100%;height:36px;padding:0 34px 0 34px;border:1px solid var(--border2);border-radius:var(--r);font-size:13.5px;color:var(--text);background:var(--bg);outline:none;transition:border-color .13s,box-shadow .13s,background .13s}
@@ -83,17 +82,6 @@ svg{flex-shrink:0}
 .search-inp::-webkit-search-cancel-button{display:none}
 .search-kbd{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--subtle);border:1px solid var(--border2);border-radius:4px;padding:0 5px;line-height:17px;pointer-events:none}
 .search-inp:focus~.search-kbd,.search-inp:not(:placeholder-shown)~.search-kbd{display:none}
-.dd{position:relative;flex-shrink:0}
-.dd-btn{height:36px;padding:0 12px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap;transition:border-color .13s}
-.dd-btn:hover{border-color:var(--accent);color:var(--text)}
-.dd-btn svg{width:14px;height:14px}
-.dd-btn .chev{transition:transform .2s}
-.dd-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
-.dd-menu{position:absolute;top:calc(100% + 5px);left:0;min-width:200px;max-height:60vh;overflow:auto;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:6px;z-index:200;animation:popIn .14s ease}
-.dd-opt{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r);font-size:13px;color:var(--muted);width:100%;text-align:left}
-.dd-opt:hover{background:var(--bg);color:var(--text)}
-.dd-opt.active{background:var(--accent-bg);color:var(--accent);font-weight:500}
-.dd-opt .n{margin-left:auto;font-size:11px;color:var(--subtle)}
 
 /* ── Порожні стани й завантаження ── */
 .empty{padding:56px 20px;text-align:center;color:var(--subtle)}
@@ -132,4 +120,4 @@ svg{flex-shrink:0}
 .avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--accent-bg);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-@media print{.topbar,.statusbar,.no-print{display:none!important}body{background:#fff}}
+@media print{.topbar,.statusbar{display:none!important}body{background:#fff}}

@@ -15,7 +15,7 @@ const FIREBASE_CONFIG = {
 };
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, get, set, push, remove, onValue, update }
+import { getDatabase, ref, get, set, remove, update }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider,
   signInWithEmailAndPassword, signInWithCredential }
@@ -56,12 +56,7 @@ async function dbSet(path, value) { await set(ref(db, path), value); }
 /** Злити ключі в шляху. З path = '/' і ключами-шляхами — атомарний запис кількох місць */
 async function dbUpdate(path, value) { await update(ref(db, path), value); }
 /** Додати дочірній елемент з автоключем → ключ */
-async function dbPush(path, value) { return (await push(ref(db, path), value)).key; }
 async function dbRemove(path) { await remove(ref(db, path)); }
-/** Слухати зміни — cb(value) щоразу; повертає функцію відписки */
-function dbListen(path, cb) {
-  return onValue(ref(db, path), snap => cb(snap.exists() ? snap.val() : null));
-}
 
 // ── Допоміжне ─────────────────────────────────────────────
 /** Компактний випадковий ID (62^len варіантів) */
@@ -71,15 +66,9 @@ function generateId(len = 10) {
   crypto.getRandomValues(arr);
   return Array.from(arr, b => chars[b % chars.length]).join('');
 }
-/** { key: {...} } → [{ id: key, ... }] */
-function objToArray(obj) {
-  if (!obj) return [];
-  return Object.entries(obj).map(([id, val]) => ({ id, ...val }));
-}
 
 export {
-  db, auth,
-  dbGet, dbSet, dbUpdate, dbPush, dbRemove, dbListen,
-  generateId, objToArray,
+  dbGet, dbSet, dbUpdate, dbRemove,
+  generateId,
   signInWithGoogle, signInEmail, signInGoogleIdToken, authSignOut, onAuth
 };
