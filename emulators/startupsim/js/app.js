@@ -10,7 +10,7 @@ import { coreViews, coreActs, coreIns, hoursUsed } from './v-core.js';
 import { marketViews, marketActs, marketIns } from './v-market.js';
 import { moneyViews, moneyActs, moneyIns } from './v-money.js';
 import { peopleViews, peopleActs, peopleIns } from './v-people.js';
-import { STAGES, stageInfo, viewStage, isOpen, unlock, syncStage } from './stages.js';
+import { STAGES, stageInfo, viewStage, isOpen, unlock, syncStage, ADVANCED_VIEWS, isSimple, suggestHours } from './stages.js';
 
 const KEY = 'edvault-startup', IDEA_KEY = 'edvault-startup-idea';
 const VIEWS = { ...coreViews, ...marketViews, ...moneyViews, ...peopleViews };
@@ -25,6 +25,23 @@ const TABS = [
   ['mail', 'Пошта', 'mail', ['inbox']],
 ];
 const tabOf = v => TABS.find(t => t[3].includes(v));
+// «що тут робити» — одне-два речення на початку кожного розділу
+const VIEW_HINTS = {
+  customers: 'Натисніть «Інтерв\'ю» на картці групи й поставте три запитання. Питайте про те, що людина вже робить, а не «чи сподобається вам ідея».',
+  plan: 'Заповніть блоки своїми словами або оберіть варіанти. Позначка покаже, що підтверджено інтерв\'ю, а що поки лише ваша здогадка.',
+  product: 'Натисніть «У роботу» на функціях, які найбільше потрібні клієнтам. Коли буде готова хоч одна — запускайте першу версію.',
+  brand: 'Оберіть колір, шрифт, тон і позиціонування так, щоб вони подобалися вашим клієнтам. Відсоток угорі показує, наскільки влучили.',
+  marketing: 'Оберіть, як люди про вас дізнаються: реклама, блогери, соцмережі. Праворуч видно, скільки відвідувачів дає кожен спосіб.',
+  promo: 'Акції ненадовго збільшують продажі, але зменшують заробіток з кожного клієнта.',
+  pricing: 'Поставте ціну. Занизька не покриє витрати, зависока відлякає клієнтів. Підказка — скільки вони вже витрачають (з інтерв\'ю).',
+  finance: 'Зареєструйте ФОП, щоб клієнти могли платити. Тут же видно, на що йдуть гроші.',
+  payments: 'Оберіть, через що клієнти платитимуть. Різні системи беруть різну комісію.',
+  investors: 'Інвестори дають гроші за частку компанії. Спершу підготуйте презентацію й дізнайтеся, що вони вимагають.',
+  invest: 'Вільні гроші можна вкласти, але лише ті, що не знадобляться на зарплати й рахунки найближчим часом.',
+  team: 'Проведіть співбесіду з кандидатом, щоб дізнатися його навички, і запропонуйте зарплату. Наймайте, коли самі вже не встигаєте.',
+  freelance: 'Підробіток дає гроші, коли їх бракує, але забирає ваші години від стартапу.',
+  inbox: 'Тут листи від клієнтів, інвесторів і наставниці. Деякі чекають на ваше рішення.',
+};
 
 /* ═════════ стан ═════════ */
 let S = null;
@@ -40,6 +57,9 @@ const C = {
   render: () => render(), save, toast,
   out(k, text) { const el = document.querySelector(`[data-out="${k}"]`); if (el) el.textContent = text; },
   topbar: () => topbar(), theme: () => theme(), ending: () => ending(),
+  // підсвітити, що натиснути: після переходу з кнопки завдання
+  flash(sel) { requestAnimationFrame(() => { const el = document.querySelector(sel); if (!el) return; el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 2600); }); },
+  suggestHours() { const h = suggestHours(S, stageInfo(S).cur); for (const [k, v] of Object.entries(h)) S.setHours(k, v); render(); toast(`Години розподілено під етап «${STAGES[stageInfo(S).cur].t}». Їх можна змінити.`, 'good'); },
   saveFile: () => saveFile(), openFile: () => openFile(),
 };
 
@@ -136,6 +156,7 @@ function morePop() {
     <button role="menuitem" data-act="openFile">${icon('open', 16)} Відкрити гру з файлу</button>
     <button role="menuitem" data-act="go" data-to="report">${icon('award', 16)} Підсумковий звіт</button>
     <button role="menuitem" data-act="go" data-to="help">${icon('book', 16)} Довідник і словник</button>
+    <button role="menuitem" data-act="simple" aria-pressed="${isSimple(S)}">${icon(isSimple(S) ? 'check' : 'wrench', 16)} ${isSimple(S) ? 'Простий режим увімкнено' : 'Увімкнути простий режим'}</button>
     <button role="menuitem" data-act="newGame">${icon('refresh', 16)} Нова гра</button>
     <small class="${s.flags.fileWeek != null ? '' : 'warn'}">${s.flags.fileWeek != null ? `У файл збережено на тижні ${s.flags.fileWeek + 1}` : 'Гру ще не зберігали у файл'}</small></div>`;
 }
@@ -160,7 +181,8 @@ function tabs(info) {
   const s = S.s, unread = s.inbox.filter(m => !m.read || (m.choices && m.chosen == null)).length;
   const cur = tabOf(ui.view);
   const badge = k => k === 'mail' && unread ? `<span class="badge">${unread}</span>` : k === 'money' && Object.values(s.inv).some(x => x.status === 'offer') && isOpen(S, 'investors', info) ? '<span class="badge">!</span>' : '';
-  const sub = cur && cur[3].length > 1 ? `<div class="subtabs" role="tablist">${cur[3].map(v => {
+  const views = cur ? cur[3].filter(v => !isSimple(S) || !ADVANCED_VIEWS.includes(v) || ui.view === v) : [];
+  const sub = views.length > 1 ? `<div class="subtabs" role="tablist">${views.map(v => {
     const open = isOpen(S, v, info), st = viewStage(v);
     return `<button class="st-it ${ui.view === v ? 'on' : ''} ${open ? '' : 'locked'}" data-act="${open ? 'go' : 'locked'}" data-to="${v}" ${ui.view === v ? 'aria-current="page"' : ''} ${open ? '' : `title="Знадобиться на етапі ${st + 1} «${esc(STAGES[st].t)}»"`}>${icon(open ? VIEWS[v].icon : 'lock', 15)}<span>${VIEWS[v].t}</span>${v === 'product' && S.canLaunch() ? '<span class="badge dot"></span>' : ''}</button>`;
   }).join('')}</div>` : '';
@@ -169,10 +191,12 @@ function tabs(info) {
 function render() {
   if (!S) return;
   $('.app').inert = !!document.querySelector('.wizard');
+  document.body.classList.toggle('simple', isSimple(S));
   const info = syncStage(S), fk = focusKey(document.activeElement);
   theme(); topbar(); road(info); tabs(info);
   const V = VIEWS[ui.view] || VIEWS.dash;
-  setHtml($('#main'), `${ui.view === 'dash' ? '' : `<header class="pg-h"><h1>${icon(V.icon, 24)} ${V.t}</h1>${S.s.over ? `<span class="chip bad">Гру завершено</span>` : ''}</header>`}${V.render(S, ui, info)}`);
+  const hint = VIEW_HINTS[ui.view] && !S.s.dismissed['hint-' + ui.view] ? `<aside class="view-hint">${icon('bulb', 18)}<p>${VIEW_HINTS[ui.view]}</p><button class="btn sm ghost" data-act="dismissTip" data-id="hint-${ui.view}">Зрозуміло</button></aside>` : '';
+  setHtml($('#main'), `${ui.view === 'dash' ? '' : `<header class="pg-h"><h1>${icon(V.icon, 24)} ${V.t}</h1>${S.s.over ? `<span class="chip bad">Гру завершено</span>` : ''}</header>${hint}`}${V.render(S, ui, info)}`);
   if (fk && (!document.activeElement || document.activeElement === document.body)) [...document.querySelectorAll('[data-act], [data-in]')].find(el => focusKey(el) === fk && !el.disabled)?.focus({ preventScroll: true });
   save();
 }
@@ -191,7 +215,9 @@ async function endWeek() {
 function weekModal(rep) {
   const s = S.s, m = rep.money, r = rep.rec, d = rep.cashAfter - rep.cashBefore;
   const out = m.salaries + m.mkt + m.servers + m.tools + m.formFee + m.cogs + m.tax + (m.loyal || 0) + (m.loan || 0) + m.extra;
-  const html = `<div class="wk-cash"><div><small>Було</small><b>${money(rep.cashBefore)}</b></div>${icon('right', 22)}<div><small>Стало</small><b>${money(rep.cashAfter)}</b></div><span class="dl ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : '−'}${money(Math.abs(d))}</span></div>
+  const rw = S.runwayWeeks(), rwText = rw === Infinity ? '' : rw > 104 ? ' Грошей вистачить більше ніж на 2 роки.' : ` Грошей вистачить приблизно на ${Math.max(0, Math.floor(rw))} ${plural(Math.max(0, Math.floor(rw)), 'тиждень', 'тижні', 'тижнів')}.`;
+  const say = d >= 0 ? `Цього тижня ви заробили більше, ніж витратили. Так тримати!` : `Цього тижня ви витратили на ${money(-d)} більше, ніж заробили.${rwText}`;
+  const html = `<p class="wk-say">${icon(d >= 0 ? 'trend' : 'info', 18)} ${esc(say)}</p><div class="wk-cash"><div><small>Було</small><b>${money(rep.cashBefore)}</b></div>${icon('right', 22)}<div><small>Стало</small><b>${money(rep.cashAfter)}</b></div><span class="dl ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : '−'}${money(Math.abs(d))}</span></div>
     <div class="mini-stats"><div><span>Виручка</span><b class="pos">${money(m.revenue)}</b></div><div><span>Витрати</span><b class="neg">${money(out)}</b></div>${m.invest ? `<div><span>Надходження</span><b class="pos">${money(m.invest)}</b></div>` : ''}<div><span>Відвідувачі</span><b>${num(r.visitors)}</b></div><div><span>${s.product.launched ? 'Нові користувачі' : 'Записалися в чергу'}</span><b>${num(r.signups)}</b></div><div><span>Нові платні</span><b>${num(r.newPaid)}</b></div><div><span>Пішли</span><b>${num(r.churned)}</b></div></div>
     ${rep.built?.length ? `<p class="note ok">${icon('check', 16)} Розробка завершила: ${rep.built.map(f => esc(S.feature(f).t)).join(', ')}</p>` : ''}
     ${rep.notes.map(n => `<p class="note warn">${icon('info', 16)} ${esc(n)}</p>`).join('')}
@@ -215,7 +241,7 @@ function ending() {
 /* ═════════ майстер старту ═════════ */
 function startWizard() {
   const blankFeat = (core = false) => ({ name: '', desc: '', size: 'm', core, segs: [0] });
-  const w = { step: 0, idea: 'homework', name: '', group: '', bg: 'dev', company: '', color: IDEAS.homework.color, sym: 'spark', fff: false,
+  const w = { step: 0, simple: true, idea: 'homework', name: '', group: '', bg: 'dev', company: '', color: IDEAS.homework.color, sym: 'spark', fff: false,
     c: { name: '', kind: 'app', scope: 'country', pitch: '', problem: '', unitCost: 400, batchMin: 20, leadTime: 1, segments: [{ name: '', arch: 'teens', size: '', price: '' }, { name: '', arch: 'parents', size: '', price: '' }], features: [blankFeat(true), blankFeat(), blankFeat()], competitors: [{ name: '', price: '', weak: '', segs: [0] }] } };
   // остання власна ідея зберігається в браузері: її можна доопрацювати й зіграти ще раз
   const blankC = JSON.parse(JSON.stringify(w.c));
@@ -265,7 +291,11 @@ function startWizard() {
       <p class="sm muted">Колір і символ (потім можна змінити в розділі «Бренд»)</p><div class="swatches">${PALETTE.map(col => `<button class="sw ${w.color === col ? 'on' : ''}" style="background:${col}" data-w="color" data-v="${col}" aria-label="Колір"></button>`).join('')}</div><div class="syms">${SYMBOLS.map(sy => `<button class="sym ${w.sym === sy ? 'on' : ''}" data-w="sym" data-v="${sy}" aria-label="Символ">${icon(sy, 20)}</button>`).join('')}</div>`,
     money: () => `<h2>Стартові гроші</h2><div class="wz-money"><div class="opt on"><b>Власні заощадження</b><p class="big">${money(150000)}</p><small>Це все, що у вас є.</small></div>
       <button class="opt ${w.fff ? 'on' : ''}" data-w="fff">${icon(w.fff ? 'check' : 'plus', 18)}<b>Гроші від родини й друзів</b><p class="big">+${money(300000)}</p><small>В обмін на 10% компанії. Більше часу на пошук, але ви вже не єдиний власник.</small></button></div>
-      <p class="sm muted">Разом: <b>${money(150000 + (w.fff ? 300000 : 0))}</b>. Ваша частка: <b>${w.fff ? '90%' : '100%'}</b>.</p>`,
+      <p class="sm muted">Разом: <b>${money(150000 + (w.fff ? 300000 : 0))}</b>. Ваша частка: <b>${w.fff ? '90%' : '100%'}</b>.</p>
+      <h2 class="wz-h2">Як грати</h2><div class="wz-kinds">
+        <button class="opt ${w.simple ? 'on' : ''}" data-w="mode" data-v="simple" aria-pressed="${w.simple}"><b>Простий режим</b><small>Радимо для першої гри. Тільки головне: клієнти, продукт, реклама, ціна, команда. Складні розрахунки сховано.</small></button>
+        <button class="opt ${w.simple ? '' : 'on'}" data-w="mode" data-v="full" aria-pressed="${!w.simple}"><b>Повний режим</b><small>Усі розрахунки й розділи: спринти, A/B-тест, фінплан, платіжні системи, вкладення.</small></button></div>
+      <p class="sm muted">Режим можна змінити будь-коли в меню «Ще».</p>`,
   };
   const check = {
     cIdea: () => !c.name.trim() ? ['Придумайте назву ідеї', 'name'] : c.problem.trim().length < 3 ? ['Опишіть проблему кількома словами', 'problem'] : c.pitch.trim().length < 10 ? ['Опишіть ідею хоча б одним реченням', 'pitch'] : null,
@@ -288,6 +318,7 @@ function startWizard() {
     if (k === 'idea') { w.idea = b.dataset.v; if (IDEAS[w.idea] && w.idea !== 'custom') w.color = IDEAS[w.idea].color; }
     else if (k === 'kind') { c.kind = b.dataset.v; if (c.kind === 'hardware' && c.batchMin < 100) Object.assign(c, { batchMin: 100, leadTime: 3 }); if (c.kind === 'goods' && c.batchMin >= 100) Object.assign(c, { batchMin: 20, leadTime: 1, unitCost: Math.min(c.unitCost, 150) }); }
     else if (k === 'scope') c.scope = b.dataset.v;
+    else if (k === 'mode') w.simple = b.dataset.v === 'simple';
     else if (k === 'clearIdea') { w.c = c = JSON.parse(JSON.stringify(blankC)); w.restored = false; try { localStorage.removeItem(IDEA_KEY); } catch { /* приватний режим */ } }
     else if (k === 'addSeg') c.segments.push({ name: '', arch: 'adults', size: '', price: '' });
     else if (k === 'rmSeg') { const i = +b.dataset.v; c.segments.splice(i, 1); for (const f of [...c.features, ...c.competitors]) f.segs = f.segs.filter(x => x !== i).map(x => x > i ? x - 1 : x); }
@@ -310,6 +341,7 @@ function startWizard() {
         const custom = w.idea === 'custom' ? { ...c, segments: keep.map(i => c.segments[i]), features: c.features.filter(f => f.name.trim()).map(f => ({ ...f, segs: remap(f.segs) })), competitors: c.competitors.filter(x => x.name.trim()).map(x => ({ ...x, segs: remap(x.segs) })) } : null;
         if (custom) try { localStorage.setItem(IDEA_KEY, JSON.stringify(c)); } catch { /* сховище недоступне */ }
         S = newGame({ idea: w.idea === 'custom' ? 'homework' : w.idea, founder: w.name.trim(), group: w.group.trim(), bg: w.bg, company: w.company.trim(), color: w.color, sym: w.sym, fff: w.fff, custom });
+        S.s.flags.simple = w.simple;
         el.remove(); document.body.classList.remove('wz-on'); ui.view = 'dash'; render(); window.Startup.S = S;
         return;
       }
@@ -348,6 +380,8 @@ document.addEventListener('click', e => {
   const k = a.dataset.act;
   if (k === 'endWeek') return endWeek();
   if (k === 'more') { ui.more = !ui.more; topbar(); return; }
+  if (k === 'simple') { S.s.flags.simple = !isSimple(S); ui.more = false; render(); toast(isSimple(S) ? 'Простий режим: складні розрахунки й необов\'язкові розділи сховано' : 'Повний режим: відкрито всі розрахунки й розділи', 'good'); return; }
+  if (k === 'autoHours') return C.suggestHours();
   if (k === 'tab') {
     const tb = TABS.find(x => x[0] === a.dataset.k), info = stageInfo(S), last = ui.tabLast?.[tb[0]];
     const v = last && isOpen(S, last, info) ? last : tb[3].find(x => isOpen(S, x, info));

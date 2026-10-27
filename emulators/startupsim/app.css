@@ -715,3 +715,18 @@ small { font-size: max(12.5px, .85em); }
 .mini-stats span { font-size: 12.5px; }
 .radios label.on .chip { background: #fff; }
 .av { color: hsl(var(--h) 60% 26%); }
+
+/* ═════════════ Простота: простий режим, підказки розділів, підсвітка цілі ═════════════ */
+body.simple .adv { display: none; }
+.view-hint { display: flex; gap: 12px; align-items: flex-start; background: var(--yel); padding: 12px 14px; border-radius: 4px; margin: -4px 0 18px; box-shadow: 0 8px 14px -10px rgba(29,36,51,.5); max-width: 860px; }
+.view-hint .ic { flex: none; margin-top: 2px; color: #6b4600; }
+.view-hint p { flex: 1; font-size: 15px; line-height: 1.5; color: var(--ink); }
+.view-hint .btn { flex: none; }
+@keyframes flash-ring { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,122,26,0); } 30%, 70% { box-shadow: 0 0 0 6px rgba(255,122,26,.75); } }
+.flash { animation: flash-ring 1.2s ease-in-out 2; border-radius: 12px; position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .flash { animation: none; outline: 4px solid var(--tan); outline-offset: 3px; } }
+.wz-h2 { margin-top: 22px; }
+.wk-say { display: flex; gap: 10px; align-items: flex-start; font-size: 15.5px; line-height: 1.45; margin-bottom: 12px; color: var(--ink); }
+.wk-say .ic { flex: none; margin-top: 2px; color: var(--acc-tx); }
+.sheet .card-h .row { flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 640px) { .view-hint { flex-wrap: wrap; } .view-hint .btn { margin-left: 30px; } }

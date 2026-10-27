@@ -44,7 +44,7 @@ function weekPlan(S) {
       <b class="ht">${icon(ic, 15)}${t}</b><output>${v} год</output><small>${extra}</small>
       <span class="hr-pm"><button class="ib" data-act="hrs" data-k="${k}" data-d="-1" aria-label="${t}: менше" ${v <= 0 ? 'disabled' : ''}>${icon('minus', 16)}</button><button class="ib" data-act="hrs" data-k="${k}" data-d="1" aria-label="${t}: більше" ${v >= DOTS * STEP ? 'disabled' : ''}>${icon('plus', 16)}</button></span></div>`;
   }).join('');
-  return `<section class="card sheet" id="weekplan"><header class="card-h"><h3>Ваш тиждень <span class="hand-s">${used} з ${HOURS} годин</span></h3><span class="chip ${over ? (used > 62 ? 'bad' : 'warn') : 'ok'}" data-out="h-total">${used} / ${HOURS} год</span></header>
+  return `<section class="card sheet" id="weekplan"><header class="card-h"><h3>Ваш тиждень <span class="hand-s">${used} з ${HOURS} годин</span></h3><span class="row gap"><button class="btn sm" data-act="autoHours">${icon('bolt', 14)} Підібрати за мене</button><span class="chip ${over ? (used > 62 ? 'bad' : 'warn') : 'ok'}" data-out="h-total">${used} / ${HOURS} год</span></span></header>
     <p class="muted sm">На що ви витратите час цього тижня. Кнопки змінюють по ${STEP} годин, а натискання на стовпчик ставить висоту одразу. Звичайний тиждень — ${HOURS} годин: більше можна, але сили падатимуть.</p>
     <div class="hcols">${cols}</div>
     ${s.team.length ? `<label class="switch"><input type="checkbox" data-in="crunch" ${s.crunch ? 'checked' : ''}><span></span>Команда працює понаднормово: на чверть швидше, але настрій падає</label>` : ''}
@@ -86,7 +86,7 @@ function stageCard(S, ui, info) {
   const head = info.allDone && i === info.cur
     ? `<h1>Компанія стала на ноги</h1><p class="lead">Ви пройшли весь шлях від ідеї до інвестицій чи прибутку. Тепер розвивайте компанію далі: усі розділи відкриті.</p>`
     : `<p class="stage-n">Етап ${i + 1} з ${STAGES.length}${i < info.cur ? ' · пройдено' : ''}</p><h1>${esc(st.long)}</h1><p class="lead">${esc(st.why)}</p>`;
-  const btn = x => x.go === 'file' ? `<button class="btn sm ${x === first ? 'primary' : ''}" data-act="saveFile">${esc(x.btn)}</button>` : `<button class="btn sm ${x === first ? 'primary' : ''}" data-act="go" data-to="${x.go}">${esc(x.btn)}</button>`;
+  const btn = x => x.go === 'file' ? `<button class="btn sm ${x === first ? 'primary' : ''}" data-act="saveFile">${esc(x.btn)}</button>` : `<button class="btn sm ${x === first ? 'primary' : ''}" data-act="go" data-to="${x.go}" ${x.hl ? `data-hl="${esc(x.hl)}"` : ''}>${esc(x.btn)}</button>`;
   return `<section class="stage-card">${head}
     <ol class="notes">${st.tasks.map(x => `<li class="note ${x.ok ? 'ok' : x === first ? 'now' : ''}"><span class="st">${x.ok ? `${icon('check', 15)} Виконано` : x === first ? 'Зараз' : 'Далі'}</span><b>${esc(x.t)}</b><small>${esc(x.d)}</small>${x.ok ? '<span class="stamp">готово</span>' : btn(x)}</li>`).join('')}</ol>
     ${i === info.cur && !info.allDone && nextOpen ? `<p class="sm muted next-open">${icon('lock', 14)} Виконайте всі завдання — відкриється етап ${i + 2} «${esc(nextOpen.t)}».</p>` : ''}
@@ -216,7 +216,7 @@ export const coreViews = {
   report: { t: 'Підсумковий звіт', icon: 'award', render: S => { S.s.flags.reportMade = true; return report(S); } },
 };
 export const coreActs = {
-  go: (C, el) => C.go(el.dataset.to),
+  go: (C, el) => { C.go(el.dataset.to); if (el.dataset.hl) C.flash(el.dataset.hl); },
   dismissTip: (C, el) => { C.S.s.dismissed[el.dataset.id] = true; C.render(); },
   openMail: (C, el) => { C.ui.mail = el.dataset.id; const m = C.S.s.inbox.find(x => x.id === el.dataset.id); if (m && !m.choices) m.read = true; C.render(); },
   choose: (C, el) => { const m = C.S.s.inbox.find(x => x.id === el.dataset.id); const r = C.S.choose(el.dataset.id, +el.dataset.i); if (m) m.read = true; if (r) C.toast(r, 'good'); C.render(); if (C.S.s.over) C.ending(); },

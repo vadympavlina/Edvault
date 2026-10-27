@@ -31,9 +31,12 @@ await step('майстер: без імені й назви далі не пус
   await p.fill('[data-w="company"]', 'Записатись');
   await p.click('[data-w="next"]');
   await p.click('[data-w="fff"]');
+  assert.equal(await p.getAttribute('[data-w="mode"][data-v="simple"]', 'aria-pressed'), 'true', 'простий режим — за замовчуванням');
+  await p.click('[data-w="mode"][data-v="full"]'); // цей тест перевіряє всі розділи, тож повний режим
   await p.click('[data-w="next"]');
   await p.waitForSelector('#main .stage-card');
   const s = await S();
+  assert.equal(s.flags.simple, false);
   assert.equal(s.idea, 'booking'); assert.equal(s.founder.bg, 'sales'); assert.equal(s.company.name, 'Записатись'); assert.equal(s.cash, 450000);
   assert.match(await p.locator('.top').innerText(), /Записатись/);
   // етап 1: три завдання, наступні етапи закриті
@@ -339,6 +342,32 @@ await step('власна ідея: конструктор у майстрі, п�
   await q.click('[data-w="next"]'); await q.click('[data-w="idea"][data-v="custom"]'); await q.click('[data-w="next"]');
   assert.match(await q.locator('.wizard').innerText(), /відновили вашу попередню ідею/);
   assert.equal(await q.inputValue('[data-c="name"]'), 'Обмін книжками');
+});
+
+await step('простий режим: складне сховано, підказки розділів, години «за мене», підсвітка цілі', async () => {
+  await go('product');
+  assert.ok(await p.isVisible('details.adv'), 'у повному режимі спринти видно');
+  await p.click('[data-act="more"]'); await p.click('.more-pop [data-act="simple"]');
+  assert.equal((await S()).flags.simple, true);
+  assert.equal(await p.isVisible('details.adv'), false, 'спринти сховано');
+  await go('pricing'); assert.equal(await p.locator('.card.adv').first().isVisible(), false, 'юніт-економіку сховано');
+  await p.click('.tab[data-k="money"]');
+  assert.equal(await p.locator('.st-it[data-to="payments"], .st-it[data-to="invest"]').count(), 0, 'платежі й вкладення сховано');
+  // підказка «що тут робити» й кнопка «Зрозуміло»
+  await go('team');
+  assert.match(await p.locator('.view-hint').innerText(), /співбесіду/);
+  await p.click('.view-hint [data-act="dismissTip"]');
+  assert.equal(await p.locator('.view-hint').count(), 0);
+  // години під етап
+  await go('dash');
+  await p.click('[data-act="autoHours"]');
+  const h = (await S()).hours;
+  assert.equal(Object.values(h).reduce((a, b) => a + b, 0), 50);
+  // кнопка завдання переводить у розділ і підсвічує, що натиснути
+  const btn = p.locator('.notes .note:not(.ok) [data-hl]').first();
+  if (await btn.count()) { await btn.click(); await p.waitForSelector('.flash'); }
+  await p.click('[data-act="more"]'); await p.click('.more-pop [data-act="simple"]');
+  assert.equal((await S()).flags.simple, false);
 });
 
 await step('читабельність: контраст тексту ≥ 4,5:1 і шрифт не дрібніший за 12 px у головних розділах', async () => {
