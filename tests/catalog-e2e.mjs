@@ -2,7 +2,7 @@
 //   node tests/catalog-e2e.mjs
 import assert from 'node:assert/strict';
 import { startServer, launch, newPage, step } from './_harness.mjs';
-import { TOOLS, TRAINERS } from '../assets/catalog-data.js';
+import { TOOLS_SITE, TOOLS, TRAINERS } from '../assets/catalog-data.js';
 
 const server = await startServer();
 const browser = await launch();
@@ -10,19 +10,19 @@ const errors = [];
 const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 } });
 const p = await newPage(ctx, errors);
 
-await step('інструменти: усі картки в розділах, адреси без .html, без згадок про тренажери', async () => {
+await step('інструменти: усі картки в розділах, посилання на сайт інструментів, без згадок про тренажери', async () => {
   await p.goto(server.url + '/tools/');
   await p.waitForSelector('.card');
   assert.equal(await p.locator('.card').count(), TOOLS.length);
   assert.equal(await p.locator('.section').count(), 4);
   const hrefs = await p.locator('.card').evaluateAll(a => a.map(x => x.getAttribute('href')));
-  assert.ok(hrefs.every(h => /^\/tools\/[\w-]+$/.test(h)), hrefs.join(' '));
+  assert.deepEqual(hrefs.sort(), TOOLS.map(t => TOOLS_SITE + t.file).sort());
   assert.equal(await p.locator('a[href^="/trainers"]').count(), 0);
   assert.doesNotMatch(await p.textContent('body'), /[Тт]ренажер/);
 });
 
 await step('кожне посилання каталогу відкриває свою сторінку', async () => {
-  for (const [kind, list] of [['tools', TOOLS], ['trainers', TRAINERS]]) {
+  for (const [kind, list] of [['trainers', TRAINERS]]) {
     for (const t of list) {
       const r = await p.request.get(`${server.url}/${kind}/${t.file.replace(/\.html$/, '')}`);
       assert.equal(r.status(), 200, t.file);
@@ -49,7 +49,9 @@ await step('пошук і вкладки категорій', async () => {
 await step('Enter відкриває перший результат, перехід запам’ятовується в «нещодавніх»', async () => {
   await p.keyboard.press('/');
   await p.keyboard.type('голосування');
-  await Promise.all([p.waitForURL(/\/tools\/vote$/), p.keyboard.press('Enter')]);
+  // зовнішній сайт у тесті не відкриваємо: перехоплюємо запит
+  await p.route(TOOLS_SITE + '**', r => r.fulfill({ contentType: 'text/html', body: '<title>vote</title>' }));
+  await Promise.all([p.waitForURL(TOOLS_SITE + 'vote.html'), p.keyboard.press('Enter')]);
   await p.goto(server.url + '/tools/'); await p.waitForSelector('.card');
   assert.equal(await p.isVisible('#recent'), true);
   assert.match(await p.textContent('#recentRow'), /Голосування/);
@@ -95,6 +97,11 @@ await step('старі адреси перенаправляються', async (
   await p.waitForFunction(() => window.MouseTrainer);
   await p.goto(server.url + '/tools/pen-trainer'); await p.waitForURL(/\/trainers\/pen-trainer$/);
   await p.goto(server.url + '/tools-admin.html'); await p.waitForURL(/\/tools\/$/);
+  // інструменти й емулятори переїхали на окремі сайти
+  await p.route('https://emulators.edvault.online/**', r => r.fulfill({ contentType: 'text/html', body: '<title>emu</title>' }));
+  await p.goto(server.url + '/tools/whiteboard'); await p.waitForURL(TOOLS_SITE + 'whiteboard.html');
+  await p.goto(server.url + '/emulators/windows'); await p.waitForURL('https://emulators.edvault.online/windows.html');
+  await p.goto(server.url + '/emulators/startup.html'); await p.waitForURL('https://emulators.edvault.online/startup.html');
 });
 
 await step('невідома адреса — сторінка 404 лише з кнопкою «Повернутися назад»', async () => {

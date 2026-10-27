@@ -6,7 +6,24 @@
 // Потрібен Playwright з Chromium (як для браузерних тестів; шляхи — змінні PLAYWRIGHT_MODULE і CHROME).
 import { readdir, readFile, writeFile, copyFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { makeIco } from '../tools/imgconv/js/core.js';
+
+// ICO з кількох PNG (формат ICO дозволяє класти PNG усередину як є)
+function makeIco(images) {
+  const head = new DataView(new ArrayBuffer(6 + 16 * images.length));
+  head.setUint16(2, 1, true); head.setUint16(4, images.length, true);
+  let offset = 6 + 16 * images.length;
+  images.forEach((im, i) => {
+    const o = 6 + 16 * i;
+    head.setUint8(o, im.size >= 256 ? 0 : im.size); head.setUint8(o + 1, im.size >= 256 ? 0 : im.size);
+    head.setUint16(o + 4, 1, true); head.setUint16(o + 6, 32, true);
+    head.setUint32(o + 8, im.data.length, true); head.setUint32(o + 12, offset, true);
+    offset += im.data.length;
+  });
+  const parts = [new Uint8Array(head.buffer), ...images.map(i => i.data)];
+  const out = new Uint8Array(parts.reduce((s, a) => s + a.length, 0));
+  let o = 0; for (const a of parts) { out.set(a, o); o += a.length; }
+  return out;
+}
 
 const ROOT = resolve(new URL('..', import.meta.url).pathname);
 const DIR = join(ROOT, 'icons');

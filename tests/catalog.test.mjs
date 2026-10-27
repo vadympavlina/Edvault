@@ -1,20 +1,27 @@
-// Каталоги /tools/ і /trainers/: кожна сторінка в списку, нічого не загубилося, кількість рівнів правдива.
+// Каталоги /tools/ і /trainers/: кожен тренажер у списку, інструменти ведуть на окремий сайт, кількість рівнів правдива.
 //   node --test tests/*.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, existsSync } from 'node:fs';
-import { TOOLS, TOOL_CATEGORIES, TRAINERS, TRAINER_CATEGORIES, trainerProgress } from '../assets/catalog-data.js';
+import { TOOLS_SITE, TOOLS, TOOL_CATEGORIES, TRAINERS, TRAINER_CATEGORIES, trainerProgress } from '../assets/catalog-data.js';
+import { hrefOf } from '../assets/catalog.js';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const pages = dir => readdirSync(ROOT + dir).filter(f => f.endsWith('.html') && f !== 'index.html').sort();
 
-test('кожна сторінка з tools/ і trainers/ є в каталозі, і навпаки', () => {
-  assert.deepEqual(TOOLS.map(t => t.file).sort(), pages('tools'));
+test('кожна сторінка з trainers/ є в каталозі, і навпаки; в tools/ лишився тільки каталог', () => {
   assert.deepEqual(TRAINERS.map(t => t.file).sort(), pages('trainers'));
+  assert.deepEqual(pages('tools'), []);
+});
+
+test('інструменти ведуть на окремий сайт, тренажери — на сторінки без .html', () => {
+  assert.match(TOOLS_SITE, /^https:\/\/.+\/$/);
+  for (const t of TOOLS) assert.equal(hrefOf('tools', t), TOOLS_SITE + t.file);
+  assert.equal(hrefOf('trainers', { file: 'robot.html' }), '/trainers/robot');
 });
 
 test('без конфліктів адрес без .html: поруч зі сторінкою немає папки з такою самою назвою', () => {
-  for (const [dir, list] of [['tools', TOOLS], ['trainers', TRAINERS]])
+  for (const [dir, list] of [['trainers', TRAINERS]])
     for (const t of list) assert.ok(!existsSync(`${ROOT}${dir}/${t.file.replace(/\.html$/, '')}`), `${dir}/${t.file}`);
 });
 
@@ -25,7 +32,7 @@ test('поля, категорії й іконки на місці', () => {
       assert.ok(!ids.has(t.id), t.id); ids.add(t.id);
       assert.ok(t.name && t.desc && t.icon && /^#[0-9a-f]{6}$/i.test(t.accent), t.id);
       assert.ok(cats.some(c => c.id === t.cat), t.id + ': невідома категорія');
-      assert.ok(existsSync(`${ROOT}icons/${t.file.replace(/\.html$/, '')}.svg`), t.id + ': немає іконки');
+      if (list === TRAINERS) assert.ok(existsSync(`${ROOT}icons/${t.file.replace(/\.html$/, '')}.svg`), t.id + ': немає іконки');
     }
     for (const c of cats) assert.ok(list.some(t => t.cat === c.id), c.id + ': порожня категорія');
   }

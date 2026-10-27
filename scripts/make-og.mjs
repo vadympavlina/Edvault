@@ -15,7 +15,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { TOOLS, TRAINERS } from '../assets/catalog-data.js';
+import { TRAINERS } from '../assets/catalog-data.js';
 
 const ROOT = resolve(new URL('..', import.meta.url).pathname);
 const SITE = 'https://www.edvault.online';
@@ -32,19 +32,10 @@ const PAGES = [
     title: 'Інструменти для вчителя', desc: 'Вайтборд, голосування, запис екрану, відеоредактор, редактор коду й інші інструменти — без реєстрації, просто в браузері.' },
   { path: 'trainers/index.html', url: '/trainers/', slug: 'trainers', icon: 'trainers', accent: '#16a34a', kind: 'Каталог',
     title: 'Тренажери для учнів', desc: 'Мишка, файли й папки, безпека в інтернеті, сліпий друк, алгоритми, мережі — з рівнями й зірками.' },
-  { path: 'emulators/windows.html', url: '/emulators/windows', slug: 'windows', icon: 'windows-emulator', accent: '#0067c0', kind: 'Навчальний емулятор',
-    title: 'Емулятор Windows', desc: 'Провідник, командний рядок, Диспетчер завдань, брандмауер, мережа й роутер — пробуйте сміливо, нічого не зламаєте.' },
-  { path: 'emulators/blogger.html', url: '/emulators/blogger', slug: 'blogger', icon: 'edvault', accent: '#d62976', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><linearGradient id="bg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#feda75"/><stop offset=".45" stop-color="#d62976"/><stop offset="1" stop-color="#4f5bd5"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#bg)"/><rect x="10" y="5.5" width="12" height="21" rx="2.6" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M14.5 8h3" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><path d="M16 21.2s-3.3-2-4-3.9a2 2 0 0 1 4-1.3 2 2 0 0 1 4 1.3c-.7 1.9-4 3.9-4 3.9z" fill="#fff"/></svg>', kind: 'Навчальний симулятор',
-    title: 'Симулятор блогера', desc: 'Навчальний телефон з Instagram, YouTube і Telegram: дописи, коментарі, реклама й безпека в мережі.' },
-  { path: 'emulators/startup.html', url: '/emulators/startup', slug: 'startup', icon: 'edvault', accent: '#6366f1', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><linearGradient id="sg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#0ea5e9"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#sg)"/><g fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" transform="translate(4 4)"><path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2 0-2.8a2 2 0 0 0-3 0z"/><path d="m12 15-3-3a22 22 0 0 1 2-4A13 13 0 0 1 22 2c0 2.7-.8 7.5-6 11a22 22 0 0 1-4 2z"/><path d="M9 12H4s.6-3 2-4c1.6-1 5 0 5 0M12 15v5s3-.6 4-2c1-1.6 0-5 0-5"/></g></svg>', kind: 'Навчальний симулятор',
-    title: 'Симулятор стартапу', desc: 'Від ідеї до компанії: інтерв\'ю з клієнтами, бізнес-план, MVP, бренд, маркетинг, фінанси, команда, фриланс, платежі й інвестори — тиждень за тижнем.' },
-  { path: 'emulators/city.html', url: '/emulators/city', slug: 'city', icon: 'edvault', accent: '#0f766e', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><linearGradient id="cg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#14b8a6"/><stop offset="1" stop-color="#0f766e"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#cg)"/><g fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" transform="translate(4 4)"><path d="M3 21V9l5-3v15M8 21V4l7 3v14M15 21v-9l6 2v7M3 21h18"/></g></svg>', kind: 'Навчальний симулятор',
-    title: 'Симулятор міста', desc: 'Керуйте містом: бюджет, транспорт, екологія, енергія й освіта. Дані, графіки й голоси жителів показують наслідки рішень.' },
   { path: 'materials.html', url: '/materials', slug: 'materials', icon: 'edvault', accent: '#4F6BF4', kind: 'Матеріали',
     title: 'Навчальні матеріали', desc: 'Предмети, уроки й файли Edvault.' },
   { path: 'equipment.html', url: '/equipment', slug: 'equipment', icon: 'equipment', accent: '#475569', kind: 'Техніка',
     title: 'Облік шкільної техніки', desc: 'Ноутбуки, проєктори й інша техніка класу: що де стоїть і в якому стані.' },
-  ...TOOLS.map(t => ({ path: 'tools/' + t.file, url: '/tools/' + t.file.replace(/\.html$/, ''), slug: 'tool-' + t.id, icon: t.file.replace(/\.html$/, ''), accent: t.accent, kind: 'Інструмент для вчителя', title: t.name, desc: t.desc })),
   ...TRAINERS.map(t => ({ path: 'trainers/' + t.file, url: '/trainers/' + t.file.replace(/\.html$/, ''), slug: 'trainer-' + t.id, icon: t.file.replace(/\.html$/, ''), accent: t.accent, kind: 'Тренажер', title: t.name, desc: t.desc })),
 ];
 

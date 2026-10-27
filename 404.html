@@ -8,11 +8,18 @@
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script>
-  // Старі адреси: тренажери переїхали з /tools/ у /trainers/, а адмінка списку інструментів більше не потрібна.
+  // Старі адреси: тренажери переїхали з /tools/ у /trainers/, адмінка списку інструментів більше не потрібна,
+  // а інструменти й емулятори тепер живуть на окремих сайтах.
   (function () {
     var TRAINERS = ['pen-trainer', 'color-trainer', 'typing-trainer', 'robot', 'mouse-trainer', 'files-trainer'];
+    var TOOLS = ['animator', 'class-manager', 'color-tool', 'image-convert', 'pixel-editor', 'screen-recorder', 'snap-editor', 'text-craft', 'videocut', 'vote', 'web-editor', 'whiteboard'];
+    var EMULATORS = ['windows', 'blogger', 'startup'];
     var p = location.pathname.replace(/\/+$/, ''), m = p.match(/^\/tools\/([\w-]+?)(\.html)?$/), to = null;
+    var e = p.match(/^\/emulators\/([\w-]+?)(\.html)?$/);
     if (m && TRAINERS.indexOf(m[1]) >= 0) to = '/trainers/' + m[1];
+    else if (m && TOOLS.indexOf(m[1]) >= 0) to = 'https://vadympavlina.github.io/edvault-tools/' + m[1] + '.html';
+    else if (e && EMULATORS.indexOf(e[1]) >= 0) to = 'https://emulators.edvault.online/' + e[1] + '.html';
+    else if (/^\/emulators$/.test(p)) to = 'https://emulators.edvault.online/';
     else if (/^\/tools-admin(\.html)?$/.test(p)) to = '/tools/';
     if (to) { location.replace(to + location.search + location.hash); return; }
     try {

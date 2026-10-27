@@ -1,5 +1,5 @@
 // Каталог Edvault: малює сторінку /tools/ або /trainers/ із захардкодженого списку (catalog-data.js).
-import { TOOLS, TOOL_CATEGORIES, TRAINERS, TRAINER_CATEGORIES, trainerProgress } from './catalog-data.js';
+import { TOOLS_SITE, TOOLS, TOOL_CATEGORIES, TRAINERS, TRAINER_CATEGORIES, trainerProgress } from './catalog-data.js';
 
 const I = {
   logo: '<svg viewBox="0 0 32 32" fill="none"><path d="M8 10h16M8 16h10M8 22h13" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>',
@@ -26,8 +26,8 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* приватний режим */ } },
 };
 const plural = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? b : c;
-// адреси без .html: /tools/vote, /trainers/robot
-export const hrefOf = (kind, item) => `/${kind}/${item.file.replace(/\.html$/, '')}`;
+// тренажери — адреси без .html (/trainers/robot); інструменти — на окремому сайті
+export const hrefOf = (kind, item) => kind === 'tools' ? TOOLS_SITE + item.file : `/${kind}/${item.file.replace(/\.html$/, '')}`;
 
 const KINDS = {
   tools: {
