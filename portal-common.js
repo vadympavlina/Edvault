@@ -1,6 +1,6 @@
 // Спільне для materials.html, lesson.html і admin.html: тема, екранування, сортування, кеш, іконки.
 
-// ── Тема (ключ спільний з інструментами) ──
+// ── Тема (ключ edvault-theme спільний для всіх сторінок порталу) ──
 export function initThemeToggle(btn) {
   if (!btn) return;
   const paint = () => {
