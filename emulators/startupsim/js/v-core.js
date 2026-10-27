@@ -40,7 +40,7 @@ function weekPlan(S) {
     const v = s.hours[k] || 0;
     const busy = s.busy?.week === s.week ? s.busy[k] : 0;
     const extra = k === 'customers' ? `ще розмов: ${S.talksLeft()}` : busy ? `${busy} год зайнято` : '';
-    return `<div class="hcol" data-k="${k}" title="${esc(d)}"><button class="tube" data-act="hrsAt" data-k="${k}" aria-label="${t}: ${v} годин. Натисніть на висоту, щоб змінити"><i style="height:${Math.min(100, v / (DOTS * STEP) * 100)}%"></i></button>
+    return `<div class="hcol" data-k="${k}" title="${esc(d)}"><button class="tube" data-act="hrsAt" data-k="${k}" tabindex="-1" aria-label="${t}: ${v} годин. Натисніть на висоту, щоб змінити"><i style="height:${Math.min(100, v / (DOTS * STEP) * 100)}%"></i></button>
       <b class="ht">${icon(ic, 15)}${t}</b><output>${v} год</output><small>${extra}</small>
       <span class="hr-pm"><button class="ib" data-act="hrs" data-k="${k}" data-d="-1" aria-label="${t}: менше" ${v <= 0 ? 'disabled' : ''}>${icon('minus', 16)}</button><button class="ib" data-act="hrs" data-k="${k}" data-d="1" aria-label="${t}: більше" ${v >= DOTS * STEP ? 'disabled' : ''}>${icon('plus', 16)}</button></span></div>`;
   }).join('');

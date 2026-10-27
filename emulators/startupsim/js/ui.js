@@ -16,10 +16,19 @@ export function modal({ title, html, cls = '', onOpen, onClose, wide = false }) 
   const el = h(`<div class="md-back"><section class="md ${wide ? 'wide' : ''} ${cls}" role="dialog" aria-modal="true" aria-label="${esc(title || '')}">
     ${title ? `<header class="md-h"><h2>${esc(title)}</h2><button class="ib" data-md-close aria-label="Закрити">${icon('x', 20)}</button></header>` : ''}
     <div class="md-b">${html}</div></section></div>`);
+  // поки вікно відкрите, решта сторінки недоступна для Tab і читалок екрана; після закриття фокус повертається
+  const prev = document.activeElement, prevKey = prev?.dataset ? [prev.dataset.act, prev.dataset.k, prev.dataset.id, prev.dataset.to].join('|') : '';
+  const behind = [...document.body.children].filter(n => !n.inert);
+  behind.forEach(n => { n.inert = true; });
   document.body.appendChild(el);
   const api = {
     el, $: s => el.querySelector(s),
-    close() { if (!el.isConnected) return; el.classList.add('out'); setTimeout(() => el.remove(), 160); onClose?.(); document.removeEventListener('keydown', key); },
+    close() {
+      if (!el.isConnected) return; el.classList.add('out'); setTimeout(() => el.remove(), 160);
+      behind.forEach(n => { n.inert = false; });
+      onClose?.(); document.removeEventListener('keydown', key);
+      setTimeout(() => { if (document.querySelector('.md-back:not(.out)')) return; const back = prev?.isConnected ? prev : prevKey && [...document.querySelectorAll('[data-act]')].find(b => [b.dataset.act, b.dataset.k, b.dataset.id, b.dataset.to].join('|') === prevKey); back?.focus?.({ preventScroll: true }); }, 0);
+    },
     set(html2) { el.querySelector('.md-b').innerHTML = html2; },
   };
   const key = e => { if (e.key === 'Escape') api.close(); };

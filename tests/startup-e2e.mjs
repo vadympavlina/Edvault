@@ -127,7 +127,10 @@ await step('бренд: колір, шрифт, тон і позиціонува
   await p.check('[data-in="brandPos"][value="masters"]');
   const s = await S();
   assert.equal(s.company.color, '#ec4899'); assert.equal(s.brand.tone, 'friendly'); assert.equal(s.brand.position, 'masters');
-  assert.equal(await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()), '#ec4899');
+  assert.equal((await S()).company.color, '#ec4899');
+  // кнопки й текст беруть темніший відтінок кольору компанії, щоб білий текст читався (контраст ≥ 4,5:1)
+  const ratio = await p.evaluate(() => { const m = getComputedStyle(document.documentElement).getPropertyValue('--acc').match(/\d+/g).map(Number); const L = c => { c /= 255; return c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; }; const l = .2126 * L(m[0]) + .7152 * L(m[1]) + .0722 * L(m[2]); return 1.05 / (l + .05); });
+  assert.ok(ratio >= 4.5, `контраст ${ratio}`);
 });
 
 await step('маркетинг: бюджет реклами й A/B-тест', async () => {
@@ -336,6 +339,28 @@ await step('власна ідея: конструктор у майстрі, п�
   await q.click('[data-w="next"]'); await q.click('[data-w="idea"][data-v="custom"]'); await q.click('[data-w="next"]');
   assert.match(await q.locator('.wizard').innerText(), /відновили вашу попередню ідею/);
   assert.equal(await q.inputValue('[data-c="name"]'), 'Обмін книжками');
+});
+
+await step('читабельність: контраст тексту ≥ 4,5:1 і шрифт не дрібніший за 12 px у головних розділах', async () => {
+  const audit = () => {
+    const rgb = c => (c.match(/[\d.]+/g) || []).map(Number);
+    const L = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+    const bg = el => { for (let e = el; e; e = e.parentElement) { const c = rgb(getComputedStyle(e).backgroundColor); if (c.length === 3 || c[3] >= .95) return c; } return [242, 245, 244]; };
+    const bad = [];
+    for (const el of document.querySelectorAll('#main *, .top *, .navtabs *')) {
+      if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+      const r = el.getBoundingClientRect(), cs = getComputedStyle(el); if (!r.width || cs.visibility === 'hidden' || el.closest('[disabled]')) continue;
+      const fg = rgb(cs.color), b = bg(el), a = L(fg), c = L(b), ratio = (Math.max(a, c) + .05) / (Math.min(a, c) + .05), size = parseFloat(cs.fontSize);
+      if (ratio < (size >= 24 ? 3 : 4.5) || size < 12) bad.push(`${el.className || el.tagName}: «${el.textContent.trim().slice(0, 30)}» ${ratio.toFixed(2)}:1, ${size}px`);
+    }
+    return bad;
+  };
+  await p.evaluate(() => { window.Startup.sim.s.company.color = '#f59e0b'; }); // найсвітліший колір палітри
+  for (const v of ['dash', 'customers', 'product', 'pricing', 'finance', 'team']) {
+    await go(v);
+    const bad = await p.evaluate(audit);
+    assert.equal(bad.length, 0, `${v}: ${bad.join('; ')}`);
+  }
 });
 
 await step('жодної помилки в консолі', async () => { assert.deepEqual(errors, []); });

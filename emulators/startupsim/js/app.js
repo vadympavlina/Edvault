@@ -97,7 +97,24 @@ function loadText(text) {
 const setHtml = (el, html) => { if (el && el._h !== html) { el.innerHTML = html; el._h = html; } };
 // після перемальовки повертаємо фокус на «ту саму» кнопку, щоб клавіатура не губилася
 const focusKey = el => el && el !== document.body && el.dataset && (el.dataset.act || el.dataset.in) ? [el.tagName, ...['act', 'in', 'k', 'd', 'to', 'id', 'i', 'v'].map(a => el.dataset[a] ?? '')].join('|') : null;
-function theme() { if (!S) return; document.documentElement.style.setProperty('--acc', S.s.company.color); document.documentElement.style.setProperty('--acc-soft', S.s.company.color + '1a'); }
+// колір компанії учень обирає сам, тож рахуємо читабельні відтінки: для кнопок з білим текстом
+// і для тексту на світлому тлі — той самий тон, але темніший, доки контраст не сягне 4,5:1
+const hexRgb = h => { const n = parseInt(h.replace('#', '').padEnd(6, '0').slice(0, 6), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+const lumOf = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+const ratio = (a, b) => { const x = lumOf(a), y = lumOf(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+const INK = [29, 36, 51];
+function readable(hex, against, need) {
+  let c = hexRgb(hex);
+  for (let i = 0; i < 20 && ratio(c, against) < need; i++) c = c.map((v, k) => Math.round(v * .92 + INK[k] * .08));
+  return `rgb(${c.join(', ')})`;
+}
+const themeCache = {};
+function theme() {
+  if (!S) return;
+  const col = S.s.company.color, st = document.documentElement.style;
+  const t = themeCache[col] ||= { acc: readable(col, [255, 255, 255], 4.6), tx: readable(col, [236, 240, 239], 4.6) };
+  st.setProperty('--acc', t.acc); st.setProperty('--acc-tx', t.tx); st.setProperty('--acc-soft', col + '1f');
+}
 const runwayText = rw => rw === Infinity ? 'прибуток' : rw > 104 ? '2+ роки' : `${Math.max(0, Math.floor(rw))} ${plural(Math.max(0, Math.floor(rw)), 'тиждень', 'тижні', 'тижнів')}`;
 function topbar() {
   if (!S) return;
@@ -111,7 +128,7 @@ function topbar() {
     </div>
     <button class="btn top-save" data-act="saveFile" title="Зберегти всю гру у файл (Ctrl+S)" aria-label="Зберегти гру у файл">${icon('save', 16)}<span>Зберегти</span></button>
     <div class="more-w"><button class="btn ib-b" data-act="more" aria-label="Ще" aria-expanded="${!!ui.more}" title="Ще">${icon('more', 18)}</button>${ui.more ? morePop() : ''}</div>
-    <button class="btn primary end-week" data-act="endWeek" ${s.over ? 'disabled' : ''}>${icon('next', 16)}<span>Завершити тиждень</span></button>`);
+    <button class="btn primary end-week" data-act="endWeek" aria-label="Завершити тиждень" ${s.over ? 'disabled' : ''}>${icon('next', 16)}<span>Завершити тиждень</span></button>`);
 }
 function morePop() {
   const s = S.s;
@@ -136,7 +153,7 @@ function road(info) {
   setHtml($('#road'), `<div class="map"><svg class="path" viewBox="0 0 1000 132" preserveAspectRatio="none" aria-hidden="true"><path class="todo" d="${roadPath(ROAD_X.length - 1)}"/>${done ? `<path class="done" d="${roadPath(done)}"/>` : ''}</svg>
     <ol>${info.list.map((st, i) => {
       const cls = i < info.cur || (info.allDone && i === info.cur) ? 'done' : i === info.cur ? 'cur' : i <= info.reached ? 'open' : 'lock';
-      return `<li class="${cls}" style="left:${ROAD_X[i]}%;top:${ROAD_Y[i] / 1.32}%"><button data-act="stage" data-i="${i}" ${i > info.reached ? 'disabled' : ''} aria-current="${i === info.cur ? 'step' : 'false'}" title="${esc(st.long)}">${i === info.cur && !info.allDone ? '<span class="here">ви тут</span>' : ''}<span class="c">${cls === 'done' ? icon('check', 18) : i + 1}</span><span class="l">${esc(st.t)}</span></button></li>`;
+      return `<li class="${cls}" style="left:${ROAD_X[i]}%;top:${ROAD_Y[i] / 1.32}%"><button data-act="stage" data-i="${i}" ${i > info.reached ? 'disabled' : ''} aria-current="${i === info.cur ? 'step' : 'false'}" aria-label="Етап ${i + 1}: ${esc(st.t)}${cls === 'done' ? ', пройдено' : cls === 'lock' ? ', ще закрито' : ''}" title="${esc(st.long)}">${i === info.cur && !info.allDone ? '<span class="here">ви тут</span>' : ''}<span class="c">${cls === 'done' ? icon('check', 18) : i + 1}</span><span class="l">${esc(st.t)}</span></button></li>`;
     }).join('')}</ol></div>`);
 }
 function tabs(info) {
@@ -147,10 +164,11 @@ function tabs(info) {
     const open = isOpen(S, v, info), st = viewStage(v);
     return `<button class="st-it ${ui.view === v ? 'on' : ''} ${open ? '' : 'locked'}" data-act="${open ? 'go' : 'locked'}" data-to="${v}" ${ui.view === v ? 'aria-current="page"' : ''} ${open ? '' : `title="Знадобиться на етапі ${st + 1} «${esc(STAGES[st].t)}»"`}>${icon(open ? VIEWS[v].icon : 'lock', 15)}<span>${VIEWS[v].t}</span>${v === 'product' && S.canLaunch() ? '<span class="badge dot"></span>' : ''}</button>`;
   }).join('')}</div>` : '';
-  setHtml($('#tabs'), `<div class="navtabs-in">${TABS.map(([k, t, ic, views]) => `<button class="tab ${cur?.[0] === k ? 'on' : ''}" data-act="tab" data-k="${k}" ${cur?.[0] === k ? 'aria-current="page"' : ''}>${icon(ic, 18)}<span>${t}</span>${badge(k)}</button>`).join('')}</div>${sub}`);
+  setHtml($('#tabs'), `<div class="navtabs-in">${TABS.map(([k, t, ic, views]) => `<button class="tab ${cur?.[0] === k ? 'on' : ''}" data-act="tab" data-k="${k}" aria-label="${t}${k === 'mail' && unread ? `, непрочитаних: ${unread}` : ''}" ${cur?.[0] === k ? 'aria-current="page"' : ''}>${icon(ic, 18)}<span>${t}</span>${badge(k)}</button>`).join('')}</div>${sub}`);
 }
 function render() {
   if (!S) return;
+  $('.app').inert = !!document.querySelector('.wizard');
   const info = syncStage(S), fk = focusKey(document.activeElement);
   theme(); topbar(); road(info); tabs(info);
   const V = VIEWS[ui.view] || VIEWS.dash;
@@ -203,7 +221,7 @@ function startWizard() {
   const blankC = JSON.parse(JSON.stringify(w.c));
   try { const saved = JSON.parse(localStorage.getItem(IDEA_KEY)); if (saved?.segments?.length && saved.features?.length) { w.c = { ...blankC, ...saved }; w.restored = true; } } catch { /* немає збереженої ідеї */ }
   const el = h('<div class="wizard" role="dialog" aria-modal="true" aria-label="Новий стартап"></div>');
-  document.body.appendChild(el); document.body.classList.add('wz-on');
+  document.body.appendChild(el); document.body.classList.add('wz-on'); $('.app').inert = true;
   const steps = () => ['hello', 'idea', ...(w.idea === 'custom' ? ['cIdea', 'cSegs', 'cFeats', 'cComp', 'cCheck'] : []), 'founder', 'company', 'money'];
   const TITLES = { hello: 'Вітаємо', idea: 'Ідея', cIdea: 'Опис', cSegs: 'Клієнти', cFeats: 'Функції', cComp: 'Конкуренти', cCheck: 'Перевірка', founder: 'Засновник', company: 'Компанія', money: 'Гроші' };
   let c = w.c;
@@ -282,7 +300,7 @@ function startWizard() {
     else if (k === 'sym') w.sym = b.dataset.v;
     else if (k === 'fff') w.fff = !w.fff;
     else if (k === 'back') w.step--;
-    else if (k === 'cancel') { el.remove(); document.body.classList.remove('wz-on'); return; }
+    else if (k === 'cancel') { el.remove(); document.body.classList.remove('wz-on'); $('.app').inert = false; return; }
     else if (k === 'next') {
       const err = check[st[w.step]]?.();
       if (err) { toast(err[0], 'bad'); (el.querySelector(err[1] ? `[data-c="${err[1]}"]` : '[data-w="name"], [data-w="company"]'))?.focus(); return; }
