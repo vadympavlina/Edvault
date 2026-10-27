@@ -1,65 +1,34 @@
-// Каталоги /tools/ і /trainers/: кожен тренажер у списку, інструменти ведуть на окремий сайт, кількість рівнів правдива.
+// Каталоги /tools/ і /trainers/: записи узгоджені, а картки ведуть на окремі сайти інструментів і тренажерів.
 //   node --test tests/*.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, existsSync } from 'node:fs';
-import { TOOLS_SITE, TOOLS, TOOL_CATEGORIES, TRAINERS, TRAINER_CATEGORIES, trainerProgress } from '../assets/catalog-data.js';
+import { readdirSync } from 'node:fs';
+import { TOOLS_SITE, TRAINERS_SITE, TOOLS, TOOL_CATEGORIES, TRAINERS, TRAINER_CATEGORIES } from '../assets/catalog-data.js';
 import { hrefOf } from '../assets/catalog.js';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const pages = dir => readdirSync(ROOT + dir).filter(f => f.endsWith('.html') && f !== 'index.html').sort();
 
-test('кожна сторінка з trainers/ є в каталозі, і навпаки; в tools/ лишився тільки каталог', () => {
-  assert.deepEqual(TRAINERS.map(t => t.file).sort(), pages('trainers'));
+test('у tools/ і trainers/ лишилися тільки каталоги', () => {
   assert.deepEqual(pages('tools'), []);
+  assert.deepEqual(pages('trainers'), []);
 });
 
-test('інструменти ведуть на окремий сайт, тренажери — на сторінки без .html', () => {
-  assert.match(TOOLS_SITE, /^https:\/\/.+\/$/);
+test('картки ведуть на окремі сайти', () => {
+  for (const site of [TOOLS_SITE, TRAINERS_SITE]) assert.match(site, /^https:\/\/.+\/$/);
   for (const t of TOOLS) assert.equal(hrefOf('tools', t), TOOLS_SITE + t.file);
-  assert.equal(hrefOf('trainers', { file: 'robot.html' }), '/trainers/robot');
+  for (const t of TRAINERS) assert.equal(hrefOf('trainers', t), TRAINERS_SITE + t.file);
 });
 
-test('без конфліктів адрес без .html: поруч зі сторінкою немає папки з такою самою назвою', () => {
-  for (const [dir, list] of [['trainers', TRAINERS]])
-    for (const t of list) assert.ok(!existsSync(`${ROOT}${dir}/${t.file.replace(/\.html$/, '')}`), `${dir}/${t.file}`);
-});
-
-test('поля, категорії й іконки на місці', () => {
+test('поля й категорії на місці', () => {
   for (const [list, cats] of [[TOOLS, TOOL_CATEGORIES], [TRAINERS, TRAINER_CATEGORIES]]) {
     const ids = new Set();
     for (const t of list) {
       assert.ok(!ids.has(t.id), t.id); ids.add(t.id);
-      assert.ok(t.name && t.desc && t.icon && /^#[0-9a-f]{6}$/i.test(t.accent), t.id);
+      assert.ok(t.name && t.desc && t.icon && /^#[0-9a-f]{6}$/i.test(t.accent) && /\.html$/.test(t.file), t.id);
       assert.ok(cats.some(c => c.id === t.cat), t.id + ': невідома категорія');
-      if (list === TRAINERS) assert.ok(existsSync(`${ROOT}icons/${t.file.replace(/\.html$/, '')}.svg`), t.id + ': немає іконки');
     }
     for (const c of cats) assert.ok(list.some(t => t.cat === c.id), c.id + ': порожня категорія');
   }
-});
-
-test('кількість рівнів тренажерів збігається з їхніми файлами рівнів', async () => {
-  const count = {
-    'pen-trainer': (await import('../trainers/pentrainer/js/levels.js')).LEVELS.length,
-    'color-trainer': (await import('../trainers/colortrainer/js/levels.js')).LEVELS.length,
-    'typing-trainer': Object.values((await import('../trainers/typingtrainer/js/lessons.js')).LEVELS).reduce((s, l) => s + l.length, 0),
-    'robot': (await import('../trainers/robot-app/js/levels.js')).LEVELS.length,
-    'mouse-trainer': (await import('../trainers/mousetrainer/js/levels.js')).LEVELS.length,
-    'files-trainer': (await import('../trainers/filestrainer/js/levels.js')).LEVELS.length,
-    'safety-trainer': (await import('../trainers/safetytrainer/js/levels.js')).LEVELS.length,
-    'hotkeys-trainer': (await import('../trainers/hotkeystrainer/js/levels.js')).LEVELS.length,
-    'network-trainer': (await import('../trainers/networktrainer/js/levels.js')).LEVELS.length,
-    'uiux-trainer': (await import('../trainers/uiuxtrainer/js/levels.js')).LEVELS.length,
-  };
-  for (const t of TRAINERS) assert.equal(t.levels, count[t.id], t.id);
-});
-
-test('прогрес тренажера читається з його сховища', () => {
-  const mem = { 'edvault-robot': JSON.stringify({ best: { a: { stars: 3 }, b: { stars: 1 }, c: { stars: 0 } } }), 'edvault-typing': JSON.stringify({ best: { uk: { a: { stars: 2 } }, en: { b: { stars: 3 } } } }), 'edvault-files': 'зламано' };
-  const storage = { getItem: k => mem[k] ?? null };
-  const T = id => TRAINERS.find(t => t.id === id);
-  assert.deepEqual(trainerProgress(T('robot'), storage), { stars: 4, max: 72, passed: 2, levels: 24 });
-  assert.equal(trainerProgress(T('typing-trainer'), storage).stars, 5);
-  assert.equal(trainerProgress(T('files-trainer'), storage).passed, 0);
-  assert.equal(trainerProgress(T('pen-trainer'), storage).stars, 0);
+  for (const t of TRAINERS) assert.ok(Number.isInteger(t.levels) && t.levels > 0, t.id + ': кількість рівнів');
 });

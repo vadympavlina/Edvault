@@ -15,7 +15,6 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { TRAINERS } from '../assets/catalog-data.js';
 
 const ROOT = resolve(new URL('..', import.meta.url).pathname);
 const SITE = 'https://www.edvault.online';
@@ -36,7 +35,6 @@ const PAGES = [
     title: 'Навчальні матеріали', desc: 'Предмети, уроки й файли Edvault.' },
   { path: 'equipment.html', url: '/equipment', slug: 'equipment', icon: 'equipment', accent: '#475569', kind: 'Техніка',
     title: 'Облік шкільної техніки', desc: 'Ноутбуки, проєктори й інша техніка класу: що де стоїть і в якому стані.' },
-  ...TRAINERS.map(t => ({ path: 'trainers/' + t.file, url: '/trainers/' + t.file.replace(/\.html$/, ''), slug: 'trainer-' + t.id, icon: t.file.replace(/\.html$/, ''), accent: t.accent, kind: 'Тренажер', title: t.name, desc: t.desc })),
 ];
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

@@ -9,14 +9,17 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script>
   // Старі адреси: тренажери переїхали з /tools/ у /trainers/, адмінка списку інструментів більше не потрібна,
-  // а інструменти й емулятори тепер живуть на окремих сайтах.
+  // а інструменти, тренажери й емулятори тепер живуть на окремих сайтах.
   (function () {
     var TRAINERS = ['pen-trainer', 'color-trainer', 'typing-trainer', 'robot', 'mouse-trainer', 'files-trainer'];
     var TOOLS = ['animator', 'class-manager', 'color-tool', 'image-convert', 'pixel-editor', 'screen-recorder', 'snap-editor', 'text-craft', 'videocut', 'vote', 'web-editor', 'whiteboard'];
     var EMULATORS = ['windows', 'blogger', 'startup'];
+    var ALL_TRAINERS = ['mouse-trainer', 'files-trainer', 'safety-trainer', 'hotkeys-trainer', 'typing-trainer', 'robot', 'network-trainer', 'uiux-trainer', 'pen-trainer', 'color-trainer'];
     var p = location.pathname.replace(/\/+$/, ''), m = p.match(/^\/tools\/([\w-]+?)(\.html)?$/), to = null;
+    var tr = p.match(/^\/trainers\/([\w-]+?)(\.html)?$/);
     var e = p.match(/^\/emulators\/([\w-]+?)(\.html)?$/);
-    if (m && TRAINERS.indexOf(m[1]) >= 0) to = '/trainers/' + m[1];
+    if (m && TRAINERS.indexOf(m[1]) >= 0) to = 'https://trainers.edvault.online/' + m[1] + '.html';
+    else if (tr && ALL_TRAINERS.indexOf(tr[1]) >= 0) to = 'https://trainers.edvault.online/' + tr[1] + '.html';
     else if (m && TOOLS.indexOf(m[1]) >= 0) to = 'https://tools.edvault.online/' + m[1] + '.html';
     else if (e && EMULATORS.indexOf(e[1]) >= 0) to = 'https://emulators.edvault.online/' + e[1] + '.html';
     else if (/^\/emulators$/.test(p)) to = 'https://emulators.edvault.online/';

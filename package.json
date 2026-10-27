@@ -1,7 +1,7 @@
 {
   "name": "edvault",
   "private": true,
-  "description": "Edvault — тренажери для учнів, каталог інструментів і портал школи (статичний сайт edvault.online)",
+  "description": "Edvault — головна сторінка, каталоги інструментів і тренажерів, портал школи (статичний сайт edvault.online)",
   "scripts": {
     "start": "node scripts/serve.mjs",
     "test": "node --test tests/*.test.mjs",

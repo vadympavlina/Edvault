@@ -1,5 +1,5 @@
 // Каталог Edvault: малює сторінку /tools/ або /trainers/ із захардкодженого списку (catalog-data.js).
-import { TOOLS_SITE, TOOLS, TOOL_CATEGORIES, TRAINERS, TRAINER_CATEGORIES, trainerProgress } from './catalog-data.js';
+import { TOOLS_SITE, TRAINERS_SITE, TOOLS, TOOL_CATEGORIES, TRAINERS, TRAINER_CATEGORIES } from './catalog-data.js';
 
 const I = {
   logo: '<svg viewBox="0 0 32 32" fill="none"><path d="M8 10h16M8 16h10M8 22h13" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>',
@@ -11,7 +11,6 @@ const I = {
   list: '<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   all: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
-  star: '<path fill="currentColor" stroke="none" d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
   layers: '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
   free: '<path d="M20 6 9 17l-5-5"/>',
   levels: '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>',
@@ -26,8 +25,8 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* приватний режим */ } },
 };
 const plural = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? b : c;
-// тренажери — адреси без .html (/trainers/robot); інструменти — на окремому сайті
-export const hrefOf = (kind, item) => kind === 'tools' ? TOOLS_SITE + item.file : `/${kind}/${item.file.replace(/\.html$/, '')}`;
+// інструменти й тренажери живуть на окремих сайтах
+export const hrefOf = (kind, item) => (kind === 'tools' ? TOOLS_SITE : TRAINERS_SITE) + item.file;
 
 const KINDS = {
   tools: {
@@ -48,7 +47,6 @@ export function mountCatalog(kind) {
   const K = KINDS[kind];
   const state = { filter: 'all', q: '', view: store.get(K.viewKey, 'grid') === 'list' ? 'list' : 'grid' };
   const catOf = id => K.cats.find(c => c.id === id);
-  const prog = it => kind === 'trainers' ? trainerProgress(it) : null;
 
   document.getElementById('app').innerHTML = `
   <header class="topbar">
@@ -110,19 +108,9 @@ export function mountCatalog(kind) {
     return esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>' + esc(text.slice(i + q.length));
   }
   function cardHtml(it) {
-    const p = prog(it), c = catOf(it.cat);
+    const c = catOf(it.cat);
     const chips = kind === 'trainers' ? [`${it.levels} ${plural(it.levels, 'рівень', 'рівні', 'рівнів')}`] : it.tags;
     const cat = state.filter === 'all' && !state.q ? '' : `<span class="card-cat">${esc(c.name)}</span>`;
-    if (p) {
-      const done = Math.round(p.passed / p.levels * 100);
-      return `<a class="card trainer" href="${hrefOf(kind, it)}" data-id="${it.id}" style="--a:${it.accent}">
-        <div class="cover"><span class="cover-ic">${svg(it.icon)}</span><span class="cover-n">${it.levels}<small>${plural(it.levels, 'рівень', 'рівні', 'рівнів')}</small></span></div>
-        <div class="card-body">${cat}<h3 class="card-name">${hl(it.name)}</h3><p class="card-desc">${hl(it.desc)}</p></div>
-        <div class="card-meta"><span class="grow"></span><span class="stars">${svg(I.star)}${p.stars} / ${p.max}</span></div>
-        <div class="prog"><div class="bar"><i style="width:${done}%"></i></div><span>${p.passed} з ${p.levels}</span></div>
-        <div class="card-go"><span>${p.passed ? (p.passed >= p.levels ? 'Покращити результат' : 'Продовжити') : 'Почати'}</span>${svg(I.arrow)}</div>
-      </a>`;
-    }
     return `<a class="card" href="${hrefOf(kind, it)}" data-id="${it.id}" style="--a:${it.accent}">
       <div class="card-top"><span class="ic">${svg(it.icon)}</span><div class="card-title">${cat}<h3 class="card-name">${hl(it.name)}</h3></div></div>
       <p class="card-desc">${hl(it.desc)}</p>
@@ -158,9 +146,8 @@ export function mountCatalog(kind) {
   function renderStats() {
     const stat = (n, label) => `<div class="stat"><b>${n}</b><span>${label}</span></div>`;
     if (kind === 'trainers') {
-      const ps = TRAINERS.map(t => trainerProgress(t));
-      const stars = ps.reduce((s, p) => s + p.stars, 0), levels = TRAINERS.reduce((s, t) => s + t.levels, 0);
-      $('stats').innerHTML = stat(TRAINERS.length, plural(TRAINERS.length, ...K.word)) + stat(levels, 'рівнів') + stat(stars, `${plural(stars, 'зірка', 'зірки', 'зірок')} здобуто`);
+      const levels = TRAINERS.reduce((s, t) => s + t.levels, 0);
+      $('stats').innerHTML = stat(TRAINERS.length, plural(TRAINERS.length, ...K.word)) + stat(levels, 'рівнів') + stat('0 ₴', 'без реєстрації');
     } else $('stats').innerHTML = stat(TOOLS.length, plural(TOOLS.length, ...K.word)) + stat(K.cats.length, 'розділи') + stat('0 ₴', 'без реєстрації');
   }
 

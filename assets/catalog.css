@@ -114,23 +114,6 @@ svg{display:block}
 .card:hover .card-go,.card:focus-visible .card-go{opacity:1;transform:none}
 mark{background:color-mix(in srgb,var(--accent) 22%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 
-/* тренажер: колірна обкладинка й прогрес */
-.card.trainer{padding:0;overflow:hidden;gap:0}
-.cover{position:relative;height:96px;display:flex;align-items:center;padding:0 20px;background:color-mix(in srgb,var(--a) 10%,var(--surface));border-bottom:1px solid color-mix(in srgb,var(--a) 14%,var(--border))}
-.cover::after{content:'';position:absolute;right:-30px;top:-40px;width:170px;height:170px;border-radius:50%;background:color-mix(in srgb,var(--a) 12%,transparent)}
-:root[data-theme="dark"] .cover{background:color-mix(in srgb,var(--a) 14%,var(--surface))}
-.cover-ic{position:relative;z-index:1;width:54px;height:54px;border-radius:15px;background:var(--a);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px color-mix(in srgb,var(--a) 35%,transparent)}
-.cover-ic svg{width:26px;height:26px}
-.cover-n{position:relative;z-index:1;margin-left:auto;text-align:right;font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1;color:color-mix(in srgb,var(--a) 75%,var(--text))}
-.cover-n small{display:block;margin-top:3px;font-size:11.5px;font-weight:600;letter-spacing:0;color:var(--muted)}
-.trainer .card-body{padding:18px 20px 0;display:flex;flex-direction:column;gap:8px;flex:1}
-.trainer .card-meta{padding:14px 20px 0}
-.stars{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700}
-.stars svg{width:15px;height:15px;color:var(--gold)}
-.prog{display:flex;align-items:center;gap:10px;padding:12px 20px 0;font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap}
-.bar{flex:1;height:6px;border-radius:4px;background:var(--surface3);overflow:hidden}
-.bar i{display:block;height:100%;border-radius:4px;background:var(--a)}
-.trainer .card-go{padding:14px 20px 18px}
 
 /* список */
 .grid.list{grid-template-columns:1fr;gap:8px}
@@ -138,14 +121,6 @@ mark{background:color-mix(in srgb,var(--accent) 22%,transparent);color:inherit;b
 .grid.list .card-top{flex:none}
 .grid.list .card-desc{flex:1;font-size:13.5px}
 .grid.list .card-meta{margin:0;flex:none}
-.grid.list .card.trainer{padding:0}
-.grid.list .cover{height:auto;align-self:stretch;width:84px;padding:0;justify-content:center;border-bottom:0;border-right:1px solid color-mix(in srgb,var(--a) 14%,var(--border))}
-.grid.list .cover::after,.grid.list .cover-n{display:none}
-.grid.list .cover-ic{width:44px;height:44px}
-.grid.list .trainer .card-body{padding:14px 0;flex:1}
-.grid.list .trainer .card-meta,.grid.list .prog{padding:0}
-.grid.list .prog{width:150px}
-.grid.list .trainer .card-go{padding:0 18px 0 0}
 
 /* порожньо */
 .state{text-align:center;padding:60px 20px;color:var(--text2)}
@@ -167,7 +142,3 @@ mark{background:color-mix(in srgb,var(--accent) 22%,transparent);color:inherit;b
   .toolbar{position:static}
 }
 @media(prefers-reduced-motion:reduce){.card{animation:none}.card-go{transition:none}}
-/* у тренажерів дія завжди видима — вона показує стан: почати, продовжити, покращити */
-.trainer .card-go{opacity:1;transform:none}
-.trainer .card-go svg{transition:transform .18s ease}
-.trainer:hover .card-go svg{transform:translateX(3px)}
