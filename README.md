@@ -2,7 +2,7 @@
 
 Тренажери для учнів, каталог інструментів і портал школи — [edvault.online](https://www.edvault.online).
 Інструменти й емулятори винесено в окремі репозиторії: [edvault-tools](https://github.com/vadympavlina/edvault-tools)
-(сайт — `TOOLS_SITE` в `assets/catalog-data.js`) і [edvault-emulators](https://github.com/vadympavlina/edvault-emulators)
+(сайт — [tools.edvault.online](https://tools.edvault.online)) і [edvault-emulators](https://github.com/vadympavlina/edvault-emulators)
 (сайт — [emulators.edvault.online](https://emulators.edvault.online)).
 Статичний сайт без збирання: HTML, CSS і модулі JavaScript, що відкриваються в браузері як є.
 Розміщено на GitHub Pages (домен у `CNAME`), адреси без `.html`: `/trainers/robot` → `trainers/robot.html`.

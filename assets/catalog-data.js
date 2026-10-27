@@ -4,7 +4,7 @@
 // Тест tests/catalog.test.mjs перевірить, що нічого не загубилося.
 
 // окремий сайт інструментів (репозиторій edvault-tools)
-export const TOOLS_SITE = 'https://vadympavlina.github.io/edvault-tools/';
+export const TOOLS_SITE = 'https://tools.edvault.online/';
 //
 // icon — внутрішність SVG 24×24 (контурна іконка); accent — колір картки.
 

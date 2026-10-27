@@ -17,7 +17,7 @@
     var p = location.pathname.replace(/\/+$/, ''), m = p.match(/^\/tools\/([\w-]+?)(\.html)?$/), to = null;
     var e = p.match(/^\/emulators\/([\w-]+?)(\.html)?$/);
     if (m && TRAINERS.indexOf(m[1]) >= 0) to = '/trainers/' + m[1];
-    else if (m && TOOLS.indexOf(m[1]) >= 0) to = 'https://vadympavlina.github.io/edvault-tools/' + m[1] + '.html';
+    else if (m && TOOLS.indexOf(m[1]) >= 0) to = 'https://tools.edvault.online/' + m[1] + '.html';
     else if (e && EMULATORS.indexOf(e[1]) >= 0) to = 'https://emulators.edvault.online/' + e[1] + '.html';
     else if (/^\/emulators$/.test(p)) to = 'https://emulators.edvault.online/';
     else if (/^\/tools-admin(\.html)?$/.test(p)) to = '/tools/';
