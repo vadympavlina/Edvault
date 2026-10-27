@@ -37,11 +37,17 @@ export const ARCH = {
     who: ['HR-директорка IT-компанії', 'керівник відділу закупівель', 'операційна директорка'], spendWord: '',
     channelSay: { events: 'галузеві конференції', sales: 'тендер і кілька зустрічей', seo: 'аналітики шукають рішення', referral: 'питаємо партнерів', social: 'LinkedIn' } },
 };
+// base — як ідею рахує рушій: підписка (app, saas) чи продаж штук зі складу (hardware)
 export const KINDS = {
-  app: { t: 'Застосунок або сайт', models: ['freemium', 'trial', 'free'] },
-  saas: { t: 'Сервіс для бізнесу', models: ['b2b', 'freemium', 'trial'] },
-  hardware: { t: 'Пристрій («залізо»)', models: ['device'] },
+  app: { t: 'Застосунок або сайт', d: 'Підписка, freemium або реклама', base: 'app', models: ['freemium', 'trial', 'free'] },
+  saas: { t: 'Сервіс для бізнесу', d: 'Організації платять щомісяця', base: 'saas', models: ['b2b', 'freemium', 'trial'] },
+  service: { t: 'Послуга з абонементом', d: 'Репетиторство, гуртки, прибирання, ремонт — клієнт платить щомісяця', base: 'app', models: ['trial', 'freemium'], service: true },
+  goods: { t: 'Товари', d: 'Власне виробництво чи перепродаж: партія, склад, продаж штук', base: 'hardware', models: ['device'], uw: ['товар', 'товари', 'товарів', 'товару'] },
+  hardware: { t: 'Пристрій («залізо»)', d: 'Розробка пристрою, виробництво партіями, склад', base: 'hardware', models: ['device'] },
 };
+// де працює компанія: частка всього ринку країни
+export const SCOPES = { city: { t: 'В одному місті', k: .07 }, region: { t: 'В області або кількох містах', k: .25 }, country: { t: 'По всій Україні', k: 1 } };
+export const DEFAULT_UW = ['пристрій', 'пристрої', 'пристроїв', 'пристрою'];
 export const SIZES = { s: { t: 'Мала', cost: 5 }, m: { t: 'Середня', cost: 10 }, l: { t: 'Велика', cost: 16 } };
 
 // Випадковість для ідеї: окреме зерно, щоб ринок не залежав від ходу гри
@@ -51,23 +57,31 @@ const low = s => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
 const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
 /* Перетворює опис учня на повноцінну ідею з прихованою правдою ринку.
-   input = { name, kind, pitch, problem, unitCost, segments: [{ name, arch }], features: [{ name, desc, size, core, segs: [i] }], competitors: [{ name, segs: [i] }] } */
+   input = { name, kind, scope, pitch, problem, unitCost, batchMin, leadTime,
+             segments: [{ name, arch, size?, price? }], features: [{ name, desc, size, core, segs: [i] }], competitors: [{ name, price?, weak?, segs: [i] }] }
+   size і price сегмента — оцінки учня. Справжні значення від них відштовхуються, але зазвичай менші: засновники переоцінюють ринок. */
 export function makeCustomIdea(input, seed = 1) {
   const r = rnd(seed), pick = a => a[Math.floor(r() * a.length)];
-  const kind = KINDS[input.kind] ? input.kind : 'app', hw = kind === 'hardware';
+  const sub = KINDS[input.kind] ? input.kind : 'app', K = KINDS[sub], kind = K.base, hw = kind === 'hardware';
+  const scope = SCOPES[input.scope] || SCOPES.country, num = v => { const n = Math.round(+v); return Number.isFinite(n) && n > 0 ? n : 0; };
   const problem = low(String(input.problem || 'цю проблему').trim().replace(/[.!?]+$/, ''));
   const segs = {}, segKeys = [];
   (input.segments || []).filter(x => x.name?.trim()).slice(0, 3).forEach((x, i) => {
     const A = ARCH[x.arch] || ARCH.adults, k = 's' + (i + 1);
     const pain = clamp(.22 + r() * .6, .15, .85);
     const wtpMul = .55 + r() * 1.1;
-    const comps = (input.competitors || []).filter(c => c.name?.trim() && (c.segs || []).includes(i)).map(c => c.name.trim());
+    const compsIn = (input.competitors || []).filter(c => c.name?.trim() && (c.segs || []).includes(i)), comps = compsIn.map(c => c.name.trim());
+    const weak = String(compsIn[0]?.weak || '').trim().replace(/[.!?]+$/, '');
+    const gSize = num(x.size), gPrice = num(x.price);
+    const size = gSize ? gSize * (.3 + r() * .6) : A.size * scope.k * (.6 + r() * .8);
+    const wtp = gPrice ? gPrice * (.45 + r() * .7) : (hw ? A.hw : A.wtp) * wtpMul;
     segs[k] = {
       t: x.name.trim(), short: x.name.trim().length > 22 ? x.name.trim().slice(0, 20) + '…' : x.name.trim(), arch: x.arch,
-      size: Math.round(A.size * (.6 + r() * .8) / 100) * 100, pain, wtp: Math.round((hw ? A.hw : A.wtp) * wtpMul / 10) * 10, churn: A.churn, sr: A.sr,
+      size: Math.max(A.b2b ? 20 : 300, Math.round(size / (A.b2b ? 10 : 100)) * (A.b2b ? 10 : 100)), pain, wtp: Math.max(10, Math.round(wtp / 10) * 10), churn: A.churn, sr: A.sr,
+      guess: { size: gSize || null, price: gPrice || null },
       ...(A.b2b ? { b2b: true, cycle: A.cycle } : {}), ...(hw && A.units ? { units: A.units } : {}),
       fit: { ...A.fit }, taste: A.taste, who: A.who, spendWord: A.spendWord, channelSay: A.channelSay,
-      solutions: [`роблю все вручну, як вийде`, `шукаю щось в інтернеті щоразу заново`, `питаю знайомих`, comps[0] ? `користуюся «${comps[0]}»` : `просто терплю`],
+      solutions: [`роблю все вручну, як вийде`, `шукаю щось в інтернеті щоразу заново`, `питаю знайомих`, comps[0] ? `користуюся «${comps[0]}»${weak ? `, хоча ${low(weak)}` : ''}` : `просто терплю`],
       high: [`Минулого тижня через ${problem} пішла купа часу й нервів. Це реально дратує.`, `Буквально вчора знову з цим зіткнулися. Скільки можна — хочеться нормального рішення.`, `Через ${problem} уже кілька разів були зайві витрати. Шукаю, що з цим робити.`],
       low: [`Чесно, таке буває рідко, і якось справляюся.`, `Не скажу, що це велика проблема для мене.`, `Ну є таке, але є речі важливіші.`],
     };
@@ -75,7 +89,7 @@ export function makeCustomIdea(input, seed = 1) {
   });
   // Функції: учень вгадує, кому вони цінні; правда трохи інша
   const feats = {};
-  (input.features || []).filter(f => f.name?.trim()).slice(0, 8).forEach((f, i) => {
+  (input.features || []).filter(f => f.name?.trim()).slice(0, 10).forEach((f, i) => {
     const v = {}, assumed = {};
     segKeys.forEach((k, si) => {
       const guess = (f.segs || []).includes(si); assumed[k] = guess;
@@ -100,12 +114,14 @@ export function makeCustomIdea(input, seed = 1) {
   if (segKeys.some(k => segs[k].b2b)) std.security = { t: 'Захист даних і договір', cost: 7, security: true, desc: 'Організації не працюють без цього.' };
   Object.assign(feats, std);
   for (const k of segKeys) if (segs[k].b2b) segs[k].requires = ['security'];
-  const competitors = (input.competitors || []).filter(c => c.name?.trim()).slice(0, 3).map(c => ({ t: c.name.trim(), seg: Object.fromEntries((c.segs || []).filter(si => segKeys[si]).map(si => [segKeys[si], Math.round((.15 + r() * .25) * 100) / 100])), price: 0 }));
+  const competitors = (input.competitors || []).filter(c => c.name?.trim()).slice(0, 4).map(c => ({ t: c.name.trim(), seg: Object.fromEntries((c.segs || []).filter(si => segKeys[si]).map(si => [segKeys[si], Math.round((.15 + r() * .25) * 100) / 100])), price: num(c.price), weak: String(c.weak || '').trim() }));
   const name = String(input.name || 'Моя ідея').trim(), pitch = String(input.pitch || '').trim() || `Продукт, який допомагає з тим, що ${problem}.`;
   const mainFeat = Object.values(feats).find(f => f.core) || Object.values(feats)[0];
   return {
-    custom: true, t: name, icon: hw ? 'cube' : kind === 'saas' ? 'building' : 'spark', color: '#6366f1', kind, pitch, problem,
-    models: KINDS[kind].models, ...(hw ? { unitCost: Math.max(50, Math.round(+input.unitCost || 400)), batchMin: 100, leadTime: 3 } : {}),
+    custom: true, t: name, icon: sub === 'goods' ? 'box' : hw ? 'cube' : kind === 'saas' ? 'building' : sub === 'service' ? 'users' : 'spark', color: '#6366f1', kind, sub, pitch, problem,
+    scope: SCOPES[input.scope] ? input.scope : 'country',
+    models: K.models, ...(K.uw ? { uw: K.uw } : {}),
+    ...(hw ? { unitCost: Math.max(sub === 'goods' ? 10 : 50, Math.round(+input.unitCost || 400)), batchMin: clamp(num(input.batchMin) || (sub === 'goods' ? 20 : 100), 5, 1000), leadTime: clamp(num(input.leadTime) || (sub === 'goods' ? 1 : 3), 1, 8) } : {}),
     season: [1, ...Array.from({ length: 12 }, () => Math.round((.85 + r() * .3) * 100) / 100)],
     segments: segs, features: feats, competitors,
     landing: [
@@ -115,6 +131,31 @@ export function makeCustomIdea(input, seed = 1) {
       { t: `${name} — найкращий у світі!`, m: .72, why: 'гучно й порожньо, не викликає довіри' },
     ],
   };
+}
+
+// Оцінки учня (розмір ринку й ціна) поряд із тим, що є насправді — для звіту
+export function marketVsGuess(I) {
+  if (!I?.custom) return [];
+  return Object.values(I.segments).filter(g => g.guess?.size || g.guess?.price).map(g => ({ seg: g.short, size: [g.guess.size, g.size], price: [g.guess.price, g.wtp] }));
+}
+
+/* Перевірка ідеї перед стартом: поради, а не заборони. Повертає [{ lvl: 'ok' | 'warn', t }]. */
+const SOLUTION_WORDS = /(застосун|додат|сайт|платформ|бот|сервіс|програм)/i;
+export function ideaCheck(input) {
+  const out = [], segs = (input.segments || []).filter(x => x.name?.trim()), feats = (input.features || []).filter(f => f.name?.trim()), comps = (input.competitors || []).filter(c => c.name?.trim());
+  const add = (ok, good, bad) => out.push(ok ? { lvl: 'ok', t: good } : { lvl: 'warn', t: bad });
+  add(!SOLUTION_WORDS.test(input.problem || ''), 'Проблему описано як біль клієнта, а не як ваш продукт.', 'У проблемі є слово на кшталт «застосунок» чи «сайт». Опишіть, що болить людям, а не що ви зробите: не «немає застосунку для…», а «важко знайти…».');
+  add(segs.length >= 2, 'Є кілька груп клієнтів — буде з чим порівнювати.', 'Опишіть щонайменше дві групи клієнтів: часто платить не та група, яку ви вважали головною.');
+  const big = feats.filter(f => f.size === 'l').length;
+  add(big <= 2, 'Перша версія не перевантажена великими функціями.', `Великих функцій ${big}. Перша версія має бути простою: залиште 1–2 великі, решту зробите пізніше.`);
+  const forAll = feats.length >= 3 && feats.every(f => (f.segs || []).length === segs.length && segs.length > 1);
+  add(!forAll, 'Ви вирішили, кому потрібна кожна функція.', 'Ви позначили, що всі функції потрібні всім групам. Так буває рідко — подумайте, кому що справді важливо.');
+  add(comps.length > 0, 'Конкурентів названо.', 'Конкуренти є завжди: навіть «робити все вручну» чи «група у Viber». Без них ринок здивує.');
+  const guessed = segs.filter(x => +x.size > 0 || +x.price > 0).length;
+  add(guessed > 0, 'Ви оцінили розмір ринку чи ціну — у звіті побачите, наскільки влучили.', 'Спробуйте оцінити, скільки є клієнтів і скільки вони заплатять. Наприкінці гри побачите, наскільки влучили.');
+  const pricey = segs.find(x => { const A = ARCH[x.arch]; return A && +x.price > (input.kind === 'goods' || input.kind === 'hardware' ? A.hw : A.wtp) * 3; });
+  add(!pricey, 'Очікувані ціни виглядають реалістично.', pricey ? `Для групи «${pricey.name.trim()}» ціна ${Math.round(+pricey.price)} ₴ утричі вища за звичну для таких клієнтів. Перевірте її в інтерв'ю.` : '');
+  return out;
 }
 
 // Порівняння припущень учня з реальністю (для звіту)

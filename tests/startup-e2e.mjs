@@ -39,7 +39,8 @@ await step('майстер: без імені й назви далі не пус
   // етап 1: три завдання, наступні етапи закриті
   assert.equal(await p.locator('.road li.cur').count(), 1);
   assert.match(await p.locator('.road li.cur').innerText(), /Клієнти/);
-  assert.equal(await p.locator('.stage-card .stage-tasks li').count(), 3);
+  assert.equal(await p.locator('.stage-card .notes .note').count(), 3);
+  assert.equal(await p.locator('.road .here').count(), 1);
   assert.equal(await p.locator('.navtabs .tab').count(), 5);
 });
 
@@ -64,15 +65,19 @@ await step('етапи: розділ наступного етапу закри�
   await p.waitForSelector('#main .stage-card');
 });
 
-await step('план тижня: крапки й кнопки годин оновлюють суму', async () => {
+await step('план тижня: стовпчики й кнопки годин оновлюють суму, фокус лишається на кнопці', async () => {
   await p.click('[data-act="hrs"][data-k="customers"][data-d="1"]');
   assert.match(await p.locator('[data-out="h-total"]').innerText(), /^44 \/ 50/);
   assert.equal((await S()).hours.customers, 20);
-  await p.click('.hr-row[data-k="content"] .dot >> nth=2');
-  assert.equal((await S()).hours.content, 15);
-  await p.click('.hr-row[data-k="content"] .dot >> nth=2');
-  assert.equal((await S()).hours.content, 10, 'повторний клік по останній крапці зменшує');
-  await p.click('.hr-row[data-k="content"] .dot >> nth=0');
+  assert.equal(await p.evaluate(() => document.activeElement.dataset.k + document.activeElement.dataset.d), 'customers1', 'фокус не губиться після перемальовки');
+  // натискання на стовпчик ставить висоту: верх — 40 год, середина — 20 год
+  const tube = p.locator('.hcol[data-k="content"] .tube'), bb = await tube.boundingBox();
+  await p.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2);
+  assert.equal((await S()).hours.content, 20);
+  await p.mouse.click(bb.x + bb.width / 2, bb.y + bb.height - 2);
+  assert.equal((await S()).hours.content, 0);
+  await p.click('[data-act="hrs"][data-k="content"][data-d="1"]');
+  assert.equal((await S()).hours.content, 5);
 });
 
 await step('інтерв\'ю: три запитання, відповіді в чаті, інсайти на картці', async () => {
@@ -303,6 +308,12 @@ await step('власна ідея: конструктор у майстрі, п�
   await q.uncheck('[data-c="features.2.segs"][value="0"]');
   await q.click('[data-w="next"]');
   await q.fill('[data-c="competitors.0.name"]', 'Групи у Viber');
+  await q.fill('[data-c="competitors.0.price"]', '0');
+  await q.fill('[data-c="competitors.0.weak"]', 'Довго шукати потрібну книжку');
+  await q.click('[data-w="next"]');
+  // перевірка ідеї: поради наставниці перед стартом
+  assert.ok(await q.locator('.wz-check li').count() >= 6);
+  assert.match(await q.locator('.wz-check').innerText(), /оцінити, скільки є клієнтів/);
   await q.click('[data-w="next"]');
   await q.fill('[data-w="name"]', 'Остап'); await q.click('[data-w="next"]');
   await q.fill('[data-w="company"]', 'КнигоОбмін'); await q.click('[data-w="next"]');
@@ -319,6 +330,12 @@ await step('власна ідея: конструктор у майстрі, п�
   assert.match(await q.locator('.report').innerText(), /Ваші припущення ↔ реальність[\s\S]*Каталог книжок/);
   await q.reload(); await q.waitForSelector('#main .stage-card, #main .pg-h');
   assert.equal(await q.evaluate(() => window.Startup.sim.I.t), 'Обмін книжками');
+  // ідея запам'ятовується: нова гра пропонує її доопрацювати
+  assert.equal(await q.evaluate(() => JSON.parse(localStorage.getItem('edvault-startup-idea')).name), 'Обмін книжками');
+  await q.click('[data-act="more"]'); await q.click('.more-pop [data-act="newGame"]'); await q.click('.md.confirm .btn.danger, .md.confirm .btn.primary');
+  await q.click('[data-w="next"]'); await q.click('[data-w="idea"][data-v="custom"]'); await q.click('[data-w="next"]');
+  assert.match(await q.locator('.wizard').innerText(), /відновили вашу попередню ідею/);
+  assert.equal(await q.inputValue('[data-c="name"]'), 'Обмін книжками');
 });
 
 await step('жодної помилки в консолі', async () => { assert.deepEqual(errors, []); });

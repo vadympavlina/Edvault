@@ -385,3 +385,35 @@ test('шлях стартапу: етапи йдуть по черзі, відк
   // кожне завдання має кнопку, що веде в існуючий розділ або на збереження файлу
   for (const st of i.list) for (const t of st.tasks) assert.ok(t.go === 'file' || all.includes(t.go), t.t);
 });
+
+test('своя ідея: товари й послуги, оцінки учня, місто чи країна, перевірка ідеї', async () => {
+  const { makeCustomIdea, ideaCheck, marketVsGuess } = await import('../emulators/startupsim/js/custom.js');
+  const base = { name: 'Свічки ручної роботи', problem: 'нудні подарунки', pitch: 'Свічки з ароматами на замовлення.',
+    segments: [{ name: 'Студенти', arch: 'students', size: 20000, price: 250 }, { name: 'Кав\'ярні', arch: 'smb' }],
+    features: [{ name: 'Аромати', size: 's', core: true, segs: [0] }, { name: 'Гравіювання', size: 'm', segs: [0, 1] }, { name: 'Доставка', size: 's', segs: [1] }],
+    competitors: [{ name: 'Маркетплейс', price: 300, weak: 'Однакові свічки', segs: [0] }] };
+  const G = makeCustomIdea({ ...base, kind: 'goods', unitCost: 80, batchMin: 30, leadTime: 2, scope: 'city' }, 3);
+  assert.equal(G.kind, 'hardware'); assert.equal(G.sub, 'goods');
+  assert.deepEqual([G.unitCost, G.batchMin, G.leadTime], [80, 30, 2]);
+  assert.equal(G.uw[0], 'товар');
+  const s1 = G.segments.s1;
+  assert.ok(s1.size <= 20000 * .9 + 100 && s1.size >= 20000 * .3 - 100, 'розмір від оцінки учня, зазвичай менший');
+  assert.equal(s1.guess.price, 250);
+  assert.match(s1.solutions[3], /Маркетплейс.*однакові свічки/);
+  // місто менше за країну, якщо учень не оцінив розмір
+  const city = makeCustomIdea({ ...base, kind: 'app', scope: 'city' }, 9).segments.s2.size, country = makeCustomIdea({ ...base, kind: 'app', scope: 'country' }, 9).segments.s2.size;
+  assert.ok(city < country / 5);
+  assert.equal(marketVsGuess(G).length, 1);
+  // перевірка ідеї знаходить типові помилки
+  const bad = ideaCheck({ problem: 'немає застосунку для свічок', segments: [{ name: 'Усі', arch: 'adults', price: 5000 }], features: [{ name: 'a', size: 'l' }, { name: 'b', size: 'l' }, { name: 'c', size: 'l' }], competitors: [] });
+  assert.ok(bad.filter(x => x.lvl === 'warn').length >= 5);
+  assert.ok(ideaCheck(base).filter(x => x.lvl === 'warn').length <= 1);
+  // гра з товарами й з послугою проходить без помилок: ціни, склад, гроші — скінченні числа
+  for (const kind of ['goods', 'service', 'hardware', 'saas']) {
+    const S = newGame({ founder: 'Т', company: 'Т', seed: 4, custom: { ...base, kind, unitCost: 80, scope: 'region' } });
+    assert.equal(S.s.price.s1, 250, 'стартова ціна — оцінка учня');
+    autoplay(S, 40);
+    assert.ok(Number.isFinite(S.s.cash) && Number.isFinite(S.mrr()), kind);
+    if (kind === 'goods') assert.match(S.s.journal.map(j => j.t).join(' '), /товар/);
+  }
+});

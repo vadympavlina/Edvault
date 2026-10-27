@@ -1,5 +1,5 @@
 // Симулятор стартапу · розділи: Ціна, Фінанси, Платежі, Інвестори, Інвестиції.
-import { MODELS, INVESTORS, SLIDES } from './data.js';
+import { INVESTORS, SLIDES } from './data.js';
 import { money, num, pct, plural, sum, W2M } from './sim.js';
 import { PAYMENTS, ASSETS } from './mods.js';
 import { icon } from './icons.js';
@@ -15,16 +15,16 @@ function pricing(S) {
   const c = hw || S.segIds.every(k => S.seg(k).b2b) ? null : S.I.models.filter(m => m !== 'b2b' && m !== 'device');
   const priceRow = k => {
     const G = S.seg(k), K = S.insight(k), max = Math.round(G.wtp / (G.units || 1) * 2.5 / 10) * 10, pf = S.priceF(k), m = S.modelOf(k);
-    return `<div class="price-row ${k === t ? 'target' : ''}"><div><b>${esc(G.short)}</b><small>${MODELS[m].t}${G.units ? ` · ${G.units} пристроїв у замовленні` : ''}</small></div>
+    return `<div class="price-row ${k === t ? 'target' : ''}"><div><b>${esc(G.short)}</b><small>${S.model(m).t}${G.units ? ` · ${G.units} ${S.uw(2)} у замовленні` : ''}</small></div>
       <input type="range" min="0" max="${max}" step="${max > 5000 ? 100 : 10}" value="${s.price[k]}" data-in="price" data-k="${k}" ${m === 'free' ? 'disabled' : ''} aria-label="Ціна для ${esc(G.short)}">
       <output data-out="p-${k}">${m === 'free' ? 'безкоштовно' : money(s.price[k]) + (hw ? '/шт' : '/міс')}</output>
       <div class="pf"><span>Готові платити</span>${meter(pf, { color: pf > .55 ? 'var(--ok)' : pf > .3 ? 'var(--warn)' : 'var(--bad)' })}<small data-out="pf-${k}">${pct(pf)}</small></div>
       <small class="muted">${K.wtp ? `За інтерв'ю зараз витрачають ≈ ${money(K.wtp)}${G.units ? ' на замовлення' : ''}` : 'Дізнайтеся в інтерв\'ю, скільки клієнти витрачають зараз'}${K.badWtp ? ` · «заплатили б» ${money(K.badWtp)} — ненадійно` : ''}</small></div>`;
   };
   return `<p class="lead">Ціна — найсильніший важіль бізнесу. Занизька — не покриєте витрати, зависока — ніхто не купить. Орієнтуйтеся на те, скільки клієнти вже витрачають на проблему.</p>
-  ${c ? `<section class="card"><header class="card-h"><h3>${icon('coins')} Модель для звичайних людей (B2C)</h3>${term('B2C')}</header><div class="seg-ctl">${c.map(m => `<button class="${s.model === m ? 'on' : ''}" data-act="model" data-k="${m}" aria-pressed="${s.model === m}"><b>${MODELS[m].t}</b><small>${MODELS[m].desc}</small></button>`).join('')}</div></section>` : ''}
+  ${c ? `<section class="card"><header class="card-h"><h3>${icon('coins')} Модель для звичайних людей (B2C)</h3>${term('B2C')}</header><div class="seg-ctl">${c.map(m => `<button class="${s.model === m ? 'on' : ''}" data-act="model" data-k="${m}" aria-pressed="${s.model === m}"><b>${S.model(m).t}</b><small>${S.model(m).desc}</small></button>`).join('')}</div></section>` : ''}
   <section class="card"><header class="card-h"><h3>${icon('tag')} Ціни за сегментами</h3></header>${S.segIds.map(priceRow).join('')}
-    ${hw ? `<p class="note">${icon('info', 16)} ${term('Собівартість')} одного пристрою: <b>${money(s.unitCost)}</b>. Ціна нижча — кожен продаж у мінус.</p>` : ''}</section>
+    ${hw ? `<p class="note">${icon('info', 16)} ${term('Собівартість')} одного ${S.uw(3)}: <b>${money(s.unitCost)}</b>. Ціна нижча — кожен продаж у мінус.</p>` : ''}</section>
   <div class="grid g2">
     <section class="card"><header class="card-h"><h3>${icon('chart')} ${term('Юніт-економіка', 'Чи вигідний один клієнт')}</h3></header>
       <div class="ins">
@@ -40,6 +40,11 @@ function pricing(S) {
     </section>
   </div>`;
 }
+
+// партія: дрібні товари замовляють десятками, пристрої — сотнями
+const small = S => S.I.batchMin < 100;
+const batchMax = S => small(S) ? 1000 : 3000, batchStep = S => small(S) ? 10 : 50;
+const batchDef = S => small(S) ? Math.min(1000, S.I.batchMin * 5) : 500;
 
 /* ═════════ Фінанси ═════════ */
 function finance(S, ui) {
@@ -83,9 +88,9 @@ function finance(S, ui) {
   </div>
   ${hw ? `<section class="card"><header class="card-h"><h3>${icon('box')} Склад і виробництво</h3></header>
     <div class="ins"><div><span>На складі</span><b>${num(s.stock.units)} шт.</b></div><div><span>Їде з фабрики</span><b>${num(sum(s.stock.orders.map(o => o.n)))} шт.</b><small>${s.stock.orders.map(o => `тиждень ${o.due + 1}`).join(', ') || '—'}</small></div><div><span>Собівартість</span><b>${money(s.unitCost)}</b></div><div><span>Мін. партія</span><b>${S.I.batchMin} шт.</b><small>виготовлення ${S.I.leadTime} тиж.</small></div></div>
-    ${s.flags.crowdUnits ? `<p class="note warn">${icon('alert', 16)} Підтримувачі краудфандингу чекають ${s.flags.crowdUnits} пристроїв.</p>` : ''}
-    <div class="sl"><label>Партія</label><input type="range" min="${S.I.batchMin}" max="3000" step="50" value="${ui.batch || 500}" data-in="batch" aria-label="Розмір партії"><output data-out="batch">${ui.batch || 500} шт. · ${money((ui.batch || 500) * s.unitCost)}</output></div>
-    <button class="btn primary" data-act="order">Замовити виробництво</button><p class="sm muted">Гроші за партію платите одразу, а пристрої з'являться за ${S.I.leadTime} тижні. Так стартапи на «залізі» потрапляють у касовий розрив.</p></section>` : ''}
+    ${s.flags.crowdUnits ? `<p class="note warn">${icon('alert', 16)} Підтримувачі краудфандингу чекають ${s.flags.crowdUnits} ${plural(s.flags.crowdUnits, S.uw(0), S.uw(1), S.uw(2))}.</p>` : ''}
+    <div class="sl"><label>Партія</label><input type="range" min="${S.I.batchMin}" max="${batchMax(S)}" step="${batchStep(S)}" value="${ui.batch || batchDef(S)}" data-in="batch" aria-label="Розмір партії"><output data-out="batch">${ui.batch || batchDef(S)} шт. · ${money((ui.batch || batchDef(S)) * s.unitCost)}</output></div>
+    <button class="btn primary" data-act="order">Замовити виробництво</button><p class="sm muted">Гроші за партію платите одразу, а ${S.uw(1)} з'являться за ${S.I.leadTime} ${plural(S.I.leadTime, 'тиждень', 'тижні', 'тижнів')}. Так стартапи на «залізі» потрапляють у касовий розрив.</p></section>` : ''}
   <section class="card"><header class="card-h"><h3>${icon('users')} ${term('Таблиця власників')}</h3>${term('Розмивання частки')}</header>
     <div class="cap">${donut(cap.map(c => ({ v: c.shares, color: c.color })))}<table class="tbl"><thead><tr><th>Власник</th><th>Частка</th><th>Вартість</th></tr></thead><tbody>${cap.map(c => `<tr><td><i class="dot" style="background:${c.color}"></i>${esc(c.t)}</td><td>${pct(c.pct, 1)}</td><td>${money(val * c.pct)}</td></tr>`).join('')}</tbody></table></div></section>`;
 }
@@ -165,7 +170,7 @@ export const moneyActs = {
   savePlan: C => { const v = k => +(document.querySelector(`[data-plan="${k}"]`)?.value || 0); C.S.setPlan([0, 1, 2].map(i => ({ rev: v('rev' + i), cost: v('cost' + i) }))); C.ui.newPlan = false; C.toast('Фінплан збережено. Порівнюйте з фактом щомісяця.', 'good'); C.render(); },
   loan: async C => { const v = +(document.querySelector('[data-in="loanAmt"]')?.value || 0); if (!await confirmBox(`Взяти кредит ${money(v)} під 26% річних?`, 'Взяти', { sub: 'Платити доведеться щотижня, навіть якщо виручка впаде.' })) return; if (C.S.takeLoan(v)) C.toast('Кредит отримано', 'good'); else C.toast('Банк відмовив: сума більша за ліміт', 'bad'); C.render(); C.topbar(); },
   crowd: C => { const g = +(document.querySelector('[data-cr="goal"]')?.value || 0), r = +(document.querySelector('[data-cr="reward"]')?.value || 0); if (g < 20000 || r < 50) { C.toast('Перевірте мету й ціну винагороди', 'bad'); return; } if (C.S.startCrowd(g, r)) C.toast('Кампанію запущено', 'good'); C.render(); },
-  order: C => { const n = C.ui.batch || 500; if (C.S.orderBatch(n)) C.toast(`Замовлено ${n} пристроїв`, 'good'); else C.toast('Не вистачає грошей на партію', 'bad'); C.render(); C.topbar(); },
+  order: C => { const n = C.ui.batch || batchDef(C.S); if (C.S.orderBatch(n)) C.toast(`Замовлено ${n} ${plural(n, C.S.uw(0), C.S.uw(1), C.S.uw(2))}`, 'good'); else C.toast('Не вистачає грошей на партію', 'bad'); C.render(); C.topbar(); },
   payMain: (C, el) => { if (C.S.setPay(el.dataset.k, 'main')) C.toast(`Підключено: ${PAYMENTS[el.dataset.k].t}`, 'good'); else C.toast('Не вдалося підключити', 'bad'); C.render(); C.topbar(); },
   payB2B: (C, el) => { if (C.S.setPay(el.dataset.k, 'b2b')) C.toast('Організації платитимуть за рахунком', 'good'); C.render(); },
   payCalc: (C, el) => { C.S.seePay(el.dataset.k); C.render(); },

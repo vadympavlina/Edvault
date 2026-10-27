@@ -3,7 +3,7 @@
 // «Завершити тиждень» — і рушій рахує воронку, гроші, команду, інвесторів, події.
 import { IDEAS, CHANNELS, MODELS, BACKGROUNDS, ROLES, FIRST, LAST, FEM, TRAITS, INVESTORS, SLIDES, ACHIEVEMENTS } from './data.js';
 import { applyMods, PROMOS, LOYALTY } from './mods.js';
-import { makeCustomIdea } from './custom.js';
+import { makeCustomIdea, DEFAULT_UW } from './custom.js';
 
 export const WEEKS = 104;
 export const HOURS = 50;            // нормальний робочий тиждень засновника
@@ -72,7 +72,8 @@ export function newGame({ idea = 'homework', founder = 'Засновник', gro
     const g = I.segments[k];
     s.users[k] = { wait: 0, free: 0, trial: 0, paid: 0, pipe: [], ever: 0, paidEver: 0 };
     s.know[k] = { n: 0, good: 0, bad: 0, pains: [], wtps: [], badWtps: [], likes: 0, ch: {}, feats: {}, sols: [] };
-    s.price[k] = I.kind === 'hardware' ? Math.round(g.wtp / (g.units || 1) * .9 / 10) * 10 : Math.round(g.wtp * .8 / 10) * 10;
+    // своя ідея: стартова ціна — та, яку назвав учень (справжню готовність платити він ще не знає)
+    s.price[k] = g.guess?.price ? Math.max(10, Math.round(g.guess.price / 10) * 10) : I.kind === 'hardware' ? Math.round(g.wtp / (g.units || 1) * .9 / 10) * 10 : Math.round(g.wtp * .8 / 10) * 10;
   }
   s.flags.start = { price: { ...s.price }, mktPlan: { ...s.mkt } }; // з чим порівнювати зміни першого тижня
   if (fff) {
@@ -102,6 +103,10 @@ export class Sim {
   seg(k = this.s.target) { return this.I.segments[k]; }
   get segIds() { return Object.keys(this.I.segments); }
   id(p = 'x') { return p + (this.s.seq++); }
+  // слова для одиниці товару: 0 — один, 1 — два-чотири, 2 — п'ять і більше, 3 — родовий («одного …»)
+  uw(i = 0) { return (this.I.uw || DEFAULT_UW)[i]; }
+  // назва й опис моделі заробітку з урахуванням того, що продаємо (товари чи пристрої)
+  model(m) { const M = MODELS[m]; return m === 'device' && this.I.uw ? { t: 'Продаж товарів', desc: 'Клієнт платить один раз за кожен товар. Кожен товар має собівартість, а виготовляти чи закуповувати їх треба партіями.' } : M; }
   feature(id) { return id === '_custom' ? CUSTOM : this.I.features[id]; }
   has(id) { return this.s.product.built.includes(id); }
   hasFlag(flag) { return this.s.product.built.some(f => this.feature(f)?.[flag]); }
@@ -242,7 +247,7 @@ export class Sim {
     n = Math.max(I.batchMin, Math.round(n)); const cost = n * this.s.unitCost;
     if (this.s.cash < cost) return false;
     this.s.cash -= cost; this.s.ledgerExtra = (this.s.ledgerExtra || 0) + cost;
-    this.s.stock.orders.push({ due: this.s.week + I.leadTime, n }); this.log(`Замовлено партію: ${n} пристроїв за ${money(cost)}.`);
+    this.s.stock.orders.push({ due: this.s.week + I.leadTime, n }); this.log(`Замовлено партію: ${n} ${plural(n, this.uw(0), this.uw(1), this.uw(2))} за ${money(cost)}.`);
     return true;
   }
 
@@ -842,7 +847,7 @@ export const EVENTS = {
     make: () => ({ from: 'Наставниця Ірина', title: 'Ви вигоріли', body: 'Ви довго працювали без відпочинку. Цього тижня ви майже нічого не можете робити, а рішення даються важко. Додайте відпочинку в план — інакше це повториться.' }) },
   supplier: { p: .15, when: S => S.I.kind === 'hardware' && S.s.week > 6,
     make: () => ({ from: 'Постачальник плат', title: 'Ціни на компоненти зросли', body: 'Через дефіцит чіпів ціна плати зросла на 25%. Можемо запропонувати дешевшого постачальника, але якість гірша.' }),
-    choices: () => [{ t: 'Прийняти нову ціну', do: S => { S.s.unitCost = Math.round(S.s.unitCost * 1.25); return `Собівартість пристрою тепер ${money(S.s.unitCost)}.`; } }, { t: 'Дешевший постачальник', do: S => { S.s.product.quality = Math.max(10, S.s.product.quality - 12); S.s.product.bugs += 8; return 'Собівартість та сама, але пристрої частіше ламаються.'; } }] },
+    choices: () => [{ t: 'Прийняти нову ціну', do: S => { S.s.unitCost = Math.round(S.s.unitCost * 1.25); return `Собівартість одного ${S.uw(3)} тепер ${money(S.s.unitCost)}.`; } }, { t: 'Дешевший постачальник', do: S => { S.s.product.quality = Math.max(10, S.s.product.quality - 12); S.s.product.bugs += 8; return `Собівартість та сама, але ${S.uw(1)} частіше ламаються.`; } }] },
   regulation: { p: .2, when: S => S.s.idea === 'homework' && S.s.week > 12 && !S.hasFlag('security'),
     make: () => ({ from: 'Новини освіти', title: 'Нові правила захисту даних дітей', body: 'Міністерство вимагає, щоб усі освітні застосунки захищали дані дітей. Школи тепер працюють лише з тими, хто має захист. Функція «Захист даних дітей» стала ще важливішою.' }) },
   pilot: { p: .25, when: S => S.seg().b2b && S.s.product.launched && S.paidUsers(S.s.target) === 0 && S.s.week > 8,

@@ -48,7 +48,7 @@ export const PROMOS = {
   sale:     { t: 'Сезонний розпродаж −40%', weeks: 2, conv: 1.65, priceNew: .6, visits: 1.15, desc: 'Сильний сплеск продажів. Найкраще працює в сезон: 1 вересня, Чорна п\'ятниця, Новий рік.' },
   giveaway: { t: 'Розіграш у соцмережах', weeks: 1, cost: 8000, aware: .05, social: 2500, desc: 'Призи за репост: зростає впізнаваність і аудиторія соцмереж. Призи коштують 8 000 ₴.' },
   code:     { t: 'Промокод для блогерів', weeks: 4, blog: 1.35, priceNew: .85, desc: 'Підписники блогера отримують знижку 15% — реклама в блогерів працює краще, і ви бачите, скільки клієнтів привів саме промокод.' },
-  bundle:   { t: '«Подарунок до покупки»', weeks: 3, conv: 1.3, cogs: .15, hw: true, desc: 'Безкоштовний аксесуар до пристрою: більше покупок, але кожен продаж дорожчий для вас на 15%.' },
+  bundle:   { t: '«Подарунок до покупки»', weeks: 3, conv: 1.3, cogs: .15, hw: true, desc: 'Безкоштовний подарунок до покупки: більше покупок, але кожен продаж дорожчий для вас на 15%.' },
 };
 export const LOYALTY = { t: 'Програма лояльності', churn: .8, cost: .04, desc: 'Бонуси постійним клієнтам: платні клієнти йдуть рідше, але програма коштує 4% виручки.' };
 
@@ -310,7 +310,7 @@ const M = {
     const fixed = this.fixedCosts() * W2M + this.s.mkt.ads * W2M;
     const m = this.modelOf(k), g = this.seg(k);
     const cogs = sum(this.s.product.built.map(f => this.feature(f)?.cogs || 0));
-    if (m === 'device') { const margin = this.s.price[k] - this.s.unitCost; return { fixed, margin, need: margin > 0 ? Math.ceil(fixed / margin) : Infinity, unit: ['пристрій на місяць', 'пристрої на місяць', 'пристроїв на місяць'] }; }
+    if (m === 'device') { const margin = this.s.price[k] - this.s.unitCost; return { fixed, margin, need: margin > 0 ? Math.ceil(fixed / margin) : Infinity, unit: [`${this.uw(0)} на місяць`, `${this.uw(1)} на місяць`, `${this.uw(2)} на місяць`] }; }
     const margin = this.s.price[k] * (1 - this.payFee(k)) - cogs - (g.b2b ? 0 : .65 * W2M);
     return { fixed, margin, need: margin > 0 ? Math.ceil(fixed / margin) : Infinity, unit: g.b2b ? ['організація-клієнт', 'організації-клієнти', 'організацій-клієнтів'] : ['платний клієнт', 'платні клієнти', 'платних клієнтів'] };
   },
@@ -407,7 +407,7 @@ const M = {
           C.status = 'won'; const net = Math.round(C.raised * .92); s.cash += net; s.ledgerIn = (s.ledgerIn || 0) + net;
           if (I.kind === 'hardware') s.flags.crowdUnits = (s.flags.crowdUnits || 0) + C.backers;
           else { const u = s.users[s.target]; u.paid += Math.round(C.backers * .6); u.paidEver += Math.round(C.backers * .6); }
-          this.mail({ from: 'Краудфандингова платформа', kind: 'finance', title: 'Кампанію успішно завершено!', body: `Ви зібрали ${fmt(C.raised)} від ${C.backers} підтримувачів. Після комісії платформи 8% на рахунок надійшло ${fmt(net)}.${I.kind === 'hardware' ? ` Не забудьте: ${C.backers} людей чекають на свої пристрої — їх треба виготовити й відправити.` : ''}` });
+          this.mail({ from: 'Краудфандингова платформа', kind: 'finance', title: 'Кампанію успішно завершено!', body: `Ви зібрали ${fmt(C.raised)} від ${C.backers} підтримувачів. Після комісії платформи 8% на рахунок надійшло ${fmt(net)}.${I.kind === 'hardware' ? ` Не забудьте: ${C.backers} людей чекають на свої ${this.uw(1)} — їх треба виготовити й відправити.` : ''}` });
         } else {
           C.status = 'failed';
           this.mail({ from: 'Краудфандингова платформа', kind: 'finance', title: 'Кампанія не зібрала мету', body: `Зібрано ${fmt(C.raised)} з ${fmt(C.goal)}. За правилом «все або нічого» гроші повернуто підтримувачам. Можна спробувати знову: з кращим відео, меншою метою або більшою впізнаваністю.` });
@@ -416,7 +416,7 @@ const M = {
     }
     // зобов'язання перед підтримувачами краудфандингу (пристрої)
     if (s.flags.crowdUnits > 0 && s.stock.units > 0) { const n = Math.min(s.flags.crowdUnits, s.stock.units); s.stock.units -= n; s.flags.crowdUnits -= n; s.users[s.target].paid += n; }
-    if (s.flags.crowdUnits > 0 && C?.status === 'won' && s.week - C.end > 8 && !s.flags.crowdAngry) { s.flags.crowdAngry = true; s.brand.aware *= .7; this.mail({ from: 'Підтримувачі кампанії', kind: 'finance', title: 'Де наші пристрої?!', body: 'Минуло два місяці, а пристроїв досі немає. Люди пишуть гнівні відгуки — впізнаваність бренду падає. Замовте виробництво.' }); }
+    if (s.flags.crowdUnits > 0 && C?.status === 'won' && s.week - C.end > 8 && !s.flags.crowdAngry) { s.flags.crowdAngry = true; s.brand.aware *= .7; this.mail({ from: 'Підтримувачі кампанії', kind: 'finance', title: `Де наші ${this.uw(1)}?!`, body: `Минуло два місяці, а ${this.uw(2)} досі немає. Люди пишуть гнівні відгуки — впізнаваність бренду падає. Замовте виробництво.` }); }
 
     // спринт
     if (s.sprint) {
