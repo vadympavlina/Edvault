@@ -11,7 +11,7 @@ const OUT = process.env.OG_SHOTS || '/tmp/og-shots';
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webp': 'image/webp', '.wasm': 'application/wasm' };
 const serve = root => new Promise(res => { const s = createServer(async (q, r) => { const p = decodeURIComponent(q.url.split('?')[0]); const tries = p.endsWith('/') ? [p + 'index.html'] : extname(p) ? [p] : [p + '.html', p + '/index.html']; for (const t of tries) { try { const b = await readFile(join(root, t)); r.setHeader('content-type', MIME[extname(t)] || 'application/octet-stream'); r.end(b); return; } catch { /* далі */ } } r.statusCode = 404; r.end('404'); }).listen(0, () => res({ s, url: 'http://localhost:' + s.address().port })); });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const drag = async (p, pts) => { await p.mouse.move(...pts[0]); await p.mouse.down(); for (const q of pts.slice(1)) await p.mouse.move(...q, { steps: 6 }); await p.mouse.up(); };
+const drag = async (p, pts, steps = 6) => { pts = pts.filter(q => Number.isFinite(q[0]) && Number.isFinite(q[1])); if (pts.length < 2) return; await p.mouse.move(...pts[0]); await p.mouse.down(); for (const q of pts.slice(1)) await p.mouse.move(...q, { steps }); await p.mouse.up(); };
 const arc = (cx, cy, r, n = 40) => Array.from({ length: n + 1 }, (_, i) => { const a = (360 * i / n) * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; });
 
 await mkdir(OUT, { recursive: true });
@@ -32,18 +32,47 @@ const PRE = {
     await pick(6); await drag(p, Array.from({ length: 41 }, (_, i) => { const t = Math.PI * 2 * i / 40; return [720 + 12 * 16 * Math.sin(t) ** 3 * .5, 640 - 12 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * .5]; }));
     await pick(3); await drag(p, [[180, 705], [260, 698], [330, 706], [520, 706], [620, 698], [830, 706]]);  },
   async 'tools-animator'(p) { await p.keyboard.press('Escape'); await sleep(300);
-    const cx = 402, cy = 400; // полотно в цьому вікні: x 96–708, y 238–583
-    await drag(p, arc(cx, cy, 80)); await drag(p, arc(cx - 28, cy - 18, 7, 14)); await drag(p, arc(cx + 28, cy - 18, 7, 14));
-    await drag(p, Array.from({ length: 16 }, (_, i) => { const a = (20 + 140 * i / 15) * Math.PI / 180; return [cx + 40 * Math.cos(a), cy + 4 + 34 * Math.sin(a)]; }));
-    await drag(p, [[cx - 14, cy - 80], [cx - 30, cy - 120], [cx - 6, cy - 98]]); await drag(p, [[cx + 14, cy - 80], [cx + 30, cy - 120], [cx + 6, cy - 98]]);
-    await p.locator('button.sw[title="Червоний"]').click().catch(() => {}); await drag(p, arc(cx - 55, cy + 12, 12, 16)); await drag(p, arc(cx + 55, cy + 12, 12, 16)); await sleep(300); },
+    // полотно в цьому вікні: x 96–708, y 238–583. Малюємо кольоровий малюнок: небо, пагорб, сонечко й веселе кошеня
+    const color = async t => { await p.getByRole('button', { name: t, exact: true }).first().click({ timeout: 2000 }).catch(() => {}); }, tool = async t => { await p.getByRole('button', { name: new RegExp('^' + t) }).first().click({ timeout: 2000 }).catch(() => {}); };
+    const ell = (cx, cy, rx, ry, n = 30) => Array.from({ length: n + 1 }, (_, i) => { const a = Math.PI * 2 * i / n; return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)]; });
+    const drag2 = (pp, pts) => drag(pp, pts, 1), fill = async (x, y) => { await p.mouse.click(x, y); await sleep(120); };
+    // небо — на шарі «Фон»
+    await p.getByText('Фон', { exact: true }).first().click().catch(() => {}); await tool('Заливка'); await color('Блакитний'); await fill(150, 270);
+    await tool('Пензель'); await color('Зелений'); await drag2(p, [[96, 500], [180, 470], [280, 490], [380, 520], [480, 500], [580, 470], [708, 495], [708, 583], [96, 583], [96, 500]]); await tool('Заливка'); await fill(300, 560);
+    await tool('Пензель'); await color('Жовтий'); await drag2(p, ell(600, 300, 32)); await tool('Заливка'); await fill(600, 300);
+    await tool('Пензель'); await color('Білий'); await drag2(p, [[160, 300], [150, 280], [180, 262], [205, 272], [225, 255], [255, 270], [265, 295], [160, 300]]); await tool('Заливка'); await fill(210, 285);
+    // кошеня — на шарі «Персонаж»
+    await p.getByText('Персонаж', { exact: true }).first().click().catch(() => {}); await tool('Пензель'); await color('Чорний');
+    await drag2(p, ell(402, 430, 100, 80)); await drag2(p, [[322, 385], [310, 300], [378, 352]]); await drag2(p, [[482, 385], [494, 300], [426, 352]]);
+    await drag2(p, ell(364, 418, 10, 13, 16)); await drag2(p, ell(440, 418, 10, 13, 16)); await drag2(p, [[394, 440], [410, 440], [402, 450], [394, 440]]);
+    await drag2(p, Array.from({ length: 14 }, (_, i) => { const a = (15 + 150 * i / 13) * Math.PI / 180; return [402 + 28 * Math.cos(a) * (i < 7 ? 1 : 1), 450 + 18 * Math.sin(a)]; }));
+    for (const dy of [-8, 4, 16]) { await drag2(p, [[330, 448 + dy], [270, 440 + dy * 1.8]]); await drag2(p, [[474, 448 + dy], [534, 440 + dy * 1.8]]); }
+    await drag2(p, ell(342, 462, 14, 9, 14)); await drag2(p, ell(462, 462, 14, 9, 14));
+    await tool('Заливка'); await color('Помаранчевий'); await fill(402, 380); await fill(402, 480); await color('Рожевий'); await fill(350, 340); await fill(454, 340); await fill(402, 445);
+    await color('Червоний'); await fill(342, 462); await fill(462, 462); await color('Чорний'); await fill(364, 418); await fill(440, 418);
+    await tool('Пензель'); await color('Рожевий'); await drag2(p, Array.from({ length: 41 }, (_, i) => { const t = Math.PI * 2 * i / 40; return [250 + 8 * 16 * Math.sin(t) ** 3 / 8 * 1, 320 - (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * 1]; }));
+    await sleep(400); },
   async 'tools-screen-recorder'(p) { await p.getByRole('button', { name: 'Зрозуміло' }).click().catch(() => {}); },
-  async 'tools-pixel-editor'(p) { await p.click('#empty-new-btn').catch(() => {}); await sleep(700); await p.getByRole('button', { name: 'Створити', exact: true }).click().catch(() => {}); await sleep(1200);
-    // миле кошеня 16×16: сітка спрайта на цьому розмірі вікна починається в (94,148), клітинка 40 px
-    const ART = ['................', '..KK........KK..', '.KOOK......KOOK.', '.KOOOKKKKKKOOOK.', '.KOOOOOOOOOOOOK.', '.KOOOOOOOOOOOOK.', '.KOOKKOOOOKKOOK.', '.KOOKWOOOOKWOOK.', '.KOOOOOOOOOOOOK.', '.KOPPOOKKOOPPOK.', '.KOOOOOOOOOOOOK.', '.KOOOOKOOKOOOOK.', '..KOOOOKKOOOOK..', '...KKOOOOOOKK...', '.....KKKKKKK....', '................'];
-    const COL = { K: '#000000', O: '#F97316', W: '#FFFFFF', P: '#F472B6' }, X0 = 94, Y0 = 148, G = 40;
-    for (const [ch, hex] of Object.entries(COL)) { await p.locator(`button.swatch[title="${hex}"]`).first().click().catch(() => {}); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (ART[y][x] === ch) await p.mouse.click(X0 + G * x + G / 2, Y0 + G * y + G / 2); }
-    await sleep(300); },
+  async 'tools-pixel-editor'(p) { await p.click('#empty-new-btn').catch(() => {}); await sleep(700);
+    await p.getByText('32×32', { exact: true }).first().click().catch(() => {}); await p.getByRole('button', { name: 'Створити', exact: true }).click().catch(() => {}); await sleep(1300);
+    // мальовничий пейзаж 32×32: небо, сонечко, хмаринка, пагорби, дерево, будиночок, квіти (кольори — з палітри редактора)
+    const N = 32, g = Array.from({ length: N }, () => Array(N).fill('.')), set = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < N && y < N) g[y][x] = c; };
+    const disc = (cx, cy, r, c) => { for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) set(x, y, c); };
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) set(x, y, y < 8 ? '#BFDBFE' : y < 13 ? '#FECACA' : '#FDE68A');
+    disc(6, 7, 5.2, '#FDE68A'); disc(6, 7, 3.6, '#FACC15');
+    for (const [x, y] of [[20, 4], [21, 4], [22, 4], [23, 4], [19, 5], [20, 5], [21, 5], [22, 5], [23, 5], [24, 5], [25, 5], [18, 6], [19, 6], [20, 6], [21, 6], [22, 6], [23, 6], [24, 6], [25, 6], [26, 6], [26, 5]]) set(x, y, '#FFFFFF');
+    for (let x = 0; x < N; x++) { const h1 = Math.round(17 + 2.5 * Math.sin(x / 4.5)), h2 = Math.round(21 + 2 * Math.sin(x / 3.5 + 1.5)), h3 = Math.round(26 + 1.2 * Math.sin(x / 2.5)); for (let y = h1; y < N; y++) set(x, y, '#BBF7D0'); for (let y = h2; y < N; y++) set(x, y, '#84CC16'); for (let y = h3; y < N; y++) set(x, y, '#22C55E'); }
+    for (let y = 17; y <= 23; y++) { set(15, y, '#78350F'); set(16, y, '#78350F'); } disc(15.5, 14, 4.4, '#10B981'); disc(14, 12.5, 1.3, '#22C55E'); disc(18, 15, 1, '#22C55E');
+    for (let y = 18; y <= 23; y++) for (let x = 22; x <= 28; x++) set(x, y, '#FECACA'); for (let k = 0; k < 4; k++) for (let x = 21 + k; x <= 29 - k; x++) set(x, 17 - k, '#EF4444');
+    for (let y = 20; y <= 23; y++) { set(24, y, '#A16207'); set(25, y, '#A16207'); } set(27, 20, '#3B82F6'); set(27, 21, '#3B82F6');
+    for (const [x, y, c] of [[3, 27, '#F472B6'], [6, 29, '#EF4444'], [10, 28, '#FACC15'], [17, 29, '#F472B6'], [20, 27, '#FFFFFF'], [29, 28, '#EF4444'], [26, 30, '#F472B6']]) set(x, y, c);
+    // сітка спрайта: центр області (414,468); клітинка = 640 / 32
+    const X0 = 94, Y0 = 148, G = 640 / N;
+    const colors = [...new Set(g.flat().filter(c => c !== '.'))];
+    for (const hex of colors) { await p.locator(`button.swatch[title="${hex}"]`).first().click().catch(() => {});
+      for (let y = 0; y < N; y++) { let x = 0; while (x < N) { if (g[y][x] !== hex) { x++; continue; } let x2 = x; while (x2 + 1 < N && g[y][x2 + 1] === hex) x2++;
+        await p.mouse.move(X0 + G * x + G / 2, Y0 + G * y + G / 2); await p.mouse.down(); if (x2 > x) await p.mouse.move(X0 + G * x2 + G / 2, Y0 + G * y + G / 2, { steps: 2 }); await p.mouse.up(); x = x2 + 1; } } }
+    await p.getByText('Полотно й сітка').click().catch(() => {}); await sleep(300); await p.getByText(/^Сітка$/).first().click({ timeout: 1500 }).catch(() => {}); await p.getByText(/Лінії кожні/).first().click({ timeout: 1500 }).catch(() => {}); await p.getByText('Полотно й сітка').click().catch(() => {}); await sleep(400); },
   async 'tools-web-editor'(p) { await p.click('#empty-new-btn').catch(() => {}); await sleep(900); },
   async 'tools-snap-editor'(p) { await p.setInputFiles('input[type=file]', SAMPLE); await sleep(900); await p.locator('.tool', { hasText: 'Стрілка' }).click().catch(() => {}); const bb = await p.locator('#canvas').boundingBox();
     if (bb) { await drag(p, [[bb.x + bb.width * .62, bb.y + bb.height * .2], [bb.x + bb.width * .35, bb.y + bb.height * .45]]); await p.locator('.tool', { hasText: 'Рамка' }).click().catch(() => {}); await drag(p, [[bb.x + bb.width * .08, bb.y + bb.height * .55], [bb.x + bb.width * .45, bb.y + bb.height * .72]]); } },
