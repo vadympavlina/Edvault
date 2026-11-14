@@ -23,18 +23,33 @@ const SAMPLE = join(OUT, '_sample.png');
   await p.screenshot({ path: SAMPLE }); await p.close(); }
 
 const PRE = {
-  async 'tools-whiteboard'(p) { await drag(p, [[300, 300], [300, 700]]); await drag(p, [[300, 700], [820, 700]]); await drag(p, [[300, 650], [380, 560], [450, 600], [540, 440], [640, 500], [760, 330]]); await drag(p, arc(560, 250, 70)); await drag(p, [[200, 150], [470, 140]]); await drag(p, [[205, 165], [440, 160]]); },
-  async 'tools-animator'(p) { await p.keyboard.press('Escape'); },
+  async 'tools-whiteboard'(p) { // милий малюнок: сонечко, будиночок, сердечко й трава
+    const sw = p.locator('[data-color], .swatch, .sw, [class*=color] button'), pick = async i => { await sw.nth(i).click().catch(() => {}); };
+    await pick(2); await drag(p, arc(760, 330, 52)); for (let a = 0; a < 360; a += 40) { const r = a * Math.PI / 180; await drag(p, [[760 + 66 * Math.cos(r), 330 + 66 * Math.sin(r)], [760 + 92 * Math.cos(r), 330 + 92 * Math.sin(r)]]); }
+    await drag(p, arc(742, 318, 5, 10)); await drag(p, arc(778, 318, 5, 10)); await drag(p, Array.from({ length: 12 }, (_, i) => { const a = (25 + 130 * i / 11) * Math.PI / 180; return [760 + 26 * Math.cos(a), 336 + 20 * Math.sin(a)]; }));
+    await pick(4); await drag(p, [[330, 560], [330, 700], [520, 700], [520, 560], [330, 560]]); await drag(p, [[400, 700], [400, 630], [450, 630], [450, 700]]); await drag(p, [[345, 590], [360, 585]]);
+    await pick(1); await drag(p, [[310, 560], [425, 460], [540, 560], [310, 560]]);
+    await pick(6); await drag(p, Array.from({ length: 41 }, (_, i) => { const t = Math.PI * 2 * i / 40; return [720 + 12 * 16 * Math.sin(t) ** 3 * .5, 640 - 12 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * .5]; }));
+    await pick(3); await drag(p, [[180, 705], [260, 698], [330, 706], [520, 706], [620, 698], [830, 706]]);  },
+  async 'tools-animator'(p) { await p.keyboard.press('Escape'); await sleep(300);
+    const cx = 402, cy = 400; // полотно в цьому вікні: x 96–708, y 238–583
+    await drag(p, arc(cx, cy, 80)); await drag(p, arc(cx - 28, cy - 18, 7, 14)); await drag(p, arc(cx + 28, cy - 18, 7, 14));
+    await drag(p, Array.from({ length: 16 }, (_, i) => { const a = (20 + 140 * i / 15) * Math.PI / 180; return [cx + 40 * Math.cos(a), cy + 4 + 34 * Math.sin(a)]; }));
+    await drag(p, [[cx - 14, cy - 80], [cx - 30, cy - 120], [cx - 6, cy - 98]]); await drag(p, [[cx + 14, cy - 80], [cx + 30, cy - 120], [cx + 6, cy - 98]]);
+    await p.locator('button.sw[title="Червоний"]').click().catch(() => {}); await drag(p, arc(cx - 55, cy + 12, 12, 16)); await drag(p, arc(cx + 55, cy + 12, 12, 16)); await sleep(300); },
   async 'tools-screen-recorder'(p) { await p.getByRole('button', { name: 'Зрозуміло' }).click().catch(() => {}); },
   async 'tools-pixel-editor'(p) { await p.click('#empty-new-btn').catch(() => {}); await sleep(700); await p.getByRole('button', { name: 'Створити', exact: true }).click().catch(() => {}); await sleep(1200);
-    const cs = p.locator('canvas'); let best = null, area = 0; for (let i = 0; i < await cs.count(); i++) { const bb = await cs.nth(i).boundingBox(); if (bb && bb.width * bb.height > area) { area = bb.width * bb.height; best = bb; } }
-    if (best) { const g = best.width / 16; for (const [x, y] of [[3, 3], [4, 3], [5, 3], [3, 4], [5, 4], [3, 5], [4, 5], [5, 5], [8, 8], [9, 8], [10, 8], [8, 9], [10, 9], [9, 10]]) await p.mouse.click(best.x + g * x + g / 2, best.y + g * y + g / 2); } },
+    // миле кошеня 16×16: сітка спрайта на цьому розмірі вікна починається в (94,148), клітинка 40 px
+    const ART = ['................', '..KK........KK..', '.KOOK......KOOK.', '.KOOOKKKKKKOOOK.', '.KOOOOOOOOOOOOK.', '.KOOOOOOOOOOOOK.', '.KOOKKOOOOKKOOK.', '.KOOKWOOOOKWOOK.', '.KOOOOOOOOOOOOK.', '.KOPPOOKKOOPPOK.', '.KOOOOOOOOOOOOK.', '.KOOOOKOOKOOOOK.', '..KOOOOKKOOOOK..', '...KKOOOOOOKK...', '.....KKKKKKK....', '................'];
+    const COL = { K: '#000000', O: '#F97316', W: '#FFFFFF', P: '#F472B6' }, X0 = 94, Y0 = 148, G = 40;
+    for (const [ch, hex] of Object.entries(COL)) { await p.locator(`button.swatch[title="${hex}"]`).first().click().catch(() => {}); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (ART[y][x] === ch) await p.mouse.click(X0 + G * x + G / 2, Y0 + G * y + G / 2); }
+    await sleep(300); },
   async 'tools-web-editor'(p) { await p.click('#empty-new-btn').catch(() => {}); await sleep(900); },
   async 'tools-snap-editor'(p) { await p.setInputFiles('input[type=file]', SAMPLE); await sleep(900); await p.locator('.tool', { hasText: 'Стрілка' }).click().catch(() => {}); const bb = await p.locator('#canvas').boundingBox();
     if (bb) { await drag(p, [[bb.x + bb.width * .62, bb.y + bb.height * .2], [bb.x + bb.width * .35, bb.y + bb.height * .45]]); await p.locator('.tool', { hasText: 'Рамка' }).click().catch(() => {}); await drag(p, [[bb.x + bb.width * .08, bb.y + bb.height * .55], [bb.x + bb.width * .45, bb.y + bb.height * .72]]); } },
   async 'tools-text-craft'(p) { await p.locator('[contenteditable=true]').first().click(); await p.keyboard.type('Природознавство: кругообіг води'); await p.keyboard.press('Enter'); await p.keyboard.type('Вода випаровується з морів і річок, піднімається вгору й утворює хмари. Потім вона падає дощем і снігом, і все починається знову.'); await p.keyboard.press('Enter'); await p.keyboard.type('Запитання для класу: куди зникає калюжа після дощу?'); },
   async 'tools-image-convert'(p) { await p.setInputFiles('input[type=file]', SAMPLE).catch(() => {}); await sleep(900); },
-  async 'tools-vote'(p) { await p.locator('.type-card').nth(1).click().catch(() => {}); },
+  async 'tools-vote'(p) { await p.locator('.type-card').nth(1).click().catch(() => {}); await sleep(400); for (const [ph, v] of [[/Напиши питання/, 'Яка тварина стане талісманом класу?'], ['Варіант 1', 'Котик'], ['Варіант 2', 'Песик']]) await p.getByPlaceholder(ph).fill(v, { timeout: 2500 }).catch(() => {}); await sleep(300); },
   async startup(p) { await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForSelector('.wizard'); await p.click('[data-w="next"]'); await p.click('[data-w="next"]'); await p.fill('[data-w="name"]', 'Марта'); await p.fill('[data-w="company"]', 'Записатись'); await p.click('[data-w="next"]'); await p.waitForSelector('#main .ws'); },
 };
 const PAGES = [['ed-index', 'Edvault', 'index.html'], ['ed-materials', 'Edvault', 'materials.html'], ['em-index', 'edvault-emulators', 'index.html'], ['em-blogger', 'edvault-emulators', 'blogger.html'], ['windows', 'windows-edvault', 'index.html'], ['startup', 'startup-edvault', 'index.html'], ['startup-check', 'startup-edvault', 'startup-check.html'], ['videocut', 'videocut-edvault', 'index.html'], ['tools-index', 'edvault-tools', 'index.html'],
