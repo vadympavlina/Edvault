@@ -31,32 +31,7 @@ const PRE = {
     await pick(1); await drag(p, [[310, 560], [425, 460], [540, 560], [310, 560]]);
     await pick(6); await drag(p, Array.from({ length: 41 }, (_, i) => { const t = Math.PI * 2 * i / 40; return [720 + 12 * 16 * Math.sin(t) ** 3 * .5, 640 - 12 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * .5]; }));
     await pick(3); await drag(p, [[180, 705], [260, 698], [330, 706], [520, 706], [620, 698], [830, 706]]);  },
-  async 'tools-animator'(p) { await p.keyboard.press('Escape'); await sleep(300);
-    // полотно в цьому вікні: x 96–708, y 238–583. Заливок інструмент «Заливка» не використовуємо (він затікає за контури):
-    // кольорові плями малюємо товстим пензлем, а контури й риси — тонким
-    const color = async t => { await p.getByRole('button', { name: t, exact: true }).first().click({ timeout: 2000 }).catch(() => {}); };
-    const size = async v => { await p.evaluate(v => { const r = [...document.querySelectorAll('input[type=range]')].find(x => x.offsetParent && +x.max >= 30); if (r) { r.value = Math.min(+r.max, v); r.dispatchEvent(new Event('input', { bubbles: true })); r.dispatchEvent(new Event('change', { bubbles: true })); } }, v); };
-    const d = pts => drag(p, pts, 1);
-    const ell = (cx, cy, rx, ry, n = 36, a0 = 0, a1 = 360) => Array.from({ length: n + 1 }, (_, i) => { const a = (a0 + (a1 - a0) * i / n) * Math.PI / 180; return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)]; });
-    const blob = async (cx, cy, rx, ry, step) => { for (let k = Math.max(rx, ry); k > 0; k -= step) await d(ell(cx, cy, Math.max(1, rx * k / Math.max(rx, ry)), Math.max(1, ry * k / Math.max(rx, ry)), 28)); };
-    // небо: широкі горизонтальні мазки
-    await size(70); await color('Блакитний'); for (let y = 250; y < 575; y += 26) await d([[98, y], [706, y]]);
-    await color('Жовтий'); await size(50); for (let y = 452; y < 500; y += 22) await d([[98, y], [706, y]]);
-    // пагорби
-    await color('Зелений'); await size(60); for (let k = 0; k < 4; k++) await d([[98, 520 + k * 22], [200, 495 + k * 22], [320, 515 + k * 22], [440, 490 + k * 22], [560, 510 + k * 22], [706, 485 + k * 22]]);
-    // сонечко
-    await color('Жовтий'); await size(18); await blob(620, 295, 36, 36, 8); await size(6); await color('Помаранчевий'); for (let a = 0; a < 360; a += 40) { const r = a * Math.PI / 180; await d([[620 + 48 * Math.cos(r), 295 + 48 * Math.sin(r)], [620 + 66 * Math.cos(r), 295 + 66 * Math.sin(r)]]); }
-    // хмаринка
-    await color('Білий'); await size(30); for (const dy of [0, 12, 24]) await d([[150 + dy / 2, 282 + dy / 3], [250 - dy / 2, 282 + dy / 3]]); await d([[185, 268], [220, 260]]);
-    // кошеня: рудa голова, вушка, мордочка
-    const cx = 402, cy = 425; await color('Помаранчевий'); await size(24);
-    await blob(cx, cy, 98, 78, 9); await d([[322, 385], [318, 322], [372, 358]]); await d([[326, 370], [332, 340], [356, 360]]); await d([[482, 385], [486, 322], [432, 358]]); await d([[478, 370], [472, 340], [448, 360]]);
-    await color('Рожевий'); await size(10); await d([[330, 360], [332, 342], [348, 356]]); await d([[474, 360], [472, 342], [456, 356]]);
-    await color('Чорний'); await size(6); await d(ell(cx, cy, 100, 80, 36)); await d([[322, 385], [312, 310], [376, 352]]); await d([[482, 385], [492, 310], [428, 352]]);
-    await size(16); await d(ell(362, 410, 5, 7, 8)); await d(ell(442, 410, 5, 7, 8)); await color('Білий'); await size(5); await d([[358, 405], [360, 404]]); await d([[438, 405], [440, 404]]);
-    await color('Рожевий'); await size(18); await d([[396, 436], [408, 436]]); await color('Червоний'); await size(14); await d([[330, 448], [338, 449]]); await d([[466, 448], [474, 449]]);
-    await color('Чорний'); await size(4); await d(ell(cx, 448, 24, 14, 12, 15, 165)); for (const dy of [-6, 6, 18]) { await d([[326, 440 + dy], [262, 430 + dy * 1.7]]); await d([[478, 440 + dy], [542, 430 + dy * 1.7]]); }
-    await sleep(500); },
+  async 'tools-animator'(p) { await p.keyboard.press('Escape'); },
   async 'tools-screen-recorder'(p) { await p.getByRole('button', { name: 'Зрозуміло' }).click().catch(() => {}); },
   async 'tools-pixel-editor'(p) { await p.click('#empty-new-btn').catch(() => {}); await sleep(700);
     await p.getByText('32×32', { exact: true }).first().click().catch(() => {}); await p.getByRole('button', { name: 'Створити', exact: true }).click().catch(() => {}); await sleep(1300);
